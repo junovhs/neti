@@ -66,7 +66,7 @@ pub const PRUNE_DIRS: &[&str] = &[
     "third_party",
 ];
 
-pub const BIN_EXT_PATTERN: &str = r"(?i)\.(png|jpe?g|gif|svg|ico|icns|webp|woff2?|ttf|otf|pdf|mp4|mov|mkv|avi|mp3|wav|flac|zip|gz|bz2|xz|7z|rar|jar|csv|tsv|parquet|sqlite|db|bin|exe|dll|so|dylib|pkl|onnx|torch|tgz|zst)$";
+pub const BIN_EXT_PATTERN: &str = r"(?i)\.(png|jpe?g|gif|svg|ico|icns|webp|woff2?|ttf|otf|pdf|mp4|mov|mkv|avi|mp3|wav|flac|zip|gz|bz2|xz|7z|rar|jar|csv|tsv|parquet|sqlite|db|bin|exe|dll|so|dylib|pkl|onnx|torch|tgz|zst|lock)$";
 
 pub const SECRET_PATTERN: &str = r"(?i)(^\.?env(\..*)?$|/\.?env(\..*)?$|(^|/)(id_rsa(\.pub)?|id_ed25519(\.pub)?|.*\.(pem|p12|jks|keystore|pfx))$)";
 

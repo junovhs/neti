@@ -79,7 +79,14 @@ impl RuleEngine {
             Some("rs" | "ts" | "tsx" | "js" | "jsx" | "py" | "go")
         );
 
-        if is_code {
+        // Only enforce safety checks if the file actually defines logic (functions)
+        let has_logic = content.contains("fn ")
+            || content.contains("def ")
+            || content.contains("function ")
+            || content.contains("=>")
+            || content.contains("func ");
+
+        if is_code && has_logic {
             let lower = content.to_lowercase();
             let has_safety = lower.contains("result")
                 || lower.contains("option")
