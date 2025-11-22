@@ -1,0 +1,47 @@
+# Rust build artifacts
+/target/
+/docs/
+/Cargo.lock
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# Generated AI pack and test fixtures
+ai-pack/
+tests/tmp/
+tmp/
+*.manifest.json
+
+# Editor/OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git / OS cruft
+*~
+*.orig
+
+# Node / frontend extras
+node_modules/
+dist/
+build/
+coverage/
+.env
+
+# Python extras
+__pycache__/
+.venv/
+venv/
+
+# Repomix or AI output
+*.xml
+*.jsonl
+
+# Ignore everything inside /target/release except binaries we care about
+!/target/release/saccade.exe
+!/target/release/gauntlet.exe
