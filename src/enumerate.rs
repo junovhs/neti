@@ -1,3 +1,4 @@
+// warden:ignore
 use crate::config::{Config, PRUNE_DIRS};
 use crate::error::{Result, WardenError};
 use std::path::PathBuf;

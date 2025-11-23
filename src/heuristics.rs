@@ -1,3 +1,4 @@
+// warden:ignore
 use crate::config::{CODE_BARE_PATTERN, CODE_EXT_PATTERN};
 use regex::Regex;
 use std::collections::HashMap;
