@@ -7,6 +7,7 @@ pub mod error;
 pub mod filter;
 pub mod heuristics;
 pub mod metrics;
+pub mod prompt; // NEW: AI Prompt Generator
 pub mod rules;
 pub mod tokens;
 pub mod tui; // NEW: The Visualizer

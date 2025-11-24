@@ -9,6 +9,7 @@ use warden_core::config::{Config, GitMode};
 use warden_core::enumerate::FileEnumerator;
 use warden_core::filter::FileFilter;
 use warden_core::heuristics::HeuristicFilter;
+use warden_core::prompt::PromptGenerator;
 use warden_core::tokens::Tokenizer;
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -32,6 +33,9 @@ struct Cli {
     no_git: bool,
     #[arg(long)]
     code_only: bool,
+    /// Wrap output with Warden Protocol prompt
+    #[arg(long, short)]
+    prompt: bool,
     /// Output format (Text for standard, Xml for Claude/LLMs)
     #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
     format: OutputFormat,
@@ -72,9 +76,42 @@ fn main() -> Result<()> {
 
     let mut full_context = String::with_capacity(100_000);
 
+    // Add prompt header if requested
+    if cli.prompt {
+        let generator = PromptGenerator::new(config.rules.clone());
+        writeln!(full_context, "{}", generator.wrap_header())?;
+        writeln!(full_context)?;
+        writeln!(
+            full_context,
+            "═══════════════════════════════════════════════════════════════════"
+        )?;
+        writeln!(full_context, "BEGIN CODEBASE")?;
+        writeln!(
+            full_context,
+            "═══════════════════════════════════════════════════════════════════"
+        )?;
+        writeln!(full_context)?;
+    }
+
     match cli.format {
         OutputFormat::Text => pack_text(&target_files, &mut full_context)?,
         OutputFormat::Xml => pack_xml(&target_files, &mut full_context)?,
+    }
+
+    // Add prompt footer if requested
+    if cli.prompt {
+        let generator = PromptGenerator::new(config.rules);
+        writeln!(full_context)?;
+        writeln!(
+            full_context,
+            "═══════════════════════════════════════════════════════════════════"
+        )?;
+        writeln!(full_context, "END CODEBASE")?;
+        writeln!(
+            full_context,
+            "═══════════════════════════════════════════════════════════════════"
+        )?;
+        writeln!(full_context, "{}", generator.generate_reminder())?;
     }
 
     // Count tokens
@@ -105,15 +142,8 @@ fn normalize_path(path: &Path) -> String {
 fn pack_text(files: &[std::path::PathBuf], out: &mut String) -> Result<()> {
     for path in files {
         let path_str = normalize_path(path);
-        writeln!(
-            out,
-            "================================================================================"
-        )?;
-        writeln!(out, "FILE: {path_str}")?;
-        writeln!(
-            out,
-            "================================================================================"
-        )?;
+        // XML-style file wrapper: clean boundaries, AI-friendly
+        writeln!(out, "<file path=\"{path_str}\">")?;
 
         match fs::read_to_string(path) {
             Ok(content) => {
@@ -123,7 +153,9 @@ fn pack_text(files: &[std::path::PathBuf], out: &mut String) -> Result<()> {
                 writeln!(out, "<ERROR READING FILE: {e}>")?;
             }
         }
-        out.push_str("\n\n");
+
+        writeln!(out, "</file>")?;
+        out.push('\n');
     }
     Ok(())
 }
@@ -132,12 +164,10 @@ fn pack_xml(files: &[std::path::PathBuf], out: &mut String) -> Result<()> {
     writeln!(out, "<documents>")?;
     for path in files {
         let path_str = normalize_path(path);
-        // Security: Open CDATA tag
         writeln!(out, "  <document path=\"{path_str}\"><![CDATA[")?;
 
         match fs::read_to_string(path) {
             Ok(content) => {
-                // Security: Sanitize CDATA closing tags in content to prevent injection
                 let safe_content = content.replace("]]>", "]]]]><![CDATA[>");
                 out.push_str(&safe_content);
             }
@@ -145,7 +175,7 @@ fn pack_xml(files: &[std::path::PathBuf], out: &mut String) -> Result<()> {
                 writeln!(out, "ERROR READING FILE: {e}")?;
             }
         }
-        // Security: Close CDATA tag
+
         writeln!(out, "]]></document>")?;
     }
     writeln!(out, "</documents>")?;
