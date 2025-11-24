@@ -1,25 +1,20 @@
 use crate::error::Result;
 use regex::Regex;
 use serde::Deserialize;
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-
-// --- CONFIG STRUCTURES ---
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct RuleConfig {
     #[serde(default = "default_max_tokens")]
     pub max_file_tokens: usize,
-
-    // The Law of Complexity (Smart Checks)
     #[serde(default = "default_max_complexity")]
     pub max_cyclomatic_complexity: usize,
     #[serde(default = "default_max_depth")]
     pub max_nesting_depth: usize,
     #[serde(default = "default_max_args")]
     pub max_function_args: usize,
-
-    // The Law of Bluntness (Legacy/Stylistic)
     #[serde(default = "default_max_words")]
     pub max_function_words: usize,
     #[serde(default)]
@@ -39,30 +34,30 @@ impl Default for RuleConfig {
     }
 }
 
-// --- DEFAULTS ---
+// DEFAULTS
 const fn default_max_tokens() -> usize {
     2000
 }
 const fn default_max_complexity() -> usize {
     10
-} // Industry standard (Holzmann/McCabe)
+}
 const fn default_max_depth() -> usize {
     4
-} // Prevents "Arrow Code"
+}
 const fn default_max_args() -> usize {
     5
-} // Enforces Data Structures
+}
 const fn default_max_words() -> usize {
     3
-} // Enforces SRP
+}
 
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct WardenToml {
     #[serde(default)]
     pub rules: RuleConfig,
+    #[serde(default)]
+    pub commands: HashMap<String, String>,
 }
-
-// --- MAIN CONFIG ---
 
 #[derive(Debug, Clone)]
 pub enum GitMode {
@@ -79,6 +74,7 @@ pub struct Config {
     pub code_only: bool,
     pub verbose: bool,
     pub rules: RuleConfig,
+    pub commands: HashMap<String, String>,
 }
 
 impl Default for Config {
@@ -97,6 +93,7 @@ impl Config {
             code_only: false,
             verbose: false,
             rules: RuleConfig::default(),
+            commands: HashMap::new(),
         }
     }
 
@@ -104,8 +101,8 @@ impl Config {
     ///
     /// # Errors
     ///
-    /// Currently always returns `Ok`. Reserved for future validation logic
-    /// that might return an error if configurations are invalid (e.g., incompatible flags).
+    /// Currently returns `Ok`. Reserved for future validation logic that might
+    /// return an error if configuration combinations are invalid.
     pub fn validate(&self) -> Result<()> {
         Ok(())
     }
@@ -135,6 +132,7 @@ impl Config {
         if let Ok(content) = fs::read_to_string(toml_path) {
             if let Ok(parsed) = toml::from_str::<WardenToml>(&content) {
                 self.rules = parsed.rules;
+                self.commands = parsed.commands;
                 if self.verbose {
                     println!("🔧 Loaded warden.toml configuration");
                 }
@@ -145,6 +143,7 @@ impl Config {
     }
 }
 
+// PRUNE_DIRS and PATTERNS
 pub const PRUNE_DIRS: &[&str] = &[
     ".git",
     ".svn",
@@ -175,7 +174,6 @@ pub const PRUNE_DIRS: &[&str] = &[
     "examples",
     "fixtures",
 ];
-
 pub const BIN_EXT_PATTERN: &str =
     r"(?i)\.(png|jpg|gif|svg|ico|webp|woff2?|ttf|pdf|mp4|zip|gz|tar|exe|dll|so|dylib|class|pyc)$";
 pub const SECRET_PATTERN: &str =

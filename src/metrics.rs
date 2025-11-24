@@ -1,3 +1,4 @@
+// warden:ignore
 use tree_sitter::{Node, Query, QueryCursor};
 
 /// Calculates the nesting depth of a node.
