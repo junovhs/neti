@@ -1,15 +1,22 @@
 use anyhow::Result;
 use clap::Parser;
 use colored::Colorize;
+use crossterm::{
+    event::{DisableMouseCapture, EnableMouseCapture},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
 use std::fs;
+use std::io;
 use std::process;
 
 use warden_core::config::{Config, GitMode};
-use warden_core::detection::Detector;
 use warden_core::enumerate::FileEnumerator;
 use warden_core::filter::FileFilter;
 use warden_core::heuristics::HeuristicFilter;
 use warden_core::rules::RuleEngine;
+use warden_core::tui::state::App;
+use warden_core::types::ScanReport;
 
 const DEFAULT_TOML: &str = r#"# warden.toml
 [rules]
@@ -24,7 +31,7 @@ ignore_naming_on = ["tests", "spec"]
 #[derive(Parser)]
 #[command(name = "warden")]
 #[command(about = "Structural linter for Code With Intent")]
-#[allow(clippy::struct_excessive_bools)]
+#[allow(clippy::struct_excessive_bools)] // Standard for Clap CLI structs
 struct Cli {
     #[arg(long, short)]
     verbose: bool,
@@ -36,6 +43,9 @@ struct Cli {
     code_only: bool,
     #[arg(long)]
     init: bool,
+    /// Launch the TUI dashboard
+    #[arg(long)]
+    ui: bool,
 }
 
 fn main() -> Result<()> {
@@ -46,43 +56,100 @@ fn main() -> Result<()> {
     }
 
     let config = initialize_config(&cli)?;
-    let target_files = run_scan(&config)?;
+    let target_files = run_scan_discovery(&config)?;
 
     if target_files.is_empty() {
         println!("No files to scan.");
         return Ok(());
     }
 
-    println!(
-        "👮 Warden scanning {} files (AST + Token Analysis)...",
-        target_files.len()
-    );
-
+    // Run Analysis
     let engine = RuleEngine::new(config);
-    let mut total_failures = 0;
+    if cli.verbose {
+        println!("👮 Analyzing {} files...", target_files.len());
+    }
+    let report = engine.scan(target_files);
 
-    for path in target_files {
-        if let Ok(passed) = engine.check_file(&path) {
-            if !passed {
-                total_failures += 1;
+    if cli.ui {
+        run_tui(report)?;
+    } else {
+        print_report(&report);
+        if report.total_violations > 0 {
+            process::exit(1);
+        }
+    }
+
+    Ok(())
+}
+
+fn run_tui(report: ScanReport) -> Result<()> {
+    // Setup Terminal
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = ratatui::backend::CrosstermBackend::new(stdout);
+    let mut terminal = ratatui::Terminal::new(backend)?;
+
+    // Run App
+    let mut app = App::new(report);
+    let res = app.run(&mut terminal);
+
+    // Restore Terminal
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    if let Err(err) = res {
+        println!("{err:?}");
+    }
+    Ok(())
+}
+
+fn print_report(report: &ScanReport) {
+    let mut failures = 0;
+    for file in &report.files {
+        if !file.is_clean() {
+            failures += file.violations.len();
+            for v in &file.violations {
+                let filename = file.path.to_string_lossy();
+                let line_num = v.row + 1;
+                println!("{}: {}", "error".red().bold(), v.message.bold());
+                println!("  {} {}:{}:1", "-->".blue(), filename, line_num);
+                println!("   {}", "|".blue());
+                println!(
+                    "   {} {}: Action required",
+                    "=".blue().bold(),
+                    v.law.white().bold()
+                );
+                println!();
             }
         }
     }
 
-    if total_failures > 0 {
+    if failures > 0 {
         println!(
             "{}",
-            format!("❌ Warden found {total_failures} violations.")
-                .red()
-                .bold()
+            format!(
+                "❌ Warden found {failures} violations in {}ms.",
+                report.duration_ms
+            )
+            .red()
+            .bold()
         );
-        process::exit(1);
     } else {
         println!(
             "{}",
-            "✅ All Clear. Code structure is clean.".green().bold()
+            format!(
+                "✅ All Clear. Scanned {} tokens in {}ms.",
+                report.total_tokens, report.duration_ms
+            )
+            .green()
+            .bold()
         );
-        process::exit(0);
     }
 }
 
@@ -112,12 +179,12 @@ fn initialize_config(cli: &Cli) -> Result<Config> {
     Ok(config)
 }
 
-fn run_scan(config: &Config) -> Result<Vec<std::path::PathBuf>> {
+fn run_scan_discovery(config: &Config) -> Result<Vec<std::path::PathBuf>> {
     let enumerator = FileEnumerator::new(config.clone());
     let raw_files = enumerator.enumerate()?;
 
-    // Optional: Detect ecosystem (informational)
-    let detector = Detector::new();
+    // Optional: Detect ecosystem
+    let detector = warden_core::detection::Detector::new();
     if let Ok(systems) = detector.detect_build_systems(&raw_files) {
         if !systems.is_empty() && config.verbose {
             let sys_list: Vec<String> = systems.iter().map(ToString::to_string).collect();

@@ -1,5 +1,6 @@
-use crate::checks::{self, CheckContext, Violation};
+use crate::checks::{self, CheckContext};
 use crate::config::RuleConfig;
+use crate::types::Violation; // Updated import
 use tree_sitter::{Parser, Query};
 
 pub struct Analyzer {

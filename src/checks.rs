@@ -1,16 +1,10 @@
 use crate::config::RuleConfig;
 use crate::metrics;
+use crate::types::Violation;
 use anyhow::Result;
 use tree_sitter::{Node, Query, QueryCursor};
 
-pub struct Violation {
-    pub row: usize,
-    pub message: String,
-    pub law: &'static str,
-}
-
 /// Context object to solve "High Arity" issues.
-/// Bundles common data needed for analysis.
 pub struct CheckContext<'a> {
     pub root: Node<'a>,
     pub source: &'a str,
@@ -24,8 +18,8 @@ pub struct CheckContext<'a> {
 ///
 /// # Errors
 ///
-/// Currently always returns `Ok`. The `Result` return type is preserved for architectural
-/// consistency.
+/// Currently always returns `Ok` as violations are collected in the mutable vector.
+/// The `Result` type is preserved for future extensibility (e.g., query failure propagation).
 #[allow(clippy::unnecessary_wraps)]
 pub fn check_naming(ctx: &CheckContext, query: &Query, out: &mut Vec<Violation>) -> Result<()> {
     let mut cursor = QueryCursor::new();

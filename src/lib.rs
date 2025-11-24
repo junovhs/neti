@@ -6,6 +6,8 @@ pub mod enumerate;
 pub mod error;
 pub mod filter;
 pub mod heuristics;
-pub mod metrics; // New module for pure logic
+pub mod metrics;
 pub mod rules;
 pub mod tokens;
+pub mod tui; // NEW: The Visualizer
+pub mod types; // NEW: Common Data Structures
