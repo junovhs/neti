@@ -11,6 +11,7 @@ use std::fs;
 use std::io;
 use std::process::{self, Command};
 
+use warden_core::apply;
 use warden_core::clipboard;
 use warden_core::config::{Config, GitMode};
 use warden_core::enumerate::FileEnumerator;
@@ -33,6 +34,11 @@ enum Commands {
     Run {
         name: String,
     },
+    Apply {
+        #[arg(long)]
+        dry_run: bool,
+    },
+    Undo,
 }
 
 #[derive(Parser)]
@@ -125,6 +131,14 @@ fn exec_subcommand(cmd: &Commands, config: &Config) -> Result<()> {
             run_alias(config, name);
             Ok(())
         }
+        Commands::Apply { dry_run } => {
+            run_apply(*dry_run);
+            Ok(())
+        }
+        Commands::Undo => {
+            run_undo();
+            Ok(())
+        }
     }
 }
 
@@ -165,6 +179,45 @@ fn execute_command_string(cmd_str: &str) {
 
         if !status.success() {
             process::exit(status.code().unwrap_or(1));
+        }
+    }
+}
+
+fn run_apply(dry_run: bool) {
+    if dry_run {
+        println!("{}", "🔍 Dry run mode - no files will be written".yellow());
+    }
+
+    match apply::run_apply(dry_run) {
+        Ok(outcome) => {
+            apply::print_result(&outcome);
+            match outcome {
+                apply::types::ApplyOutcome::Success { .. } => {}
+                _ => {
+                    process::exit(1);
+                }
+            }
+        }
+        Err(e) => {
+            println!("{}", format!("❌ Error: {e}").red());
+            process::exit(1);
+        }
+    }
+}
+
+fn run_undo() {
+    println!("{}", "🔄 Restoring from backup...".yellow());
+
+    match apply::run_undo() {
+        Ok(restored) => {
+            println!("{}", "✅ Restored files:".green());
+            for file in restored {
+                println!("   {} {}", "✓".green(), file.display());
+            }
+        }
+        Err(e) => {
+            println!("{}", format!("❌ Error: {e}").red());
+            process::exit(1);
         }
     }
 }

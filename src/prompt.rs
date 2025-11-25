@@ -12,91 +12,103 @@ impl PromptGenerator {
         Self { config }
     }
 
-    /// Generates system prompt.
+    /// Generates the full system prompt.
+    ///
     /// # Errors
-    /// Returns `Ok`.
+    /// This function does not currently error but returns Result for API consistency.
     pub fn generate(&self) -> Result<String> {
-        Ok(format!(
-            r#"🛡️ SYSTEM MANDATE: THE WARDEN PROTOCOL
+        Ok(self.build_system_prompt())
+    }
+
+    /// Wraps the header for context packs.
+    ///
+    /// # Errors
+    /// This function does not currently error but returns Result for API consistency.
+    pub fn wrap_header(&self) -> Result<String> {
+        Ok(self.build_system_prompt())
+    }
+
+    /// Generates a short reminder prompt.
+    ///
+    /// # Errors
+    /// This function does not currently error but returns Result for API consistency.
+    pub fn generate_reminder(&self) -> Result<String> {
+        Ok(self.build_reminder())
+    }
+
+    fn build_system_prompt(&self) -> String {
+        let tokens = self.config.max_file_tokens;
+        let complexity = self.config.max_cyclomatic_complexity;
+        let depth = self.config.max_nesting_depth;
+        let args = self.config.max_function_args;
+        let output_format = build_output_format();
+
+        format!(
+            r"🛡️ SYSTEM MANDATE: THE WARDEN PROTOCOL
 ROLE: High-Integrity Systems Architect (NASA/JPL Standard).
-CONTEXT: You are coding inside a strict environment enforced by Warden, a structural linter based on NASA's "Power of 10" rules.
+CONTEXT: You are coding inside a strict environment enforced by Warden.
 
 THE 3 LAWS (Non-Negotiable):
 
-1. LAW OF ATOMICITY (Holzmann Rule 4)
-   - Files: MUST be < {} tokens (~60-100 logical statements).
-   - Rationale: Each file should be a logical unit, verifiable as a unit.
-   - Action: Split immediately if larger. Separate VIEW (UI) from LOGIC (business logic).
+1. LAW OF ATOMICITY
+   - Files: MUST be < {tokens} tokens.
+   - Action: Split immediately if larger.
 
-2. LAW OF COMPLEXITY (Holzmann Rules 1 & 2)
-   - Cyclomatic Complexity: MUST be ≤ {} per function.
-   - Nesting Depth: MUST be ≤ {} levels.
-   - Function Arguments: MUST be ≤ {} parameters.
-   - Rationale: Simpler control flow = stronger analysis capabilities.
-   - Action: Extract functions. Simplify branching. Use data structures over parameter lists.
+2. LAW OF COMPLEXITY
+   - Cyclomatic Complexity: MUST be ≤ {complexity} per function.
+   - Nesting Depth: MUST be ≤ {depth} levels.
+   - Function Arguments: MUST be ≤ {args} parameters.
 
-3. LAW OF PARANOIA (Smart Safety)
-   - Fallibility: Use Result<T, E> for I/O, parsing, and system calls.
-   - Infallibility: Do NOT use Result for pure logic or UI rendering (trust Clippy).
-   - Strict Ban: NO .unwrap() or .expect() calls. Zero Tolerance.
-   - Rationale: Leverage Rust's type system. Don't fight the compiler.
+3. LAW OF PARANOIA
+   - Use Result<T, E> for I/O and fallible operations.
+   - NO .unwrap() or .expect() calls.
 
-LANGUAGE SPECIFICS:
-   - RUST: clippy::pedantic enforced. Use thiserror for errors.
-   - TYPESCRIPT: Strict mode + @ts-check. NO 'any' type.
-   - PYTHON: Type hints mandatory (def func(x: int) -> str).
-
-OPERATIONAL PROTOCOL:
-   1. Read: Understand the full context before generating code.
-   2. Generate: Output COMPLETE, WHOLE files with proper headers.
-   3. Verify: Ask "Does this violate the 3 Laws?" before submission.
-   4. Iterate: If Warden rejects it, refactor and resubmit."#,
-            self.config.max_file_tokens,
-            self.config.max_cyclomatic_complexity,
-            self.config.max_nesting_depth,
-            self.config.max_function_args
-        ))
-    }
-
-    /// Generates reminder.
-    /// # Errors
-    /// Returns `Ok`.
-    pub fn generate_reminder(&self) -> Result<String> {
-        Ok(format!(
-            r"
-═══════════════════════════════════════════════════════════════════
-🛡️ REMINDER: WARDEN PROTOCOL CONSTRAINTS
-═══════════════════════════════════════════════════════════════════
-
-BEFORE SUBMITTING CODE, VERIFY:
-□ Files < {} tokens
-□ Cyclomatic complexity ≤ {} per function
-□ Nesting depth ≤ {} levels
-□ Function parameters ≤ {}
-□ No .unwrap() or .expect() calls
-□ Result<T> used for I/O and fallible ops ONLY
-
-If ANY constraint is violated, REFACTOR before submitting.
-═══════════════════════════════════════════════════════════════════",
-            self.config.max_file_tokens,
-            self.config.max_cyclomatic_complexity,
-            self.config.max_nesting_depth,
-            self.config.max_function_args
-        ))
-    }
-
-    /// Wraps prompt.
-    /// # Errors
-    /// Returns `Ok`.
-    pub fn wrap_header(&self) -> Result<String> {
-        let body = self.generate()?;
-        Ok(format!(
-            r"═══════════════════════════════════════════════════════════════════
-🛡️ WARDEN PROTOCOL - AI SYSTEM PROMPT
-═══════════════════════════════════════════════════════════════════
-
-{body}
+{output_format}
 "
-        ))
+        )
     }
+
+    fn build_reminder(&self) -> String {
+        let tokens = self.config.max_file_tokens;
+        let complexity = self.config.max_cyclomatic_complexity;
+        let depth = self.config.max_nesting_depth;
+        let args = self.config.max_function_args;
+
+        format!(
+            r"WARDEN CONSTRAINTS:
+□ Files < {tokens} tokens
+□ Complexity ≤ {complexity}
+□ Nesting ≤ {depth}
+□ Args ≤ {args}
+□ No .unwrap()
+□ Use <delivery> + <file> tags"
+        )
+    }
+}
+
+fn build_output_format() -> &'static str {
+    r"OUTPUT FORMAT (MANDATORY):
+
+When providing code files, use this exact format:
+
+1. Declare ALL files first:
+
+<delivery>
+path/to/file1.rs
+path/to/file2.rs [NEW]
+</delivery>
+
+2. Provide EACH file:
+
+<file path='path/to/file1.rs'>
+[complete file contents]
+</file>
+
+RULES:
+- Every file in <delivery> MUST have a matching <file> block
+- Do NOT use markdown code blocks - use <file> tags only
+- Do NOT truncate files
+- Paths must match exactly
+
+The `warden apply` command will REJECT incomplete deliveries."
 }

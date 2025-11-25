@@ -1,5 +1,6 @@
 // src/lib.rs
 pub mod analysis;
+pub mod apply;
 pub mod checks;
 pub mod clipboard;
 pub mod config;
