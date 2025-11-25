@@ -98,7 +98,10 @@ impl App {
         if self.handle_nav(code) {
             return;
         }
-        self.handle_action(code);
+        if self.handle_quit(code) {
+            return;
+        }
+        self.handle_toggles(code);
     }
 
     fn handle_nav(&mut self, code: KeyCode) -> bool {
@@ -115,9 +118,16 @@ impl App {
         }
     }
 
-    fn handle_action(&mut self, code: KeyCode) {
+    fn handle_quit(&mut self, code: KeyCode) -> bool {
+        if matches!(code, KeyCode::Char('q') | KeyCode::Esc) {
+            self.running = false;
+            return true;
+        }
+        false
+    }
+
+    fn handle_toggles(&mut self, code: KeyCode) {
         match code {
-            KeyCode::Char('q') | KeyCode::Esc => self.running = false,
             KeyCode::Char('s') => self.cycle_sort(),
             KeyCode::Char('f') => self.toggle_filter(),
             _ => {}

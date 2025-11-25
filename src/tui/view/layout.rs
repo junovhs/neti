@@ -33,10 +33,9 @@ fn draw_header(f: &mut Frame, app: &App, area: Rect) {
     } else {
         100.0
     };
-    let health_color = get_health_color(health);
 
     let info = build_info_string(app, total);
-    let line = build_header_line(health, health_color, &info);
+    let line = build_header_line(health, &info);
 
     f.render_widget(
         Paragraph::new(line)
@@ -55,29 +54,37 @@ fn count_stats(app: &App) -> (usize, usize) {
 
 fn get_health_color(health: f64) -> Color {
     if health > 90.0 {
-        Color::Green
-    } else if health > 70.0 {
-        Color::Yellow
-    } else {
-        Color::Red
+        return Color::Green;
     }
+    if health > 70.0 {
+        return Color::Yellow;
+    }
+    Color::Red
 }
 
 fn build_info_string(app: &App, total: usize) -> String {
-    let sort_str = match app.sort_mode {
-        SortMode::Path => "NAME",
-        SortMode::Tokens => "SIZE",
-        SortMode::Violations => "ERRORS",
-    };
-    let filter_str = if app.only_violations {
-        " | FILTER: ERRORS"
-    } else {
-        ""
-    };
+    let sort_str = get_sort_label(app.sort_mode);
+    let filter_str = get_filter_label(app.only_violations);
     format!(" FILES: {total} | SORT: {sort_str}{filter_str} ")
 }
 
-fn build_header_line(health: f64, color: Color, info: &str) -> Line<'_> {
+fn get_sort_label(mode: SortMode) -> &'static str {
+    match mode {
+        SortMode::Path => "NAME",
+        SortMode::Tokens => "SIZE",
+        SortMode::Violations => "ERRORS",
+    }
+}
+
+fn get_filter_label(active: bool) -> &'static str {
+    if active {
+        " | FILTER: ERRORS"
+    } else {
+        ""
+    }
+}
+
+fn build_header_line(health: f64, info: &str) -> Line<'_> {
     Line::from(vec![
         Span::styled(
             " 🛡️ WARDEN PROTOCOL ",
@@ -86,7 +93,10 @@ fn build_header_line(health: f64, color: Color, info: &str) -> Line<'_> {
                 .add_modifier(Modifier::BOLD),
         ),
         Span::raw(" | "),
-        Span::styled(format!("HEALTH: {health:.1}%"), Style::default().fg(color)),
+        Span::styled(
+            format!("HEALTH: {health:.1}%"),
+            Style::default().fg(get_health_color(health)),
+        ),
         Span::raw(" |"),
         Span::raw(info),
     ])
