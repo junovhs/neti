@@ -1,85 +1,12 @@
 # Warden Protocol Roadmap
 
-## Current State: v0.4.0 ✓
+## Current State: v0.5.0 (Bulletproof Apply) ✓
 
-The core loop works:
-- Generate context with `knit --prompt`
-- Chat with AI
-- Apply responses with `warden apply`
-- Verify with `warden` and `warden check`
-- **Self-hosting:** Warden enforces its own rules on its own codebase
-
----
-
-## v0.5.0 — Bulletproof Apply
-
-**Theme:** If it applies, it's valid. If it's invalid, it rejects hard.
-
-### Validation Hardening
-
-- [x] **Truncation detection (smart)**  
-  Reject files that are obviously incomplete:
-  - [x] Truncation markers: `// ...`, `/* ... */`, `// rest of file`, `// etc`
-  - [ ] Unbalanced braces/brackets (deferring to v0.6 for robustness)
-  - [ ] Files that end mid-statement (deferring)
-  
-  *Goal: Zero false positives. If Warden rejects it, it was definitely broken.*
-
-- [x] **Path safety validation**  
-  Block dangerous paths before they touch disk:
-  - `../` directory traversal
-  - Absolute paths (`/etc/passwd`, `C:\Windows\...`)
-  - Sensitive targets: `.git/`, `.env`, `.ssh/`, `id_rsa`, `.aws/`, `credentials`
-  - Hidden files starting with `.` (configurable)
-  
-  *Enterprise-grade paranoia.*
-
-- [x] **Strict format enforcement**  
-  If AI doesn't use `<file path="...">` tags, reject immediately with clear error message explaining the required format. No fallback parsing. No guessing. Garbage in = garbage out.
-
-- [x] **Markdown block rejection**  
-  Rejects files containing fenced code blocks to prevent AI formatting artifacts from corrupting source.
-
-- [x] **Robust Delimiter Protocol (The "Nabla" Format)**
-  Replace fragile XML tags with high-entropy Unicode fences to prevent Markdown rendering issues and AI confusion.
-  - Start: `∇∇∇ path/to/file.rs ∇∇∇`
-  - End:   `∆∆∆`
-  - *Prevents chat interfaces from hiding tags or interpreting them as HTML.*
-
-### Workflow Enhancement (v0.5.0)
-
-- [x] **Error injection in knit**  
-  When `knit --prompt` runs, it scans the files being packed. If violations exist, they are appended to the context header.
-  *AI sees what's broken. AI fixes it.*
-
-- [x] **Smart Clipboard Protocol**
-  - Auto-detect content size.
-  - If < 1500 tokens: Copy as raw text.
-  - If > 1500 tokens: Save to temp file, copy *file handle* to clipboard.
-  - **The Garbage Man:** Auto-cleanup temp files older than 15 mins.
-
-- [ ] **The "Plan" Protocol** (Prompt Update)
-  Update system prompt to enforce a `<plan>` block before `<delivery>`.
-  - AI must explain *why* it is making changes in natural language first.
-  - `warden apply` extracts the plan and displays it to the user for confirmation before writing files.
-  - *Mitigates "coding without thinking".*
-
-### Git Integration (Experimental)
-
-- [ ] **warden apply --commit**  
-  On successful apply:
-  1. `git add .`
-  2. Auto-generate commit message from the `<plan>` block or `<delivery>` manifest
-  3. Commit (no push by default)
-
-- [ ] **warden apply --commit --push**  
-  Same as above, but also pushes.
-
-*Philosophy: If it passes validation, commit it. Use git as your undo. Atomic commits per apply.*
-
-### Implemented (Keep for Now)
-
-- [x] **Backup system** — Creates `.warden_apply_backup/TIMESTAMP/` before writes. Simple insurance until git workflow is muscle memory.
+The core loop is hardened:
+- **Nabla Protocol**: Robust file delimiters (`∇∇∇`).
+- **Plan Protocol**: Interactive confirmation before writing.
+- **Git Integration**: Atomic commits per apply.
+- **Self-hosting**: Warden enforces its own rules.
 
 ---
 
