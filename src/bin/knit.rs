@@ -13,6 +13,7 @@ use warden_core::filter::FileFilter;
 use warden_core::heuristics::HeuristicFilter;
 use warden_core::prompt::PromptGenerator;
 use warden_core::rules::RuleEngine;
+use warden_core::skeleton;
 use warden_core::tokens::Tokenizer;
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -42,6 +43,8 @@ struct Cli {
     prompt: bool,
     #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
     format: OutputFormat,
+    #[arg(long)]
+    skeleton: bool, // NEW: Context Intelligence flag
 }
 
 fn main() -> Result<()> {
@@ -91,11 +94,10 @@ fn generate_content(files: &[PathBuf], cli: &Cli, config: &Config) -> Result<Str
 
     if cli.prompt {
         write_header(&mut ctx, config)?;
-        // NEW: Inject active violations into the context so AI sees what to fix
         inject_violations(&mut ctx, files, config)?;
     }
 
-    write_body(files, &mut ctx, &cli.format)?;
+    write_body(files, &mut ctx, cli)?;
 
     if cli.prompt {
         write_footer(&mut ctx, config)?;
@@ -106,17 +108,21 @@ fn generate_content(files: &[PathBuf], cli: &Cli, config: &Config) -> Result<Str
 
 fn inject_violations(ctx: &mut String, files: &[PathBuf], config: &Config) -> Result<()> {
     let engine = RuleEngine::new(config.clone());
-    // We scan the files we are about to pack.
-    // This ensures the AI sees errors relevant to the context provided.
     let report = engine.scan(files.to_vec());
 
     if !report.has_errors() {
         return Ok(());
     }
 
-    writeln!(ctx, "═══════════════════════════════════════════════════════════════════")?;
+    writeln!(
+        ctx,
+        "═══════════════════════════════════════════════════════════════════"
+    )?;
     writeln!(ctx, "⚠️  ACTIVE VIOLATIONS (PRIORITY FIX REQUIRED)")?;
-    writeln!(ctx, "═══════════════════════════════════════════════════════════════════\n")?;
+    writeln!(
+        ctx,
+        "═══════════════════════════════════════════════════════════════════\n"
+    )?;
 
     for file in report.files {
         if file.is_clean() {
@@ -131,14 +137,14 @@ fn inject_violations(ctx: &mut String, files: &[PathBuf], config: &Config) -> Re
         }
     }
     writeln!(ctx)?;
-    
+
     Ok(())
 }
 
-fn write_body(files: &[PathBuf], ctx: &mut String, format: &OutputFormat) -> Result<()> {
-    match format {
-        OutputFormat::Text => pack_text(files, ctx),
-        OutputFormat::Xml => pack_xml(files, ctx),
+fn write_body(files: &[PathBuf], ctx: &mut String, cli: &Cli) -> Result<()> {
+    match cli.format {
+        OutputFormat::Text => pack_text(files, ctx, cli.skeleton),
+        OutputFormat::Xml => pack_xml(files, ctx, cli.skeleton),
     }
 }
 
@@ -171,26 +177,32 @@ fn output_result(content: &str, tokens: usize, cli: &Cli) -> Result<()> {
     if cli.copy {
         let msg = clipboard::smart_copy(content)?;
         println!("{}", "✓ Copied to clipboard".green());
-        println!("  ({msg})"); // Shows "Copied as file attachment..." if large
+        println!("  ({msg})");
         println!("{info}");
         return Ok(());
     }
 
-    // Default: Write to file
     fs::write("context.txt", content)?;
     println!("✅ Generated 'context.txt'");
     println!("{info}");
     Ok(())
 }
 
-fn pack_text(files: &[PathBuf], out: &mut String) -> Result<()> {
+fn pack_text(files: &[PathBuf], out: &mut String, skeleton: bool) -> Result<()> {
     for path in files {
         let p_str = path.to_string_lossy().replace('\\', "/");
-        // Legacy XML-like file tags are still used for INPUT to the AI
-        // because they are easy to read. The AI is instructed to output Nabla.
         writeln!(out, "<file path=\"{p_str}\">")?;
+
         match fs::read_to_string(path) {
-            Ok(c) => out.push_str(&c),
+            Ok(content) => {
+                if skeleton {
+                    // TODO: Detect language and pass to skeletonizer
+                    // For now, pass direct content until logic is ready
+                    out.push_str(&skeleton::clean(path, &content));
+                } else {
+                    out.push_str(&content);
+                }
+            }
             Err(e) => writeln!(out, "<ERROR READING FILE: {e}>")?,
         }
         writeln!(out, "</file>\n")?;
@@ -198,13 +210,22 @@ fn pack_text(files: &[PathBuf], out: &mut String) -> Result<()> {
     Ok(())
 }
 
-fn pack_xml(files: &[PathBuf], out: &mut String) -> Result<()> {
+fn pack_xml(files: &[PathBuf], out: &mut String, skeleton: bool) -> Result<()> {
     writeln!(out, "<documents>")?;
     for path in files {
         let p_str = path.to_string_lossy().replace('\\', "/");
         writeln!(out, "  <document path=\"{p_str}\"><![CDATA[")?;
+
         match fs::read_to_string(path) {
-            Ok(c) => out.push_str(&c.replace("]]>", "]]]]><![CDATA[>")),
+            Ok(content) => {
+                if skeleton {
+                    out.push_str(
+                        &skeleton::clean(path, &content).replace("]]>", "]]]]><![CDATA[>"),
+                    );
+                } else {
+                    out.push_str(&content.replace("]]>", "]]]]><![CDATA[>"));
+                }
+            }
             Err(e) => writeln!(out, "ERROR READING FILE: {e}")?,
         }
         writeln!(out, "]]></document>")?;
