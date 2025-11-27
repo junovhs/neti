@@ -1,3 +1,6 @@
+# warden:ignore
+# Warden Protocol Roadmap
+...
 # Warden Protocol Roadmap
 
 ## Current State: v0.4.0 ✓
@@ -41,7 +44,20 @@ The core loop works:
 - [x] **Markdown block rejection**  
   Rejects files containing fenced code blocks to prevent AI formatting artifacts from corrupting source.
 
-### Workflow Enhancement
+### Workflow Enhancement (v0.5.0)
+
+- [ ] **Smart Clipboard Protocol**
+  - Auto-detect content size.
+  - If < 1500 tokens: Copy as raw text.
+  - If > 1500 tokens: Save to temp file, copy *file handle* to clipboard.
+  - Enables `Ctrl+V` to attach `context.txt` as a file instantly, preventing browser crashes.
+  - **The Garbage Man:** Auto-cleanup temp files older than 15 mins. To handle cleanup, every time warden performs a "Smart Copy," it quickly scans the temp directory and deletes any Warden temp files older than 15 minutes. This keeps disk usage low without breaking the "Copy -> Wait 5 mins -> Paste" flow.
+
+- [ ] **The "Plan" Protocol** (Prompt Update)
+  Update system prompt to enforce a `<plan>` block before `<delivery>`.
+  - AI must explain *why* it is making changes in natural language first.
+  - `warden apply` extracts the plan and displays it to the user for confirmation before writing files.
+  - *Mitigates "coding without thinking".*
 
 - [ ] **Error injection in knit**  
   When `knit --prompt` runs:
@@ -67,14 +83,8 @@ The core loop works:
 - [ ] **`warden apply --commit`**  
   On successful apply:
   1. `git add .`
-  2. Auto-generate commit message from `<delivery>` manifest
+  2. Auto-generate commit message from the `<plan>` block or `<delivery>` manifest
   3. Commit (no push by default)
-  
-  Example commit message:
-
-      warden: update src/apply/validator.rs, add src/apply/safety.rs
-      
-      Applied via warden apply
 
 - [ ] **`warden apply --commit --push`**  
   Same as above, but also pushes.
@@ -85,17 +95,53 @@ The core loop works:
 
 - [x] **Backup system** — Creates `.warden_apply_backup/TIMESTAMP/` before writes. Simple insurance until git workflow is muscle memory.
 
-### Cut from v0.5
+---
 
-- ~~Markdown fallback parsing~~ — If AI can't follow format instructions, use a different AI.
+## v0.6.0 — Context Intelligence (The Saccade Merge)
+
+**Theme:** The "Map vs. Territory" Architecture. Solve the "Lost in the Middle" problem.
+
+### The Skeletonizer (Ported from Saccade)
+- [ ] **Port `parser.rs` from Saccade**
+  - Integrate Tree-sitter-based stripping of function bodies.
+  - Keep structs, enums, trait signatures, and function signatures.
+  - Goal: Reduce file size by ~70-90% while retaining API visibility.
+  
+- [ ] **`knit --skeleton`**
+  - Generates a context file where *every* file is skeletonized.
+  - Useful for "high level architectural planning" with the AI.
+
+### Smart Knitting (Context Slicing)
+- [ ] **Dependency Graphing (Saccade Stage 1)**
+  - Implement Tree-sitter queries to find `mod`, `use`, `import`, and `require`.
+  - Build a lightweight graph of local file dependencies.
+
+- [ ] **`knit src/main.rs --smart`**
+  - **The Territory:** Includes full source code of `src/main.rs` and its *immediate* imports.
+  - **The Map:** Includes *skeletons* of the rest of the project (or at least the rest of the module).
+  - *Result:* AI has deep focus on the task, broad awareness of the project, but low token count.
+
+### The "Generate-Then-Structure" Workflow
+- [ ] **Decoupled Reasoning**
+  - Update `warden apply` to handle a two-step generation process if we move to an agentic loop later.
+  - Step 1: Generate Plan (Natural Language).
+  - Step 2: Generate Code (Strict XML).
+  - *Reduces the cognitive load of formatting on the AI's reasoning capabilities.*
 
 ---
 
-## v0.6.0 — Intelligence
+## v0.7.0 — Verification & Safety
 
-**Theme:** Understand the code, not just count it.
+**Theme:** Trust the tool, verify the AI.
 
-### Smarter Analysis
+### Property-Based Testing (The Dream)
+- [ ] **`warden gen-test <file>`**
+  - Uses AI to write *Property-Based Tests* (`proptest` for Rust, `hypothesis` for Python).
+  - Prompt: "Analyze this code. Write a property test that asserts invariants. Do not write unit tests."
+  - Automatically saves to `tests/warden_props_<name>.rs`.
+  - *Moves verification from "it compiles" to "it is mathematically sound".*
+
+### Smarter Analysis (Refined)
 
 - [ ] **Function-level violation reporting**  
   Not just "file has violations" but detailed breakdown:
@@ -110,10 +156,6 @@ The core loop works:
         │   ├─ 2 match arms with complex guards (lines 67, 89)
         │   └─ while loop with break conditions (line 94)
         └─ Suggestion: Extract inner match to separate function
-      
-        fn validate_input() [Line 142]
-        ├─ Arity: 7 arguments (max 5)
-        └─ Suggestion: Group into ValidateOptions struct
   
   *Learn from the patterns. Understand WHY it's complex.*
 
@@ -122,37 +164,12 @@ The core loop works:
   - Track file mtimes in `.warden_cache`
   - Or use `git status` to find modified files
   - Full rescan on config change
-  
-  *Goal: As smart as rustc about what needs recompilation.*
-
-### Smarter Context Generation
-
-- [ ] **Dependency-aware knitting**  
-  When file A imports file B:
-  - Include B in context even if not explicitly requested
-  - Order: dependencies before dependents
-  - Show import graph in context header
-  
-  *AI sees the full picture without you manually selecting files.*
-
-- [ ] **Import graph visualization**  
-  `warden deps` or `warden deps src/main.rs`:
-
-      src/main.rs
-      ├─ src/config.rs
-      │  └─ src/types.rs
-      ├─ src/engine.rs
-      │  ├─ src/types.rs
-      │  └─ src/analysis.rs
-      └─ src/tui/mod.rs
-         ├─ src/tui/state.rs
-         └─ src/tui/view.rs
 
 ---
 
-## v0.7.0 — Testing & Stability
+## v0.8.0 — Ecosystem & Polish
 
-**Theme:** Trust the tool.
+**Theme:** CI/CD and tooling integration.
 
 - [ ] **Test suite**
   - Unit tests for each module
@@ -169,18 +186,6 @@ The core loop works:
   - Document all flags and subcommands
   - Semantic versioning discipline
   - Deprecation warnings before removal
-
----
-
-## v0.8.0 — Ecosystem
-
-**Theme:** CI/CD and tooling integration.
-
-- [ ] **JSON output**: `warden --format json`
-- [ ] **SARIF output**: GitHub Code Scanning integration
-- [ ] **Exit codes**: Documented, consistent, scriptable
-- [ ] **Pre-commit hook**: `warden hook install`
-- [ ] **GitHub Action**: Official action for PR checks
 
 ---
 
@@ -207,25 +212,16 @@ Each language needs: grammar, complexity patterns, naming rules, safety checks.
 
 ## Future / Speculative
 
+### AI-Native Linting
+- [ ] **Global State Detection:** Flag `static mut` or singletons (AI hates hidden state).
+- [ ] **Impure Function Warning:** Flag functions that return values but take no arguments (implies hidden I/O or state reading).
+- [ ] **Deep Inheritance Check:** Flag class extension > 1 level (AI gets lost in hierarchy).
+
 ### Metrics Dashboard
 Track complexity trends over time. SQLite backend. Charts showing codebase health evolution.
 
-### AI Provider Integration  
-When money exists: direct Claude/GPT API calls. `warden chat` command. Self-contained loop without browser.
-
-### Complexity Budget
-Instead of per-function limits, allocate complexity budget per file that can be distributed across functions. Some functions can be complex if others are simple.
-
 ### Session Branches
 `warden session start` creates timestamped branch. Each `warden apply --commit` adds to it. `warden session merge` squashes and merges to main.
-
----
-
-## Not Doing
-
-- **VS Code Extension** — IDE lock-in, maintenance burden
-- **Markdown fallback parsing** — Enforce format discipline
-- **Watch mode** — Adds complexity, unclear benefit
 
 ---
 

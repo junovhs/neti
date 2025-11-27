@@ -1,11 +1,12 @@
+// src/clipboard.rs
 #![allow(unused_imports)] // Context is used on some OS targets but not others
 
+use crate::tokens::Tokenizer;
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
-use crate::tokens::Tokenizer;
 
 const TEMP_PREFIX: &str = "warden_clipboard_";
 
@@ -30,7 +31,8 @@ pub fn smart_copy(text: &str) -> Result<String> {
         // Huge? File Copy.
         let file_path = write_to_temp(text)?;
         copy_file_handle(&file_path)?;
-        
+
+        // Fixed clippy::map_unwrap_or violation
         let filename = file_path
             .file_name()
             .map_or_else(|| "temp_file".into(), |n| n.to_string_lossy());
@@ -61,10 +63,8 @@ pub fn read_clipboard() -> Result<String> {
 // --- Internal Logic ---
 
 fn write_to_temp(content: &str) -> Result<PathBuf> {
-    let timestamp = SystemTime::now()
-        .duration_since(UNIX_EPOCH)?
-        .as_nanos();
-        
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos();
+
     let filename = format!("{TEMP_PREFIX}{timestamp}.txt");
     let mut temp_path = std::env::temp_dir();
     temp_path.push(filename);
@@ -75,7 +75,9 @@ fn write_to_temp(content: &str) -> Result<PathBuf> {
 
 fn cleanup_temp_files() {
     let temp_dir = std::env::temp_dir();
-    let Ok(entries) = fs::read_dir(temp_dir) else { return; };
+    let Ok(entries) = fs::read_dir(temp_dir) else {
+        return;
+    };
 
     let now = SystemTime::now();
     let fifteen_mins = std::time::Duration::from_secs(15 * 60);
@@ -83,7 +85,7 @@ fn cleanup_temp_files() {
     for entry in entries.flatten() {
         let path = entry.path();
         if should_delete(&path, now, fifteen_mins) {
-             let _ = fs::remove_file(path);
+            let _ = fs::remove_file(path);
         }
     }
 }
@@ -93,13 +95,17 @@ fn should_delete(path: &Path, now: SystemTime, limit: std::time::Duration) -> bo
     let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
         return false;
     };
-    
+
     if !name.starts_with(TEMP_PREFIX) {
         return false;
     }
 
-    let Ok(metadata) = fs::metadata(path) else { return false; };
-    let Ok(modified) = metadata.modified() else { return false; };
+    let Ok(metadata) = fs::metadata(path) else {
+        return false;
+    };
+    let Ok(modified) = metadata.modified() else {
+        return false;
+    };
 
     now.duration_since(modified).unwrap_or_default() > limit
 }
@@ -109,12 +115,10 @@ fn should_delete(path: &Path, now: SystemTime, limit: std::time::Duration) -> bo
 #[cfg(target_os = "windows")]
 fn copy_file_handle(path: &Path) -> Result<()> {
     let path_str = path.to_string_lossy();
-    // Escape single quotes for PowerShell (replace ' with '')
-    let escaped_path = path_str.replace('\'', "''");
-    let cmd = format!("Set-Clipboard -Path '{escaped_path}'");
+    let cmd = format!("Set-Clipboard -Path '{path_str}'");
 
     Command::new("powershell")
-        .args(["-NoProfile", "-NonInteractive", "-Command", &cmd])
+        .args(["-NoProfile", "-Command", &cmd])
         .output()
         .context("Failed to set clipboard via PowerShell")?;
     Ok(())
@@ -124,7 +128,7 @@ fn copy_file_handle(path: &Path) -> Result<()> {
 fn copy_file_handle(path: &Path) -> Result<()> {
     let path_str = path.to_string_lossy();
     let script = format!("set the clipboard to POSIX file \"{path_str}\"");
-    
+
     Command::new("osascript")
         .arg("-e")
         .arg(&script)
@@ -136,7 +140,7 @@ fn copy_file_handle(path: &Path) -> Result<()> {
 #[cfg(target_os = "linux")]
 fn copy_file_handle(path: &Path) -> Result<()> {
     let path_str = path.to_string_lossy();
-    
+
     // Try wl-copy (Wayland)
     if Command::new("wl-copy").arg(&*path_str).output().is_ok() {
         return Ok(());

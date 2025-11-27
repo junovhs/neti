@@ -6,6 +6,7 @@ use std::fmt::Write;
 use std::fs;
 use std::path::PathBuf;
 
+use warden_core::clipboard;
 use warden_core::config::{Config, GitMode};
 use warden_core::enumerate::FileEnumerator;
 use warden_core::filter::FileFilter;
@@ -27,6 +28,8 @@ struct Cli {
     #[arg(long, short)]
     stdout: bool,
     #[arg(long, short)]
+    copy: bool, // <--- NEW FLAG
+    #[arg(long, short)]
     verbose: bool,
     #[arg(long)]
     git_only: bool,
@@ -44,7 +47,7 @@ fn main() -> Result<()> {
     let cli = Cli::parse();
     let config = setup_config(&cli)?;
 
-    if !cli.stdout {
+    if !cli.stdout && !cli.copy {
         println!("🧶 Knitting repository...");
     }
 
@@ -52,7 +55,7 @@ fn main() -> Result<()> {
     let content = generate_content(&files, &cli, &config)?;
     let token_count = Tokenizer::count(&content);
 
-    output_result(&content, token_count, cli.stdout)
+    output_result(&content, token_count, &cli)
 }
 
 fn setup_config(cli: &Cli) -> Result<Config> {
@@ -119,20 +122,30 @@ fn write_footer(ctx: &mut String, config: &Config) -> Result<()> {
     Ok(())
 }
 
-fn output_result(content: &str, tokens: usize, stdout: bool) -> Result<()> {
+fn output_result(content: &str, tokens: usize, cli: &Cli) -> Result<()> {
     let info = format!(
         "\n📊 Context Size: {} tokens",
         tokens.to_string().yellow().bold()
     );
 
-    if stdout {
+    if cli.stdout {
         print!("{content}");
         eprintln!("{info}");
-    } else {
-        fs::write("context.txt", content)?;
-        println!("✅ Generated 'context.txt'");
-        println!("{info}");
+        return Ok(());
     }
+
+    if cli.copy {
+        let msg = clipboard::smart_copy(content)?;
+        println!("{}", "✓ Copied to clipboard".green());
+        println!("  ({msg})"); // Shows "Copied as file attachment..." if large
+        println!("{info}");
+        return Ok(());
+    }
+
+    // Default: Write to file
+    fs::write("context.txt", content)?;
+    println!("✅ Generated 'context.txt'");
+    println!("{info}");
     Ok(())
 }
 
