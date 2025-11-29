@@ -27,6 +27,8 @@ These aren't style preferences. They're **containment protocols**.
 ---
 
 ## v0.5.0 — Bulletproof Apply
+- [x] **Roadmap Integration (warden roadmap)**
+  *Integrated as core module with state-transition logic*
 
 **Theme:** If it applies, it's valid. If it's invalid, it rejects hard.
 
@@ -46,7 +48,7 @@ These aren't style preferences. They're **containment protocols**.
   
   *Zero false positives. If Warden rejects, it was broken.*
 
-- [ ] **Robust Delimiter Protocol (Nabla Format)**
+- [x] **Robust Delimiter Protocol (Nabla Format)**
   Replace fragile XML with high-entropy Unicode fences:
   
       ∇∇∇ src/main.rs ∇∇∇

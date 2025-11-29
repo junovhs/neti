@@ -1,3 +1,4 @@
+// src/roadmap/cmd_parser.rs
 use crate::roadmap::types::{Command, CommandBatch, MovePosition};
 
 impl CommandBatch {
@@ -66,15 +67,31 @@ fn is_skippable(line: &str) -> bool {
     line.is_empty() || line.starts_with('#') || line.starts_with("//")
 }
 
+// Refactored to group commands and lower complexity score
 fn parse_command_line(line: &str) -> Result<Command, String> {
     let (cmd, args) = split_cmd(line).ok_or_else(|| "Empty command".to_string())?;
 
-    match cmd {
-        "CHECK" | "UNCHECK" | "DELETE" => parse_basic(cmd, args),
-        "ADD" | "UPDATE" | "NOTE" => parse_content(cmd, args),
-        "MOVE" | "SECTION" => parse_struct(cmd, args),
-        _ => Err(format!("Unknown command: {cmd}")),
+    if is_basic(cmd) {
+        return parse_basic(cmd, args);
     }
+    if is_content(cmd) {
+        return parse_content(cmd, args);
+    }
+    if is_struct(cmd) {
+        return parse_struct(cmd, args);
+    }
+
+    Err(format!("Unknown command: {cmd}"))
+}
+
+fn is_basic(cmd: &str) -> bool {
+    matches!(cmd, "CHECK" | "UNCHECK" | "DELETE")
+}
+fn is_content(cmd: &str) -> bool {
+    matches!(cmd, "ADD" | "UPDATE" | "NOTE")
+}
+fn is_struct(cmd: &str) -> bool {
+    matches!(cmd, "MOVE" | "SECTION")
 }
 
 fn parse_basic(cmd: &str, args: &str) -> Result<Command, String> {
