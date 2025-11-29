@@ -33,6 +33,8 @@ These aren't style preferences. They're **containment protocols**.
 - [x] **Pack copies file path to clipboard for attachment paste**
 - [x] **TypeScript auto-detection uses biome**
 - [x] **Integration tests for all features**
+- [x] **Unified Apply**
+  *Implemented: warden apply now scans for ===ROADMAP=== blocks*
   *Integrated as core module with state-transition logic*
 
 **Theme:** If it applies, it's valid. If it's invalid, it rejects hard.
@@ -77,6 +79,8 @@ These aren't style preferences. They're **containment protocols**.
 ---
 
 ## v0.6.0 — Context Intelligence
+- [x] **Smart Context (Focus Mode)**
+  *Implemented: warden pack <target> skeletonizes background files*
 
 **Theme:** The Map vs. Territory problem.
 
