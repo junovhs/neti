@@ -14,8 +14,9 @@ pub mod metrics;
 pub mod project;
 pub mod prompt;
 pub mod reporting;
+pub mod roadmap;
 pub mod rules;
-pub mod skeleton; // NEW
+pub mod skeleton;
 pub mod tokens;
 pub mod tui;
 pub mod types;

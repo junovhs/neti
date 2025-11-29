@@ -16,6 +16,7 @@ use warden_core::heuristics::HeuristicFilter;
 use warden_core::project;
 use warden_core::prompt::PromptGenerator;
 use warden_core::reporting;
+use warden_core::roadmap::cli::{handle_command, RoadmapCommand};
 use warden_core::rules::RuleEngine;
 use warden_core::tui::state::App;
 use warden_core::types::ScanReport;
@@ -41,6 +42,8 @@ enum Commands {
     Check,
     Fix,
     Apply,
+    #[command(subcommand)]
+    Roadmap(RoadmapCommand),
 }
 
 fn main() {
@@ -74,6 +77,7 @@ fn dispatch_subcommand(cmd: &Commands) -> Result<()> {
         Commands::Check => run_command("check"),
         Commands::Fix => run_command("fix"),
         Commands::Apply => handle_apply(),
+        Commands::Roadmap(cmd) => handle_command(cmd.clone()),
     }
 }
 
@@ -88,7 +92,7 @@ fn dispatch_default(ui: bool) -> Result<()> {
 fn handle_apply() -> Result<()> {
     let mut config = Config::new();
     config.load_local_config();
-    
+
     let ctx = ApplyContext::new(&config);
     let outcome = apply::run_apply(&ctx)?;
     apply::print_result(&outcome);

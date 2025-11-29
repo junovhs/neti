@@ -46,3 +46,4 @@ venv/
 # Ignore everything inside /target/release except binaries we care about
 !/target/release/saccade.exe
 !/target/release/gauntlet.exe
+chaos_examples/
