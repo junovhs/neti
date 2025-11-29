@@ -29,6 +29,9 @@ These aren't style preferences. They're **containment protocols**.
 ## v0.5.0 — Bulletproof Apply
 - [x] **Roadmap Integration (warden roadmap)**
 - [x] **Update README with roadmap docs**
+- [x] **Pack defaults to --prompt, --noprompt to disable**
+- [x] **Pack copies file path to clipboard for attachment paste**
+- [x] **TypeScript auto-detection uses biome**
   *Integrated as core module with state-transition logic*
 
 **Theme:** If it applies, it's valid. If it's invalid, it rejects hard.
@@ -70,7 +73,6 @@ These aren't style preferences. They're **containment protocols**.
   On success: `git add .` → auto-generate commit message → commit.
   
   *If it passes validation, commit it. Git is your undo.*
-
 ---
 
 ## v0.6.0 — The Contract Protocol
