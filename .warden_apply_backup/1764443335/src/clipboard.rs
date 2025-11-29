@@ -41,15 +41,7 @@ pub fn smart_copy(text: &str) -> Result<String> {
     }
 }
 
-/// Copies a file path to clipboard so it can be pasted as a file attachment.
-///
-/// # Errors
-/// Returns error if clipboard access fails.
-pub fn copy_file_path(path: &Path) -> Result<()> {
-    copy_file_handle(path)
-}
-
-/// Wrapper for backward compatibility. // warden:ignore
+/// Legacy wrapper for existing calls.
 ///
 /// # Errors
 /// Returns error if clipboard access fails.
@@ -144,24 +136,14 @@ fn copy_file_handle(path: &Path) -> Result<()> {
 #[cfg(target_os = "linux")]
 fn copy_file_handle(path: &Path) -> Result<()> {
     let path_str = path.to_string_lossy();
-    let uri = format!("file://{path_str}");
     
-    // Try wl-copy (Wayland) first with proper MIME type
-    if let Ok(mut child) = Command::new("wl-copy")
-        .args(["--type", "text/uri-list"])
-        .stdin(std::process::Stdio::piped())
-        .spawn()
-    {
-        if let Some(mut stdin) = child.stdin.take() {
-            use std::io::Write;
-            let _ = write!(stdin, "{uri}");
-        }
-        if child.wait().is_ok() {
-            return Ok(());
-        }
+    // Try wl-copy (Wayland)
+    if Command::new("wl-copy").arg(&*path_str).output().is_ok() {
+        return Ok(());
     }
 
-    // X11 fallback with xclip
+    // X11 fallback
+    let uri = format!("file://{path_str}");
     let mut child = Command::new("xclip")
         .args(["-selection", "clipboard", "-t", "text/uri-list", "-i"])
         .stdin(std::process::Stdio::piped())
