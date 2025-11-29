@@ -6,23 +6,24 @@ use tree_sitter::{Language, Parser, Query, QueryCursor};
 static SKELETONIZER: LazyLock<Skeletonizer> = LazyLock::new(Skeletonizer::new);
 
 struct Skeletonizer {
-    rust: Query,
-    python: Query,
-    javascript: Query,
+    rust_query: Query,
+    py_query: Query,
+    js_query: Query,
+    // go_query: Query, // Future
 }
 
 impl Skeletonizer {
     fn new() -> Self {
         Self {
-            rust: compile_query(
+            rust_query: compile_query(
                 tree_sitter_rust::language(),
                 "(function_item body: (block) @body)",
             ),
-            python: compile_query(
+            py_query: compile_query(
                 tree_sitter_python::language(),
                 "(function_definition body: (block) @body)",
             ),
-            javascript: compile_query(
+            js_query: compile_query(
                 tree_sitter_typescript::language_typescript(),
                 r"
                 (function_declaration body: (statement_block) @body)
@@ -37,17 +38,17 @@ impl Skeletonizer {
         match lang {
             "rs" => Some((
                 tree_sitter_rust::language(),
-                &self.rust,
+                &self.rust_query,
                 "{ ... }",
             )),
             "py" => Some((
                 tree_sitter_python::language(),
-                &self.python,
+                &self.py_query,
                 "...",
             )),
             "js" | "jsx" | "ts" | "tsx" => Some((
                 tree_sitter_typescript::language_typescript(),
-                &self.javascript,
+                &self.js_query,
                 "{ ... }",
             )),
             _ => None,

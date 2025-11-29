@@ -1,0 +1,5965 @@
+🛡️ SYSTEM MANDATE: THE WARDEN PROTOCOL
+ROLE: High-Integrity Systems Architect (NASA/JPL Standard).
+CONTEXT: You are coding inside a strict environment enforced by Warden.
+
+THE 3 LAWS (Non-Negotiable):
+
+1. LAW OF ATOMICITY
+   - Files: MUST be < 2000 tokens.
+   - Action: Split immediately if larger.
+
+2. LAW OF COMPLEXITY
+   - Cyclomatic Complexity: MUST be ≤ 8 per function.
+   - Nesting Depth: MUST be ≤ 3 levels.
+   - Function Arguments: MUST be ≤ 5 parameters.
+
+3. LAW OF PARANOIA
+   - Use Result<T, E> for I/O and fallible operations.
+   - NO .unwrap() or .expect() calls.
+
+OUTPUT FORMAT (MANDATORY):
+
+1. Explain the changes (Technical Plan) using NABLA PROTOCOL:
+   - Must start with "GOAL:"
+   - Must include "CHANGES:" list
+
+∇∇∇ PLAN ∇∇∇
+GOAL: Refactor authentication module.
+CHANGES:
+1. Extract user validation to new file.
+2. Update config parser.
+∆∆∆
+
+2. Declare the plan (Manifest) using NABLA PROTOCOL:
+
+∇∇∇ MANIFEST ∇∇∇
+path/to/file1.rs
+path/to/file2.rs [NEW]
+∆∆∆
+
+3. Provide EACH file using NABLA PROTOCOL:
+
+∇∇∇ path/to/file1.rs ∇∇∇
+[file content]
+∆∆∆
+
+RULES:
+- Do NOT use markdown code blocks (e.g. triple backticks) to wrap the file. The ∇∇∇ delimiters ARE the fence.
+- You MAY use markdown inside the file content.
+- Every file in the manifest MUST have a matching ∇∇∇ block.
+- Paths must match exactly.
+- Do NOT truncate files (No "// ...").
+
+
+═══════════════════════════════════════════════════════════════════
+BEGIN CODEBASE
+═══════════════════════════════════════════════════════════════════
+
+∇∇∇ .gitignore ∇∇∇
+# Rust build artifacts
+/target/
+/docs/
+/tests/
+/Cargo.lock
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# Generated AI pack and test fixtures
+ai-pack/
+tests/tmp/
+tmp/
+*.manifest.json
+
+# Editor/OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Git / OS cruft
+*~
+*.orig
+
+# Node / frontend extras
+node_modules/
+dist/
+build/
+coverage/
+.env
+
+# Python extras
+__pycache__/
+.venv/
+venv/
+
+# Repomix or AI output
+*.xml
+*.jsonl
+
+# Ignore everything inside /target/release except binaries we care about
+!/target/release/saccade.exe
+!/target/release/gauntlet.exe
+chaos_examples/
+
+∆∆∆
+
+∇∇∇ Cargo.toml ∇∇∇
+[package]
+name = "warden"
+version = "0.5.0"
+edition = "2021"
+
+[lib]
+name = "warden_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "warden"
+path = "src/bin/warden.rs"
+
+[dependencies]
+anyhow = "1.0"
+thiserror = "1.0"
+regex = "1.10"
+walkdir = "2.5"
+clap = { version = "4.5", features = ["derive"] }
+ignore = "0.4"
+colored = "2.1"
+rayon = "1.10"
+once_cell = "1.19"
+serde = { version = "1.0", features = ["derive"] }
+toml = "0.8"
+arboard = "3.4"
+
+# THE BRAINS
+tiktoken-rs = "0.5"
+
+# UI / TUI
+ratatui = "0.29"
+crossterm = "0.28"
+
+# Structural Parsing
+tree-sitter = "0.20"
+tree-sitter-rust = "0.20"
+tree-sitter-python = "0.20"
+tree-sitter-typescript = "0.20"
+tree-sitter-javascript = "0.20"
+
+[dev-dependencies]
+tempfile = "3.10"
+∆∆∆
+
+∇∇∇ LICENSE ∇∇∇
+MIT License
+
+Copyright (c) 2025 Spencer Nunamaker
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+∆∆∆
+
+∇∇∇ README.md ∇∇∇
+# 🛡️ Warden Protocol
+
+**Structural governance for AI-assisted development.**
+
+> *"The rules are like the seat belts in a car: Initially, using them is perhaps a little uncomfortable, but after a while, it becomes second nature, and not using them is unimaginable."*
+> — Gerard J. Holzmann, NASA/JPL
+
+Warden enforces **NASA "Power of 10" Rules** adapted for the AI coding era. It's not a style linter—it's a containment system that keeps AI-generated code verifiable, modular, and sane.
+
+    cargo install --path .
+
+---
+
+## The Problem
+
+You paste 50KB into Claude. It generates a 400-line function with 6 levels of nesting. Now you're debugging something neither you nor the AI can reason about.
+
+AI-generated code **drifts**:
+- Functions bloat
+- Complexity creeps
+- Context windows overflow
+- Hallucinations compound
+
+Warden stops this at the source.
+
+---
+
+## The 3 Laws
+
+### 1. Law of Atomicity
+Files must be **< 2000 tokens**.
+
+Small files fit in context windows. Small files are verifiable. Small files can be taken to an AI in isolation and brought back—they just slot in.
+
+### 2. Law of Complexity
+- **Cyclomatic Complexity:** ≤ 10 per function
+- **Nesting Depth:** ≤ 3 levels
+- **Function Arguments:** ≤ 5 parameters
+
+These aren't style preferences. They're **containment protocols**. Low complexity bounds the hallucination surface. Shallow nesting prevents AI losing track of scope.
+
+### 3. Law of Paranoia
+- No `.unwrap()` or `.expect()` (Rust)
+- Fallible operations must return `Result`
+
+The type system is your ally. Don't let AI lie to the compiler.
+
+---
+
+## The Dream
+
+Take any file to a fresh AI conversation. Work on it. Bring it back.
+
+**It slots in perfectly. Every time. Guaranteed.**
+
+This is the ultimate dream of Warden: modularity so strict that files become interchangeable, verifiable units.
+
+---
+
+## Quick Start
+
+    cd your-project
+    warden              # Scan for violations (auto-creates warden.toml)
+    warden pack --prompt # Generate context.txt for AI
+
+That's it. Warden detects your project type (Rust/Node/Python/Go) and configures itself.
+
+---
+
+## The Workflow
+
+Warden is a closed-loop system for AI development.
+
+### 1. Generate Context
+
+    warden pack --prompt
+
+Creates `context.txt` containing:
+- Your codebase (filtered, deduplicated)
+- The Warden Protocol system prompt
+- Current violations (AI sees what to fix)
+- Token count
+
+### 2. Chat with AI
+
+`context.txt` will be generated and applied to your clipboard. Paste the file into Claude/GPT/Gemini. Ask for changes.
+
+The AI responds with structured output:
+
+    ∇∇∇ src/lib.rs ∇∇∇
+    // complete file contents
+    ∆∆∆
+    
+    ∇∇∇ src/new_module.rs ∇∇∇
+    // complete file contents
+    ∆∆∆
+
+### 3. Apply Changes
+
+    warden apply
+
+This:
+- Extracts file blocks from clipboard
+- **Validates paths** (blocks traversal, sensitive files, hidden files)
+- **Rejects truncated output** (unbalanced braces, `// ...` markers)
+- **Rejects markdown artifacts** (no fenced code blocks in source)
+- Creates timestamped backup
+- Writes files atomically
+- On failure: copies AI-friendly error to clipboard
+
+### 4. Verify
+
+    warden          # Structural analysis
+    warden check    # Run your linter (clippy, biome, ruff)
+
+If violations exist, exit code is non-zero. CI-friendly.
+
+### 5. Iterate
+
+If `warden apply` fails, the error is already in your clipboard. Paste it back to AI, get corrected output, repeat.
+
+---
+
+## Commands
+
+### Core Analysis & Validation
+| Command | Description |
+|---------|-------------|
+| `warden` | Run structural scan (complexity, tokens, etc.) |
+| `warden --ui` | Interactive TUI dashboard |
+| `warden check` | Run configured linter (e.g., clippy, ruff) |
+| `warden fix` | Run configured formatter |
+
+### Context & Packaging
+| Command | Description |
+|---------|-------------|
+| `warden pack` | Generate `context.txt` from codebase |
+| `warden pack --prompt` | Include system prompt & violations |
+| `warden pack --skeleton` | Export structure only (signatures) |
+| `warden pack --git-only` | Only include files tracked by git |
+| `warden pack --stdout` | Output to stdout instead of file |
+
+### Application & Safety
+| Command | Description |
+|---------|-------------|
+| `warden apply` | Apply AI response from clipboard |
+| `warden apply --dry-run` | Validate output without writing to disk |
+
+### Roadmap Management
+| Command | Description |
+|---------|-------------|
+| `warden roadmap init` | Create new ROADMAP.md |
+| `warden roadmap prompt` | Copy AI teaching prompt to clipboard |
+| `warden roadmap apply` | Apply roadmap commands from clipboard |
+| `warden roadmap show` | Display roadmap status tree |
+| `warden roadmap tasks` | List tasks (filterable by pending/done) |
+
+### Utilities
+| Command | Description |
+|---------|-------------|
+| `warden --init` | Create/regenerate `warden.toml` |
+| `warden prompt` | Print system prompt only |
+| `warden prompt -c` | Copy system prompt to clipboard |
+
+---
+
+## Configuration
+
+Warden auto-generates `warden.toml` based on project type:
+
+**Rust:**
+
+    [rules]
+    max_file_tokens = 2000
+    max_cyclomatic_complexity = 5
+    max_nesting_depth = 2
+    
+    [commands]
+    check = "cargo clippy --all-targets -- -D warnings -D clippy::pedantic"
+    fix = "cargo fmt"
+
+**Node/TypeScript:**
+
+    [commands]
+    check = "npx @biomejs/biome check src/"
+    fix = "npx @biomejs/biome check --write src/"
+
+**Python:**
+
+    [commands]
+    check = "ruff check ."
+    fix = "ruff check --fix ."
+
+### Tuning Strictness
+
+Strict (for greenfield):
+
+    [rules]
+    max_file_tokens = 1500
+    max_cyclomatic_complexity = 4
+    max_nesting_depth = 2
+
+Relaxed (for legacy adoption):
+
+    [rules]
+    max_file_tokens = 3000
+    max_cyclomatic_complexity = 10
+    max_nesting_depth = 4
+
+---
+
+## Safety Features
+
+### Path Safety Validation
+
+Warden blocks dangerous paths before they touch disk:
+
+| Threat | Example | Status |
+|--------|---------|--------|
+| Directory traversal | `../etc/passwd` | Blocked |
+| Absolute paths | `/etc/passwd`, `C:\Windows` | Blocked |
+| Git internals | `.git/config` | Blocked |
+| Secrets | `.env`, `.ssh/`, `.aws/` | Blocked |
+| Hidden files | `.secrets`, `.private` | Blocked |
+
+### Truncation Detection
+
+AI output often gets cut off. Warden catches:
+- Unbalanced `{}`, `[]`, `()`
+- Truncation markers: `// ...`, `// rest of file`
+- Files ending mid-statement
+
+### Markdown Rejection
+
+Chat interfaces love to wrap code in fenced blocks. Warden rejects any file containing triple backticks or tildes—these corrupt source files.
+
+### Atomic Backups
+
+Before any write: `.warden_apply_backup/TIMESTAMP/`
+
+Your original files are always preserved.
+
+---
+
+## The Nabla Format
+
+XML tags get mangled by chat interfaces. Warden uses Unicode delimiters that never appear in real code:
+
+    ∇∇∇ path/to/file.rs ∇∇∇
+    fn main() {
+        println!("Hello");
+    }
+    ∆∆∆
+
+- `∇∇∇` (nabla) opens a file block
+- `∆∆∆` (delta) closes it
+- Never interpreted as HTML
+- Never rendered as markdown
+- Trivial to parse
+
+---
+
+## TUI Dashboard
+
+    warden --ui
+
+| Key | Action |
+|-----|--------|
+| `j/k` | Navigate files |
+| `s` | Cycle sort (name/size/errors) |
+| `f` | Toggle error filter |
+| `q` | Quit |
+
+---
+
+## Roadmap Management
+
+Warden includes AI-friendly roadmap management. Instead of AI rewriting your entire roadmap, it sends surgical commands.
+
+### The Workflow
+
+1. Run `warden roadmap prompt`
+2. Paste to AI, describe what changed
+3. AI responds with commands:
+```
+===ROADMAP===
+CHECK truncation-detection
+ADD v0.5.0 "New feature" AFTER truncation-detection
+NOTE auth-system "Needs refactor"
+===END===
+```
+
+4. Run `warden roadmap apply`
+
+### Commands
+
+| Command | Example |
+|---------|---------|
+| `CHECK` | `CHECK task-name` |
+| `UNCHECK` | `UNCHECK task-name` |
+| `ADD` | `ADD v0.1.0 "New task"` |
+| `ADD AFTER` | `ADD v0.1.0 "Task" AFTER other-task` |
+| `DELETE` | `DELETE old-task` |
+| `UPDATE` | `UPDATE task "New description"` |
+| `NOTE` | `NOTE task "Implementation note"` |
+
+Tasks are identified by slugified names. `Truncation detection` becomes `truncation-detection`.
+
+---
+
+## Coming Soon: The Contract Protocol
+
+AI will declare intent before writing code. Warden verifies the output matches.
+
+    ∇∇∇ CONTRACT ∇∇∇
+    GOAL: Refactor parser for clarity
+    
+    REFACTOR FN src/parser.rs:parse_header
+        ASSERT complexity <= 4
+        ASSERT depth <= 1
+    
+    CREATE STRUCT src/types.rs:Header
+        ASSERT public == true
+    
+    UPDATE FILE src/lib.rs
+        ASSERT tokens < 2000
+    ∆∆∆
+
+If AI hallucinates complex code or touches undeclared files, the contract fails. No human judgment needed—pass/fail.
+
+---
+
+## Why These Rules?
+
+For humans, complexity limits are debatable style choices.
+
+For AI, they're **containment protocols**:
+
+| Metric | Human Value | AI Value |
+|--------|-------------|----------|
+| Cyclomatic Complexity | Debatable | **Critical** - bounds hallucination surface |
+| Nesting Depth | Readability | **Critical** - AI loses scope tracking |
+| Function Length | Preference | **Critical** - attention degrades |
+| File Size | Organization | **Critical** - context economics |
+
+We don't enforce low complexity because it makes "better" code. We enforce it because it makes **verifiable** code.
+
+---
+
+## Languages
+
+Currently supported:
+- **Rust** - Full analysis (complexity, nesting, arity, safety)
+- **TypeScript/JavaScript** - Full analysis
+- **Python** - Full analysis
+- **Go** - Preliminary support
+
+Coming soon: C/C++, Java/Kotlin
+
+---
+
+## Philosophy
+
+Warden exists because AI-assisted development needs **constraints**, not suggestions.
+
+The original Power of 10 rules were for life-critical systems where bugs kill people. We're not building flight software—but we are building systems that must remain comprehensible through hundreds of AI-human iterations.
+
+**Principles:**
+
+1. **Reject bad input, don't fix it** — Warden is a gatekeeper, not a fixer.
+
+2. **Git is the undo system** — Don't reinvent version control.
+
+3. **Explicit > Magic** — If AI doesn't follow format, fail loudly.
+
+4. **Containment over craftsmanship** — For AI, constraints aren't style. They're safety.
+
+5. **Eat your own dogfood** — Warden enforces its own rules on its own codebase.
+
+---
+
+## Self-Hosting
+
+Warden is self-hosting. Run `warden` in this repo:
+
+    ✅ All Clear. Scanned 37586 tokens in 116ms.
+
+The tool passes its own rules.
+
+---
+
+## License
+
+MIT
+
+---
+
+## Links
+
+- [Roadmap](ROADMAP.md)
+- [NASA Power of 10 Rules](https://en.wikipedia.org/wiki/The_Power_of_10:_Rules_for_Developing_Safety-Critical_Code)
+
+---
+
+*Complexity is the enemy. Warden is the checkpoint.*
+∆∆∆
+
+∇∇∇ ROADMAP.md ∇∇∇
+# Warden Protocol Roadmap
+
+## Philosophy
+
+**The Two-Layer Model:**
+1. **Files** (~2k tokens) - The organizational unit. Right-sized for context windows.
+2. **Contracts** - The semantic unit. Machine-verifiable intent at symbol level.
+
+**Why Constraints Matter for AI:**
+- Cyclomatic complexity limits bound hallucination surface
+- Nesting depth limits prevent AI losing track of scope  
+- Function length limits fight attention degradation
+- File size limits respect context window economics
+
+These aren't style preferences. They're **containment protocols**.
+
+---
+
+## Current State: v0.4.1
+
+- [x] Core loop: knit → chat → apply → verify
+- [x] Self-hosting (Warden passes its own rules)
+- [x] Path safety validation (traversal, absolute, sensitive, hidden)
+- [x] Markdown block rejection
+- [x] Backup system
+
+---
+
+## v0.5.0 — Bulletproof Apply
+- [x] **Roadmap Integration (warden roadmap)**
+- [x] **Update README with roadmap docs**
+- [x] **Pack defaults to --prompt, --noprompt to disable**
+- [x] **Pack copies file path to clipboard for attachment paste**
+- [x] **TypeScript auto-detection uses biome**
+- [x] **Integration tests for all features**
+  *Integrated as core module with state-transition logic*
+
+**Theme:** If it applies, it's valid. If it's invalid, it rejects hard.
+
+### Validation Hardening
+
+- [x] **Path safety validation**
+  Blocks: `../` traversal, absolute paths, `.git/`, `.env`, `.ssh/`, `.aws/`, hidden files.
+
+- [x] **Markdown block rejection**
+  Rejects fenced code blocks in file content.
+
+- [x] **Truncation detection**
+  Reject obviously incomplete files:
+  - Unbalanced braces/brackets
+  - Truncation markers: `// ...`, `// rest of file`
+  - Zero false positives logic
+  - **Ignore Support**: `warden:ignore` bypasses checks for specific lines.
+
+- [x] **Robust Delimiter Protocol (Nabla Format)**
+  Replace fragile XML with high-entropy Unicode fences:
+  
+      ∇∇∇ src/main.rs ∇∇∇
+      fn main() {}
+      ∆∆∆
+  
+  Benefits:
+  - Never interpreted as HTML/Markdown
+  - Never appears in real code
+  - Trivial to regex
+  - AI can't confuse output with format
+
+### Workflow Enhancement
+
+- [x] **Error injection in knit**
+  When `knit --prompt` runs, append current violations.
+
+- [x] **`warden apply --commit`**
+  On success: `git add .` → auto-generate commit message → commit.
+  
+  *If it passes validation, commit it. Git is your undo.*
+---
+
+## v0.6.0 — Context Intelligence
+
+**Theme:** The Map vs. Territory problem.
+
+### The Skeletonizer
+
+Strip function bodies, keep signatures:
+
+    // Full (Territory)
+    pub fn process(data: &[u8]) -> Result<Output> {
+        let parsed = parse(data)?;
+        validate(&parsed)?;
+        transform(parsed)
+    }
+    
+    // Skeleton (Map)
+    pub fn process(data: &[u8]) -> Result<Output> { ... }
+
+- [ ] **`knit --skeleton`** - All files skeletonized
+- [ ] **`knit src/main.rs --smart`** - Full code for target + skeletons for rest
+
+### Dependency Graphing
+
+- [ ] Parse `mod`, `use`, `import`, `require` statements
+- [ ] Build local dependency graph
+- [ ] Auto-include dependencies in context
+
+---
+
+## v0.7.0 — Verification & Safety
+
+**Theme:** Beyond "it compiles."
+
+### Feature Anchors (Anti-Lobotomy)
+Prevent "accidental lobotomy" where AI refactors code and silently drops functionality.
+
+- **Concept:** Explicitly declare "This code implements Feature X".
+- **Mechanism:** `#[warden::feature("auth")]` attributes or `features.toml`.
+- **Enforcement:** If a registered feature anchor disappears or its associated tests vanish, Warden halts.
+- **Deprecation:** Explicit command `warden feature deprecate <name>` required to remove.
+
+### Property-Based Testing
+
+- [ ] **`warden gen-test <file>`**
+  AI writes property tests (proptest/hypothesis), not unit tests.
+  
+      "Assert invariants. What must ALWAYS be true?"
+
+### Function-Level Reporting
+
+    src/engine.rs
+    
+      fn process_batch() [Line 45]
+      ├─ Complexity: 14 (max 5)
+      ├─ Depth: 5 (max 2)
+      ├─ Contributing factors:
+      │   ├─ 3 nested ifs (lines 52, 58, 61)
+      │   └─ 2 complex match guards (lines 67, 89)
+      └─ Suggestion: Extract inner match
+
+### Incremental Scanning
+
+- [ ] Track file mtimes in `.warden_cache`
+- [ ] Use `git status` for changed files
+- [ ] Full rescan on config change
+
+---
+
+## v0.8.0 — Ecosystem
+
+**Theme:** CI/CD integration.
+
+- [ ] `warden --format json` - Machine-readable output
+- [ ] SARIF output for GitHub Code Scanning
+- [ ] `warden hook install` - Pre-commit hook
+- [ ] GitHub Action for PR checks
+- [ ] Documented exit codes
+
+---
+
+## v1.0.0 — Release
+
+- [ ] Published to crates.io
+- [ ] Homebrew formula
+- [ ] Scoop/Winget packages
+- [ ] Documentation site
+- [ ] Logo and branding
+
+---
+
+## Future
+
+### AI-Native Linting
+- Global state detection (`static mut`, singletons)
+- Impure function warnings (returns value, takes no args)
+- Deep inheritance check (> 1 level)
+
+### Metrics Dashboard
+SQLite backend. Complexity trends over time. Codebase health charts.
+
+### Session Branches
+`warden session start` → timestamped branch
+`warden apply --commit` → atomic commits
+`warden session merge` → squash to main
+
+---
+
+## Not Doing
+
+- **VS Code Extension** - IDE lock-in, maintenance burden
+- **Watch mode** - Complexity without clear benefit
+- **Markdown fallback parsing** - Enforce format discipline
+- **"Smart" fixing** - Warden rejects, doesn't repair
+
+---
+
+## Principles
+
+1. **Reject bad input, don't fix it**
+   Warden is a gatekeeper, not a fixer.
+
+2. **Git is the undo system**
+   Don't reinvent version control.
+
+3. **Explicit > Magic**
+   If AI doesn't follow format, fail loudly.
+
+4. **Containment over craftsmanship**
+   For AI, constraints aren't style—they're safety.
+
+5. **Eat your own dogfood**
+   Warden must pass its own rules.
+
+6. **The dream: perfect modularity**
+   Take any file to AI, bring it back, it slots in perfectly.
+   Contracts make this verifiable.
+
+∆∆∆
+
+∇∇∇ src/analysis/ast.rs ∇∇∇
+// src/analysis/ast.rs
+use super::checks::{self, CheckContext};
+use crate::config::RuleConfig;
+use crate::types::Violation;
+use tree_sitter::{Language, Parser, Query};
+
+pub struct Analyzer {
+    rust_naming: Query,
+    rust_complexity: Query,
+    rust_banned: Query,
+    js_naming: Query,
+    js_complexity: Query,
+    py_naming: Query,
+    py_complexity: Query,
+}
+
+impl Default for Analyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Analyzer {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            rust_naming: compile_query(
+                tree_sitter_rust::language(),
+                "(function_item name: (identifier) @name)",
+            ),
+            rust_complexity: compile_query(
+                tree_sitter_rust::language(),
+                r#"
+                (if_expression) @branch
+                (match_arm) @branch
+                (while_expression) @branch
+                (for_expression) @branch
+                (binary_expression operator: ["&&" "||"]) @branch
+            "#,
+            ),
+            rust_banned: compile_query(
+                tree_sitter_rust::language(),
+                r"(call_expression function: (field_expression field: (field_identifier) @method)) @call",
+            ),
+            js_naming: compile_query(
+                tree_sitter_typescript::language_typescript(),
+                r"
+                (function_declaration name: (identifier) @name)
+                (method_definition name: (property_identifier) @name)
+                (variable_declarator name: (identifier) @name value: [(arrow_function) (function_expression)])
+            ",
+            ),
+            js_complexity: compile_query(
+                tree_sitter_typescript::language_typescript(),
+                r#"
+                (if_statement) @branch
+                (for_statement) @branch
+                (for_in_statement) @branch
+                (while_statement) @branch
+                (do_statement) @branch
+                (switch_case) @branch
+                (catch_clause) @branch
+                (ternary_expression) @branch
+                (binary_expression operator: ["&&" "||" "??"]) @branch
+            "#,
+            ),
+            py_naming: compile_query(
+                tree_sitter_python::language(),
+                "(function_definition name: (identifier) @name)",
+            ),
+            py_complexity: compile_query(
+                tree_sitter_python::language(),
+                r"
+                (if_statement) @branch
+                (for_statement) @branch
+                (while_statement) @branch
+                (except_clause) @branch
+                (boolean_operator) @branch
+            ",
+            ),
+        }
+    }
+
+    #[must_use]
+    pub fn analyze(
+        &self,
+        lang: &str,
+        filename: &str,
+        content: &str,
+        config: &RuleConfig,
+    ) -> Vec<Violation> {
+        let Some(queries) = self.select_language(lang) else {
+            return vec![];
+        };
+        Self::run_analysis(&queries, filename, content, config)
+    }
+
+    fn select_language(&self, lang: &str) -> Option<LanguageQueries<'_>> {
+        match lang {
+            "rs" => Some(self.queries_rust()),
+            "js" | "jsx" | "ts" | "tsx" => Some(self.queries_js()),
+            "py" => Some(self.queries_python()),
+            _ => None,
+        }
+    }
+
+    fn queries_rust(&self) -> LanguageQueries<'_> {
+        LanguageQueries {
+            language: tree_sitter_rust::language(),
+            naming: &self.rust_naming,
+            complexity: &self.rust_complexity,
+            banned: Some(&self.rust_banned),
+        }
+    }
+
+    fn queries_js(&self) -> LanguageQueries<'_> {
+        LanguageQueries {
+            language: tree_sitter_typescript::language_typescript(),
+            naming: &self.js_naming,
+            complexity: &self.js_complexity,
+            banned: None,
+        }
+    }
+
+    fn queries_python(&self) -> LanguageQueries<'_> {
+        LanguageQueries {
+            language: tree_sitter_python::language(),
+            naming: &self.py_naming,
+            complexity: &self.py_complexity,
+            banned: None,
+        }
+    }
+
+    fn run_analysis(
+        queries: &LanguageQueries<'_>,
+        filename: &str,
+        content: &str,
+        config: &RuleConfig,
+    ) -> Vec<Violation> {
+        let mut parser = Parser::new();
+        if parser.set_language(queries.language).is_err() {
+            return vec![];
+        }
+
+        let Some(tree) = parser.parse(content, None) else {
+            return vec![];
+        };
+
+        let mut violations = Vec::new();
+        let ctx = CheckContext {
+            root: tree.root_node(),
+            source: content,
+            filename,
+            config,
+        };
+
+        checks::check_naming(&ctx, queries.naming, &mut violations);
+        checks::check_metrics(&ctx, queries.complexity, &mut violations);
+
+        if let Some(banned) = queries.banned {
+            checks::check_banned(&ctx, banned, &mut violations);
+        }
+
+        violations
+    }
+}
+
+struct LanguageQueries<'a> {
+    language: Language,
+    naming: &'a Query,
+    complexity: &'a Query,
+    banned: Option<&'a Query>,
+}
+
+fn compile_query(lang: Language, pattern: &str) -> Query {
+    match Query::new(lang, pattern) {
+        Ok(q) => q,
+        Err(e) => panic!("Invalid tree-sitter query pattern: {e}"),
+    }
+}
+∆∆∆
+
+∇∇∇ src/analysis/checks.rs ∇∇∇
+// src/analysis/checks.rs
+use super::metrics;
+use crate::config::RuleConfig;
+use crate::types::Violation;
+use tree_sitter::{Node, Query, QueryCursor, QueryMatch, TreeCursor};
+
+pub struct CheckContext<'a> {
+    pub root: Node<'a>,
+    pub source: &'a str,
+    pub filename: &'a str,
+    pub config: &'a RuleConfig,
+}
+
+/// Checks for naming violations (function name word count).
+pub fn check_naming(ctx: &CheckContext, query: &Query, out: &mut Vec<Violation>) {
+    if is_ignored(ctx.filename, &ctx.config.ignore_naming_on) {
+        return;
+    }
+
+    let mut cursor = QueryCursor::new();
+    for m in cursor.matches(query, ctx.root, ctx.source.as_bytes()) {
+        let node = m.captures[0].node;
+        let name = node.utf8_text(ctx.source.as_bytes()).unwrap_or("?");
+        let word_count = count_words(name);
+
+        if word_count > ctx.config.max_function_words {
+            out.push(Violation {
+                row: node.start_position().row,
+                message: format!(
+                    "Function '{name}' has {word_count} words (Max: {}). Is it doing too much?",
+                    ctx.config.max_function_words
+                ),
+                law: "LAW OF BLUNTNESS",
+            });
+        }
+    }
+}
+
+fn count_words(name: &str) -> usize {
+    if name.contains('_') {
+        name.split('_').count()
+    } else {
+        let caps = name.chars().filter(|c| c.is_uppercase()).count();
+        if name.chars().next().is_some_and(char::is_uppercase) {
+            caps
+        } else {
+            caps + 1
+        }
+    }
+}
+
+fn is_ignored(filename: &str, patterns: &[String]) -> bool {
+    patterns.iter().any(|p| filename.contains(p))
+}
+
+/// Checks for complexity metrics (arity, depth, cyclomatic complexity).
+pub fn check_metrics(ctx: &CheckContext, complexity_query: &Query, out: &mut Vec<Violation>) {
+    traverse_nodes(ctx, |node| {
+        let kind = node.kind();
+        if kind.contains("function") || kind.contains("method") {
+            validate_arity(node, ctx.config.max_function_args, out);
+            validate_depth(node, ctx.config.max_nesting_depth, out);
+            validate_complexity(
+                node,
+                ctx.source,
+                complexity_query,
+                ctx.config.max_cyclomatic_complexity,
+                out,
+            );
+        }
+    });
+}
+
+fn validate_arity(node: Node, max: usize, out: &mut Vec<Violation>) {
+    let args = metrics::count_arguments(node);
+    if args > max {
+        out.push(Violation {
+            row: node.start_position().row,
+            message: format!(
+                "High Arity: Function takes {args} arguments (Max: {max}). Use a Struct."
+            ),
+            law: "LAW OF COMPLEXITY",
+        });
+    }
+}
+
+fn validate_depth(node: Node, max: usize, out: &mut Vec<Violation>) {
+    let depth = metrics::calculate_max_depth(node);
+    if depth > max {
+        out.push(Violation {
+            row: node.start_position().row,
+            message: format!("Deep Nesting: Max depth is {depth} (Max: {max}). Extract logic."),
+            law: "LAW OF COMPLEXITY",
+        });
+    }
+}
+
+fn validate_complexity(
+    node: Node,
+    source: &str,
+    query: &Query,
+    max: usize,
+    out: &mut Vec<Violation>,
+) {
+    let score = metrics::calculate_complexity(node, source, query);
+    if score > max {
+        out.push(Violation {
+            row: node.start_position().row,
+            message: format!("High Complexity: Score is {score} (Max: {max}). Hard to test."),
+            law: "LAW OF COMPLEXITY",
+        });
+    }
+}
+
+/// Checks for banned constructs (`.unwrap()` and `.expect()` calls).
+pub fn check_banned(ctx: &CheckContext, banned_query: &Query, out: &mut Vec<Violation>) {
+    let mut cursor = QueryCursor::new();
+    let names = banned_query.capture_names();
+
+    for m in cursor.matches(banned_query, ctx.root, ctx.source.as_bytes()) {
+        process_banned_match(&m, names, ctx, out);
+    }
+}
+
+fn process_banned_match(
+    m: &QueryMatch,
+    names: &[String],
+    ctx: &CheckContext,
+    out: &mut Vec<Violation>,
+) {
+    let mut method_name: Option<&str> = None;
+    let mut row = 0;
+
+    for cap in m.captures {
+        let capture_name = &names[cap.index as usize];
+
+        if capture_name == "method" {
+            method_name = cap.node.utf8_text(ctx.source.as_bytes()).ok();
+        }
+        if capture_name == "call" {
+            row = cap.node.start_position().row;
+        }
+    }
+
+    if let Some(name) = method_name {
+        if name == "unwrap" || name == "expect" {
+            out.push(Violation {
+                row,
+                message: format!("Banned: '.{name}()'. Use '?' or 'unwrap_or'."),
+                law: "LAW OF PARANOIA",
+            });
+        }
+    }
+}
+
+fn traverse_nodes<F>(ctx: &CheckContext, mut cb: F)
+where
+    F: FnMut(Node),
+{
+    let mut cursor = ctx.root.walk();
+    loop {
+        cb(cursor.node());
+        if !advance_cursor(&mut cursor) {
+            break;
+        }
+    }
+}
+
+fn advance_cursor(cursor: &mut TreeCursor) -> bool {
+    if cursor.goto_first_child() {
+        return true;
+    }
+    while !cursor.goto_next_sibling() {
+        if !cursor.goto_parent() {
+            return false;
+        }
+    }
+    true
+}
+∆∆∆
+
+∇∇∇ src/analysis/metrics.rs ∇∇∇
+// src/analysis/metrics.rs
+use tree_sitter::{Node, Query, QueryCursor};
+
+/// Calculates the nesting depth of a node.
+#[must_use]
+pub fn calculate_max_depth(node: Node) -> usize {
+    let mut max_depth = 0;
+    let mut cursor = node.walk();
+
+    for child in node.children(&mut cursor) {
+        if child.kind().contains("block") || child.kind().contains("body") {
+            max_depth = std::cmp::max(max_depth, walk_depth(child, 0));
+        }
+    }
+    max_depth
+}
+
+fn walk_depth(node: Node, current: usize) -> usize {
+    let mut max = current;
+    let mut cursor = node.walk();
+
+    for child in node.children(&mut cursor) {
+        let kind = child.kind();
+        if matches!(
+            kind,
+            "if_expression"
+                | "match_expression"
+                | "for_expression"
+                | "while_expression"
+                | "loop_expression"
+                | "if_statement"
+                | "for_statement"
+                | "for_in_statement"
+                | "while_statement"
+                | "do_statement"
+                | "switch_case"
+                | "catch_clause"
+                | "try_statement"
+        ) {
+            max = std::cmp::max(max, walk_depth(child, current + 1));
+        } else {
+            max = std::cmp::max(max, walk_depth(child, current));
+        }
+    }
+    max
+}
+
+/// Calculates `McCabe` Cyclomatic Complexity.
+#[must_use]
+pub fn calculate_complexity(node: Node, source: &str, query: &Query) -> usize {
+    let mut cursor = QueryCursor::new();
+    let mut complexity = 1;
+    for _ in cursor.matches(query, node, source.as_bytes()) {
+        complexity += 1;
+    }
+    complexity
+}
+
+/// Counts named arguments/parameters.
+#[must_use]
+pub fn count_arguments(node: Node) -> usize {
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if child.kind().contains("parameter") || child.kind().contains("argument") {
+            return child.named_child_count();
+        }
+    }
+    0
+}
+∆∆∆
+
+∇∇∇ src/analysis/mod.rs ∇∇∇
+// src/analysis/mod.rs
+pub mod ast;
+pub mod checks;
+pub mod metrics;
+
+use crate::config::Config;
+use crate::tokens::Tokenizer;
+use crate::types::{FileReport, ScanReport, Violation};
+use ast::Analyzer;
+use rayon::prelude::*;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
+use std::time::Instant;
+
+static ANALYZER: LazyLock<Analyzer> = LazyLock::new(Analyzer::new);
+
+pub struct RuleEngine {
+    config: Config,
+}
+
+impl RuleEngine {
+    #[must_use]
+    pub fn new(config: Config) -> Self {
+        Self { config }
+    }
+
+    /// Scans a list of files and returns a structured report.
+    #[must_use]
+    pub fn scan(&self, files: Vec<PathBuf>) -> ScanReport {
+        let start = Instant::now();
+
+        let results: Vec<FileReport> = files
+            .into_par_iter()
+            .filter_map(|path| self.analyze_file(&path))
+            .collect();
+
+        let total_tokens = results.iter().map(|f| f.token_count).sum();
+        let total_violations = results.iter().map(|f| f.violations.len()).sum();
+
+        ScanReport {
+            files: results,
+            total_tokens,
+            total_violations,
+            duration_ms: start.elapsed().as_millis(),
+        }
+    }
+
+    fn analyze_file(&self, path: &Path) -> Option<FileReport> {
+        let content = fs::read_to_string(path).ok()?;
+
+        // Support C-style, Hash-style, and HTML-style (Markdown) ignores
+        if content.contains("// warden:ignore")
+            || content.contains("# warden:ignore")
+            || content.contains("<!-- warden:ignore -->")
+        {
+            return None;
+        }
+
+        let filename = path.to_string_lossy();
+        let token_count = Tokenizer::count(&content);
+        let mut violations = Vec::new();
+
+        // 1. Law of Atomicity (checked unless exempted)
+        if !self.is_exempt_from_tokens(&filename) && token_count > self.config.rules.max_file_tokens
+        {
+            violations.push(Violation {
+                row: 0,
+                message: format!(
+                    "File size is {token_count} tokens (Limit: {})",
+                    self.config.rules.max_file_tokens
+                ),
+                law: "LAW OF ATOMICITY",
+            });
+        }
+
+        // 2. AST Analysis (complexity, nesting, arity, banned calls)
+        if let Some(ext) = path.extension().and_then(|s| s.to_str()) {
+            let mut ast_violations = ANALYZER.analyze(ext, &filename, &content, &self.config.rules);
+            violations.append(&mut ast_violations);
+        }
+
+        Some(FileReport {
+            path: path.to_path_buf(),
+            token_count,
+            complexity_score: 0,
+            violations,
+        })
+    }
+
+    fn is_exempt_from_tokens(&self, filename: &str) -> bool {
+        self.config
+            .rules
+            .ignore_tokens_on
+            .iter()
+            .any(|pattern| filename.contains(pattern))
+    }
+}
+∆∆∆
+
+∇∇∇ src/apply/extractor.rs ∇∇∇
+// src/apply/extractor.rs
+use crate::apply::types::FileContent;
+use anyhow::Result;
+use regex::Regex;
+use std::collections::HashMap;
+
+/// Extracts the optional PLAN block.
+#[must_use]
+pub fn extract_plan(response: &str) -> Option<String> {
+    let open_re = Regex::new(r"(?m)^∇∇∇\s*PLAN\s*∇∇∇\s*$").ok()?;
+    let close_re = Regex::new(r"(?m)^∆∆∆\s*$").ok()?;
+
+    let start_match = open_re.find(response)?;
+    let end_match = close_re.find_at(response, start_match.end())?;
+
+    let content = &response[start_match.end()..end_match.start()];
+    Some(content.trim().to_string())
+}
+
+/// Extracts file blocks using the Robust Delimiter Protocol (Nabla Format).
+///
+/// Format:
+/// ∇∇∇ path/to/file.rs ∇∇∇
+/// [content]
+/// ∆∆∆
+///
+/// # Errors
+/// Returns error if regex compilation fails.
+pub fn extract_files(response: &str) -> Result<HashMap<String, FileContent>> {
+    let mut files = HashMap::new();
+    let header_re = Regex::new(r"(?m)^∇∇∇\s*(.+?)\s*∇∇∇\s*$")?;
+    let footer_re = Regex::new(r"(?m)^∆∆∆\s*$")?;
+
+    let mut current_pos = 0;
+
+    while let Some(header_match) = header_re.find_at(response, current_pos) {
+        current_pos = process_block(response, header_match, &footer_re, &mut files);
+    }
+
+    Ok(files)
+}
+
+fn process_block(
+    response: &str,
+    header_match: regex::Match,
+    footer_re: &Regex,
+    files: &mut HashMap<String, FileContent>,
+) -> usize {
+    let raw_path = header_match.as_str().replace('∇', "").trim().to_string();
+
+    // Skip MANIFEST and PLAN blocks (don't write them to disk)
+    if raw_path == "MANIFEST" || raw_path == "PLAN" {
+        return skip_block(response, header_match.end(), footer_re);
+    }
+
+    let content_start = header_match.end();
+
+    if let Some(footer_match) = footer_re.find_at(response, content_start) {
+        let content_end = footer_match.start();
+        let raw_content = &response[content_start..content_end];
+        let clean_content = clean_nabla_content(raw_content);
+        let line_count = clean_content.lines().count();
+
+        files.insert(
+            raw_path,
+            FileContent {
+                content: clean_content,
+                line_count,
+            },
+        );
+        footer_match.end()
+    } else {
+        // Malformed/Truncated block, skip head
+        content_start
+    }
+}
+
+fn skip_block(response: &str, start_pos: usize, footer_re: &Regex) -> usize {
+    if let Some(footer_match) = footer_re.find_at(response, start_pos) {
+        footer_match.end()
+    } else {
+        start_pos
+    }
+}
+
+fn clean_nabla_content(raw: &str) -> String {
+    // We want to remove the single leading newline that usually follows the header
+    // and the single trailing newline before the footer, but keep everything else.
+    let content = raw.trim_matches('\n');
+    content.to_string()
+}
+
+∆∆∆
+
+∇∇∇ src/apply/git.rs ∇∇∇
+// src/apply/git.rs
+use anyhow::{anyhow, Result};
+use std::process::Command;
+use colored::Colorize;
+
+/// Stages all files, commits with the plan, and pushes.
+///
+/// # Errors
+/// Returns error if git commands fail.
+pub fn commit_and_push(plan: Option<&str>) -> Result<()> {
+    // 1. Git Add All
+    // "I always use git add . at repo root"
+    run_git(&["add", "."])?;
+
+    // 2. Check if there are changes to commit
+    let status = Command::new("git").arg("status").arg("--porcelain").output()?;
+    if status.stdout.is_empty() {
+        println!("{}", "No changes to commit.".yellow());
+        return Ok(());
+    }
+
+    // 3. Construct Commit Message
+    let message = construct_message(plan);
+
+    // 4. Git Commit
+    run_git(&["commit", "-m", &message])?;
+    println!("{} {}", "Git Commit:".green(), message.lines().next().unwrap_or(""));
+
+    // 5. Git Push
+    print!("{}", "Pushing to remote... ".dimmed());
+    run_git(&["push"])?;
+    println!("{}", "Done.".green());
+
+    Ok(())
+}
+
+fn run_git(args: &[&str]) -> Result<()> {
+    let output = Command::new("git")
+        .args(args)
+        .output()?;
+
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(anyhow!("Git error: {err}"));
+    }
+    Ok(())
+}
+
+fn construct_message(plan: Option<&str>) -> String {
+    if let Some(p) = plan {
+        // We clean up the plan to make it a decent commit message
+        // Remove the "GOAL:" prefix if present, as it's redundant
+        let clean = p.replace("GOAL:", "").trim().to_string();
+        return clean;
+    }
+    "warden: automated update".to_string()
+}
+∆∆∆
+
+∇∇∇ src/apply/manifest.rs ∇∇∇
+// src/apply/manifest.rs
+use crate::apply::types::{ManifestEntry, Operation};
+use anyhow::Result;
+use regex::Regex;
+
+/// Parses the delivery manifest block.
+/// Supports both Legacy XML and Nabla Protocol.
+///
+/// # Errors
+/// Returns error if regex compilation fails.
+pub fn parse_manifest(response: &str) -> Result<Option<Vec<ManifestEntry>>> {
+    if let Some((start, end)) = find_nabla_manifest(response)? {
+        let block = &response[start..end];
+        let entries = parse_manifest_lines(block)?;
+        return Ok(Some(entries));
+    }
+
+    if let Some((start, end)) = find_legacy_manifest(response)? {
+        let block = &response[start..end];
+        let entries = parse_manifest_lines(block)?;
+        return Ok(Some(entries));
+    }
+
+    Ok(None)
+}
+
+fn find_nabla_manifest(response: &str) -> Result<Option<(usize, usize)>> {
+    // ∇∇∇ MANIFEST ∇∇∇
+    let open_re = Regex::new(r"∇∇∇\s*MANIFEST\s*∇∇∇")?;
+    // ∆∆∆
+    let close_re = Regex::new(r"∆∆∆")?;
+
+    let Some(start_match) = open_re.find(response) else {
+        return Ok(None);
+    };
+    
+    // Search for closer AFTER the opener
+    let Some(end_match) = close_re.find_at(response, start_match.end()) else {
+        return Ok(None);
+    };
+
+    Ok(Some((start_match.end(), end_match.start())))
+}
+
+fn find_legacy_manifest(response: &str) -> Result<Option<(usize, usize)>> {
+    let open_re = Regex::new(r"(?i)<delivery>")?;
+    let close_re = Regex::new(r"(?i)</delivery>")?;
+
+    let start_match = open_re.find(response);
+    let end_match = close_re.find(response);
+
+    match (start_match, end_match) {
+        (Some(s), Some(e)) => Ok(Some((s.end(), e.start()))),
+        _ => Ok(None),
+    }
+}
+
+fn parse_manifest_lines(block: &str) -> Result<Vec<ManifestEntry>> {
+    let list_marker_re = Regex::new(r"^\s*(?:[-*]|\d+\.)\s+")?;
+    let mut entries = Vec::new();
+
+    for line in block.lines() {
+        if let Some(entry) = parse_manifest_line(line, &list_marker_re) {
+            entries.push(entry);
+        }
+    }
+    Ok(entries)
+}
+
+fn parse_manifest_line(line: &str, marker_re: &Regex) -> Option<ManifestEntry> {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let clean_line = marker_re.replace(trimmed, "");
+    let clean_line_ref = clean_line.as_ref();
+
+    if clean_line_ref.trim().is_empty() {
+        return None;
+    }
+
+    let (path_raw, op) = parse_operation(clean_line_ref);
+    let final_path = extract_clean_path(&path_raw);
+
+    if final_path.is_empty() {
+        None
+    } else {
+        Some(ManifestEntry {
+            path: final_path,
+            operation: op,
+        })
+    }
+}
+
+fn parse_operation(line: &str) -> (String, Operation) {
+    let upper = line.to_uppercase();
+    if upper.contains("[NEW]") {
+        (
+            line.replace("[NEW]", "").replace("[new]", ""),
+            Operation::New,
+        )
+    } else if upper.contains("[DELETE]") {
+        (
+            line.replace("[DELETE]", "").replace("[delete]", ""),
+            Operation::Delete,
+        )
+    } else {
+        (line.to_string(), Operation::Update)
+    }
+}
+
+fn extract_clean_path(raw: &str) -> String {
+    raw.split_whitespace().next().unwrap_or(raw).to_string()
+}
+∆∆∆
+
+∇∇∇ src/apply/messages.rs ∇∇∇
+// src/apply/messages.rs
+use crate::apply::types::ApplyOutcome;
+use colored::Colorize;
+
+pub fn print_outcome(outcome: &ApplyOutcome) {
+    match outcome {
+        ApplyOutcome::Success {
+            written,
+            deleted,
+            backed_up,
+        } => print_success(written, deleted, *backed_up),
+        ApplyOutcome::ValidationFailure {
+            errors,
+            missing,
+            ai_message,
+        } => {
+            print_validation_errors(errors, missing);
+            print_ai_feedback(ai_message);
+        }
+        ApplyOutcome::ParseError(e) => println!("{}: {e}", "⚠️  Parse Error".red()),
+        ApplyOutcome::WriteError(e) => println!("{}: {e}", "💥 Write Error".red()),
+    }
+}
+
+fn print_success(written: &[String], deleted: &[String], backed_up: bool) {
+    println!("{}", "✅ Apply successful!".green().bold());
+    if backed_up {
+        println!("   (Backup created in .warden_apply_backup/)");
+    }
+    println!();
+    for file in written {
+        println!("   {} {file}", "✓".green());
+    }
+    for file in deleted {
+        println!("   {} {file}", "✗".red());
+    }
+    println!();
+    println!("Run {} to verify.", "warden check".yellow());
+}
+
+fn print_validation_errors(errors: &[String], missing: &[String]) {
+    println!("{}", "❌ Validation Failed".red().bold());
+
+    if !missing.is_empty() {
+        println!(
+            "{}",
+            "\nMissing Files (Declared but not provided):".yellow()
+        );
+        for f in missing {
+            println!("   - {f}");
+        }
+    }
+
+    if !errors.is_empty() {
+        println!("{}", "\nContent Errors:".yellow());
+        for e in errors {
+            println!("   - {e}");
+        }
+    }
+}
+
+fn print_ai_feedback(ai_message: &str) {
+    println!();
+    println!("{}", "📋 Paste this back to the AI:".cyan().bold());
+    println!("{}", "─".repeat(60).black());
+    println!("{ai_message}");
+    println!("{}", "─".repeat(60).black());
+
+    if crate::clipboard::copy_to_clipboard(ai_message).is_ok() {
+        println!("{}", "✓ Copied to clipboard".green());
+    }
+}
+
+#[must_use]
+pub fn format_ai_rejection(missing: &[String], errors: &[String]) -> String {
+    use std::fmt::Write;
+    let mut msg = String::from("The previous output was rejected by the Warden Protocol.\n\n");
+
+    if !missing.is_empty() {
+        msg.push_str("MISSING FILES (Declared in MANIFEST but not found in Nabla blocks):\n");
+        for f in missing {
+            let _ = writeln!(msg, "- {f}");
+        }
+        msg.push('\n');
+    }
+
+    if !errors.is_empty() {
+        msg.push_str("VALIDATION ERRORS:\n");
+        for e in errors {
+            let _ = writeln!(msg, "- {e}");
+        }
+        msg.push('\n');
+    }
+
+    msg.push_str(
+        "Please provide the missing or corrected files using the NABLA PROTOCOL (∇∇∇ ... ∆∆∆).",
+    );
+    msg
+}
+
+∆∆∆
+
+∇∇∇ src/apply/mod.rs ∇∇∇
+// src/apply/mod.rs
+pub mod extractor;
+pub mod git;
+pub mod manifest;
+pub mod messages;
+pub mod types;
+pub mod validator;
+pub mod writer;
+
+use crate::clipboard;
+use anyhow::{Context, Result};
+use colored::Colorize;
+use std::io::{self, Write};
+use std::process::Command;
+use types::{ApplyContext, ApplyOutcome, ExtractedFiles, Manifest};
+
+/// Runs the apply command logic.
+///
+/// # Errors
+/// Returns error if clipboard access fails.
+pub fn run_apply(ctx: &ApplyContext) -> Result<ApplyOutcome> {
+    let content = clipboard::read_clipboard().context("Failed to read clipboard")?;
+    process_input(&content, ctx)
+}
+
+pub fn print_result(outcome: &ApplyOutcome) {
+    messages::print_outcome(outcome);
+}
+
+/// Processes input content directly.
+///
+/// # Errors
+/// Returns error if extraction, write, or git operations fail.
+pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> {
+    if content.trim().is_empty() {
+        return Ok(ApplyOutcome::ParseError("Clipboard/Input is empty".to_string()));
+    }
+
+    let plan_opt = extractor::extract_plan(content);
+
+    if !ensure_consent(plan_opt.as_deref(), ctx)? {
+        return Ok(ApplyOutcome::ParseError("Operation cancelled by user.".to_string()));
+    }
+
+    let validation = validate_payload(content);
+    if !matches!(validation, ApplyOutcome::Success { .. }) {
+        return Ok(validation);
+    }
+
+    apply_and_verify(content, ctx, plan_opt.as_deref())
+}
+
+fn ensure_consent(plan: Option<&str>, ctx: &ApplyContext) -> Result<bool> {
+    let Some(p) = plan else {
+        if ctx.force || ctx.dry_run {
+            return Ok(true);
+        }
+        println!("{}", "⚠️  No PLAN block found. Proceed with caution.".yellow());
+        return confirm("Apply these changes without a plan?");
+    };
+
+    println!("{}", "📋 PROPOSED PLAN:".cyan().bold());
+    println!("{}", "─".repeat(50).dimmed());
+    println!("{}", p.trim());
+    println!("{}", "─".repeat(50).dimmed());
+
+    if ctx.force || ctx.dry_run {
+        return Ok(true);
+    }
+
+    validate_plan_structure(p);
+    confirm("Apply these changes?")
+}
+
+fn validate_payload(content: &str) -> ApplyOutcome {
+    let manifest = match parse_manifest_step(content) {
+        Ok(m) => m,
+        Err(e) => return ApplyOutcome::ParseError(e),
+    };
+
+    let extracted = match extract_files_step(content) {
+        Ok(e) => e,
+        Err(e) => return ApplyOutcome::ParseError(e),
+    };
+
+    validator::validate(&manifest, &extracted)
+}
+
+fn apply_and_verify(content: &str, ctx: &ApplyContext, plan: Option<&str>) -> Result<ApplyOutcome> {
+    let extracted = extractor::extract_files(content)?;
+    let manifest = manifest::parse_manifest(content)?.unwrap_or_default();
+
+    if ctx.dry_run {
+        return Ok(ApplyOutcome::Success {
+            written: vec!["(Dry Run) Files verified".to_string()],
+            deleted: vec![],
+            backed_up: false,
+        });
+    }
+
+    let outcome = writer::write_files(&manifest, &extracted, None)?;
+
+    verify_and_commit(&outcome, ctx, plan)?;
+    Ok(outcome)
+}
+
+fn verify_and_commit(outcome: &ApplyOutcome, ctx: &ApplyContext, plan: Option<&str>) -> Result<()> {
+    if !matches!(outcome, ApplyOutcome::Success { .. }) {
+        return Ok(());
+    }
+
+    if !verify_application(ctx)? {
+        println!("{}", "\n❌ Verification Failed. Changes applied but NOT committed.".red().bold());
+        println!("Fix the issues manually and then commit.");
+        return Ok(());
+    }
+
+    println!("{}", "\n✨ Verification Passed. Committing & Pushing...".green().bold());
+    if let Err(e) = git::commit_and_push(plan) {
+        eprintln!("{} Git operation failed: {e}", "⚠️".yellow());
+    }
+    Ok(())
+}
+
+fn verify_application(ctx: &ApplyContext) -> Result<bool> {
+    println!("{}", "\n🔍 Verifying changes...".blue().bold());
+
+    if let Some(cmd) = ctx.config.commands.get("check") {
+        if !run_check_command(cmd)? {
+            return Ok(false);
+        }
+    }
+
+    println!("Running structural scan...");
+    let status = Command::new("warden").status()?;
+    Ok(status.success())
+}
+
+fn run_check_command(cmd: &str) -> Result<bool> {
+    println!("Running check: {}", cmd.dimmed());
+    let parts: Vec<&str> = cmd.split_whitespace().collect();
+
+    let Some((prog, args)) = parts.split_first() else {
+        return Ok(true); // Empty command passes trivially
+    };
+
+    let status = Command::new(prog).args(args).status()?;
+    Ok(status.success())
+}
+
+fn validate_plan_structure(plan: &str) {
+    if !plan.contains("GOAL:") || !plan.contains("CHANGES:") {
+        println!("{}", "⚠️  Plan is unstructured (missing GOAL/CHANGES).".yellow());
+    }
+}
+
+fn confirm(prompt: &str) -> Result<bool> {
+    print!("{prompt} [y/N] ");
+    io::stdout().flush()?;
+    let mut input = String::new();
+    io::stdin().read_line(&mut input)?;
+    Ok(input.trim().eq_ignore_ascii_case("y"))
+}
+
+fn parse_manifest_step(content: &str) -> Result<Manifest, String> {
+    match manifest::parse_manifest(content) {
+        Ok(Some(m)) => Ok(m),
+        Ok(None) => Ok(Vec::new()),
+        Err(e) => Err(format!("Manifest Error: {e}")),
+    }
+}
+
+fn extract_files_step(content: &str) -> Result<ExtractedFiles, String> {
+    extractor::extract_files(content).map_err(|e| format!("Extraction Error: {e}"))
+}
+∆∆∆
+
+∇∇∇ src/apply/types.rs ∇∇∇
+// src/apply/types.rs
+use crate::config::Config;
+use std::collections::HashMap;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Operation {
+    Update,
+    New,
+    Delete,
+}
+
+#[derive(Debug, Clone)]
+pub struct ManifestEntry {
+    pub path: String,
+    pub operation: Operation,
+}
+
+#[derive(Debug, Clone)]
+pub struct FileContent {
+    pub content: String,
+    pub line_count: usize,
+}
+
+#[derive(Debug)]
+pub enum ApplyOutcome {
+    Success {
+        written: Vec<String>,
+        deleted: Vec<String>,
+        backed_up: bool,
+    },
+    ValidationFailure {
+        errors: Vec<String>,
+        missing: Vec<String>,
+        ai_message: String,
+    },
+    ParseError(String),
+    WriteError(String),
+}
+
+/// Context for the apply operation.
+/// Connects project config with runtime flags.
+pub struct ApplyContext<'a> {
+    pub config: &'a Config,
+    pub force: bool,   // Skips interactive confirmation (for tests/automation)
+    pub dry_run: bool, // Skips disk writes (for tests)
+}
+
+impl<'a> ApplyContext<'a> {
+    #[must_use]
+    pub fn new(config: &'a Config) -> Self {
+        Self {
+            config,
+            force: false,
+            dry_run: false,
+        }
+    }
+}
+
+// The manifest is just a list of entries
+pub type Manifest = Vec<ManifestEntry>;
+
+// The extracted files are mapped by path
+pub type ExtractedFiles = HashMap<String, FileContent>;
+∆∆∆
+
+∇∇∇ src/apply/validator.rs ∇∇∇
+// src/apply/validator.rs
+use crate::apply::messages;
+use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
+use regex::Regex;
+use std::sync::LazyLock;
+
+const SENSITIVE_PATHS: &[&str] = &[
+    ".git/",
+    ".env",
+    ".ssh/",
+    ".aws/",
+    ".gnupg/",
+    "id_rsa",
+    "id_ed25519",
+    "credentials",
+    ".warden_apply_backup/",
+];
+
+/// Compiled regex patterns for detecting lazy/truncated AI output.
+/// These are compile-time constant patterns; if any fail to compile,
+/// it's a programmer error that will surface immediately at first use.
+static LAZY_MARKERS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
+    [
+        // Matches "// ..."
+        r"^\s*//\s*\.{3,}\s*$",
+        // Matches "/* ... */"
+        r"^\s*/\*\s*\.{3,}\s*\*/\s*$",
+        // Matches phrases indicating omitted code.
+        // warden:ignore
+        r"(?i)^\s*//.*(rest of|remaining|existing|implement|logic here).*$",
+        // Matches Python style "# ..."
+        r"^\s*#\s*\.{3,}\s*$",
+    ]
+    .iter()
+    .filter_map(|pattern| match Regex::new(pattern) {
+        Ok(re) => Some(re),
+        Err(e) => {
+            eprintln!("Warning: Invalid lazy marker pattern '{pattern}': {e}");
+            None
+        }
+    })
+    .collect()
+});
+
+#[must_use]
+pub fn validate(manifest: &Manifest, extracted: &ExtractedFiles) -> ApplyOutcome {
+    let mut errors = Vec::new();
+    check_path_safety(extracted, &mut errors);
+
+    if !errors.is_empty() {
+        let ai_message = messages::format_ai_rejection(&[], &errors);
+        return ApplyOutcome::ValidationFailure {
+            errors,
+            missing: Vec::new(),
+            ai_message,
+        };
+    }
+
+    let missing = check_missing(manifest, extracted);
+    let content_errors = check_content(extracted);
+
+    if !missing.is_empty() || !content_errors.is_empty() {
+        let ai_message = messages::format_ai_rejection(&missing, &content_errors);
+        return ApplyOutcome::ValidationFailure {
+            errors: content_errors,
+            missing,
+            ai_message,
+        };
+    }
+
+    let written = extracted.keys().cloned().collect();
+    let deleted = manifest
+        .iter()
+        .filter(|e| e.operation == Operation::Delete)
+        .map(|e| e.path.clone())
+        .collect();
+
+    ApplyOutcome::Success {
+        written,
+        deleted,
+        backed_up: true,
+    }
+}
+
+fn check_path_safety(extracted: &ExtractedFiles, errors: &mut Vec<String>) {
+    for path in extracted.keys() {
+        validate_single_path(path, errors);
+    }
+}
+
+fn validate_single_path(path: &str, errors: &mut Vec<String>) {
+    if has_traversal(path) {
+        errors.push(format!(
+            "SECURITY: path contains directory traversal: {path}"
+        ));
+        return;
+    }
+
+    if is_absolute_path(path) {
+        errors.push(format!("SECURITY: absolute path not allowed: {path}"));
+        return;
+    }
+
+    if is_sensitive_path(path) {
+        errors.push(format!("SECURITY: sensitive path blocked: {path}"));
+        return;
+    }
+
+    if is_hidden_file(path) {
+        errors.push(format!("SECURITY: hidden file not allowed: {path}"));
+    }
+}
+
+fn has_traversal(path: &str) -> bool {
+    path.contains("../") || path.starts_with("..")
+}
+
+fn is_absolute_path(path: &str) -> bool {
+    if path.starts_with('/') {
+        return true;
+    }
+    // Windows drive letter check (e.g., C:\)
+    let bytes = path.as_bytes();
+    bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
+}
+
+fn is_sensitive_path(path: &str) -> bool {
+    let lower = path.to_lowercase();
+    SENSITIVE_PATHS.iter().any(|s| lower.contains(s))
+}
+
+fn is_hidden_file(path: &str) -> bool {
+    path.split('/')
+        .filter(|s| !s.is_empty())
+        .any(|seg| seg.starts_with('.') && seg != "." && seg != "..")
+}
+
+fn check_missing(manifest: &Manifest, extracted: &ExtractedFiles) -> Vec<String> {
+    manifest
+        .iter()
+        .filter(|entry| entry.operation != Operation::Delete)
+        .filter(|entry| !extracted.contains_key(&entry.path))
+        .map(|entry| entry.path.clone())
+        .collect()
+}
+
+fn check_content(extracted: &ExtractedFiles) -> Vec<String> {
+    let mut errors = Vec::new();
+    for (path, file) in extracted {
+        check_single_file(path, &file.content, &mut errors);
+    }
+    errors
+}
+
+fn check_single_file(path: &str, content: &str, errors: &mut Vec<String>) {
+    if content.trim().is_empty() {
+        errors.push(format!("{path} is empty"));
+        return;
+    }
+    check_lazy_truncation(path, content, errors);
+}
+
+fn check_lazy_truncation(path: &str, content: &str, errors: &mut Vec<String>) {
+    for (line_num, line) in content.lines().enumerate() {
+        // Allow explicit ignores for cases where code intentionally looks truncated
+        if line.contains("warden:ignore") {
+            continue;
+        }
+
+        for regex in LAZY_MARKERS.iter() {
+            if regex.is_match(line) {
+                errors.push(format!(
+                    "{path}:{}: Detected lazy truncation marker: '{}'. Full file required.",
+                    line_num + 1,
+                    line.trim()
+                ));
+            }
+        }
+    }
+}
+∆∆∆
+
+∇∇∇ src/apply/writer.rs ∇∇∇
+// src/apply/writer.rs
+use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
+use anyhow::{anyhow, Context, Result};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::time::{SystemTime, UNIX_EPOCH};
+
+const BACKUP_DIR: &str = ".warden_apply_backup";
+
+/// Writes changes (updates, new files, deletes) to disk.
+///
+/// # Errors
+/// Returns error if file system operations fail.
+pub fn write_files(
+    manifest: &Manifest,
+    files: &ExtractedFiles,
+    root: Option<&Path>,
+) -> Result<ApplyOutcome> {
+    let backup_path = create_backup(manifest, root)?;
+    let mut written = Vec::new();
+    let mut deleted = Vec::new();
+
+    for entry in manifest {
+        match entry.operation {
+            Operation::Delete => {
+                delete_file(&entry.path, root)?;
+                deleted.push(entry.path.clone());
+            }
+            Operation::Update | Operation::New => {
+                if let Some(file_data) = files.get(&entry.path) {
+                    write_single_file(&entry.path, &file_data.content, root)?;
+                    written.push(entry.path.clone());
+                }
+            }
+        }
+    }
+
+    Ok(ApplyOutcome::Success {
+        written,
+        deleted,
+        backed_up: backup_path.is_some(),
+    })
+}
+
+fn delete_file(path_str: &str, root: Option<&Path>) -> Result<()> {
+    let path = resolve_path(path_str, root);
+    if path.exists() {
+        fs::remove_file(&path).with_context(|| format!("Failed to delete {}", path.display()))?;
+    }
+    Ok(())
+}
+
+fn write_single_file(path_str: &str, content: &str, root: Option<&Path>) -> Result<()> {
+    let path = resolve_path(path_str, root);
+
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|e| anyhow!("Failed to create directory {}: {e}", parent.display()))?;
+    }
+    fs::write(&path, content).map_err(|e| anyhow!("Failed to write {}: {e}", path.display()))?;
+    Ok(())
+}
+
+fn resolve_path(path_str: &str, root: Option<&Path>) -> PathBuf {
+    match root {
+        Some(r) => r.join(path_str),
+        None => PathBuf::from(path_str),
+    }
+}
+
+fn create_backup(manifest: &Manifest, root: Option<&Path>) -> Result<Option<PathBuf>> {
+    let targets: Vec<&String> = manifest
+        .iter()
+        .map(|e| &e.path)
+        .filter(|p| resolve_path(p, root).exists())
+        .collect();
+
+    if targets.is_empty() {
+        return Ok(None);
+    }
+
+    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+    let root_path = root.map_or_else(|| PathBuf::from("."), Path::to_path_buf);
+    let backup_folder = root_path.join(BACKUP_DIR).join(timestamp.to_string());
+
+    fs::create_dir_all(&backup_folder).context("Failed to create backup directory")?;
+
+    for path_str in targets {
+        backup_single_file(path_str, &backup_folder, root)?;
+    }
+
+    Ok(Some(backup_folder))
+}
+
+fn backup_single_file(path_str: &str, backup_folder: &Path, root: Option<&Path>) -> Result<()> {
+    let src = resolve_path(path_str, root);
+    let dest = backup_folder.join(path_str);
+
+    if let Some(parent) = dest.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    fs::copy(&src, &dest).with_context(|| format!("Failed to backup {}", src.display()))?;
+    Ok(())
+}
+∆∆∆
+
+∇∇∇ src/bin/warden.rs ∇∇∇
+use anyhow::Result;
+use clap::{Parser, Subcommand};
+use colored::Colorize;
+use std::fs;
+use std::io;
+use std::path::Path;
+use std::process::{self, Command};
+
+use warden_core::analysis::RuleEngine;
+use warden_core::apply;
+use warden_core::apply::types::ApplyContext;
+use warden_core::config::Config;
+use warden_core::discovery;
+use warden_core::pack::{self, OutputFormat, PackOptions};
+use warden_core::project;
+use warden_core::prompt::PromptGenerator;
+use warden_core::reporting;
+use warden_core::roadmap::cli::{handle_command, RoadmapCommand};
+use warden_core::tui::state::App;
+use warden_core::types::ScanReport;
+
+#[derive(Parser)]
+#[command(name = "warden")]
+#[command(version)]
+#[command(about = "Code quality guardian", long_about = None)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+    #[arg(long)]
+    ui: bool,
+    #[arg(long)]
+    init: bool,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Prompt {
+        #[arg(long, short)]
+        copy: bool,
+    },
+    Check,
+    Fix,
+    Apply,
+    #[command(subcommand)]
+    Roadmap(RoadmapCommand),
+    Pack {
+        #[arg(long, short)]
+        stdout: bool,
+        #[arg(long, short)]
+        copy: bool,
+        /// Skip including the system prompt (prompt is included by default)
+        #[arg(long)]
+        noprompt: bool,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+        #[arg(long)]
+        skeleton: bool,
+        #[arg(long)]
+        git_only: bool,
+        #[arg(long)]
+        no_git: bool,
+        #[arg(long)]
+        code_only: bool,
+        #[arg(long, short)]
+        verbose: bool,
+    },
+}
+
+fn main() {
+    if let Err(e) = run() {
+        eprintln!("{} {e}", "error:".red().bold());
+        process::exit(1);
+    }
+}
+
+fn run() -> Result<()> {
+    let cli = Cli::parse();
+
+    if cli.init {
+        return init_config();
+    }
+
+    ensure_config_exists();
+    dispatch_command(&cli)
+}
+
+fn dispatch_command(cli: &Cli) -> Result<()> {
+    match &cli.command {
+        Some(cmd) => dispatch_subcommand(cmd),
+        None => dispatch_default(cli.ui),
+    }
+}
+
+fn dispatch_subcommand(cmd: &Commands) -> Result<()> {
+    match cmd {
+        Commands::Prompt { copy } => handle_prompt(*copy),
+        Commands::Check => run_command("check"),
+        Commands::Fix => run_command("fix"),
+        Commands::Apply => handle_apply(),
+        Commands::Roadmap(cmd) => handle_command(cmd.clone()),
+        Commands::Pack {
+            stdout,
+            copy,
+            noprompt,
+            format,
+            skeleton,
+            git_only,
+            no_git,
+            code_only,
+            verbose,
+        } => pack::run(&PackOptions {
+            stdout: *stdout,
+            copy: *copy,
+            prompt: !*noprompt,
+            format: format.clone(),
+            skeleton: *skeleton,
+            git_only: *git_only,
+            no_git: *no_git,
+            code_only: *code_only,
+            verbose: *verbose,
+        }),
+    }
+}
+
+fn dispatch_default(ui: bool) -> Result<()> {
+    if ui {
+        run_tui()
+    } else {
+        run_scan()
+    }
+}
+
+fn handle_apply() -> Result<()> {
+    let mut config = Config::new();
+    config.load_local_config();
+
+    let ctx = ApplyContext::new(&config);
+    let outcome = apply::run_apply(&ctx)?;
+    apply::print_result(&outcome);
+    Ok(())
+}
+
+fn ensure_config_exists() {
+    if Path::new("warden.toml").exists() {
+        return;
+    }
+    let content = project::generate_toml();
+    if fs::write("warden.toml", &content).is_ok() {
+        eprintln!("{}", "📝 Created warden.toml".dimmed());
+    }
+}
+
+fn init_config() -> Result<()> {
+    let content = project::generate_toml();
+    fs::write("warden.toml", &content)?;
+    println!("{}", "✓ Created warden.toml".green());
+    Ok(())
+}
+
+fn handle_prompt(copy: bool) -> Result<()> {
+    let mut config = Config::new();
+    config.load_local_config();
+    let gen = PromptGenerator::new(config.rules.clone());
+    let prompt = gen.generate()?;
+    if copy {
+        warden_core::clipboard::copy_to_clipboard(&prompt)?;
+        println!("{}", "✓ Copied to clipboard".green());
+    } else {
+        println!("{prompt}");
+    }
+    Ok(())
+}
+
+fn run_command(name: &str) -> Result<()> {
+    let mut config = Config::new();
+    config.load_local_config();
+
+    let Some(cmd_str) = config.commands.get(name) else {
+        eprintln!(
+            "{} No '{}' command configured in warden.toml",
+            "error:".red(),
+            name
+        );
+        process::exit(1);
+    };
+
+    println!("{} Running '{}': {}", "🚀".green(), name, cmd_str.dimmed());
+
+    let parts: Vec<&str> = cmd_str.split_whitespace().collect();
+    let (prog, args) = parts.split_first().unwrap_or((&"", &[]));
+
+    let status = Command::new(prog).args(args).status();
+
+    match status {
+        Ok(s) if s.success() => Ok(()),
+        Ok(s) => exit_with_code(s.code().unwrap_or(1)),
+        Err(e) => {
+            handle_exec_error(&e, prog);
+            process::exit(1);
+        }
+    }
+}
+
+fn exit_with_code(code: i32) -> Result<()> {
+    eprintln!("{} Command failed with exit code {code}", "❌".red());
+    process::exit(code);
+}
+
+fn handle_exec_error(e: &std::io::Error, prog: &str) {
+    if e.kind() == io::ErrorKind::NotFound {
+        eprintln!("{} Command not found: {prog}", "error:".red());
+        eprintln!("  Check that the program is installed and in PATH");
+    } else {
+        eprintln!("{} Failed to execute: {e}", "error:".red());
+    }
+}
+
+fn run_scan() -> Result<()> {
+    let config = load_config();
+    let files = discovery::discover(&config)?;
+    let report = scan_files(&config, files);
+
+    reporting::print_report(&report)?;
+
+    if report.has_errors() {
+        process::exit(1);
+    }
+    Ok(())
+}
+
+fn run_tui() -> Result<()> {
+    let config = load_config();
+    let files = discovery::discover(&config)?;
+    let report = scan_files(&config, files);
+    run_tui_with_report(report)
+}
+
+fn load_config() -> Config {
+    let mut config = Config::new();
+    config.load_local_config();
+    config
+}
+
+fn scan_files(config: &Config, files: Vec<std::path::PathBuf>) -> ScanReport {
+    RuleEngine::new(config.clone()).scan(files)
+}
+
+fn run_tui_with_report(report: ScanReport) -> Result<()> {
+    use crossterm::{
+        event::{DisableMouseCapture, EnableMouseCapture},
+        execute,
+        terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+    };
+    use ratatui::backend::CrosstermBackend;
+    use ratatui::Terminal;
+
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    let mut app = App::new(report);
+    let res = app.run(&mut terminal);
+
+    disable_raw_mode()?;
+    execute!(
+        terminal.backend_mut(),
+        LeaveAlternateScreen,
+        DisableMouseCapture
+    )?;
+    terminal.show_cursor()?;
+
+    res
+}
+∆∆∆
+
+∇∇∇ src/clipboard.rs ∇∇∇
+#![allow(unused_imports)] // Context is used on some OS targets but not others
+
+use anyhow::{Context, Result};
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
+use crate::tokens::Tokenizer;
+
+const TEMP_PREFIX: &str = "warden_clipboard_";
+
+// --- Public API ---
+
+/// Smartly copies text or file handles based on size.
+///
+/// # Errors
+/// Returns error if clipboard access fails or temp file creation fails.
+pub fn smart_copy(text: &str) -> Result<String> {
+    // 1. The Garbage Man: Clean up old artifacts first
+    cleanup_temp_files();
+
+    // 2. Check Size
+    let token_count = Tokenizer::count(text);
+
+    if token_count < 1500 {
+        // Small? Text Copy.
+        perform_copy(text)?;
+        Ok("Text copied to clipboard".to_string())
+    } else {
+        // Huge? File Copy.
+        let file_path = write_to_temp(text)?;
+        copy_file_handle(&file_path)?;
+        
+        let filename = file_path
+            .file_name()
+            .map_or_else(|| "temp_file".into(), |n| n.to_string_lossy());
+
+        Ok(format!(
+            "Large content ({token_count} tokens). Copied as file attachment: {filename}"
+        ))
+    }
+}
+
+/// Copies a file path to clipboard so it can be pasted as a file attachment.
+///
+/// # Errors
+/// Returns error if clipboard access fails.
+pub fn copy_file_path(path: &Path) -> Result<()> {
+    copy_file_handle(path)
+}
+
+/// Wrapper for backward compatibility. // warden:ignore
+///
+/// # Errors
+/// Returns error if clipboard access fails.
+pub fn copy_to_clipboard(text: &str) -> Result<()> {
+    let _ = smart_copy(text)?;
+    Ok(())
+}
+
+/// Reads text from the system clipboard.
+///
+/// # Errors
+/// Returns error if clipboard access fails.
+pub fn read_clipboard() -> Result<String> {
+    perform_read()
+}
+
+// --- Internal Logic ---
+
+fn write_to_temp(content: &str) -> Result<PathBuf> {
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)?
+        .as_nanos();
+        
+    let filename = format!("{TEMP_PREFIX}{timestamp}.txt");
+    let mut temp_path = std::env::temp_dir();
+    temp_path.push(filename);
+
+    fs::write(&temp_path, content)?;
+    Ok(temp_path)
+}
+
+fn cleanup_temp_files() {
+    let temp_dir = std::env::temp_dir();
+    let Ok(entries) = fs::read_dir(temp_dir) else { return; };
+
+    let now = SystemTime::now();
+    let fifteen_mins = std::time::Duration::from_secs(15 * 60);
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        if should_delete(&path, now, fifteen_mins) {
+             let _ = fs::remove_file(path);
+        }
+    }
+}
+
+// Helper to reduce cyclomatic complexity of cleanup_temp_files
+fn should_delete(path: &Path, now: SystemTime, limit: std::time::Duration) -> bool {
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    
+    if !name.starts_with(TEMP_PREFIX) {
+        return false;
+    }
+
+    let Ok(metadata) = fs::metadata(path) else { return false; };
+    let Ok(modified) = metadata.modified() else { return false; };
+
+    now.duration_since(modified).unwrap_or_default() > limit
+}
+
+// --- Platform Specifics (File Handles) ---
+
+#[cfg(target_os = "windows")]
+fn copy_file_handle(path: &Path) -> Result<()> {
+    let path_str = path.to_string_lossy();
+    // Escape single quotes for PowerShell (replace ' with '')
+    let escaped_path = path_str.replace('\'', "''");
+    let cmd = format!("Set-Clipboard -Path '{escaped_path}'");
+
+    Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &cmd])
+        .output()
+        .context("Failed to set clipboard via PowerShell")?;
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn copy_file_handle(path: &Path) -> Result<()> {
+    let path_str = path.to_string_lossy();
+    let script = format!("set the clipboard to POSIX file \"{path_str}\"");
+    
+    Command::new("osascript")
+        .arg("-e")
+        .arg(&script)
+        .output()
+        .context("Failed to set clipboard via osascript")?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn copy_file_handle(path: &Path) -> Result<()> {
+    let path_str = path.to_string_lossy();
+    let uri = format!("file://{path_str}");
+    
+    // Try wl-copy (Wayland) first with proper MIME type
+    if let Ok(mut child) = Command::new("wl-copy")
+        .args(["--type", "text/uri-list"])
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+    {
+        if let Some(mut stdin) = child.stdin.take() {
+            use std::io::Write;
+            let _ = write!(stdin, "{uri}");
+        }
+        if child.wait().is_ok() {
+            return Ok(());
+        }
+    }
+
+    // X11 fallback with xclip
+    let mut child = Command::new("xclip")
+        .args(["-selection", "clipboard", "-t", "text/uri-list", "-i"])
+        .stdin(std::process::Stdio::piped())
+        .spawn()?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        use std::io::Write;
+        write!(stdin, "{uri}")?;
+    }
+    child.wait()?;
+    Ok(())
+}
+
+// --- Platform Specifics (Text Read/Write) ---
+
+#[cfg(target_os = "macos")]
+fn perform_copy(text: &str) -> Result<()> {
+    use std::io::Write;
+    let mut child = Command::new("pbcopy")
+        .stdin(std::process::Stdio::piped())
+        .spawn()?;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(text.as_bytes())?;
+    }
+    child.wait()?;
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn perform_read() -> Result<String> {
+    let output = Command::new("pbpaste").output()?;
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+#[cfg(target_os = "linux")]
+fn perform_copy(text: &str) -> Result<()> {
+    use std::io::Write;
+    // Try xclip
+    if let Ok(mut child) = Command::new("xclip")
+        .args(["-selection", "clipboard", "-in"])
+        .stdin(std::process::Stdio::piped())
+        .spawn()
+    {
+        if let Some(mut stdin) = child.stdin.take() {
+            stdin.write_all(text.as_bytes())?;
+        }
+        child.wait()?;
+        return Ok(());
+    }
+
+    // Fallback to wl-copy
+    let mut child = Command::new("wl-copy")
+        .stdin(std::process::Stdio::piped())
+        .spawn()?;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(text.as_bytes())?;
+    }
+    child.wait()?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn perform_read() -> Result<String> {
+    if let Ok(output) = Command::new("xclip")
+        .args(["-selection", "clipboard", "-out"])
+        .output()
+    {
+        return Ok(String::from_utf8_lossy(&output.stdout).to_string());
+    }
+    let output = Command::new("wl-paste").output()?;
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn perform_copy(text: &str) -> Result<()> {
+    use std::io::Write;
+    let mut child = Command::new("clip")
+        .stdin(std::process::Stdio::piped())
+        .spawn()?;
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin.write_all(text.as_bytes())?;
+    }
+    child.wait()?;
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn perform_read() -> Result<String> {
+    let output = Command::new("powershell")
+        .args(["-command", "Get-Clipboard"])
+        .output()?;
+    Ok(String::from_utf8_lossy(&output.stdout).to_string())
+}
+∆∆∆
+
+∇∇∇ src/config.rs ∇∇∇
+// src/config.rs
+pub use crate::constants::{
+    BIN_EXT_PATTERN, CODE_BARE_PATTERN, CODE_EXT_PATTERN, PRUNE_DIRS, SECRET_PATTERN,
+};
+use crate::error::Result;
+use crate::project::{self, ProjectType};
+use regex::Regex;
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::fs;
+use std::path::Path;
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct RuleConfig {
+    #[serde(default = "default_max_tokens")]
+    pub max_file_tokens: usize,
+    #[serde(default = "default_max_complexity")]
+    pub max_cyclomatic_complexity: usize,
+    #[serde(default = "default_max_depth")]
+    pub max_nesting_depth: usize,
+    #[serde(default = "default_max_args")]
+    pub max_function_args: usize,
+    #[serde(default = "default_max_words")]
+    pub max_function_words: usize,
+    #[serde(default)]
+    pub ignore_naming_on: Vec<String>,
+    #[serde(default = "default_ignore_tokens")]
+    pub ignore_tokens_on: Vec<String>,
+}
+
+impl Default for RuleConfig {
+    fn default() -> Self {
+        Self {
+            max_file_tokens: default_max_tokens(),
+            max_cyclomatic_complexity: default_max_complexity(),
+            max_nesting_depth: default_max_depth(),
+            max_function_args: default_max_args(),
+            max_function_words: default_max_words(),
+            ignore_naming_on: Vec::new(),
+            ignore_tokens_on: default_ignore_tokens(),
+        }
+    }
+}
+
+const fn default_max_tokens() -> usize {
+    2000
+}
+const fn default_max_complexity() -> usize {
+    5
+}
+const fn default_max_depth() -> usize {
+    2
+}
+const fn default_max_args() -> usize {
+    5
+}
+const fn default_max_words() -> usize {
+    5
+}
+fn default_ignore_tokens() -> Vec<String> {
+    vec!["README.md".to_string(), "lock".to_string()]
+}
+
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct WardenToml {
+    #[serde(default)]
+    pub rules: RuleConfig,
+    #[serde(default)]
+    pub commands: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum GitMode {
+    Auto,
+    Yes,
+    No,
+}
+
+#[derive(Debug, Clone)]
+pub struct Config {
+    pub git_mode: GitMode,
+    pub include_patterns: Vec<Regex>,
+    pub exclude_patterns: Vec<Regex>,
+    pub code_only: bool,
+    pub verbose: bool,
+    pub rules: RuleConfig,
+    pub commands: HashMap<String, String>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Config {
+    #[must_use]
+    pub fn new() -> Self {
+        Self {
+            git_mode: GitMode::Auto,
+            include_patterns: Vec::new(),
+            exclude_patterns: Vec::new(),
+            code_only: false,
+            verbose: false,
+            rules: RuleConfig::default(),
+            commands: HashMap::new(),
+        }
+    }
+
+    /// Validates configuration.
+    /// # Errors
+    /// Currently always returns Ok.
+    pub fn validate(&self) -> Result<()> {
+        Ok(())
+    }
+
+    pub fn load_local_config(&mut self) {
+        self.load_ignore_file();
+        self.load_toml_config();
+        self.apply_project_defaults();
+    }
+
+    fn apply_project_defaults(&mut self) {
+        if self.commands.contains_key("check") {
+            return;
+        }
+        let defaults = project_defaults(ProjectType::detect());
+        for (k, v) in defaults {
+            self.commands.entry(k).or_insert(v);
+        }
+    }
+
+    fn load_ignore_file(&mut self) {
+        let Ok(content) = fs::read_to_string(".wardenignore") else {
+            return;
+        };
+        for line in content.lines() {
+            self.process_ignore_line(line);
+        }
+    }
+
+    fn process_ignore_line(&mut self, line: &str) {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.starts_with('#') {
+            return;
+        }
+        if let Ok(re) = Regex::new(trimmed) {
+            self.exclude_patterns.push(re);
+        }
+    }
+
+    fn load_toml_config(&mut self) {
+        if !Path::new("warden.toml").exists() {
+            return;
+        }
+        let Ok(content) = fs::read_to_string("warden.toml") else {
+            return;
+        };
+        self.parse_toml(&content);
+    }
+
+    fn parse_toml(&mut self, content: &str) {
+        let Ok(parsed) = toml::from_str::<WardenToml>(content) else {
+            return;
+        };
+        self.rules = parsed.rules;
+        self.commands = parsed.commands;
+    }
+}
+
+fn project_defaults(project: ProjectType) -> HashMap<String, String> {
+    let mut m = HashMap::new();
+    match project {
+        ProjectType::Rust => {
+            m.insert(
+                "check".into(),
+                "cargo clippy --all-targets -- -D warnings -D clippy::pedantic".into(),
+            );
+            m.insert("fix".into(), "cargo fmt".into());
+        }
+        ProjectType::Node => {
+            let npx = project::npx_cmd();
+            m.insert("check".into(), format!("{npx} @biomejs/biome check src/"));
+            m.insert(
+                "fix".into(),
+                format!("{npx} @biomejs/biome check --write src/"),
+            );
+        }
+        ProjectType::Python => {
+            m.insert("check".into(), "ruff check .".into());
+            m.insert("fix".into(), "ruff check --fix .".into());
+        }
+        ProjectType::Go => {
+            m.insert("check".into(), "go vet ./...".into());
+            m.insert("fix".into(), "go fmt ./...".into());
+        }
+        ProjectType::Unknown => {}
+    }
+    m
+}
+∆∆∆
+
+∇∇∇ src/constants.rs ∇∇∇
+// src/constants.rs
+//! Shared constants for file filtering and pattern matching.
+
+pub const PRUNE_DIRS: &[&str] = &[
+    ".git",
+    ".svn",
+    ".hg",
+    "node_modules",
+    "target",
+    "dist",
+    "build",
+    "out",
+    "gen",
+    ".venv",
+    "venv",
+    ".tox",
+    "__pycache__",
+    "coverage",
+    "vendor",
+    ".warden_apply_backup",
+];
+
+pub const PRUNE_FILES: &[&str] = &[
+    "Cargo.lock",
+    "package-lock.json",
+    "pnpm-lock.yaml",
+    "yarn.lock",
+    "bun.lockb",
+    "go.sum",
+    "Gemfile.lock",
+];
+
+pub const SKIP_DIRS: &[&str] = &["tests", "test", "spec", "docs", "examples", "fixtures"];
+
+pub const BIN_EXT_PATTERN: &str =
+    r"(?i)\.(png|jpg|gif|svg|ico|webp|woff2?|ttf|pdf|mp4|zip|gz|tar|exe|dll|so|dylib|class|pyc)$";
+
+pub const SECRET_PATTERN: &str =
+    r"(?i)(^\.?env(\..*)?$|/\.?env(\..*)?$|(^|/)(id_rsa|id_ed25519|.*\.(pem|p12|key|pfx))$)";
+
+pub const CODE_EXT_PATTERN: &str = r"(?i)\.(rs|go|py|js|jsx|ts|tsx|java|c|cpp|h|hpp|cs|php|rb|sh|sql|html|css|scss|json|toml|yaml|md)$";
+
+pub const CODE_BARE_PATTERN: &str = r"(?i)(Makefile|Dockerfile|CMakeLists\.txt)$";
+
+/// Checks if a directory name should be pruned during traversal.
+#[must_use]
+pub fn should_prune(name: &str) -> bool {
+    PRUNE_DIRS.contains(&name) || PRUNE_FILES.contains(&name) || SKIP_DIRS.contains(&name)
+}
+
+∆∆∆
+
+∇∇∇ src/detection.rs ∇∇∇
+// src/detection.rs
+use crate::error::Result;
+use std::collections::HashSet;
+use std::fmt;
+use std::path::Path;
+
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
+pub enum BuildSystemType {
+    Rust,
+    Node,
+    Python,
+    Go,
+    CMake,
+    Conan,
+}
+
+impl fmt::Display for BuildSystemType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{self:?}")
+    }
+}
+
+#[derive(Default)]
+pub struct Detector;
+
+impl Detector {
+    #[must_use]
+    pub fn new() -> Self {
+        Self
+    }
+
+    /// Detects build systems.
+    /// # Errors
+    /// Returns `Ok`.
+    pub fn detect_build_systems(
+        &self,
+        files: &[std::path::PathBuf],
+    ) -> Result<Vec<BuildSystemType>> {
+        let mut detected = HashSet::new();
+        for file in files {
+            check_file(file, &mut detected);
+        }
+        Ok(detected.into_iter().collect())
+    }
+}
+
+fn check_file(path: &Path, set: &mut HashSet<BuildSystemType>) {
+    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+        if check_cmake(path, set) {
+            return;
+        }
+        check_common(name, set);
+    }
+}
+
+fn check_cmake(path: &Path, set: &mut HashSet<BuildSystemType>) -> bool {
+    if path
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("cmake"))
+    {
+        set.insert(BuildSystemType::CMake);
+        return true;
+    }
+    false
+}
+
+const COMMON_CONFIGS: &[(&str, BuildSystemType)] = &[
+    ("Cargo.toml", BuildSystemType::Rust),
+    ("package.json", BuildSystemType::Node),
+    ("requirements.txt", BuildSystemType::Python),
+    ("pyproject.toml", BuildSystemType::Python),
+    ("Pipfile", BuildSystemType::Python),
+    ("go.mod", BuildSystemType::Go),
+    ("CMakeLists.txt", BuildSystemType::CMake),
+    ("conanfile.txt", BuildSystemType::Conan),
+    ("conanfile.py", BuildSystemType::Conan),
+];
+
+fn check_common(name: &str, set: &mut HashSet<BuildSystemType>) {
+    for (file, sys) in COMMON_CONFIGS {
+        if name == *file {
+            set.insert(*sys);
+            return;
+        }
+    }
+}
+
+∆∆∆
+
+∇∇∇ src/discovery.rs ∇∇∇
+// src/discovery.rs
+use crate::config::{
+    Config, GitMode, BIN_EXT_PATTERN, CODE_BARE_PATTERN, CODE_EXT_PATTERN, SECRET_PATTERN,
+};
+use crate::constants::should_prune;
+use crate::error::{Result, WardenError};
+use regex::Regex;
+use std::collections::HashMap;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::sync::LazyLock;
+use walkdir::WalkDir;
+
+/// Runs the full file discovery pipeline: Enumerate -> Heuristics -> Filter.
+///
+/// # Errors
+/// Returns error if git commands fail or regexes are invalid.
+pub fn discover(config: &Config) -> Result<Vec<PathBuf>> {
+    let raw_files = enumerate_files(config)?;
+    let heuristic_files = filter_heuristics(raw_files);
+    let final_files = filter_config(heuristic_files, config)?;
+    Ok(final_files)
+}
+
+// --- Enumeration ---
+
+fn enumerate_files(config: &Config) -> Result<Vec<PathBuf>> {
+    match config.git_mode {
+        GitMode::Yes => enumerate_git_required(),
+        GitMode::No => Ok(walk_filesystem(config.verbose)),
+        GitMode::Auto => Ok(enumerate_auto(config.verbose)),
+    }
+}
+
+fn enumerate_git_required() -> Result<Vec<PathBuf>> {
+    if !in_git_repo() {
+        return Err(WardenError::NotInGitRepo);
+    }
+    git_ls_files().map(filter_pruned)
+}
+
+fn enumerate_auto(verbose: bool) -> Vec<PathBuf> {
+    if in_git_repo() {
+        git_ls_files().map_or_else(|_| walk_filesystem(verbose), filter_pruned)
+    } else {
+        walk_filesystem(verbose)
+    }
+}
+
+fn walk_filesystem(verbose: bool) -> Vec<PathBuf> {
+    let walker = WalkDir::new(".")
+        .follow_links(false)
+        .into_iter()
+        .filter_entry(|e| !should_prune(&e.file_name().to_string_lossy()));
+
+    let (paths, error_count) = accumulate_walker(walker);
+    if error_count > 0 && verbose {
+        eprintln!("WARN: Encountered {error_count} errors during file walk");
+    }
+    paths
+}
+
+fn accumulate_walker<I>(walker: I) -> (Vec<PathBuf>, usize)
+where
+    I: Iterator<Item = walkdir::Result<walkdir::DirEntry>>,
+{
+    let mut paths = Vec::new();
+    let mut errors = 0;
+    for item in walker {
+        match item {
+            Ok(entry) => {
+                if entry.file_type().is_file() {
+                    let p = entry.path().strip_prefix(".").unwrap_or(entry.path());
+                    paths.push(p.to_path_buf());
+                }
+            }
+            Err(_) => errors += 1,
+        }
+    }
+    (paths, errors)
+}
+
+fn in_git_repo() -> bool {
+    Command::new("git")
+        .args(["rev-parse", "--is-inside-work-tree"])
+        .output()
+        .map(|o| o.status.success())
+        .unwrap_or(false)
+}
+
+fn git_ls_files() -> Result<Vec<PathBuf>> {
+    let out = Command::new("git")
+        .args(["ls-files", "-z", "-c", "-o", "--exclude-standard", "."])
+        .output()?;
+
+    if !out.status.success() {
+        return Err(WardenError::Other(format!(
+            "git ls-files failed: {}",
+            out.status
+        )));
+    }
+
+    let paths = out
+        .stdout
+        .split(|&b| b == 0)
+        .filter(|chunk| !chunk.is_empty())
+        .map(|chunk| PathBuf::from(String::from_utf8_lossy(chunk).as_ref()))
+        .collect();
+
+    Ok(paths)
+}
+
+fn filter_pruned(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    paths
+        .into_iter()
+        .filter(|p| !contains_pruned_component(p))
+        .collect()
+}
+
+fn contains_pruned_component(path: &Path) -> bool {
+    path.components()
+        .filter_map(|c| c.as_os_str().to_str())
+        .any(should_prune)
+}
+
+// --- Heuristics ---
+
+const MIN_TEXT_ENTROPY: f64 = 3.5;
+const MAX_TEXT_ENTROPY: f64 = 5.5;
+const BUILD_MARKERS: &[&str] = &[
+    "find_package",
+    "add_executable",
+    "target_link_libraries",
+    "cmake_minimum_required",
+    "project(",
+    "add-apt-repository",
+    "conanfile.py",
+    "dependency",
+    "require",
+    "include",
+    "import",
+];
+
+static CODE_EXT_RE: LazyLock<Option<Regex>> = LazyLock::new(|| Regex::new(CODE_EXT_PATTERN).ok());
+static CODE_BARE_RE: LazyLock<Option<Regex>> = LazyLock::new(|| Regex::new(CODE_BARE_PATTERN).ok());
+
+fn filter_heuristics(files: Vec<PathBuf>) -> Vec<PathBuf> {
+    files.into_iter().filter(|p| keep_heuristic(p)).collect()
+}
+
+fn keep_heuristic(path: &Path) -> bool {
+    let s = path.to_string_lossy();
+    if is_known_code(&s) {
+        return true;
+    }
+
+    let Ok(entropy) = calculate_entropy(path) else {
+        return false;
+    };
+    if (MIN_TEXT_ENTROPY..=MAX_TEXT_ENTROPY).contains(&entropy) {
+        return true;
+    }
+    has_build_markers(path)
+}
+
+fn is_known_code(path_str: &str) -> bool {
+    let ext = CODE_EXT_RE.as_ref().is_some_and(|r| r.is_match(path_str));
+    let bare = CODE_BARE_RE.as_ref().is_some_and(|r| r.is_match(path_str));
+    ext || bare
+}
+
+fn has_build_markers(path: &Path) -> bool {
+    let Ok(content) = fs::read_to_string(path) else {
+        return false;
+    };
+    let lower = content.to_lowercase();
+    BUILD_MARKERS.iter().any(|m| lower.contains(m))
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn calculate_entropy(path: &Path) -> std::io::Result<f64> {
+    let bytes = fs::read(path)?;
+    if bytes.is_empty() {
+        return Ok(0.0);
+    }
+    let mut freq = HashMap::new();
+    for &b in &bytes {
+        *freq.entry(b).or_insert(0) += 1;
+    }
+    let len = bytes.len() as f64;
+    Ok(freq
+        .values()
+        .fold(0.0, |acc, &n| acc - (f64::from(n) / len) * (f64::from(n) / len).log2()))
+}
+
+// --- Config Filter ---
+
+struct FilterContext<'a> {
+    config: &'a Config,
+    bin_re: Regex,
+    secret_re: Regex,
+    code_re: Option<Regex>,
+    bare_re: Option<Regex>,
+}
+
+fn filter_config(files: Vec<PathBuf>, config: &Config) -> Result<Vec<PathBuf>> {
+    let ctx = FilterContext {
+        config,
+        bin_re: Regex::new(BIN_EXT_PATTERN)?,
+        secret_re: Regex::new(SECRET_PATTERN)?,
+        code_re: if config.code_only {
+            Some(Regex::new(CODE_EXT_PATTERN)?)
+        } else {
+            None
+        },
+        bare_re: if config.code_only {
+            Some(Regex::new(CODE_BARE_PATTERN)?)
+        } else {
+            None
+        },
+    };
+
+    Ok(files
+        .into_iter()
+        .filter(|p| should_keep_config(p, &ctx))
+        .collect())
+}
+
+fn should_keep_config(path: &Path, ctx: &FilterContext) -> bool {
+    let s = path.to_string_lossy().replace('\\', "/");
+
+    if ctx.secret_re.is_match(&s)
+        || ctx.bin_re.is_match(&s)
+        || ctx.config.exclude_patterns.iter().any(|p| p.is_match(&s))
+    {
+        return false;
+    }
+
+    if ctx.config.code_only {
+        let is_code = ctx.code_re.as_ref().is_some_and(|r| r.is_match(&s))
+            || ctx.bare_re.as_ref().is_some_and(|r| r.is_match(&s));
+        if !is_code {
+            return false;
+        }
+    }
+
+    ctx.config.include_patterns.is_empty()
+        || ctx.config.include_patterns.iter().any(|p| p.is_match(&s))
+}
+∆∆∆
+
+∇∇∇ src/error.rs ∇∇∇
+// src/error.rs
+use std::path::PathBuf;
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum WardenError {
+    #[error("I/O error: {source} (path: {path})")]
+    Io {
+        source: std::io::Error,
+        path: PathBuf,
+    },
+
+    #[error("Not inside a Git repository")]
+    NotInGitRepo,
+
+    #[error("Regex error: {0}")]
+    Regex(#[from] regex::Error),
+
+    #[error("Generic error: {0}")]
+    Other(String),
+}
+
+pub type Result<T> = std::result::Result<T, WardenError>;
+
+// Allow `?` on std::io::Error by converting to WardenError::Io with unknown path.
+impl From<std::io::Error> for WardenError {
+    fn from(source: std::io::Error) -> Self {
+        WardenError::Io {
+            source,
+            path: PathBuf::from("<unknown>"),
+        }
+    }
+}
+
+// Gracefully convert WalkDir errors
+impl From<walkdir::Error> for WardenError {
+    fn from(e: walkdir::Error) -> Self {
+        WardenError::Other(e.to_string())
+    }
+}
+
+∆∆∆
+
+∇∇∇ src/lib.rs ∇∇∇
+// src/lib.rs
+pub mod analysis;
+pub mod apply;
+pub mod clipboard;
+pub mod config;
+pub mod constants;
+pub mod discovery;
+pub mod error;
+pub mod pack;
+pub mod project;
+pub mod prompt;
+pub mod reporting;
+pub mod roadmap;
+pub mod skeleton;
+pub mod tokens;
+pub mod tui;
+pub mod types;
+
+// Legacy/Test compatibility aliases
+pub use analysis as rules;
+∆∆∆
+
+∇∇∇ src/pack.rs ∇∇∇
+// src/pack.rs
+use crate::analysis::RuleEngine;
+use crate::clipboard;
+use crate::config::{Config, GitMode};
+use crate::discovery;
+use crate::prompt::PromptGenerator;
+use crate::skeleton;
+use crate::tokens::Tokenizer;
+use anyhow::Result;
+use clap::ValueEnum;
+use colored::Colorize;
+use std::fmt::Write;
+use std::fs;
+use std::path::PathBuf;
+
+#[derive(Debug, Clone, ValueEnum)]
+pub enum OutputFormat {
+    Text,
+    Xml,
+}
+
+#[allow(clippy::struct_excessive_bools)]
+pub struct PackOptions {
+    pub stdout: bool,
+    pub copy: bool,
+    pub verbose: bool,
+    pub prompt: bool,
+    pub format: OutputFormat,
+    pub skeleton: bool,
+    pub git_only: bool,
+    pub no_git: bool,
+    pub code_only: bool,
+}
+
+/// Entry point for the pack command.
+///
+/// # Errors
+/// Returns error if:
+/// - Configuration loading fails
+/// - File discovery fails
+/// - Content generation fails
+/// - Clipboard access fails (if --copy is used)
+/// - File writing fails
+pub fn run(options: &PackOptions) -> Result<()> {
+    let config = setup_config(options)?;
+
+    if !options.stdout && !options.copy {
+        println!("🧶 Knitting repository...");
+    }
+
+    let files = discovery::discover(&config)?;
+    if options.verbose {
+        eprintln!("📦 Packing {} files...", files.len());
+    }
+
+    let content = generate_content(&files, options, &config)?;
+    let token_count = Tokenizer::count(&content);
+
+    output_result(&content, token_count, options)
+}
+
+fn setup_config(opts: &PackOptions) -> Result<Config> {
+    let mut config = Config::new();
+    config.verbose = opts.verbose;
+    config.code_only = opts.code_only;
+    config.git_mode = if opts.git_only {
+        GitMode::Yes
+    } else if opts.no_git {
+        GitMode::No
+    } else {
+        GitMode::Auto
+    };
+    config.load_local_config();
+    config.validate()?;
+    Ok(config)
+}
+
+fn generate_content(files: &[PathBuf], opts: &PackOptions, config: &Config) -> Result<String> {
+    let mut ctx = String::with_capacity(100_000);
+
+    if opts.prompt {
+        write_header(&mut ctx, config)?;
+        inject_violations(&mut ctx, files, config)?;
+    }
+
+    write_body(files, &mut ctx, opts)?;
+
+    if opts.prompt {
+        write_footer(&mut ctx, config)?;
+    }
+
+    Ok(ctx)
+}
+
+fn inject_violations(ctx: &mut String, files: &[PathBuf], config: &Config) -> Result<()> {
+    let engine = RuleEngine::new(config.clone());
+    let report = engine.scan(files.to_vec());
+
+    if !report.has_errors() {
+        return Ok(());
+    }
+
+    writeln!(
+        ctx,
+        "═══════════════════════════════════════════════════════════════════"
+    )?;
+    writeln!(ctx, "⚠️  ACTIVE VIOLATIONS (PRIORITY FIX REQUIRED)")?;
+    writeln!(
+        ctx,
+        "═══════════════════════════════════════════════════════════════════\n"
+    )?;
+
+    for file in report.files {
+        if file.is_clean() {
+            continue;
+        }
+        for v in file.violations {
+            writeln!(ctx, "FILE: {}", file.path.display())?;
+            writeln!(ctx, "LAW:  {}", v.law)?;
+            writeln!(ctx, "LINE: {}", v.row + 1)?;
+            writeln!(ctx, "ERR:  {}", v.message)?;
+            writeln!(ctx, "{}", "─".repeat(40))?;
+        }
+    }
+    writeln!(ctx)?;
+
+    Ok(())
+}
+
+fn write_body(files: &[PathBuf], ctx: &mut String, opts: &PackOptions) -> Result<()> {
+    match opts.format {
+        OutputFormat::Text => pack_nabla(files, ctx, opts.skeleton),
+        OutputFormat::Xml => pack_xml(files, ctx, opts.skeleton),
+    }
+}
+
+fn write_header(ctx: &mut String, config: &Config) -> Result<()> {
+    let gen = PromptGenerator::new(config.rules.clone());
+    writeln!(ctx, "{}", gen.wrap_header()?)?;
+    writeln!(ctx, "\n═══════════════════════════════════════════════════════════════════\nBEGIN CODEBASE\n═══════════════════════════════════════════════════════════════════\n")?;
+    Ok(())
+}
+
+fn write_footer(ctx: &mut String, config: &Config) -> Result<()> {
+    let gen = PromptGenerator::new(config.rules.clone());
+    writeln!(ctx, "\n═══════════════════════════════════════════════════════════════════\nEND CODEBASE\n═══════════════════════════════════════════════════════════════════\n")?;
+    writeln!(ctx, "{}", gen.generate_reminder()?)?;
+    Ok(())
+}
+
+fn output_result(content: &str, tokens: usize, opts: &PackOptions) -> Result<()> {
+    let info = format!(
+        "\n📊 Context Size: {} tokens",
+        tokens.to_string().yellow().bold()
+    );
+
+    if opts.stdout {
+        print!("{content}");
+        eprintln!("{info}");
+        return Ok(());
+    }
+
+    if opts.copy {
+        let msg = clipboard::smart_copy(content)?;
+        println!("{}", "✓ Copied to clipboard".green());
+        println!("  ({msg})");
+        println!("{info}");
+        return Ok(());
+    }
+
+    // Default: Write to file and copy file path to clipboard
+    let output_path = PathBuf::from("context.txt");
+    fs::write(&output_path, content)?;
+    println!("✅ Generated 'context.txt'");
+
+    // Copy file path to clipboard for drag-drop style paste
+    if let Ok(abs_path) = fs::canonicalize(&output_path) {
+        if clipboard::copy_file_path(&abs_path).is_ok() {
+            println!(
+                "{}",
+                "📎 File path copied to clipboard (paste as attachment)".cyan()
+            );
+        }
+    }
+
+    println!("{info}");
+    Ok(())
+}
+
+fn pack_nabla(files: &[PathBuf], out: &mut String, skeleton: bool) -> Result<()> {
+    for path in files {
+        let p_str = path.to_string_lossy().replace('\\', "/");
+        writeln!(out, "∇∇∇ {p_str} ∇∇∇")?;
+
+        match fs::read_to_string(path) {
+            Ok(content) => {
+                if skeleton {
+                    out.push_str(&skeleton::clean(path, &content));
+                } else {
+                    out.push_str(&content);
+                }
+            }
+            Err(e) => writeln!(out, "// <ERROR READING FILE: {e}>")?,
+        }
+        writeln!(out, "\n∆∆∆\n")?;
+    }
+    Ok(())
+}
+
+fn pack_xml(files: &[PathBuf], out: &mut String, skeleton: bool) -> Result<()> {
+    writeln!(out, "<documents>")?;
+    for path in files {
+        let p_str = path.to_string_lossy().replace('\\', "/");
+        writeln!(out, "  <document path=\"{p_str}\"><![CDATA[")?;
+
+        match fs::read_to_string(path) {
+            Ok(content) => {
+                if skeleton {
+                    out.push_str(
+                        &skeleton::clean(path, &content).replace("]]>", "]]]]><![CDATA[>"),
+                    );
+                } else {
+                    out.push_str(&content.replace("]]>", "]]]]><![CDATA[>"));
+                }
+            }
+            Err(e) => writeln!(out, "<!-- ERROR: {e} -->")?,
+        }
+        writeln!(out, "]]></document>")?;
+    }
+    writeln!(out, "</documents>")?;
+    Ok(())
+}
+∆∆∆
+
+∇∇∇ src/project.rs ∇∇∇
+// src/project.rs
+use std::path::Path;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ProjectType {
+    Rust,
+    Node,
+    Python,
+    Go,
+    Unknown,
+}
+
+impl ProjectType {
+    #[must_use]
+    pub fn detect() -> Self {
+        if Path::new("Cargo.toml").exists() {
+            return Self::Rust;
+        }
+        if Path::new("package.json").exists() {
+            return Self::Node;
+        }
+        if Path::new("pyproject.toml").exists()
+            || Path::new("requirements.txt").exists()
+            || Path::new("Pipfile").exists()
+        {
+            return Self::Python;
+        }
+        if Path::new("go.mod").exists() {
+            return Self::Go;
+        }
+        Self::Unknown
+    }
+
+    /// Detects if this is a TypeScript project
+    #[must_use]
+    pub fn is_typescript() -> bool {
+        Path::new("tsconfig.json").exists()
+            || Path::new("tsconfig.node.json").exists()
+            || has_ts_files()
+    }
+}
+
+fn has_ts_files() -> bool {
+    Path::new("src")
+        .read_dir()
+        .map(|entries| {
+            entries.flatten().any(|e| {
+                e.path()
+                    .extension()
+                    .is_some_and(|ext| ext == "ts" || ext == "tsx")
+            })
+        })
+        .unwrap_or(false)
+}
+
+#[must_use]
+pub fn generate_toml() -> String {
+    let project = ProjectType::detect();
+    let rules = rules_section();
+    let commands = commands_section(project);
+
+    format!("# warden.toml\n{rules}\n\n{commands}\n")
+}
+
+fn rules_section() -> String {
+    r#"[rules]
+max_file_tokens = 2000
+max_cyclomatic_complexity = 8
+max_nesting_depth = 3
+max_function_args = 5
+max_function_words = 5
+ignore_naming_on = ["tests", "spec"]"#
+        .to_string()
+}
+
+fn commands_section(project: ProjectType) -> String {
+    match project {
+        ProjectType::Rust => rust_commands(),
+        ProjectType::Node => node_commands(),
+        ProjectType::Python => python_commands(),
+        ProjectType::Go => go_commands(),
+        ProjectType::Unknown => unknown_commands(),
+    }
+}
+
+fn rust_commands() -> String {
+    r#"[commands]
+check = "cargo clippy --all-targets -- -D warnings -D clippy::pedantic"
+fix = "cargo fmt""#
+        .to_string()
+}
+
+fn node_commands() -> String {
+    let npx = npx_cmd();
+    
+    // Use biome for TypeScript projects
+    if ProjectType::is_typescript() {
+        format!(
+            r#"[commands]
+check = "{npx} @biomejs/biome check src/"
+fix = "{npx} @biomejs/biome check --write src/""#
+        )
+    } else {
+        format!(
+            r#"[commands]
+check = "{npx} eslint src/"
+fix = "{npx} eslint --fix src/""#
+        )
+    }
+}
+
+fn python_commands() -> String {
+    r#"[commands]
+check = "ruff check ."
+fix = "ruff check --fix .""#
+        .to_string()
+}
+
+fn go_commands() -> String {
+    r#"[commands]
+check = "go vet ./..."
+fix = "go fmt ./...""#
+        .to_string()
+}
+
+fn unknown_commands() -> String {
+    r#"# No project type detected. Configure commands manually:
+# [commands]
+# check = "your-lint-command"
+# fix = "your-fix-command""#
+        .to_string()
+}
+
+#[must_use]
+pub fn npx_cmd() -> &'static str {
+    if cfg!(windows) {
+        "npx.cmd"
+    } else {
+        "npx"
+    }
+}
+∆∆∆
+
+∇∇∇ src/prompt.rs ∇∇∇
+// src/prompt.rs
+use crate::config::RuleConfig;
+use anyhow::Result;
+
+pub struct PromptGenerator {
+    config: RuleConfig,
+}
+
+impl PromptGenerator {
+    #[must_use]
+    pub fn new(config: RuleConfig) -> Self {
+        Self { config }
+    }
+
+    /// Generates the full system prompt.
+    /// # Errors
+    /// Currently infallible, returns Result for API consistency.
+    pub fn generate(&self) -> Result<String> {
+        Ok(self.build_system_prompt())
+    }
+
+    /// Generates a short reminder prompt for context footers.
+    /// # Errors
+    /// Currently infallible, returns Result for API consistency.
+    pub fn generate_reminder(&self) -> Result<String> {
+        Ok(self.build_reminder())
+    }
+
+    /// Alias for `generate()` — used by knit for context headers.
+    /// # Errors
+    /// Currently infallible, returns Result for API consistency.
+    pub fn wrap_header(&self) -> Result<String> {
+        self.generate()
+    }
+
+    fn build_system_prompt(&self) -> String {
+        let tokens = self.config.max_file_tokens;
+        let complexity = self.config.max_cyclomatic_complexity;
+        let depth = self.config.max_nesting_depth;
+        let args = self.config.max_function_args;
+        let output_format = build_output_format();
+
+        format!(
+            r"🛡️ SYSTEM MANDATE: THE WARDEN PROTOCOL
+ROLE: High-Integrity Systems Architect (NASA/JPL Standard).
+CONTEXT: You are coding inside a strict environment enforced by Warden.
+
+THE 3 LAWS (Non-Negotiable):
+
+1. LAW OF ATOMICITY
+   - Files: MUST be < {tokens} tokens.
+   - Action: Split immediately if larger.
+
+2. LAW OF COMPLEXITY
+   - Cyclomatic Complexity: MUST be ≤ {complexity} per function.
+   - Nesting Depth: MUST be ≤ {depth} levels.
+   - Function Arguments: MUST be ≤ {args} parameters.
+
+3. LAW OF PARANOIA
+   - Use Result<T, E> for I/O and fallible operations.
+   - NO .unwrap() or .expect() calls.
+
+{output_format}
+"
+        )
+    }
+
+    fn build_reminder(&self) -> String {
+        let tokens = self.config.max_file_tokens;
+        let complexity = self.config.max_cyclomatic_complexity;
+        let depth = self.config.max_nesting_depth;
+        let args = self.config.max_function_args;
+
+        format!(
+            r"WARDEN CONSTRAINTS:
+□ Files < {tokens} tokens
+□ Complexity ≤ {complexity}
+□ Nesting ≤ {depth}
+□ Args ≤ {args}
+□ No .unwrap() or .expect()
+□ Use Nabla Format (∇∇∇ ... ∆∆∆)"
+        )
+    }
+}
+
+fn build_output_format() -> String {
+    let nabla = "∇";
+    let delta = "∆";
+    let open = format!("{nabla}{nabla}{nabla}");
+    let close = format!("{delta}{delta}{delta}");
+
+    format!(
+        r#"OUTPUT FORMAT (MANDATORY):
+
+1. Explain the changes (Technical Plan) using NABLA PROTOCOL:
+   - Must start with "GOAL:"
+   - Must include "CHANGES:" list
+
+{open} PLAN {open}
+GOAL: Refactor authentication module.
+CHANGES:
+1. Extract user validation to new file.
+2. Update config parser.
+{close}
+
+2. Declare the plan (Manifest) using NABLA PROTOCOL:
+
+{open} MANIFEST {open}
+path/to/file1.rs
+path/to/file2.rs [NEW]
+{close}
+
+3. Provide EACH file using NABLA PROTOCOL:
+
+{open} path/to/file1.rs {open}
+[file content]
+{close}
+
+RULES:
+- Do NOT use markdown code blocks (e.g. triple backticks) to wrap the file. The {open} delimiters ARE the fence.
+- You MAY use markdown inside the file content.
+- Every file in the manifest MUST have a matching {open} block.
+- Paths must match exactly.
+- Do NOT truncate files (No "// ...")."#
+    )
+}
+
+∆∆∆
+
+∇∇∇ src/reporting.rs ∇∇∇
+// src/reporting.rs
+use crate::types::{FileReport, ScanReport, Violation};
+use anyhow::Result;
+use colored::Colorize;
+
+/// Prints the scan report to stdout.
+///
+/// # Errors
+/// Returns `Ok(())` normally.
+pub fn print_report(report: &ScanReport) -> Result<()> {
+    let failures = count_failures(report);
+
+    report
+        .files
+        .iter()
+        .filter(|f| !f.is_clean())
+        .for_each(print_file_report);
+
+    print_summary(report, failures);
+    Ok(())
+}
+
+fn count_failures(report: &ScanReport) -> usize {
+    report
+        .files
+        .iter()
+        .filter(|f| !f.is_clean())
+        .map(|f| f.violations.len())
+        .sum()
+}
+
+fn print_file_report(file: &FileReport) {
+    for v in &file.violations {
+        print_violation(&file.path, v);
+    }
+}
+
+fn print_violation(path: &std::path::Path, v: &Violation) {
+    let filename = path.to_string_lossy();
+    let line_num = v.row + 1;
+
+    println!("{}: {}", "error".red().bold(), v.message.bold());
+    println!("  {} {}:{}:1", "-->".blue(), filename, line_num);
+    println!("   {}", "|".blue());
+    println!(
+        "   {} {}: Action required",
+        "=".blue().bold(),
+        v.law.white().bold()
+    );
+    println!();
+}
+
+fn print_summary(report: &ScanReport, failures: usize) {
+    if failures > 0 {
+        let msg = format!(
+            "❌ Warden found {failures} violations in {}ms.",
+            report.duration_ms
+        );
+        println!("{}", msg.red().bold());
+    } else {
+        let msg = format!(
+            "✅ All Clear. Scanned {} tokens in {}ms.",
+            report.total_tokens, report.duration_ms
+        );
+        println!("{}", msg.green().bold());
+    }
+}
+
+∆∆∆
+
+∇∇∇ src/roadmap/cli.rs ∇∇∇
+use crate::clipboard;
+use crate::roadmap::{
+    apply_commands, generate_prompt, CommandBatch, PromptOptions, Roadmap, TaskStatus,
+};
+use anyhow::{anyhow, Context, Result};
+use clap::Subcommand;
+use std::io::{self, Read};
+use std::path::{Path, PathBuf};
+
+#[derive(Subcommand, Debug, Clone)]
+pub enum RoadmapCommand {
+    Init {
+        #[arg(short, long, default_value = "ROADMAP.md")]
+        output: PathBuf,
+        #[arg(short, long)]
+        name: Option<String>,
+    },
+    Prompt {
+        #[arg(short, long, default_value = "ROADMAP.md")]
+        file: PathBuf,
+        #[arg(long)]
+        full: bool,
+        #[arg(long)]
+        examples: bool,
+        #[arg(long)]
+        stdout: bool,
+    },
+    Apply {
+        #[arg(short, long, default_value = "ROADMAP.md")]
+        file: PathBuf,
+        #[arg(long)]
+        dry_run: bool,
+        #[arg(long)]
+        stdin: bool,
+        #[arg(short, long)]
+        verbose: bool,
+    },
+    Show {
+        #[arg(short, long, default_value = "ROADMAP.md")]
+        file: PathBuf,
+        #[arg(long, default_value = "tree")]
+        format: String,
+    },
+    Tasks {
+        #[arg(short, long, default_value = "ROADMAP.md")]
+        file: PathBuf,
+        #[arg(long)]
+        pending: bool,
+        #[arg(long)]
+        complete: bool,
+    },
+}
+
+/// Entry point for roadmap commands
+/// # Errors
+/// Returns error if IO fails or clipboard access fails
+pub fn handle_command(cmd: RoadmapCommand) -> Result<()> {
+    match cmd {
+        RoadmapCommand::Init { output, name } => run_init(&output, name),
+        RoadmapCommand::Prompt {
+            file,
+            full,
+            examples,
+            stdout,
+        } => run_prompt(&file, full, examples, stdout),
+        RoadmapCommand::Apply {
+            file,
+            dry_run,
+            stdin,
+            verbose,
+        } => run_apply(&file, dry_run, stdin, verbose),
+        RoadmapCommand::Show { file, format } => run_show(&file, &format),
+        RoadmapCommand::Tasks {
+            file,
+            pending,
+            complete,
+        } => run_tasks(&file, pending, complete),
+    }
+}
+
+fn run_init(output: &Path, name: Option<String>) -> Result<()> {
+    if output.exists() {
+        return Err(anyhow!(
+            "{} already exists. Use --output.",
+            output.display()
+        ));
+    }
+    let n = name.unwrap_or_else(|| "Project".to_string());
+    std::fs::write(output, template(&n))?;
+    println!("✓ Created {}", output.display());
+    Ok(())
+}
+
+fn run_prompt(file: &Path, full: bool, examples: bool, stdout: bool) -> Result<()> {
+    let r = load(file)?;
+    let p = generate_prompt(
+        &r,
+        &PromptOptions {
+            full,
+            examples,
+            project_name: None,
+        },
+    );
+    if stdout {
+        println!("{p}");
+    } else {
+        clipboard::smart_copy(&p).map_err(|e| anyhow!("Clipboard: {e}"))?;
+        println!("✓ Copied prompt.");
+    }
+    Ok(())
+}
+
+fn run_apply(file: &Path, dry_run: bool, stdin: bool, verbose: bool) -> Result<()> {
+    let mut roadmap = load(file)?;
+    let input = get_input(stdin)?;
+    let batch = CommandBatch::parse(&input);
+
+    if batch.commands.is_empty() {
+        print_errs(&batch.errors);
+        return Err(anyhow!("No commands found."));
+    }
+
+    println!(
+        "Found {} commands: {}",
+        batch.commands.len(),
+        batch.summary()
+    );
+    if verbose {
+        print_errs(&batch.errors);
+    }
+
+    if dry_run {
+        println!("[DRY RUN]");
+        return Ok(());
+    }
+
+    let results = apply_commands(&mut roadmap, &batch);
+    if results
+        .iter()
+        .any(|r| matches!(r, crate::roadmap::ApplyResult::Success(_)))
+    {
+        roadmap.save(file)?;
+        println!("✓ Saved.");
+    }
+    for r in &results {
+        println!("{r}");
+    }
+    Ok(())
+}
+
+fn run_show(file: &Path, format: &str) -> Result<()> {
+    let r = load(file)?;
+    if format == "stats" {
+        let s = r.stats();
+        println!(
+            "Tasks: {} ({} done, {} pending)",
+            s.total, s.complete, s.pending
+        );
+    } else {
+        println!("{}", r.compact_state());
+    }
+    Ok(())
+}
+
+fn run_tasks(file: &Path, pending: bool, complete: bool) -> Result<()> {
+    let r = load(file)?;
+    for t in r.all_tasks() {
+        if should_show_task(t.status, pending, complete) {
+            let mark = if t.status == TaskStatus::Complete {
+                "[x]"
+            } else {
+                "[ ]"
+            };
+            println!("{mark} {} - {}", t.path, t.text);
+        }
+    }
+    Ok(())
+}
+
+fn should_show_task(status: TaskStatus, pending: bool, complete: bool) -> bool {
+    match (pending, complete) {
+        (true, false) => status == TaskStatus::Pending,
+        (false, true) => status == TaskStatus::Complete,
+        _ => true,
+    }
+}
+
+fn load(path: &Path) -> Result<Roadmap> {
+    Roadmap::from_file(path).context("Load failed")
+}
+
+fn get_input(stdin: bool) -> Result<String> {
+    if stdin {
+        let mut buf = String::new();
+        io::stdin().read_to_string(&mut buf)?;
+        Ok(buf)
+    } else {
+        clipboard::read_clipboard().context("Clipboard read failed")
+    }
+}
+
+fn print_errs(errors: &[String]) {
+    for e in errors {
+        eprintln!("Warning: {e}");
+    }
+}
+
+fn template(name: &str) -> String {
+    format!("# {name} Roadmap\n\n## v0.1.0\n\n- [ ] Init\n\n## v0.2.0\n\n## v0.3.0\n")
+}
+
+∆∆∆
+
+∇∇∇ src/roadmap/cmd_parser.rs ∇∇∇
+// src/roadmap/cmd_parser.rs
+use crate::roadmap::types::{Command, CommandBatch, MovePosition};
+
+impl CommandBatch {
+    #[must_use]
+    pub fn parse(input: &str) -> Self {
+        let mut commands = Vec::new();
+        let mut errors = Vec::new();
+        let content = extract_roadmap_block(input);
+
+        for line in content.lines() {
+            let line = line.trim();
+            if is_skippable(line) {
+                continue;
+            }
+
+            match parse_command_line(line) {
+                Ok(cmd) => commands.push(cmd),
+                Err(e) => {
+                    if !line.is_empty() && !is_ignorable(line) {
+                        errors.push(format!("Line '{}': {e}", truncate(line, 40)));
+                    }
+                }
+            }
+        }
+        Self { commands, errors }
+    }
+
+    #[must_use]
+    pub fn summary(&self) -> String {
+        let mut counts: std::collections::HashMap<&str, usize> = std::collections::HashMap::new();
+        for cmd in &self.commands {
+            *counts.entry(cmd_name(cmd)).or_insert(0) += 1;
+        }
+
+        if counts.is_empty() {
+            return "No commands".to_string();
+        }
+
+        let parts: Vec<String> = counts.iter().map(|(k, v)| format!("{v} {k}")).collect();
+        parts.join(", ")
+    }
+}
+
+// Split match to reduce Cyclomatic Complexity (Max 8)
+fn cmd_name(cmd: &Command) -> &'static str {
+    match cmd {
+        Command::Check { .. } => "CHECK",
+        Command::Uncheck { .. } => "UNCHECK",
+        Command::Add { .. } => "ADD",
+        Command::Delete { .. } => "DELETE",
+        _ => cmd_name_extended(cmd),
+    }
+}
+
+fn cmd_name_extended(cmd: &Command) -> &'static str {
+    match cmd {
+        Command::Update { .. } => "UPDATE",
+        Command::Note { .. } => "NOTE",
+        Command::Move { .. } => "MOVE",
+        Command::ReplaceSection { .. } => "SECTION",
+        _ => "UNKNOWN",
+    }
+}
+
+fn extract_roadmap_block(input: &str) -> &str {
+    if let Some(start) = input.find("===ROADMAP===") {
+        let after = &input[start + 13..];
+        return after.find("===END===").map_or(after, |end| &after[..end]);
+    }
+    input
+}
+
+fn is_skippable(line: &str) -> bool {
+    line.is_empty() || line.starts_with('#') || line.starts_with("//")
+}
+
+fn parse_command_line(line: &str) -> Result<Command, String> {
+    let (cmd, args) = split_cmd(line).ok_or_else(|| "Empty command".to_string())?;
+
+    if is_basic(cmd) {
+        return parse_basic(cmd, args);
+    }
+    if is_content(cmd) {
+        return parse_content(cmd, args);
+    }
+    if is_struct(cmd) {
+        return parse_struct(cmd, args);
+    }
+
+    Err(format!("Unknown command: {cmd}"))
+}
+
+fn is_basic(cmd: &str) -> bool {
+    matches!(cmd, "CHECK" | "UNCHECK" | "DELETE")
+}
+fn is_content(cmd: &str) -> bool {
+    matches!(cmd, "ADD" | "UPDATE" | "NOTE")
+}
+fn is_struct(cmd: &str) -> bool {
+    matches!(cmd, "MOVE" | "SECTION")
+}
+
+fn parse_basic(cmd: &str, args: &str) -> Result<Command, String> {
+    let path = req_path(args)?;
+    match cmd {
+        "CHECK" => Ok(Command::Check { path }),
+        "UNCHECK" => Ok(Command::Uncheck { path }),
+        "DELETE" => Ok(Command::Delete { path }),
+        _ => unreachable!(),
+    }
+}
+
+fn parse_content(cmd: &str, args: &str) -> Result<Command, String> {
+    match cmd {
+        "ADD" => parse_add(args),
+        "UPDATE" => parse_update(args),
+        "NOTE" => parse_note(args),
+        _ => unreachable!(),
+    }
+}
+
+fn parse_struct(cmd: &str, args: &str) -> Result<Command, String> {
+    match cmd {
+        "MOVE" => parse_move(args),
+        "SECTION" => parse_section(args),
+        _ => unreachable!(),
+    }
+}
+
+fn split_cmd(line: &str) -> Option<(&str, &str)> {
+    let mut parts = line.splitn(2, ' ');
+    let cmd = parts.next()?;
+    let args = parts.next().unwrap_or("");
+    if cmd.is_empty() {
+        return None;
+    }
+    Some((cmd, args))
+}
+
+fn req_path(args: &str) -> Result<String, String> {
+    let path = args.trim();
+    if path.is_empty() {
+        return Err("Requires task path".into());
+    }
+    Ok(path.to_string())
+}
+
+fn parse_add(args: &str) -> Result<Command, String> {
+    let (parent, rest) = split_first_word(args);
+    if parent.is_empty() {
+        return Err("ADD needs parent".into());
+    }
+    let (text, after) = parse_quoted_with_after(rest)?;
+    Ok(Command::Add {
+        parent: parent.into(),
+        text,
+        after,
+    })
+}
+
+fn parse_update(args: &str) -> Result<Command, String> {
+    let (path, rest) = split_first_word(args);
+    if path.is_empty() {
+        return Err("UPDATE needs path".into());
+    }
+    Ok(Command::Update {
+        path: path.into(),
+        text: parse_quoted(rest)?,
+    })
+}
+
+fn parse_note(args: &str) -> Result<Command, String> {
+    let (path, rest) = split_first_word(args);
+    if path.is_empty() {
+        return Err("NOTE needs path".into());
+    }
+    Ok(Command::Note {
+        path: path.into(),
+        note: parse_quoted(rest)?,
+    })
+}
+
+fn parse_move(args: &str) -> Result<Command, String> {
+    let parts: Vec<&str> = args.split_whitespace().collect();
+    if parts.len() < 3 {
+        return Err("MOVE: path AFTER|BEFORE target".into());
+    }
+
+    let pos = match parts[1].to_uppercase().as_str() {
+        "AFTER" => MovePosition::After(parts[2].into()),
+        "BEFORE" => MovePosition::Before(parts[2].into()),
+        _ => return Err("Invalid position".into()),
+    };
+    Ok(Command::Move {
+        path: parts[0].into(),
+        position: pos,
+    })
+}
+
+fn parse_section(args: &str) -> Result<Command, String> {
+    let id = args.trim();
+    if id.is_empty() {
+        return Err("SECTION needs ID".into());
+    }
+    Ok(Command::ReplaceSection {
+        id: id.into(),
+        content: String::new(),
+    })
+}
+
+fn split_first_word(s: &str) -> (&str, &str) {
+    s.trim()
+        .split_once(char::is_whitespace)
+        .map_or((s.trim(), ""), |(h, t)| (h, t.trim()))
+}
+
+fn parse_quoted(s: &str) -> Result<String, String> {
+    let s = s.trim();
+    if let Some(stripped) = s.strip_prefix('"') {
+        stripped
+            .find('"')
+            .map(|end| stripped[..end].to_string())
+            .ok_or_else(|| "Unclosed quote".into())
+    } else {
+        Ok(s.to_string())
+    }
+}
+
+fn parse_quoted_with_after(s: &str) -> Result<(String, Option<String>), String> {
+    let (text, rest) = extract_quoted_text(s)?;
+
+    let after = if let Some(stripped) = rest.strip_prefix("AFTER ") {
+        Some(stripped.trim().to_string())
+    } else {
+        rest.strip_prefix("after ")
+            .map(|stripped| stripped.trim().to_string())
+    };
+
+    Ok((text, after))
+}
+
+fn extract_quoted_text(s: &str) -> Result<(String, &str), String> {
+    let s = s.trim();
+    if let Some(stripped) = s.strip_prefix('"') {
+        let end = stripped.find('"').ok_or("Unclosed quote")?;
+        Ok((stripped[..end].to_string(), stripped[end + 1..].trim()))
+    } else if let Some((text, rest)) = s.split_once(" AFTER ") {
+        Ok((text.trim().to_string(), rest.trim()))
+    } else {
+        Ok((s.to_string(), ""))
+    }
+}
+
+fn is_ignorable(line: &str) -> bool {
+    let u = line.to_uppercase();
+    u.starts_with("===")
+        || u.starts_with("---")
+        || u.starts_with("```")
+        || u == "ROADMAP"
+        || u == "END"
+}
+
+fn truncate(s: &str, max: usize) -> String {
+    if s.len() <= max {
+        s.to_string()
+    } else {
+        format!("{}...", &s[..max])
+    }
+}
+∆∆∆
+
+∇∇∇ src/roadmap/cmd_runner.rs ∇∇∇
+use crate::roadmap::parser::slugify;
+use crate::roadmap::types::{
+    ApplyResult, Command, CommandBatch, MovePosition, Roadmap, TaskStatus,
+};
+
+pub fn apply_commands(roadmap: &mut Roadmap, batch: &CommandBatch) -> Vec<ApplyResult> {
+    batch
+        .commands
+        .iter()
+        .map(|cmd| run_cmd(roadmap, cmd))
+        .collect()
+}
+
+fn run_cmd(roadmap: &mut Roadmap, cmd: &Command) -> ApplyResult {
+    match cmd {
+        Command::Check { path } => set_status(roadmap, path, TaskStatus::Complete),
+        Command::Uncheck { path } => set_status(roadmap, path, TaskStatus::Pending),
+        Command::Add {
+            parent,
+            text,
+            after,
+        } => run_add(roadmap, parent, text, after.as_deref()),
+        Command::Delete { path } => run_delete(roadmap, path),
+        Command::Update { path, text } => run_update(roadmap, path, text),
+        Command::Note { path, note } => run_note(roadmap, path, note),
+        _ => ApplyResult::Error("Command not supported".into()),
+    }
+}
+
+fn set_status(roadmap: &mut Roadmap, path: &str, status: TaskStatus) -> ApplyResult {
+    if let Some(task) = roadmap.find_task(path) {
+        if update_line_status(roadmap, task.line, status) {
+            return ok_res(status, path);
+        }
+    }
+
+    if let Some(idx) = find_line_idx(roadmap, path) {
+        if update_line_status(roadmap, idx, status) {
+            return ok_res(status, path);
+        }
+    }
+
+    ApplyResult::NotFound(path.into())
+}
+
+fn run_add(roadmap: &mut Roadmap, parent: &str, text: &str, after: Option<&str>) -> ApplyResult {
+    let lines: Vec<&str> = roadmap.raw.lines().collect();
+
+    if let Some(idx) = scan_insertion_point(&lines, parent, after) {
+        insert_raw(roadmap, idx, format!("- [ ] **{text}**"));
+        ApplyResult::Success(format!("Added: {text}"))
+    } else {
+        ApplyResult::NotFound(format!("Section: {parent}"))
+    }
+}
+
+fn run_delete(roadmap: &mut Roadmap, path: &str) -> ApplyResult {
+    if let Some(idx) = find_line_idx(roadmap, path) {
+        remove_raw(roadmap, idx);
+        ApplyResult::Success(format!("Deleted: {path}"))
+    } else {
+        ApplyResult::NotFound(path.into())
+    }
+}
+
+fn run_update(roadmap: &mut Roadmap, path: &str, text: &str) -> ApplyResult {
+    if let Some(idx) = find_line_idx(roadmap, path) {
+        let line = roadmap.raw.lines().nth(idx).unwrap_or("");
+        let indent = &line[..line.len() - line.trim_start().len()];
+        let mark = if line.to_uppercase().contains("[X]") {
+            "[x]"
+        } else {
+            "[ ]"
+        };
+
+        replace_raw(roadmap, idx, format!("{indent}- {mark} **{text}**"));
+        ApplyResult::Success(format!("Updated: {path}"))
+    } else {
+        ApplyResult::NotFound(path.into())
+    }
+}
+
+fn run_note(roadmap: &mut Roadmap, path: &str, note: &str) -> ApplyResult {
+    if let Some(idx) = find_line_idx(roadmap, path) {
+        let line = roadmap.raw.lines().nth(idx).unwrap_or("");
+        let indent_len = line.len() - line.trim_start().len();
+        let prefix = " ".repeat(indent_len + 2);
+
+        insert_raw(roadmap, idx + 1, format!("{prefix}*{note}*"));
+        ApplyResult::Success(format!("Added note: {path}"))
+    } else {
+        ApplyResult::NotFound(path.into())
+    }
+}
+
+#[allow(dead_code)]
+fn apply_move(_: &mut Roadmap, path: &str, _: &MovePosition) -> ApplyResult {
+    ApplyResult::Error(format!("MOVE not implemented: {path}"))
+}
+
+#[allow(dead_code)]
+fn apply_section_replace(_: &mut Roadmap, id: &str, _: &str) -> ApplyResult {
+    ApplyResult::Error(format!("SECTION not implemented: {id}"))
+}
+
+// --- Logic Helpers ---
+
+// Refactored to reduce nesting depth
+fn scan_insertion_point(lines: &[&str], parent: &str, after: Option<&str>) -> Option<usize> {
+    let p_slug = slugify(parent);
+    let mut state = ScanState::default();
+
+    for (i, line) in lines.iter().enumerate() {
+        process_line(line, i, &p_slug, after, &mut state);
+        if let Some(idx) = state.found_index {
+            return Some(idx);
+        }
+    }
+    state.last_task.map(|i| i + 1).or(state.sec_start)
+}
+
+#[derive(Default)]
+struct ScanState {
+    in_sec: bool,
+    last_task: Option<usize>,
+    sec_start: Option<usize>,
+    found_index: Option<usize>,
+}
+
+fn process_line(line: &str, i: usize, p_slug: &str, after: Option<&str>, state: &mut ScanState) {
+    if line.starts_with("##") {
+        if check_section_entry(line, p_slug) {
+            state.in_sec = true;
+            state.sec_start = Some(i + 1);
+        } else if state.in_sec {
+            state.in_sec = false;
+        }
+        return;
+    }
+
+    if state.in_sec && is_task(line) {
+        state.last_task = Some(i);
+        if check_after_match(line, after) {
+            state.found_index = Some(i + 1);
+        }
+    }
+}
+
+fn check_section_entry(line: &str, parent_slug: &str) -> bool {
+    slugify(line).contains(parent_slug)
+}
+
+fn check_after_match(line: &str, after: Option<&str>) -> bool {
+    if let Some(tgt) = after {
+        slugify(line).contains(&slugify(tgt))
+    } else {
+        false
+    }
+}
+
+fn find_line_idx(roadmap: &Roadmap, path: &str) -> Option<usize> {
+    let search = path.split('/').next_back().unwrap_or(path);
+    let s_slug = slugify(search);
+
+    roadmap
+        .raw
+        .lines()
+        .position(|l| is_task(l) && slugify(l).contains(&s_slug))
+}
+
+fn update_line_status(roadmap: &mut Roadmap, idx: usize, status: TaskStatus) -> bool {
+    let lines: Vec<&str> = roadmap.raw.lines().collect();
+    if idx >= lines.len() {
+        return false;
+    }
+
+    let line = lines[idx];
+    let new = match status {
+        TaskStatus::Complete => line.replace("- [ ]", "- [x]"),
+        TaskStatus::Pending => line.replace("- [x]", "- [ ]").replace("- [X]", "- [ ]"),
+    };
+    replace_raw(roadmap, idx, new);
+    true
+}
+
+// --- Mutation Helpers ---
+
+fn replace_raw(roadmap: &mut Roadmap, idx: usize, line: String) {
+    modify_lines(roadmap, |lines| {
+        if idx < lines.len() {
+            lines[idx] = line;
+        }
+    });
+}
+
+fn insert_raw(roadmap: &mut Roadmap, idx: usize, line: String) {
+    modify_lines(roadmap, |lines| {
+        if idx <= lines.len() {
+            lines.insert(idx, line);
+        }
+    });
+}
+
+fn remove_raw(roadmap: &mut Roadmap, idx: usize) {
+    modify_lines(roadmap, |lines| {
+        if idx < lines.len() {
+            lines.remove(idx);
+        }
+    });
+}
+
+fn modify_lines<F>(roadmap: &mut Roadmap, f: F)
+where
+    F: FnOnce(&mut Vec<String>),
+{
+    let mut lines: Vec<String> = roadmap.raw.lines().map(ToString::to_string).collect();
+    f(&mut lines);
+    roadmap.raw = lines.join("\n");
+}
+
+fn is_task(line: &str) -> bool {
+    line.trim().starts_with("- [")
+}
+
+fn ok_res(status: TaskStatus, path: &str) -> ApplyResult {
+    let act = if status == TaskStatus::Complete {
+        "Checked"
+    } else {
+        "Unchecked"
+    };
+    ApplyResult::Success(format!("{act}: {path}"))
+}
+
+∆∆∆
+
+∇∇∇ src/roadmap/display.rs ∇∇∇
+use crate::roadmap::types::{Roadmap, Section, TaskStatus};
+use std::fmt::Write;
+
+impl Roadmap {
+    /// Generate a compact state representation for AI context
+    #[must_use]
+    pub fn compact_state(&self) -> String {
+        let mut out = String::new();
+        let _ = write!(out, "# {}\n\n", self.title);
+
+        for section in &self.sections {
+            if section.tasks.is_empty() && section.subsections.is_empty() {
+                continue;
+            }
+            out.push_str(&format_section_compact(section, 0));
+        }
+
+        out
+    }
+}
+
+fn format_section_compact(section: &Section, depth: usize) -> String {
+    let mut out = String::new();
+    let indent = "  ".repeat(depth);
+
+    let total = section.tasks.len();
+    let complete = section
+        .tasks
+        .iter()
+        .filter(|t| t.status == TaskStatus::Complete)
+        .count();
+
+    if total > 0 {
+        let _ = writeln!(out, "{indent}{} [{complete}/{total}]", section.heading);
+        for task in &section.tasks {
+            let marker = match task.status {
+                TaskStatus::Complete => "✓",
+                TaskStatus::Pending => "○",
+            };
+            let _ = writeln!(out, "{indent}  {marker} {} ({})", task.text, task.path);
+        }
+    } else if !section.subsections.is_empty() {
+        let _ = writeln!(out, "{indent}{}", section.heading);
+    }
+
+    for sub in &section.subsections {
+        out.push_str(&format_section_compact(sub, depth + 1));
+    }
+
+    out
+}
+
+∆∆∆
+
+∇∇∇ src/roadmap/mod.rs ∇∇∇
+pub mod cli;
+pub mod cmd_parser;
+pub mod cmd_runner;
+pub mod display;
+pub mod parser;
+pub mod prompt;
+pub mod types;
+
+// Re-export CommandBatch from types, not cmd_parser
+pub use cmd_runner::apply_commands;
+pub use parser::slugify;
+pub use prompt::{generate_prompt, PromptOptions};
+pub use types::CommandBatch;
+pub use types::*;
+
+∆∆∆
+
+∇∇∇ src/roadmap/parser.rs ∇∇∇
+use crate::roadmap::types::{Roadmap, RoadmapStats, Section, Task, TaskStatus};
+use std::path::Path;
+
+impl Roadmap {
+    /// Parse a roadmap from markdown content
+    #[must_use]
+    pub fn parse(content: &str) -> Self {
+        let lines: Vec<&str> = content.lines().collect();
+        let mut sections = Vec::new();
+        let mut title = "Roadmap".to_string();
+        let mut i = 0;
+
+        if let Some(first) = lines.first() {
+            if let Some(t) = first.strip_prefix("# ") {
+                title = t.trim().to_string();
+                i = 1;
+            }
+        }
+
+        while i < lines.len() {
+            if let Some((lvl, txt)) = parse_heading(lines[i]) {
+                sections.push(parse_section(&lines, &mut i, lvl, txt));
+            } else {
+                i += 1;
+            }
+        }
+
+        Self {
+            path: None,
+            title,
+            sections,
+            raw: content.into(),
+        }
+    }
+
+    /// Parse from a file
+    /// # Errors
+    /// Returns error on file read fail
+    pub fn from_file(path: &Path) -> std::io::Result<Self> {
+        let c = std::fs::read_to_string(path)?;
+        let mut r = Self::parse(&c);
+        r.path = Some(path.display().to_string());
+        Ok(r)
+    }
+
+    /// Save back to file
+    /// # Errors
+    /// Returns error on file write fail
+    pub fn save(&self, path: &Path) -> std::io::Result<()> {
+        std::fs::write(path, &self.raw)
+    }
+
+    #[must_use]
+    pub fn all_tasks(&self) -> Vec<&Task> {
+        let mut out = Vec::new();
+        for s in &self.sections {
+            collect_tasks(s, &mut out);
+        }
+        out
+    }
+
+    #[must_use]
+    pub fn find_task(&self, path: &str) -> Option<&Task> {
+        self.all_tasks().into_iter().find(|t| t.path == path)
+    }
+
+    #[must_use]
+    pub fn stats(&self) -> RoadmapStats {
+        let t = self.all_tasks();
+        let c = t
+            .iter()
+            .filter(|x| x.status == TaskStatus::Complete)
+            .count();
+        RoadmapStats {
+            total: t.len(),
+            complete: c,
+            pending: t.len() - c,
+        }
+    }
+}
+
+// --- Parsing helpers ---
+
+fn parse_heading(line: &str) -> Option<(u8, String)> {
+    let t = line.trim();
+    if !t.starts_with("##") {
+        return None;
+    }
+    let lvl = t.chars().take_while(|&c| c == '#').count();
+    if lvl < 2 {
+        return None;
+    }
+
+    // Fix: Safe cast using try_from
+    let level = u8::try_from(lvl).ok()?;
+    Some((level, t[lvl..].trim().into()))
+}
+
+fn parse_section(lines: &[&str], i: &mut usize, lvl: u8, heading: String) -> Section {
+    let start = *i;
+    let id = crate::roadmap::slugify(&heading);
+    let mut tasks = Vec::new();
+    let mut subs = Vec::new();
+    let mut raw = String::new();
+
+    *i += 1;
+
+    while *i < lines.len() {
+        let line = lines[*i];
+        if let Some((next_lvl, next_txt)) = parse_heading(line) {
+            if next_lvl <= lvl {
+                break;
+            }
+            subs.push(parse_section(lines, i, next_lvl, next_txt));
+            continue;
+        }
+
+        if let Some(mut task) = parse_task(line, *i) {
+            task.path = format!("{id}/{}", task.id);
+            tasks.push(task);
+        } else {
+            raw.push_str(line);
+            raw.push('\n');
+        }
+        *i += 1;
+    }
+
+    Section {
+        id,
+        heading,
+        level: lvl,
+        theme: None,
+        tasks,
+        subsections: subs,
+        raw_content: raw,
+        line_start: start,
+        line_end: *i,
+    }
+}
+
+fn parse_task(line: &str, line_num: usize) -> Option<Task> {
+    let t = line.trim();
+    if !t.starts_with("- [") {
+        return None;
+    }
+
+    let (stat, rest) = if let Some(stripped) = t.strip_prefix("- [ ]") {
+        (TaskStatus::Pending, stripped)
+    } else {
+        (TaskStatus::Complete, &t[5..])
+    };
+
+    let text = rest.split("<!--").next()?.trim().trim_matches('*');
+    let id = crate::roadmap::slugify(text);
+
+    Some(Task {
+        id,
+        path: String::new(),
+        text: text.into(),
+        status: stat,
+        indent: 0,
+        line: line_num,
+        children: vec![],
+    })
+}
+
+fn collect_tasks<'a>(s: &'a Section, out: &mut Vec<&'a Task>) {
+    for t in &s.tasks {
+        out.push(t);
+    }
+    for sub in &s.subsections {
+        collect_tasks(sub, out);
+    }
+}
+
+/// Convert text to a URL-safe slug
+#[must_use]
+pub fn slugify(text: &str) -> String {
+    text.to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .split('-')
+        .filter(|s| !s.is_empty())
+        .collect::<Vec<_>>()
+        .join("-")
+}
+
+∆∆∆
+
+∇∇∇ src/roadmap/prompt.rs ∇∇∇
+use crate::roadmap::types::{Roadmap, Section, TaskStatus};
+use std::fmt::Write;
+
+/// Options for prompt generation
+#[derive(Debug, Clone, Default)]
+pub struct PromptOptions {
+    pub full: bool,
+    pub examples: bool,
+    pub project_name: Option<String>,
+}
+
+/// Generate the teaching prompt for AI
+#[must_use]
+pub fn generate_prompt(roadmap: &Roadmap, options: &PromptOptions) -> String {
+    let project_name = options
+        .project_name
+        .clone()
+        .unwrap_or_else(|| roadmap.title.clone());
+
+    let mut prompt = String::new();
+
+    let _ = writeln!(prompt, "# Roadmap Commands for: {project_name}\n");
+
+    let stats = roadmap.stats();
+    let pct = if stats.total > 0 {
+        #[allow(clippy::cast_precision_loss)]
+        {
+            (stats.complete as f64 / stats.total as f64) * 100.0
+        }
+    } else {
+        0.0
+    };
+
+    let _ = writeln!(
+        prompt,
+        "Progress: {}/{} tasks complete ({:.0}%)\n",
+        stats.complete, stats.total, pct
+    );
+
+    prompt.push_str("## Commands\n\n");
+    prompt.push_str("Wrap commands in `===ROADMAP===` and `===END===` markers.\n\n");
+    prompt.push_str("```\n");
+    prompt.push_str("CHECK <path>              # Mark task complete\n");
+    prompt.push_str("UNCHECK <path>            # Mark task incomplete\n");
+    prompt.push_str("ADD <section> \"<text>\"    # Add new task to section\n");
+    prompt.push_str("ADD <section> \"<text>\" AFTER <task>  # Add after specific task\n");
+    prompt.push_str("DELETE <path>             # Remove task\n");
+    prompt.push_str("UPDATE <path> \"<text>\"    # Change task description\n");
+    prompt.push_str("NOTE <path> \"<text>\"      # Add note under task\n");
+    prompt.push_str("```\n\n");
+
+    prompt.push_str("## Task Paths\n\n");
+    prompt.push_str("Paths are: `section-slug/task-slug`\n");
+    prompt.push_str("Example: `v0-5-0-bulletproof-apply/truncation-detection`\n\n");
+    prompt.push_str("You can use partial matches - just the task slug often works.\n\n");
+
+    if options.examples {
+        prompt.push_str("## Examples\n\n");
+        prompt.push_str("```\n");
+        prompt.push_str("===ROADMAP===\n");
+        prompt.push_str("CHECK truncation-detection\n");
+        prompt.push_str("ADD v0-5-0 \"Improve error messages\" AFTER truncation-detection\n");
+        prompt.push_str("NOTE path-safety \"Implemented using std::path::Path\"\n");
+        prompt.push_str("===END===\n");
+        prompt.push_str("```\n\n");
+    }
+
+    prompt.push_str("---\n\n");
+    prompt.push_str("## Current Roadmap State\n\n");
+
+    if options.full {
+        prompt.push_str("```markdown\n");
+        prompt.push_str(&roadmap.raw);
+        prompt.push_str("\n```\n");
+    } else {
+        prompt.push_str(&generate_compact_state(roadmap));
+    }
+
+    prompt
+}
+
+fn generate_compact_state(roadmap: &Roadmap) -> String {
+    let mut out = String::new();
+    for section in &roadmap.sections {
+        if section.tasks.is_empty() && section.subsections.is_empty() {
+            continue;
+        }
+        out.push_str(&format_section_tree(section, 0));
+    }
+    out
+}
+
+fn format_section_tree(section: &Section, depth: usize) -> String {
+    let mut out = String::new();
+    let indent = "  ".repeat(depth);
+    let (complete, total) = count_tasks_recursive(section);
+
+    if total > 0 {
+        let progress = format!("[{complete}/{total}]");
+        let status_icon = if complete == total {
+            "✓"
+        } else if complete > 0 {
+            "◐"
+        } else {
+            "○"
+        };
+        let _ = writeln!(out, "{indent}{status_icon} {} {progress}", section.heading);
+
+        for task in &section.tasks {
+            let icon = match task.status {
+                TaskStatus::Complete => "  ✓",
+                TaskStatus::Pending => "  ○",
+            };
+            let _ = writeln!(out, "{indent}{icon}  {} (id: {})", task.text, task.id);
+        }
+    }
+
+    for sub in &section.subsections {
+        out.push_str(&format_section_tree(sub, depth + 1));
+    }
+    out
+}
+
+fn count_tasks_recursive(section: &Section) -> (usize, usize) {
+    let mut complete = 0;
+    let mut total = 0;
+
+    for task in &section.tasks {
+        total += 1;
+        if task.status == TaskStatus::Complete {
+            complete += 1;
+        }
+    }
+
+    for sub in &section.subsections {
+        let (c, t) = count_tasks_recursive(sub);
+        complete += c;
+        total += t;
+    }
+
+    (complete, total)
+}
+
+∆∆∆
+
+∇∇∇ src/roadmap/types.rs ∇∇∇
+use std::fmt;
+
+#[derive(Debug, Clone)]
+pub struct Roadmap {
+    pub path: Option<String>,
+    pub title: String,
+    pub sections: Vec<Section>,
+    pub raw: String,
+}
+
+#[derive(Debug, Clone)]
+pub struct Section {
+    pub id: String,
+    pub heading: String,
+    pub level: u8,
+    pub theme: Option<String>,
+    pub tasks: Vec<Task>,
+    pub subsections: Vec<Section>,
+    pub raw_content: String,
+    pub line_start: usize,
+    pub line_end: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct Task {
+    pub id: String,
+    pub path: String,
+    pub text: String,
+    pub status: TaskStatus,
+    pub indent: u8,
+    pub line: usize,
+    pub children: Vec<Task>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskStatus {
+    Pending,
+    Complete,
+}
+
+#[derive(Debug, Clone)]
+pub struct RoadmapStats {
+    pub total: usize,
+    pub complete: usize,
+    pub pending: usize,
+}
+
+/// A single command from AI
+#[derive(Debug, Clone)]
+pub enum Command {
+    Check {
+        path: String,
+    },
+    Uncheck {
+        path: String,
+    },
+    Add {
+        parent: String,
+        text: String,
+        after: Option<String>,
+    },
+    Delete {
+        path: String,
+    },
+    Update {
+        path: String,
+        text: String,
+    },
+    Note {
+        path: String,
+        note: String,
+    },
+    Move {
+        path: String,
+        position: MovePosition,
+    },
+    ReplaceSection {
+        id: String,
+        content: String,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub enum MovePosition {
+    After(String),
+    Before(String),
+}
+
+/// A batch of commands parsed from AI output
+#[derive(Debug, Clone)]
+pub struct CommandBatch {
+    pub commands: Vec<Command>,
+    pub errors: Vec<String>,
+}
+
+/// Result of applying a command
+#[derive(Debug)]
+pub enum ApplyResult {
+    Success(String),
+    NotFound(String),
+    Error(String),
+}
+
+impl fmt::Display for ApplyResult {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Success(msg) => write!(f, "✓ {msg}"),
+            Self::NotFound(msg) => write!(f, "✗ Not found: {msg}"),
+            Self::Error(msg) => write!(f, "✗ Error: {msg}"),
+        }
+    }
+}
+
+∆∆∆
+
+∇∇∇ src/skeleton.rs ∇∇∇
+// src/skeleton.rs
+use std::path::Path;
+
+/// Reduces code to its structural skeleton (signatures only).
+///
+/// # Arguments
+/// * `path` - The file path (used for language detection).
+/// * `content` - The full source code.
+///
+/// # Returns
+/// The skeletonized code, or the original content if language is unsupported.
+#[must_use]
+pub fn clean(path: &Path, content: &str) -> String {
+    // Placeholder logic for v0.6.0 kickoff.
+    // Real implementation will use Tree-sitter.
+    // For now, if the flag is passed, we just return the content with a TODO marker
+    // so we can verify the CLI wiring works.
+
+    // Future: Match extension -> Select Query -> Execute
+    let _ = path;
+    format!("// SKELETONIZED (TODO: Implement Parser)\n{content}")
+}
+
+∆∆∆
+
+∇∇∇ src/tokens.rs ∇∇∇
+// src/tokens.rs
+use std::sync::LazyLock;
+use tiktoken_rs::CoreBPE;
+
+/// The tokenizer encoding (`cl100k_base`, used by GPT-4/3.5-turbo).
+/// Initialization is deferred until first use. If the encoding fails to load
+/// (which should never happen with a valid tiktoken-rs installation),
+/// token counting will return 0 and log an error.
+static BPE: LazyLock<Option<CoreBPE>> = LazyLock::new(|| {
+    tiktoken_rs::cl100k_base()
+        .map_err(|e| eprintln!("Failed to load cl100k_base tokenizer: {e}"))
+        .ok()
+});
+
+pub struct Tokenizer;
+
+impl Tokenizer {
+    /// Counts the number of tokens in the given text.
+    /// Returns 0 if the tokenizer failed to initialize.
+    #[must_use]
+    pub fn count(text: &str) -> usize {
+        BPE.as_ref()
+            .map_or(0, |bpe| bpe.encode_ordinary(text).len())
+    }
+
+    /// Returns true if the text exceeds the token limit.
+    #[must_use]
+    pub fn exceeds_limit(text: &str, limit: usize) -> bool {
+        Self::count(text) > limit
+    }
+
+    /// Returns true if the tokenizer is available.
+    #[must_use]
+    pub fn is_available() -> bool {
+        BPE.is_some()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_tokenizer_available() {
+        assert!(Tokenizer::is_available());
+    }
+
+    #[test]
+    fn test_count_basic() {
+        let count = Tokenizer::count("hello world");
+        assert!(count > 0);
+    }
+
+    #[test]
+    fn test_exceeds_limit() {
+        assert!(!Tokenizer::exceeds_limit("hi", 100));
+        assert!(Tokenizer::exceeds_limit("hello world this is a test", 1));
+    }
+}
+
+∆∆∆
+
+∇∇∇ src/tui/mod.rs ∇∇∇
+pub mod state;
+pub mod view;
+
+∆∆∆
+
+∇∇∇ src/tui/state.rs ∇∇∇
+// src/tui/state.rs
+use crate::types::{FileReport, ScanReport};
+use anyhow::Result;
+use crossterm::event::{self, Event, KeyCode};
+use std::time::Duration;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum SortMode {
+    Path,
+    Tokens,
+    Violations,
+}
+
+pub struct App {
+    pub report: ScanReport,
+    pub view_indices: Vec<usize>,
+    pub selected_index: usize,
+    pub running: bool,
+    pub sort_mode: SortMode,
+    pub only_violations: bool,
+}
+
+impl App {
+    #[must_use]
+    pub fn new(report: ScanReport) -> Self {
+        let mut app = Self {
+            report,
+            view_indices: Vec::new(),
+            selected_index: 0,
+            running: true,
+            sort_mode: SortMode::Path,
+            only_violations: false,
+        };
+        app.update_view();
+        app
+    }
+
+    fn update_view(&mut self) {
+        let mut indices: Vec<usize> = self
+            .report
+            .files
+            .iter()
+            .enumerate()
+            .filter(|(_, f)| !self.only_violations || !f.is_clean())
+            .map(|(i, _)| i)
+            .collect();
+
+        self.sort_indices(&mut indices);
+        self.view_indices = indices;
+        self.clamp_selection();
+    }
+
+    fn sort_indices(&self, indices: &mut [usize]) {
+        let files = &self.report.files;
+        indices.sort_by(|&a, &b| {
+            let f1 = &files[a];
+            let f2 = &files[b];
+            match self.sort_mode {
+                SortMode::Path => f1.path.cmp(&f2.path),
+                SortMode::Tokens => f2.token_count.cmp(&f1.token_count),
+                SortMode::Violations => f2.violations.len().cmp(&f1.violations.len()),
+            }
+        });
+    }
+
+    fn clamp_selection(&mut self) {
+        if self.view_indices.is_empty() {
+            self.selected_index = 0;
+        } else if self.selected_index >= self.view_indices.len() {
+            self.selected_index = self.view_indices.len() - 1;
+        }
+    }
+
+    /// Runs TUI loop.
+    /// # Errors
+    /// Returns error on IO failure.
+    pub fn run<B: ratatui::backend::Backend>(
+        &mut self,
+        terminal: &mut ratatui::Terminal<B>,
+    ) -> Result<()> {
+        while self.running {
+            terminal.draw(|f| crate::tui::view::draw(f, self))?;
+            self.process_event()?;
+        }
+        Ok(())
+    }
+
+    fn process_event(&mut self) -> Result<()> {
+        if event::poll(Duration::from_millis(100))? {
+            if let Event::Key(key) = event::read()? {
+                self.handle_input(key.code);
+            }
+        }
+        Ok(())
+    }
+
+    fn handle_input(&mut self, code: KeyCode) {
+        if self.handle_nav(code) {
+            return;
+        }
+        if self.handle_quit(code) {
+            return;
+        }
+        self.handle_toggles(code);
+    }
+
+    fn handle_nav(&mut self, code: KeyCode) -> bool {
+        match code {
+            KeyCode::Up | KeyCode::Char('k') => {
+                self.move_up();
+                true
+            }
+            KeyCode::Down | KeyCode::Char('j') => {
+                self.move_down();
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn handle_quit(&mut self, code: KeyCode) -> bool {
+        if matches!(code, KeyCode::Char('q') | KeyCode::Esc) {
+            self.running = false;
+            return true;
+        }
+        false
+    }
+
+    fn handle_toggles(&mut self, code: KeyCode) {
+        match code {
+            KeyCode::Char('s') => self.cycle_sort(),
+            KeyCode::Char('f') => self.toggle_filter(),
+            _ => {}
+        }
+    }
+
+    fn move_up(&mut self) {
+        if self.selected_index > 0 {
+            self.selected_index -= 1;
+        }
+    }
+
+    fn move_down(&mut self) {
+        if !self.view_indices.is_empty() && self.selected_index < self.view_indices.len() - 1 {
+            self.selected_index += 1;
+        }
+    }
+
+    fn cycle_sort(&mut self) {
+        self.sort_mode = match self.sort_mode {
+            SortMode::Path => SortMode::Tokens,
+            SortMode::Tokens => SortMode::Violations,
+            SortMode::Violations => SortMode::Path,
+        };
+        self.update_view();
+    }
+
+    fn toggle_filter(&mut self) {
+        self.only_violations = !self.only_violations;
+        self.update_view();
+    }
+
+    #[must_use]
+    pub fn get_selected_file(&self) -> Option<&FileReport> {
+        if let Some(&real_index) = self.view_indices.get(self.selected_index) {
+            self.report.files.get(real_index)
+        } else {
+            None
+        }
+    }
+}
+
+∆∆∆
+
+∇∇∇ src/tui/view/components.rs ∇∇∇
+// src/tui/view/components.rs
+use crate::tui::state::App;
+use crate::types::FileReport;
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, Borders, Gauge, List, ListItem, Paragraph};
+use ratatui::Frame;
+
+pub fn draw_file_list(f: &mut Frame, app: &App, area: Rect) {
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" 📂 File List ");
+    let items = build_list_items(app);
+
+    let list = List::new(items).block(block).highlight_style(
+        Style::default()
+            .bg(Color::DarkGray)
+            .add_modifier(Modifier::BOLD),
+    );
+
+    let mut state = ratatui::widgets::ListState::default();
+    state.select(Some(app.selected_index));
+    f.render_stateful_widget(list, area, &mut state);
+}
+
+fn build_list_items(app: &App) -> Vec<ListItem<'_>> {
+    app.view_indices
+        .iter()
+        .map(|&idx| {
+            let file = &app.report.files[idx];
+            create_list_item(file)
+        })
+        .collect()
+}
+
+fn create_list_item(file: &FileReport) -> ListItem<'_> {
+    let name = file.path.to_string_lossy();
+    let is_clean = file.is_clean();
+    let (color, icon) = if !is_clean {
+        (Color::Red, "!")
+    } else if file.token_count > 1000 {
+        (Color::Yellow, "✓")
+    } else {
+        (Color::Green, "✓")
+    };
+
+    let bars = (file.token_count / 200).clamp(0, 10);
+    let bar_vis = "I".repeat(bars);
+
+    let content = Line::from(vec![
+        Span::styled(
+            format!("{icon} "),
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(format!("{name:<30} ")),
+        Span::styled(
+            format!("{bar_vis:<10}"),
+            Style::default().fg(Color::DarkGray),
+        ),
+    ]);
+    ListItem::new(content)
+}
+
+#[allow(clippy::cast_precision_loss)]
+pub fn draw_inspector(f: &mut Frame, app: &App, area: Rect) {
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" 🕵️ Inspector ");
+    let inner = block.inner(area);
+    f.render_widget(block, area);
+
+    if let Some(file) = app.get_selected_file() {
+        let layout = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints(
+                [
+                    Constraint::Length(2),
+                    Constraint::Length(6),
+                    Constraint::Min(5),
+                ]
+                .as_ref(),
+            )
+            .split(inner);
+
+        draw_header(f, file, layout[0]);
+        draw_stats(f, file, layout[1]);
+        draw_issues(f, file, layout[2]);
+    } else {
+        f.render_widget(
+            Paragraph::new("No file selected").alignment(Alignment::Center),
+            inner,
+        );
+    }
+}
+
+fn draw_header(f: &mut Frame, file: &FileReport, area: Rect) {
+    let header = Paragraph::new(Line::from(vec![
+        Span::styled("TARGET: ", Style::default().fg(Color::DarkGray)),
+        Span::styled(
+            file.path.to_string_lossy(),
+            Style::default().add_modifier(Modifier::BOLD),
+        ),
+    ]));
+    f.render_widget(header, area);
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn draw_stats(f: &mut Frame, file: &FileReport, area: Rect) {
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)].as_ref())
+        .split(area);
+
+    let t_ratio = (file.token_count as f64 / 2000.0).clamp(0.0, 1.0);
+    let t_gauge = Gauge::default()
+        .block(Block::default().borders(Borders::NONE).title("Size"))
+        .gauge_style(Style::default().fg(if t_ratio > 0.8 {
+            Color::Red
+        } else {
+            Color::Green
+        }))
+        .ratio(t_ratio)
+        .label(format!("{} toks", file.token_count));
+    f.render_widget(t_gauge, chunks[0]);
+
+    let v_count = file.violations.len();
+    let v_ratio = (v_count as f64 / 5.0).clamp(0.0, 1.0);
+    let v_gauge = Gauge::default()
+        .block(Block::default().borders(Borders::NONE).title("Issues"))
+        .gauge_style(Style::default().fg(if v_count > 0 {
+            Color::Red
+        } else {
+            Color::Green
+        }))
+        .ratio(v_ratio)
+        .label(format!("{v_count} Found"));
+    f.render_widget(v_gauge, chunks[1]);
+}
+
+fn draw_issues(f: &mut Frame, file: &FileReport, area: Rect) {
+    if file.is_clean() {
+        let p = Paragraph::new("✨ Clean.")
+            .style(Style::default().fg(Color::Green))
+            .alignment(Alignment::Center);
+        f.render_widget(p, area);
+        return;
+    }
+
+    let items: Vec<ListItem> = file
+        .violations
+        .iter()
+        .map(|v| {
+            let header = Line::from(vec![
+                Span::styled(
+                    format!("[{}] ", v.law),
+                    Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+                ),
+                Span::raw(format!("Line {}", v.row + 1)),
+            ]);
+            let msg = Line::from(Span::styled(
+                format!("  └─ {}", v.message),
+                Style::default().fg(Color::White),
+            ));
+            ListItem::new(vec![header, msg, Line::from("")])
+        })
+        .collect();
+
+    let list = List::new(items).block(Block::default().borders(Borders::TOP).title(" Violations "));
+    f.render_widget(list, area);
+}
+
+∆∆∆
+
+∇∇∇ src/tui/view/layout.rs ∇∇∇
+// src/tui/view/layout.rs
+use crate::tui::state::{App, SortMode};
+use crate::tui::view::components;
+use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
+use ratatui::style::{Color, Modifier, Style};
+use ratatui::text::{Line, Span};
+use ratatui::widgets::{Block, Borders, Paragraph};
+use ratatui::Frame;
+
+pub fn render_dashboard(f: &mut Frame, app: &App, area: Rect) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(
+            [
+                Constraint::Length(3),
+                Constraint::Min(10),
+                Constraint::Length(1),
+            ]
+            .as_ref(),
+        )
+        .split(area);
+
+    draw_header(f, app, chunks[0]);
+    draw_main(f, app, chunks[1]);
+    draw_footer(f, chunks[2]);
+}
+
+#[allow(clippy::cast_precision_loss)]
+fn draw_header(f: &mut Frame, app: &App, area: Rect) {
+    let (clean_count, total) = count_stats(app);
+    let health = if total > 0 {
+        (clean_count as f64 / total as f64) * 100.0
+    } else {
+        100.0
+    };
+
+    let info = build_info_string(app, total);
+    let line = build_header_line(health, &info);
+
+    f.render_widget(
+        Paragraph::new(line)
+            .block(Block::default().borders(Borders::ALL))
+            .alignment(Alignment::Center),
+        area,
+    );
+}
+
+fn count_stats(app: &App) -> (usize, usize) {
+    (
+        app.report.files.iter().filter(|f| f.is_clean()).count(),
+        app.report.files.len(),
+    )
+}
+
+fn get_health_color(health: f64) -> Color {
+    if health > 90.0 {
+        return Color::Green;
+    }
+    if health > 70.0 {
+        return Color::Yellow;
+    }
+    Color::Red
+}
+
+fn build_info_string(app: &App, total: usize) -> String {
+    let sort_str = get_sort_label(app.sort_mode);
+    let filter_str = get_filter_label(app.only_violations);
+    format!(" FILES: {total} | SORT: {sort_str}{filter_str} ")
+}
+
+fn get_sort_label(mode: SortMode) -> &'static str {
+    match mode {
+        SortMode::Path => "NAME",
+        SortMode::Tokens => "SIZE",
+        SortMode::Violations => "ERRORS",
+    }
+}
+
+fn get_filter_label(active: bool) -> &'static str {
+    if active {
+        " | FILTER: ERRORS"
+    } else {
+        ""
+    }
+}
+
+fn build_header_line(health: f64, info: &str) -> Line<'_> {
+    Line::from(vec![
+        Span::styled(
+            " 🛡️ WARDEN PROTOCOL ",
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        ),
+        Span::raw(" | "),
+        Span::styled(
+            format!("HEALTH: {health:.1}%"),
+            Style::default().fg(get_health_color(health)),
+        ),
+        Span::raw(" |"),
+        Span::raw(info),
+    ])
+}
+
+fn draw_main(f: &mut Frame, app: &App, area: Rect) {
+    let chunks = get_main_chunks(area);
+    components::draw_file_list(f, app, chunks[0]);
+    components::draw_inspector(f, app, chunks[1]);
+}
+
+fn get_main_chunks(area: Rect) -> std::rc::Rc<[Rect]> {
+    Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(40), Constraint::Percentage(60)].as_ref())
+        .split(area)
+}
+
+fn draw_footer(f: &mut Frame, area: Rect) {
+    let text = " [s] Sort Mode | [f] Filter Errors | [j/k] Navigate | [q] Quit ";
+    f.render_widget(
+        Paragraph::new(text).style(Style::default().fg(Color::DarkGray).bg(Color::Black)),
+        area,
+    );
+}
+
+∆∆∆
+
+∇∇∇ src/tui/view/mod.rs ∇∇∇
+// src/tui/view/mod.rs
+pub mod components;
+pub mod layout;
+
+use crate::tui::state::App;
+use ratatui::Frame;
+
+pub fn draw(f: &mut Frame, app: &App) {
+    let area = f.area();
+    layout::render_dashboard(f, app, area);
+}
+
+∆∆∆
+
+∇∇∇ src/types.rs ∇∇∇
+// src/types.rs
+use std::path::PathBuf;
+
+/// A single violation detected during analysis.
+#[derive(Debug, Clone)]
+pub struct Violation {
+    pub row: usize,
+    pub message: String,
+    pub law: &'static str,
+}
+
+/// Analysis results for a single file.
+#[derive(Debug, Clone)]
+pub struct FileReport {
+    pub path: PathBuf,
+    pub token_count: usize,
+    pub complexity_score: usize,
+    pub violations: Vec<Violation>,
+}
+
+impl FileReport {
+    /// Returns true if no violations were found.
+    #[must_use]
+    pub fn is_clean(&self) -> bool {
+        self.violations.is_empty()
+    }
+
+    /// Returns the number of violations.
+    #[must_use]
+    pub fn violation_count(&self) -> usize {
+        self.violations.len()
+    }
+}
+
+/// Aggregated results from scanning multiple files.
+#[derive(Debug, Clone, Default)]
+pub struct ScanReport {
+    pub files: Vec<FileReport>,
+    pub total_tokens: usize,
+    pub total_violations: usize,
+    pub duration_ms: u128,
+}
+
+impl ScanReport {
+    /// Returns true if any violations were found.
+    #[must_use]
+    pub fn has_errors(&self) -> bool {
+        self.total_violations > 0
+    }
+
+    /// Returns the number of clean files.
+    #[must_use]
+    pub fn clean_file_count(&self) -> usize {
+        self.files.iter().filter(|f| f.is_clean()).count()
+    }
+}
+
+∆∆∆
+
+∇∇∇ warden.toml ∇∇∇
+# warden.toml
+[rules]
+max_file_tokens = 2000
+max_cyclomatic_complexity = 8
+max_nesting_depth = 3
+max_function_args = 5
+max_function_words = 5
+ignore_naming_on = ["tests", "spec"]
+
+[commands]
+check = "cargo clippy --all-targets -- -D warnings -D clippy::pedantic"
+fix = "cargo fmt"
+
+∆∆∆
+
+
+═══════════════════════════════════════════════════════════════════
+END CODEBASE
+═══════════════════════════════════════════════════════════════════
+
+WARDEN CONSTRAINTS:
+□ Files < 2000 tokens
+□ Complexity ≤ 8
+□ Nesting ≤ 3
+□ Args ≤ 5
+□ No .unwrap() or .expect()
+□ Use Nabla Format (∇∇∇ ... ∆∆∆)
