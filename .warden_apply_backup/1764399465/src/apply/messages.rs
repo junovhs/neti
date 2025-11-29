@@ -4,11 +4,7 @@ use colored::Colorize;
 
 pub fn print_outcome(outcome: &ApplyOutcome) {
     match outcome {
-        ApplyOutcome::Success {
-            written,
-            deleted,
-            backed_up,
-        } => print_success(written, deleted, *backed_up),
+        ApplyOutcome::Success { written, backed_up } => print_success(written, *backed_up),
         ApplyOutcome::ValidationFailure {
             errors,
             missing,
@@ -22,7 +18,7 @@ pub fn print_outcome(outcome: &ApplyOutcome) {
     }
 }
 
-fn print_success(written: &[String], deleted: &[String], backed_up: bool) {
+fn print_success(written: &[String], backed_up: bool) {
     println!("{}", "✅ Apply successful!".green().bold());
     if backed_up {
         println!("   (Backup created in .warden_apply_backup/)");
@@ -30,9 +26,6 @@ fn print_success(written: &[String], deleted: &[String], backed_up: bool) {
     println!();
     for file in written {
         println!("   {} {file}", "✓".green());
-    }
-    for file in deleted {
-        println!("   {} {file}", "✗".red());
     }
     println!();
     println!("Run {} to verify.", "warden check".yellow());

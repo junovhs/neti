@@ -25,7 +25,6 @@ pub struct FileContent {
 pub enum ApplyOutcome {
     Success {
         written: Vec<String>,
-        deleted: Vec<String>,
         backed_up: bool,
     },
     ValidationFailure {

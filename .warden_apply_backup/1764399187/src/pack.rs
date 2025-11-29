@@ -1,7 +1,9 @@
 // src/pack.rs
 use crate::clipboard;
 use crate::config::{Config, GitMode};
-use crate::discovery;
+use crate::enumerate::FileEnumerator;
+use crate::filter::FileFilter;
+use crate::heuristics::HeuristicFilter;
 use crate::prompt::PromptGenerator;
 use crate::rules::RuleEngine;
 use crate::skeleton;
@@ -44,11 +46,7 @@ pub fn run(options: &PackOptions) -> Result<()> {
         println!("🧶 Knitting repository...");
     }
 
-    let files = discovery::discover(&config)?;
-    if options.verbose {
-        eprintln!("📦 Packing {} files...", files.len());
-    }
-
+    let files = discover_files(&config, options.verbose)?;
     let content = generate_content(&files, options, &config)?;
     let token_count = Tokenizer::count(&content);
 
@@ -69,6 +67,17 @@ fn setup_config(opts: &PackOptions) -> Result<Config> {
     config.load_local_config();
     config.validate()?;
     Ok(config)
+}
+
+fn discover_files(config: &Config, verbose: bool) -> Result<Vec<PathBuf>> {
+    let raw = FileEnumerator::new(config.clone()).enumerate()?;
+    let h_files = HeuristicFilter::new().filter(raw);
+    let t_files = FileFilter::new(config)?.filter(h_files);
+
+    if verbose {
+        eprintln!("📦 Packing {} files...", t_files.len());
+    }
+    Ok(t_files)
 }
 
 fn generate_content(files: &[PathBuf], opts: &PackOptions, config: &Config) -> Result<String> {

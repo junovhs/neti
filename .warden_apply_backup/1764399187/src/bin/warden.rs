@@ -9,7 +9,9 @@ use std::process::{self, Command};
 use warden_core::apply;
 use warden_core::apply::types::ApplyContext;
 use warden_core::config::Config;
-use warden_core::discovery;
+use warden_core::enumerate::FileEnumerator;
+use warden_core::filter::FileFilter;
+use warden_core::heuristics::HeuristicFilter;
 use warden_core::pack::{self, OutputFormat, PackOptions};
 use warden_core::project;
 use warden_core::prompt::PromptGenerator;
@@ -217,7 +219,7 @@ fn handle_exec_error(e: &std::io::Error, prog: &str) {
 
 fn run_scan() -> Result<()> {
     let config = load_config();
-    let files = discovery::discover(&config)?;
+    let files = discover_files(&config)?;
     let report = scan_files(&config, files);
 
     reporting::print_report(&report)?;
@@ -230,7 +232,7 @@ fn run_scan() -> Result<()> {
 
 fn run_tui() -> Result<()> {
     let config = load_config();
-    let files = discovery::discover(&config)?;
+    let files = discover_files(&config)?;
     let report = scan_files(&config, files);
     run_tui_with_report(report)
 }
@@ -239,6 +241,12 @@ fn load_config() -> Config {
     let mut config = Config::new();
     config.load_local_config();
     config
+}
+
+fn discover_files(config: &Config) -> Result<Vec<std::path::PathBuf>> {
+    let files = FileEnumerator::new(config.clone()).enumerate()?;
+    let files = FileFilter::new(config)?.filter(files);
+    Ok(HeuristicFilter::new().filter(files))
 }
 
 fn scan_files(config: &Config, files: Vec<std::path::PathBuf>) -> ScanReport {

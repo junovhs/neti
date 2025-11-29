@@ -88,17 +88,15 @@ fn validate_payload(content: &str) -> ApplyOutcome {
 
 fn apply_and_verify(content: &str, ctx: &ApplyContext, plan: Option<&str>) -> Result<ApplyOutcome> {
     let extracted = extractor::extract_files(content)?;
-    let manifest = manifest::parse_manifest(content)?.unwrap_or_default();
-
+    
     if ctx.dry_run {
         return Ok(ApplyOutcome::Success {
             written: vec!["(Dry Run) Files verified".to_string()],
-            deleted: vec![],
             backed_up: false,
         });
     }
 
-    let outcome = writer::write_files(&manifest, &extracted, None)?;
+    let outcome = writer::write_files(&extracted, None)?;
 
     verify_and_commit(&outcome, ctx, plan)?;
     Ok(outcome)
@@ -139,7 +137,7 @@ fn verify_application(ctx: &ApplyContext) -> Result<bool> {
 fn run_check_command(cmd: &str) -> Result<bool> {
     println!("Running check: {}", cmd.dimmed());
     let parts: Vec<&str> = cmd.split_whitespace().collect();
-
+    
     let Some((prog, args)) = parts.split_first() else {
         return Ok(true); // Empty command passes trivially
     };

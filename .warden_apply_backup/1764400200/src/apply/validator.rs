@@ -21,14 +21,13 @@ const SENSITIVE_PATHS: &[&str] = &[
 /// it's a programmer error that will surface immediately at first use.
 static LAZY_MARKERS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     [
-        // Matches "// ..."
+        // // ...
         r"^\s*//\s*\.{3,}\s*$",
-        // Matches "/* ... */"
+        // /* ... */
         r"^\s*/\*\s*\.{3,}\s*\*/\s*$",
-        // Matches phrases indicating omitted code.
-        // warden:ignore
+        // // ... rest of code, // remaining code, etc.
         r"(?i)^\s*//.*(rest of|remaining|existing|implement|logic here).*$",
-        // Matches Python style "# ..."
+        // # ... (Python style)
         r"^\s*#\s*\.{3,}\s*$",
     ]
     .iter()
@@ -162,11 +161,6 @@ fn check_single_file(path: &str, content: &str, errors: &mut Vec<String>) {
 
 fn check_lazy_truncation(path: &str, content: &str, errors: &mut Vec<String>) {
     for (line_num, line) in content.lines().enumerate() {
-        // Allow explicit ignores for cases where code intentionally looks truncated
-        if line.contains("warden:ignore") {
-            continue;
-        }
-
         for regex in LAZY_MARKERS.iter() {
             if regex.is_match(line) {
                 errors.push(format!(
