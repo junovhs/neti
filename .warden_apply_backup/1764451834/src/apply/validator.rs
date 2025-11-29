@@ -89,13 +89,6 @@ fn check_path_safety(extracted: &ExtractedFiles, errors: &mut Vec<String>) {
 }
 
 fn validate_single_path(path: &str, errors: &mut Vec<String>) {
-    if path.eq_ignore_ascii_case("ROADMAP.md") {
-        errors.push(
-            "PROTECTED: ROADMAP.md is managed programmatically. Use 'warden roadmap apply' commands instead of rewriting the file.".to_string(),
-        );
-        return;
-    }
-
     if has_traversal(path) {
         errors.push(format!(
             "SECURITY: path contains directory traversal: {path}"
