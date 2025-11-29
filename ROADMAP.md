@@ -32,6 +32,7 @@ These aren't style preferences. They're **containment protocols**.
 - [x] **Pack defaults to --prompt, --noprompt to disable**
 - [x] **Pack copies file path to clipboard for attachment paste**
 - [x] **TypeScript auto-detection uses biome**
+- [x] **Integration tests for all features**
   *Integrated as core module with state-transition logic*
 
 **Theme:** If it applies, it's valid. If it's invalid, it rejects hard.
@@ -69,7 +70,7 @@ These aren't style preferences. They're **containment protocols**.
 - [x] **Error injection in knit**
   When `knit --prompt` runs, append current violations.
 
-- [ ] **`warden apply --commit`**
+- [x] **`warden apply --commit`**
   On success: `git add .` → auto-generate commit message → commit.
   
   *If it passes validation, commit it. Git is your undo.*
