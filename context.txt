@@ -819,31 +819,6 @@ SQLite backend. Complexity trends over time. Codebase health charts.
    Contracts make this verifiable.
 ∆∆∆
 
-∇∇∇ chaos.sh ∇∇∇
-// <ERROR READING FILE: No such file or directory (os error 2)>
-
-∆∆∆
-
-∇∇∇ chaos_examples/bloat.rs ∇∇∇
-// <ERROR READING FILE: No such file or directory (os error 2)>
-
-∆∆∆
-
-∇∇∇ chaos_examples/complex.rs ∇∇∇
-// <ERROR READING FILE: No such file or directory (os error 2)>
-
-∆∆∆
-
-∇∇∇ chaos_examples/deep.rs ∇∇∇
-// <ERROR READING FILE: No such file or directory (os error 2)>
-
-∆∆∆
-
-∇∇∇ chaos_examples/unsafe.rs ∇∇∇
-// <ERROR READING FILE: No such file or directory (os error 2)>
-
-∆∆∆
-
 ∇∇∇ src/analysis.rs ∇∇∇
 // src/analysis.rs
 use crate::checks::{self, CheckContext};

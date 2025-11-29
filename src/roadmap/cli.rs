@@ -206,5 +206,5 @@ fn print_errs(errors: &[String]) {
 }
 
 fn template(name: &str) -> String {
-    format!("# {name} Roadmap\n\n## v0.1\n- [ ] Init")
+    format!("# {name} Roadmap\n\n## v0.1.0\n\n- [ ] Init\n\n## v0.2.0\n\n## v0.3.0\n")
 }
