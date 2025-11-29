@@ -129,51 +129,44 @@ fn verify_and_commit(outcome: &ApplyOutcome, ctx: &ApplyContext, plan: Option<&s
         return Ok(());
     }
     
-    if !has_changes(outcome) {
-         println!("{}", "No changes detected.".yellow());
-         return Ok(());
-    }
-
-    if verify_application(ctx)? {
-        handle_success(plan);
-    } else {
-        handle_failure(plan);
-    }
-    Ok(())
-}
-
-fn has_changes(outcome: &ApplyOutcome) -> bool {
+    // If no changes, do nothing (don't clear intent either, as it might be for a future step)
     if let ApplyOutcome::Success { written, deleted, roadmap_results, .. } = outcome {
-        !written.is_empty() || !deleted.is_empty() || !roadmap_results.is_empty()
-    } else {
-        false
+        if written.is_empty() && deleted.is_empty() && roadmap_results.is_empty() {
+             println!("{}", "No changes detected.".yellow());
+             return Ok(());
+        }
     }
-}
 
-fn handle_success(plan: Option<&str>) {
+    if !verify_application(ctx)? {
+        println!("{}", "\n❌ Verification Failed. Changes applied but NOT committed.".red().bold());
+        println!("Fix the issues manually and then commit.");
+        
+        // Persist intent on failure
+        if let Some(p) = plan {
+             save_intent(p);
+        }
+        return Ok(());
+    }
+
     println!("{}", "\n✨ Verification Passed. Committing & Pushing...".green().bold());
+    
+    // Merge intent on success
     let message = construct_commit_message(plan);
     if let Err(e) = git::commit_and_push(&message) {
         eprintln!("{} Git operation failed: {e}", "⚠️".yellow());
     } else {
         clear_intent();
     }
-}
-
-fn handle_failure(plan: Option<&str>) {
-    println!("{}", "\n❌ Verification Failed. Changes applied but NOT committed.".red().bold());
-    println!("Fix the issues manually and then commit.");
-    if let Some(p) = plan {
-         save_intent(p);
-    }
+    Ok(())
 }
 
 fn save_intent(plan: &str) {
     // Only save if no intent exists (preserve the original goal)
     if !Path::new(INTENT_FILE).exists() {
         let clean = plan.replace("GOAL:", "").trim().to_string();
-        // Ignore errors silently (best effort)
-        let _ = std::fs::write(INTENT_FILE, clean);
+        if let Ok(_) = std::fs::write(INTENT_FILE, clean) {
+             // Silently saved
+        }
     }
 }
 

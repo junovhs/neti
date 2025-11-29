@@ -3,12 +3,13 @@ use anyhow::{anyhow, Result};
 use std::process::Command;
 use colored::Colorize;
 
-/// Stages all files, commits with the provided message, and pushes.
+/// Stages all files, commits with the plan, and pushes.
 ///
 /// # Errors
 /// Returns error if git commands fail.
-pub fn commit_and_push(message: &str) -> Result<()> {
+pub fn commit_and_push(plan: Option<&str>) -> Result<()> {
     // 1. Git Add All
+    // "I always use git add . at repo root"
     run_git(&["add", "."])?;
 
     // 2. Check if there are changes to commit
@@ -18,12 +19,14 @@ pub fn commit_and_push(message: &str) -> Result<()> {
         return Ok(());
     }
 
-    // 3. Git Commit
-    let final_message = clean_message(message);
-    run_git(&["commit", "-m", &final_message])?;
-    println!("{} {}", "Git Commit:".green(), final_message.lines().next().unwrap_or(""));
+    // 3. Construct Commit Message
+    let message = construct_message(plan);
 
-    // 4. Git Push
+    // 4. Git Commit
+    run_git(&["commit", "-m", &message])?;
+    println!("{} {}", "Git Commit:".green(), message.lines().next().unwrap_or(""));
+
+    // 5. Git Push
     print!("{}", "Pushing to remote... ".dimmed());
     run_git(&["push"])?;
     println!("{}", "Done.".green());
@@ -43,11 +46,12 @@ fn run_git(args: &[&str]) -> Result<()> {
     Ok(())
 }
 
-fn clean_message(raw: &str) -> String {
-    let clean = raw.replace("GOAL:", "").trim().to_string();
-    if clean.is_empty() {
-        "warden: automated update".to_string()
-    } else {
-        clean
+fn construct_message(plan: Option<&str>) -> String {
+    if let Some(p) = plan {
+        // We clean up the plan to make it a decent commit message
+        // Remove the "GOAL:" prefix if present, as it's redundant
+        let clean = p.replace("GOAL:", "").trim().to_string();
+        return clean;
     }
+    "warden: automated update".to_string()
 }

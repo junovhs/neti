@@ -135,11 +135,10 @@ fn verify_and_commit(outcome: &ApplyOutcome, ctx: &ApplyContext, plan: Option<&s
     }
 
     if verify_application(ctx)? {
-        handle_success(plan);
+        handle_success(plan)
     } else {
-        handle_failure(plan);
+        handle_failure(plan)
     }
-    Ok(())
 }
 
 fn has_changes(outcome: &ApplyOutcome) -> bool {
@@ -150,7 +149,7 @@ fn has_changes(outcome: &ApplyOutcome) -> bool {
     }
 }
 
-fn handle_success(plan: Option<&str>) {
+fn handle_success(plan: Option<&str>) -> Result<()> {
     println!("{}", "\n✨ Verification Passed. Committing & Pushing...".green().bold());
     let message = construct_commit_message(plan);
     if let Err(e) = git::commit_and_push(&message) {
@@ -158,14 +157,16 @@ fn handle_success(plan: Option<&str>) {
     } else {
         clear_intent();
     }
+    Ok(())
 }
 
-fn handle_failure(plan: Option<&str>) {
+fn handle_failure(plan: Option<&str>) -> Result<()> {
     println!("{}", "\n❌ Verification Failed. Changes applied but NOT committed.".red().bold());
     println!("Fix the issues manually and then commit.");
     if let Some(p) = plan {
          save_intent(p);
     }
+    Ok(())
 }
 
 fn save_intent(plan: &str) {

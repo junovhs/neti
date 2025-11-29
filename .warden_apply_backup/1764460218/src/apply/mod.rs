@@ -16,8 +16,6 @@ use std::path::Path;
 use std::process::Command;
 use types::{ApplyContext, ApplyOutcome, ExtractedFiles, Manifest};
 
-const INTENT_FILE: &str = ".warden_intent";
-
 /// Runs the apply command logic.
 ///
 /// # Errors
@@ -48,8 +46,6 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
 
     let validation = validate_payload(content);
     if !matches!(validation, ApplyOutcome::Success { .. }) {
-        // Validation failed immediately (bad format/safety)
-        // We do NOT persist intent here because the user likely needs to reprompt entirely.
         return Ok(validation);
     }
 
@@ -89,6 +85,8 @@ fn validate_payload(content: &str) -> ApplyOutcome {
         Err(e) => return ApplyOutcome::ParseError(e),
     };
 
+    // If validation passes (or trivially passes with empty files), we proceed.
+    // Important: validator handles EMPTY manifests gracefully (returns Success with empty lists).
     validator::validate(&manifest, &extracted)
 }
 
@@ -105,17 +103,22 @@ fn apply_and_verify(content: &str, ctx: &ApplyContext, plan: Option<&str>) -> Re
         });
     }
 
+    // 1. Apply Files
     let mut outcome = writer::write_files(&manifest, &extracted, None)?;
 
-    // Handle roadmap updates
+    // 2. Apply Roadmap (if present)
+    // We assume standard location "ROADMAP.md" for implicit apply
     let roadmap_path = Path::new("ROADMAP.md");
     let mut roadmap_results = Vec::new();
+
     if roadmap_path.exists() {
         match roadmap::handle_input(roadmap_path, content) {
             Ok(results) => roadmap_results = results,
             Err(e) => eprintln!("{} Roadmap update failed: {e}", "⚠️".yellow()),
         }
     }
+
+    // Merge roadmap results into outcome
     if let ApplyOutcome::Success { roadmap_results: ref mut rr, .. } = outcome {
         rr.append(&mut roadmap_results);
     }
@@ -128,69 +131,26 @@ fn verify_and_commit(outcome: &ApplyOutcome, ctx: &ApplyContext, plan: Option<&s
     if !matches!(outcome, ApplyOutcome::Success { .. }) {
         return Ok(());
     }
-    
-    if !has_changes(outcome) {
-         println!("{}", "No changes detected.".yellow());
-         return Ok(());
-    }
 
-    if verify_application(ctx)? {
-        handle_success(plan);
-    } else {
-        handle_failure(plan);
-    }
-    Ok(())
-}
-
-fn has_changes(outcome: &ApplyOutcome) -> bool {
+    // Special case: If NO files changed AND NO roadmap changes, we don't commit.
     if let ApplyOutcome::Success { written, deleted, roadmap_results, .. } = outcome {
-        !written.is_empty() || !deleted.is_empty() || !roadmap_results.is_empty()
-    } else {
-        false
-    }
-}
-
-fn handle_success(plan: Option<&str>) {
-    println!("{}", "\n✨ Verification Passed. Committing & Pushing...".green().bold());
-    let message = construct_commit_message(plan);
-    if let Err(e) = git::commit_and_push(&message) {
-        eprintln!("{} Git operation failed: {e}", "⚠️".yellow());
-    } else {
-        clear_intent();
-    }
-}
-
-fn handle_failure(plan: Option<&str>) {
-    println!("{}", "\n❌ Verification Failed. Changes applied but NOT committed.".red().bold());
-    println!("Fix the issues manually and then commit.");
-    if let Some(p) = plan {
-         save_intent(p);
-    }
-}
-
-fn save_intent(plan: &str) {
-    // Only save if no intent exists (preserve the original goal)
-    if !Path::new(INTENT_FILE).exists() {
-        let clean = plan.replace("GOAL:", "").trim().to_string();
-        // Ignore errors silently (best effort)
-        let _ = std::fs::write(INTENT_FILE, clean);
-    }
-}
-
-fn clear_intent() {
-    let _ = std::fs::remove_file(INTENT_FILE);
-}
-
-fn construct_commit_message(current_plan: Option<&str>) -> String {
-    let current = current_plan.unwrap_or("Automated update").replace("GOAL:", "").trim().to_string();
-    
-    if let Ok(stored) = std::fs::read_to_string(INTENT_FILE) {
-        let stored = stored.trim();
-        if !stored.is_empty() && stored != current {
-            return format!("{stored}\n\nFollow-up: {current}");
+        if written.is_empty() && deleted.is_empty() && roadmap_results.is_empty() {
+             println!("{}", "No changes detected (Files or Roadmap).".yellow());
+             return Ok(());
         }
     }
-    current
+
+    if !verify_application(ctx)? {
+        println!("{}", "\n❌ Verification Failed. Changes applied but NOT committed.".red().bold());
+        println!("Fix the issues manually and then commit.");
+        return Ok(());
+    }
+
+    println!("{}", "\n✨ Verification Passed. Committing & Pushing...".green().bold());
+    if let Err(e) = git::commit_and_push(plan) {
+        eprintln!("{} Git operation failed: {e}", "⚠️".yellow());
+    }
+    Ok(())
 }
 
 fn verify_application(ctx: &ApplyContext) -> Result<bool> {
@@ -210,7 +170,11 @@ fn verify_application(ctx: &ApplyContext) -> Result<bool> {
 fn run_check_command(cmd: &str) -> Result<bool> {
     println!("Running check: {}", cmd.dimmed());
     let parts: Vec<&str> = cmd.split_whitespace().collect();
-    let Some((prog, args)) = parts.split_first() else { return Ok(true); };
+
+    let Some((prog, args)) = parts.split_first() else {
+        return Ok(true); // Empty command passes trivially
+    };
+
     let status = Command::new(prog).args(args).status()?;
     Ok(status.success())
 }
