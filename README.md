@@ -139,6 +139,11 @@ If `warden apply` fails, the error is already in your clipboard. Paste it back t
 | `knit --prompt` | Include system prompt |
 | `knit --skeleton` | Signatures only (coming soon) |
 | `knit --stdout` | Output to stdout |
+| `warden roadmap init` | Create new ROADMAP.md |
+| `warden roadmap prompt` | Copy AI teaching prompt to clipboard |
+| `warden roadmap apply` | Apply roadmap commands from clipboard |
+| `warden roadmap show` | Display roadmap status |
+| `warden roadmap tasks` | List tasks with paths |
 
 ---
 
@@ -251,6 +256,43 @@ XML tags get mangled by chat interfaces. Warden uses Unicode delimiters that nev
 | `q` | Quit |
 
 ---
+
+## Roadmap Management
+
+Warden includes AI-friendly roadmap management. Instead of AI rewriting your entire roadmap, it sends surgical commands.
+
+    warden roadmap init          # Create ROADMAP.md
+    warden roadmap prompt        # Copy AI instructions to clipboard
+    warden roadmap apply         # Apply commands from clipboard
+
+### The Workflow
+
+1. Run `warden roadmap prompt`
+2. Paste to AI, describe what changed
+3. AI responds with commands:
+```
+===ROADMAP===
+CHECK truncation-detection
+ADD v0.5.0 "New feature" AFTER truncation-detection
+NOTE auth-system "Needs refactor"
+===END===
+```
+
+4. Run `warden roadmap apply`
+
+### Commands
+
+| Command | Example |
+|---------|---------|
+| `CHECK` | `CHECK task-name` |
+| `UNCHECK` | `UNCHECK task-name` |
+| `ADD` | `ADD v0.1.0 "New task"` |
+| `ADD AFTER` | `ADD v0.1.0 "Task" AFTER other-task` |
+| `DELETE` | `DELETE old-task` |
+| `UPDATE` | `UPDATE task "New description"` |
+| `NOTE` | `NOTE task "Implementation note"` |
+
+Tasks are identified by slugified names. `Truncation detection` becomes `truncation-detection`.
 
 ## Coming Soon: The Contract Protocol
 
