@@ -3,7 +3,7 @@ use clap::{Parser, Subcommand};
 use colored::Colorize;
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{self, Command};
 
 use warden_core::analysis::RuleEngine;
@@ -53,7 +53,6 @@ enum Commands {
         noprompt: bool,
         #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
         format: OutputFormat,
-        /// Force skeletonization of all files (overrides focus target)
         #[arg(long)]
         skeleton: bool,
         #[arg(long)]
@@ -64,9 +63,6 @@ enum Commands {
         code_only: bool,
         #[arg(long, short)]
         verbose: bool,
-        /// Focus on a specific file (others will be skeletonized)
-        #[arg(value_name = "TARGET")]
-        target: Option<PathBuf>,
     },
 }
 
@@ -112,7 +108,6 @@ fn dispatch_subcommand(cmd: &Commands) -> Result<()> {
             no_git,
             code_only,
             verbose,
-            target,
         } => pack::run(&PackOptions {
             stdout: *stdout,
             copy: *copy,
@@ -123,7 +118,6 @@ fn dispatch_subcommand(cmd: &Commands) -> Result<()> {
             no_git: *no_git,
             code_only: *code_only,
             verbose: *verbose,
-            target: target.clone(),
         }),
     }
 }

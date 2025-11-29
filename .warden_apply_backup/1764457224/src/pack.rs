@@ -11,7 +11,7 @@ use clap::ValueEnum;
 use colored::Colorize;
 use std::fmt::Write;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, ValueEnum, Default)]
 pub enum OutputFormat {
@@ -32,7 +32,6 @@ pub struct PackOptions {
     pub git_only: bool,
     pub no_git: bool,
     pub code_only: bool,
-    pub target: Option<PathBuf>,
 }
 
 /// Entry point for the pack command.
@@ -48,11 +47,7 @@ pub fn run(options: &PackOptions) -> Result<()> {
     let config = setup_config(options)?;
 
     if !options.stdout && !options.copy {
-        if let Some(t) = &options.target {
-            println!("🧶 Knitting repository (Focus: {})...", t.display());
-        } else {
-            println!("🧶 Knitting repository...");
-        }
+        println!("🧶 Knitting repository...");
     }
 
     let files = discovery::discover(&config)?;
@@ -141,8 +136,8 @@ fn inject_violations(ctx: &mut String, files: &[PathBuf], config: &Config) -> Re
 
 fn write_body(files: &[PathBuf], ctx: &mut String, opts: &PackOptions) -> Result<()> {
     match opts.format {
-        OutputFormat::Text => pack_nabla(files, ctx, opts),
-        OutputFormat::Xml => pack_xml(files, ctx, opts),
+        OutputFormat::Text => pack_nabla(files, ctx, opts.skeleton),
+        OutputFormat::Xml => pack_xml(files, ctx, opts.skeleton),
     }
 }
 
@@ -180,10 +175,12 @@ fn output_result(content: &str, tokens: usize, opts: &PackOptions) -> Result<()>
         return Ok(());
     }
 
+    // Default: Write to file and copy file path to clipboard
     let output_path = PathBuf::from("context.txt");
     fs::write(&output_path, content)?;
     println!("✅ Generated 'context.txt'");
 
+    // Copy file path to clipboard for drag-drop style paste
     if let Ok(abs_path) = fs::canonicalize(&output_path) {
         if clipboard::copy_file_path(&abs_path).is_ok() {
             println!(
@@ -197,30 +194,14 @@ fn output_result(content: &str, tokens: usize, opts: &PackOptions) -> Result<()>
     Ok(())
 }
 
-fn should_skeletonize(path: &Path, opts: &PackOptions) -> bool {
-    // If global skeleton flag is on, everything is skeletonized
-    if opts.skeleton {
-        return true;
-    }
-
-    // If a target is specified, everything EXCEPT the target is skeletonized
-    if let Some(target) = &opts.target {
-        // We do a loose match: if the path ends with the target string.
-        // This allows "warden pack src/main.rs" to match "./src/main.rs"
-        return !path.ends_with(target);
-    }
-
-    false
-}
-
-fn pack_nabla(files: &[PathBuf], out: &mut String, opts: &PackOptions) -> Result<()> {
+fn pack_nabla(files: &[PathBuf], out: &mut String, skeleton: bool) -> Result<()> {
     for path in files {
         let p_str = path.to_string_lossy().replace('\\', "/");
         writeln!(out, "∇∇∇ {p_str} ∇∇∇")?;
 
         match fs::read_to_string(path) {
             Ok(content) => {
-                if should_skeletonize(path, opts) {
+                if skeleton {
                     out.push_str(&skeleton::clean(path, &content));
                 } else {
                     out.push_str(&content);
@@ -233,7 +214,7 @@ fn pack_nabla(files: &[PathBuf], out: &mut String, opts: &PackOptions) -> Result
     Ok(())
 }
 
-fn pack_xml(files: &[PathBuf], out: &mut String, opts: &PackOptions) -> Result<()> {
+fn pack_xml(files: &[PathBuf], out: &mut String, skeleton: bool) -> Result<()> {
     writeln!(out, "<documents>")?;
     for path in files {
         let p_str = path.to_string_lossy().replace('\\', "/");
@@ -241,7 +222,7 @@ fn pack_xml(files: &[PathBuf], out: &mut String, opts: &PackOptions) -> Result<(
 
         match fs::read_to_string(path) {
             Ok(content) => {
-                if should_skeletonize(path, opts) {
+                if skeleton {
                     out.push_str(
                         &skeleton::clean(path, &content).replace("]]>", "]]]]><![CDATA[>"),
                     );
