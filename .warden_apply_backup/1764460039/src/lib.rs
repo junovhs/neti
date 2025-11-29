@@ -6,7 +6,6 @@ pub mod config;
 pub mod constants;
 pub mod discovery;
 pub mod error;
-pub mod graph;
 pub mod pack;
 pub mod project;
 pub mod prompt;
