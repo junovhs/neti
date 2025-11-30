@@ -5,18 +5,10 @@ use crossterm::event::{self, Event, KeyCode};
 use std::collections::HashMap;
 use std::time::Duration;
 
-#[derive(PartialEq)]
-pub enum ConfigField {
-    MaxTokens,
-    MaxComplexity,
-    MaxDepth,
-    MaxArgs,
-    MaxWords,
-}
-
 pub struct ConfigApp {
     pub rules: RuleConfig,
     pub commands: HashMap<String, Vec<String>>,
+    /// 0 = Preset, 1..5 = Rules
     pub selected_field: usize,
     pub running: bool,
     pub modified: bool,
@@ -94,12 +86,12 @@ impl ConfigApp {
         if self.selected_field > 0 {
             self.selected_field -= 1;
         } else {
-            self.selected_field = 4;
+            self.selected_field = 5;
         }
     }
 
     fn move_down(&mut self) {
-        if self.selected_field < 4 {
+        if self.selected_field < 5 {
             self.selected_field += 1;
         } else {
             self.selected_field = 0;
@@ -109,11 +101,12 @@ impl ConfigApp {
     fn increment_val(&mut self) {
         self.modified = true;
         match self.selected_field {
-            0 => self.rules.max_file_tokens += 100,
-            1 => self.rules.max_cyclomatic_complexity += 1,
-            2 => self.rules.max_nesting_depth += 1,
-            3 => self.rules.max_function_args += 1,
-            4 => self.rules.max_function_words += 1,
+            0 => self.cycle_preset(true),
+            1 => self.rules.max_file_tokens += 100,
+            2 => self.rules.max_cyclomatic_complexity += 1,
+            3 => self.rules.max_nesting_depth += 1,
+            4 => self.rules.max_function_args += 1,
+            5 => self.rules.max_function_words += 1,
             _ => {}
         }
     }
@@ -121,28 +114,62 @@ impl ConfigApp {
     fn decrement_val(&mut self) {
         self.modified = true;
         match self.selected_field {
-            0 => {
+            0 => self.cycle_preset(false),
+            1 => {
                 self.rules.max_file_tokens =
                     self.rules.max_file_tokens.saturating_sub(100).max(100);
             }
-            1 => {
+            2 => {
                 self.rules.max_cyclomatic_complexity =
                     self.rules.max_cyclomatic_complexity.saturating_sub(1).max(1);
             }
-            2 => {
+            3 => {
                 self.rules.max_nesting_depth =
                     self.rules.max_nesting_depth.saturating_sub(1).max(1);
             }
-            3 => {
+            4 => {
                 self.rules.max_function_args =
                     self.rules.max_function_args.saturating_sub(1).max(1);
             }
-            4 => {
+            5 => {
                 self.rules.max_function_words =
                     self.rules.max_function_words.saturating_sub(1).max(1);
             }
             _ => {}
         }
+    }
+
+    fn cycle_preset(&mut self, forward: bool) {
+        // Simple 3-state cycle based on token count as a heuristic
+        let current = if self.rules.max_file_tokens <= 1500 {
+            0 // Strict
+        } else if self.rules.max_file_tokens <= 2000 {
+            1 // Standard
+        } else {
+            2 // Relaxed
+        };
+
+        let next = if forward {
+            (current + 1) % 3
+        } else {
+            (current + 2) % 3
+        };
+
+        match next {
+            0 => self.apply_preset(1500, 4, 2),  // Strict
+            1 => self.apply_preset(2000, 8, 3),  // Standard
+            2 => self.apply_preset(3000, 12, 4), // Relaxed
+            _ => {}
+        }
+    }
+
+    fn apply_preset(&mut self, tokens: usize, complexity: usize, depth: usize) {
+        self.rules.max_file_tokens = tokens;
+        self.rules.max_cyclomatic_complexity = complexity;
+        self.rules.max_nesting_depth = depth;
+        // Keep args/words standard across presets for now, or tune them too
+        self.rules.max_function_args = 5;
+        self.rules.max_function_words = 5;
     }
 
     fn save(&mut self) {
@@ -153,5 +180,61 @@ impl ConfigApp {
                 Some(("Saved warden.toml!".to_string(), std::time::Instant::now()));
             self.modified = false;
         }
+    }
+
+    // --- View Helpers ---
+
+    #[must_use]
+    pub fn get_active_label(&self) -> &'static str {
+        match self.selected_field {
+            0 => "GLOBAL PROTOCOL",
+            1 => "LAW OF ATOMICITY",
+            2..=4 => "LAW OF COMPLEXITY",
+            5 => "LAW OF BLUNTNESS",
+            _ => "UNKNOWN",
+        }
+    }
+
+    #[must_use]
+    pub fn get_active_description(&self) -> &'static str {
+        match self.selected_field {
+            0 => "Select a predefined security clearance level.\n\nStrict: Greenfield/Critical systems.\nStandard: Recommended balance.\nRelaxed: Legacy containment.",
+            1 => "Limits file size. Large files confuse AI context windows and make verification impossible. \n\nGoal: Modular, atomic units.",
+            2 => "Limits control flow paths. High complexity increases hallucination rates and makes code untestable.\n\nGoal: Linear, obvious logic.",
+            3 => "Limits indentation. Deep nesting causes AI to lose scope tracking and context.\n\nGoal: Shallow, flat structures.",
+            4 => "Limits function inputs. Too many arguments suggests a missing struct or mixed concerns.\n\nGoal: Clean interfaces.",
+            5 => "Limits function naming verbosity. Long names often mask poor abstraction.\n\nGoal: Concise intent.",
+            _ => "",
+        }
+    }
+
+    #[must_use]
+    pub fn detect_preset(&self) -> &'static str {
+        if self.rules.max_file_tokens <= 1500 && self.rules.max_cyclomatic_complexity <= 4 {
+             "STRICT"
+        } else if self.rules.max_file_tokens >= 3000 {
+             "RELAXED"
+        } else if self.rules.max_file_tokens == 2000 {
+             "STANDARD"
+        } else {
+             "CUSTOM"
+        }
+    }
+
+    #[must_use]
+    #[allow(clippy::cast_precision_loss)]
+    pub fn get_containment_integrity(&self) -> f64 {
+        // Calculate an aggregate "Integrity Score" based on all metrics.
+        // Lower values = Higher Integrity (closer to strict limits)
+        // We invert this for the gauge: 1.0 = Strict, 0.0 = Relaxed.
+
+        let t_score = (self.rules.max_file_tokens as f64 - 1000.0) / 3000.0; // 1500->0.16, 3000->0.66
+        let c_score = (self.rules.max_cyclomatic_complexity as f64 - 1.0) / 15.0;
+        let d_score = (self.rules.max_nesting_depth as f64 - 1.0) / 5.0;
+
+        let raw_avg = (t_score + c_score + d_score) / 3.0;
+        
+        // Invert: 1.0 minus the "looseness"
+        (1.0 - raw_avg).clamp(0.0, 1.0)
     }
 }
