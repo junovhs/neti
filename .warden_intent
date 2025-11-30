@@ -1,0 +1,6 @@
+Implement Roadmap Audit (Test Traceability) and fix roadmap state.
+CHANGES:
+1.  Create `src/roadmap/audit.rs`: Implements `check_traceability` to scan for test files matching completed tasks.
+2.  Update `src/roadmap/mod.rs`: Export the new `audit` module.
+3.  Update `src/roadmap/cli.rs`: Add `audit` subcommand to the CLI.
+4.  Update Roadmap: Deduplicate "Config Wizard" and mark "Test Traceability" complete via command block.

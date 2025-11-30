@@ -1,4 +1,3 @@
-pub mod audit;
 pub mod cli;
 pub mod cmd_parser;
 pub mod cmd_runner;

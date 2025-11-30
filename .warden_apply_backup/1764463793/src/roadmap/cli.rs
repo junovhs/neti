@@ -1,6 +1,6 @@
 use crate::clipboard;
 use crate::roadmap::{
-    apply_commands, audit, generate_prompt, CommandBatch, PromptOptions, Roadmap, TaskStatus,
+    apply_commands, generate_prompt, CommandBatch, PromptOptions, Roadmap, TaskStatus,
 };
 use anyhow::{anyhow, Context, Result};
 use clap::Subcommand;
@@ -49,12 +49,6 @@ pub enum RoadmapCommand {
         #[arg(long)]
         complete: bool,
     },
-    Audit {
-        #[arg(short, long, default_value = "ROADMAP.md")]
-        file: PathBuf,
-        #[arg(long)]
-        strict: bool,
-    },
 }
 
 /// Entry point for roadmap commands
@@ -81,7 +75,6 @@ pub fn handle_command(cmd: RoadmapCommand) -> Result<()> {
             pending,
             complete,
         } => run_tasks(&file, pending, complete),
-        RoadmapCommand::Audit { file, strict } => run_audit(&file, strict),
     }
 }
 
@@ -181,13 +174,6 @@ fn run_tasks(file: &Path, pending: bool, complete: bool) -> Result<()> {
             println!("{mark} {} - {}", t.path, t.text);
         }
     }
-    Ok(())
-}
-
-fn run_audit(file: &Path, strict: bool) -> Result<()> {
-    let r = load(file)?;
-    let root = std::env::current_dir()?;
-    audit::run(&r, &root, audit::AuditOptions { strict });
     Ok(())
 }
 
