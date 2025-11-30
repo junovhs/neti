@@ -69,7 +69,7 @@ fn print_validation_errors(errors: &[String], missing: &[String]) {
     }
 }
 
-fn print_ai_feedback(ai_message: &str) {
+pub fn print_ai_feedback(ai_message: &str) {
     println!();
     println!("{}", "📋 Paste this back to the AI:".cyan().bold());
     println!("{}", "─".repeat(60).black());
@@ -96,14 +96,30 @@ pub fn format_ai_rejection(missing: &[String], errors: &[String]) -> String {
 
     if !errors.is_empty() {
         msg.push_str("VALIDATION ERRORS:\n");
+        let mut hint_dogfood = false;
         for e in errors {
             let _ = writeln!(msg, "- {e}");
+            if e.contains("truncation marker") || e.contains("Banned") {
+                hint_dogfood = true;
+            }
         }
         msg.push('\n');
+
+        if hint_dogfood {
+            msg.push_str("TIP: If you are actively 'dogfooding' (testing failure cases) or intentionally using banned patterns, verify the content matches the rules or use '// warden:ignore' on the file/line to bypass.\n\n");
+        }
     }
 
     msg.push_str(
         "Please provide the missing or corrected files using the NABLA PROTOCOL (∇∇∇ ... ∆∆∆).",
     );
     msg
+}
+
+#[must_use]
+pub fn format_verification_failure(output: &str) -> String {
+    format!(
+        "The changes were applied, but post-application verification failed.\n\nFAILURE LOG:\n{}\n\nPlease fix the implementation so that checks pass.",
+        output.trim()
+    )
 }

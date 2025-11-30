@@ -53,18 +53,18 @@
 - [x] **Token exemption patterns** <!-- test: tests/unit_config.rs::test_ignore_tokens_on -->
 
 ### Law of Complexity — Cyclomatic
-- [x] **Rust complexity query (if/match/for/while/&&/||)** <!-- test: tests/integration_core.rs::test_complexity_simple_function_passes -->
-- [x] **Complexity violation detection** <!-- test: tests/integration_core.rs::test_complexity_branchy_function_fails -->
+- [x] **Rust complexity query (if/match/for/while/&&/||) <!-- test: tests/integration_core.rs::test_complexity_boundary_check -->**
+- [x] **Complexity violation detection <!-- test: tests/integration_core.rs::test_complexity_construct_match -->**
 - [x] **JS/TS complexity query** <!-- test: tests/unit_analysis.rs::test_js_complexity -->
 - [x] **Python complexity query** <!-- test: tests/unit_analysis.rs::test_python_complexity -->
 
 ### Law of Complexity — Nesting Depth
-- [x] **Depth calculation (block/body traversal)** <!-- test: tests/integration_core.rs::test_nesting_shallow_passes -->
-- [x] **Deep nesting violation** <!-- test: tests/integration_core.rs::test_nesting_deep_fails -->
+- [x] **Depth calculation (block/body traversal) <!-- test: tests/integration_core.rs::test_nesting_boundary -->**
+- [x] **Deep nesting violation <!-- test: tests/integration_core.rs::test_nesting_boundary -->**
 
 ### Law of Complexity — Arity
-- [x] **Parameter counting** <!-- test: tests/integration_core.rs::test_arity_few_args_passes -->
-- [x] **High arity violation** <!-- test: tests/integration_core.rs::test_arity_many_args_fails -->
+- [x] **Parameter counting <!-- test: tests/integration_core.rs::test_arity_boundary -->**
+- [x] **High arity violation <!-- test: tests/integration_core.rs::test_arity_boundary -->**
 
 ### Law of Complexity — Naming
 - [x] **Snake_case word counting** <!-- test: tests/unit_analysis.rs::test_snake_case_words -->
@@ -74,7 +74,7 @@
 ### Law of Paranoia (Rust)
 - [x] **Banned call query (.unwrap/.expect)** <!-- test: tests/integration_core.rs::test_paranoia_unwrap_fails -->
 - [x] **.expect() detection** <!-- test: tests/integration_core.rs::test_paranoia_expect_fails -->
-- [x] **Safe alternatives allowed (.unwrap_or)** <!-- test: tests/integration_core.rs::test_paranoia_no_unwrap_passes -->
+- [x] **Safe alternatives allowed (.unwrap_or) <!-- test: tests/integration_core.rs::test_paranoia_safe_alternatives_pass -->**
 
 ### File Ignores
 - [x] **warden:ignore (C-style //)** <!-- test: tests/integration_core.rs::test_warden_ignore_skips_file -->

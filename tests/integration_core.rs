@@ -1,5 +1,10 @@
 // tests/integration_core.rs
 //! Integration tests for the 3 Laws enforcement.
+//!
+//! VERIFICATION STRATEGY:
+//! 1. Isolation: Each syntactic construct (if, match, loop) is tested separately.
+//! 2. Boundaries: Tests verify behavior exactly at the limit and limit + 1.
+//! 3. Safety: Tests verify that safe alternatives do not trigger violations.
 
 use anyhow::Result;
 use std::fs::File;
@@ -11,19 +16,35 @@ use warden_core::types::Violation;
 
 // --- Helpers ---
 
-fn strict_rules() -> RuleConfig {
+fn config_complexity(limit: usize) -> RuleConfig {
     RuleConfig {
-        max_file_tokens: 50,
-        max_cyclomatic_complexity: 2,
-        max_nesting_depth: 1,
-        max_function_args: 2,
-        max_function_words: 3,
-        ignore_naming_on: vec![],
-        ignore_tokens_on: vec![],
+        max_cyclomatic_complexity: limit,
+        ..Default::default()
     }
 }
 
-fn scan_with_rules(content: &str, rules: RuleConfig) -> Result<Vec<Violation>> {
+fn config_depth(limit: usize) -> RuleConfig {
+    RuleConfig {
+        max_nesting_depth: limit,
+        ..Default::default()
+    }
+}
+
+fn config_arity(limit: usize) -> RuleConfig {
+    RuleConfig {
+        max_function_args: limit,
+        ..Default::default()
+    }
+}
+
+fn config_tokens(limit: usize) -> RuleConfig {
+    RuleConfig {
+        max_file_tokens: limit,
+        ..Default::default()
+    }
+}
+
+fn scan(content: &str, rules: RuleConfig) -> Result<Vec<Violation>> {
     let dir = TempDir::new()?;
     let file_path = dir.path().join("test.rs");
     let mut file = File::create(&file_path)?;
@@ -46,85 +67,146 @@ fn scan_with_rules(content: &str, rules: RuleConfig) -> Result<Vec<Violation>> {
 
 #[test]
 fn test_atomicity_clean_file_passes() -> Result<()> {
-    let content = "fn main() { println!(\"Small file\"); }";
-    let violations = scan_with_rules(content, strict_rules())?;
+    let content = r#"fn main() { println!("Small file"); }"#;
+    // Limit is 100, content is ~10 tokens
+    let violations = scan(content, config_tokens(100))?;
     assert!(violations.is_empty());
     Ok(())
 }
 
 #[test]
 fn test_atomicity_large_file_fails() -> Result<()> {
-    // Generate content > 50 tokens
+    // Generate content definitely larger than limit
     let content = "fn main() { let x = 1; } ".repeat(20);
-    let violations = scan_with_rules(&content, strict_rules())?;
+    // Limit is 10 tokens
+    let violations = scan(&content, config_tokens(10))?;
 
     assert!(!violations.is_empty());
     assert!(violations[0].message.contains("File size"));
     Ok(())
 }
 
-// --- Law of Complexity ---
+// --- Law of Complexity: Granular Verification ---
 
 #[test]
-fn test_complexity_simple_function_passes() -> Result<()> {
-    let content = "fn simple() { if true { println!(\"ok\"); } }";
-    let violations = scan_with_rules(content, strict_rules())?;
-    assert!(violations.is_empty());
+fn test_complexity_boundary_check() -> Result<()> {
+    // Base complexity of a function is 1.
+    // Adding one 'if' adds 1.
+    // Total = 2.
+    let content = "fn f() { if true {} }";
+
+    // Case 1: Limit = 2 (Should Pass)
+    let violations = scan(content, config_complexity(2))?;
+    assert!(
+        violations.is_empty(),
+        "Complexity 2 should pass limit 2"
+    );
+
+    // Case 2: Limit = 1 (Should Fail)
+    let violations = scan(content, config_complexity(1))?;
+    assert!(
+        violations.iter().any(|v| v.message.contains("Score is 2")),
+        "Complexity 2 should fail limit 1"
+    );
     Ok(())
 }
 
 #[test]
-fn test_complexity_branchy_function_fails() -> Result<()> {
-    // Complexity > 2
+fn test_complexity_construct_match() -> Result<()> {
+    // Matches count as branches.
+    // Base(1) + Arm(1) + Arm(1) = 3
     let content = r"
-        fn complex() {
-            if true {}
-            if true {}
-            if true {}
+        fn f(x: i32) {
+            match x {
+                1 => {},
+                2 => {},
+                _ => {}
+            }
         }
     ";
-    let violations = scan_with_rules(content, strict_rules())?;
-
-    assert!(violations
-        .iter()
-        .any(|v| v.message.contains("High Complexity")));
+    let violations = scan(content, config_complexity(2))?;
+    assert!(
+        violations.iter().any(|v| v.message.contains("High Complexity")),
+        "Match arms must increment complexity"
+    );
     Ok(())
 }
 
 #[test]
-fn test_nesting_shallow_passes() -> Result<()> {
-    // Depth 1 (one if)
-    let content = "fn shallow() { if true { println!(\"ok\"); } }";
-    let violations = scan_with_rules(content, strict_rules())?;
-    assert!(violations.is_empty());
+fn test_complexity_construct_loops() -> Result<()> {
+    // Loops count as branches.
+    // Base(1) + For(1) + While(1) = 3
+    let content = r"
+        fn f() {
+            for _ in 0..10 {}
+            while true {}
+        }
+    ";
+    let violations = scan(content, config_complexity(2))?;
+    assert!(
+        violations.iter().any(|v| v.message.contains("High Complexity")),
+        "Loops must increment complexity"
+    );
     Ok(())
 }
 
 #[test]
-fn test_nesting_deep_fails() -> Result<()> {
-    // Depth 2 (nested if) > Max 1
-    let content = "fn deep() { if true { if true { println!(\"too deep\"); } } }";
-    let violations = scan_with_rules(content, strict_rules())?;
-
-    assert!(violations.iter().any(|v| v.message.contains("Deep Nesting")));
+fn test_complexity_construct_logic_ops() -> Result<()> {
+    // Boolean operators count as branches (short-circuiting).
+    // Base(1) + &&(1) + ||(1) = 3
+    let content = "fn f(a: bool, b: bool, c: bool) { if a && b || c {} }";
+    
+    // Note: The 'if' itself counts (1), plus && (1), plus || (1).
+    // Total for this function: Base(1) + If(1) + &&(1) + ||(1) = 4.
+    
+    let violations = scan(content, config_complexity(3))?;
+    assert!(
+        violations.iter().any(|v| v.message.contains("High Complexity")),
+        "Logic operators (&&, ||) must increment complexity"
+    );
     Ok(())
 }
 
+// --- Law of Complexity: Nesting ---
+
 #[test]
-fn test_arity_few_args_passes() -> Result<()> {
-    let content = "fn add(a: i32, b: i32) {}";
-    let violations = scan_with_rules(content, strict_rules())?;
-    assert!(violations.is_empty());
+fn test_nesting_boundary() -> Result<()> {
+    // Depth: Function block (0) -> If (1).
+    let content = "fn f() { if true {} }";
+
+    // Limit 1: Pass
+    assert!(scan(content, config_depth(1))?.is_empty());
+
+    // Limit 0: Fail
+    // The engine treats function body as depth 0, first block as 1.
+    // Let's verify depth 2 fails limit 1.
+    let deep = "fn f() { if true { if true {} } }"; // Depth 2
+    
+    assert!(scan(deep, config_depth(2))?.is_empty());
+    
+    let violations = scan(deep, config_depth(1))?;
+    assert!(
+        violations.iter().any(|v| v.message.contains("Deep Nesting")),
+        "Depth 2 should fail limit 1"
+    );
     Ok(())
 }
 
-#[test]
-fn test_arity_many_args_fails() -> Result<()> {
-    // Args > 2
-    let content = "fn many(a: i32, b: i32, c: i32) {}";
-    let violations = scan_with_rules(content, strict_rules())?;
+// --- Law of Complexity: Arity ---
 
-    assert!(violations.iter().any(|v| v.message.contains("High Arity")));
+#[test]
+fn test_arity_boundary() -> Result<()> {
+    let content = "fn f(a: i32, b: i32) {}";
+
+    // Limit 2: Pass
+    assert!(scan(content, config_arity(2))?.is_empty());
+
+    // Limit 1: Fail
+    let violations = scan(content, config_arity(1))?;
+    assert!(
+        violations.iter().any(|v| v.message.contains("High Arity")),
+        "2 Args should fail limit 1"
+    );
     Ok(())
 }
 
@@ -133,7 +215,7 @@ fn test_arity_many_args_fails() -> Result<()> {
 #[test]
 fn test_paranoia_unwrap_fails() -> Result<()> {
     let content = "fn risky() { let x = Some(1); x.unwrap(); }";
-    let violations = scan_with_rules(content, strict_rules())?;
+    let violations = scan(content, RuleConfig::default())?;
 
     assert!(violations
         .iter()
@@ -143,8 +225,8 @@ fn test_paranoia_unwrap_fails() -> Result<()> {
 
 #[test]
 fn test_paranoia_expect_fails() -> Result<()> {
-    let content = "fn risky() { let x = Some(1); x.expect(\"boom\"); }";
-    let violations = scan_with_rules(content, strict_rules())?;
+    let content = r#"fn risky() { let x = Some(1); x.expect("boom"); }"#;
+    let violations = scan(content, RuleConfig::default())?;
 
     assert!(violations
         .iter()
@@ -153,14 +235,24 @@ fn test_paranoia_expect_fails() -> Result<()> {
 }
 
 #[test]
-fn test_paranoia_no_unwrap_passes() -> Result<()> {
-    let content = "fn safe() { let x = Some(1); x.unwrap_or(0); }";
-    let violations = scan_with_rules(content, strict_rules())?;
-    assert!(violations.is_empty());
+fn test_paranoia_safe_alternatives_pass() -> Result<()> {
+    // Ensure we don't flag valid alternatives or other methods
+    // We use r#...# to allow quotes inside the string.
+    let content = r#"
+        fn safe() { 
+            let x = Some(1); 
+            x.unwrap_or(0);
+            x.unwrap_or_else(|| 0);
+            // Result operator should be fine
+            let _ = File::open("foo")?; 
+        }
+    "#;
+    let violations = scan(content, RuleConfig::default())?;
+    assert!(violations.is_empty(), "Safe error handling should not trigger violations");
     Ok(())
 }
 
-// --- Ignore Rules ---
+// --- Ignore Mechanics ---
 
 #[test]
 fn test_warden_ignore_skips_file() -> Result<()> {
@@ -170,8 +262,7 @@ fn test_warden_ignore_skips_file() -> Result<()> {
              if true { if true { if true { x.unwrap(); } } }
         }
     ";
-    let violations = scan_with_rules(content, strict_rules())?;
-
-    assert!(violations.is_empty());
+    let violations = scan(content, config_complexity(1))?;
+    assert!(violations.is_empty(), "warden:ignore should bypass all checks");
     Ok(())
 }

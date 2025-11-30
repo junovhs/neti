@@ -5,6 +5,7 @@ pub mod manifest;
 pub mod messages;
 pub mod types;
 pub mod validator;
+pub mod verification;
 pub mod writer;
 
 use crate::clipboard;
@@ -13,7 +14,6 @@ use anyhow::{Context, Result};
 use colored::Colorize;
 use std::io::{self, Write};
 use std::path::Path;
-use std::process::Command;
 use types::{ApplyContext, ApplyOutcome, ExtractedFiles, Manifest};
 
 const INTENT_FILE: &str = ".warden_intent";
@@ -61,7 +61,7 @@ fn ensure_consent(plan: Option<&str>, ctx: &ApplyContext) -> Result<bool> {
         if ctx.force || ctx.dry_run {
             return Ok(true);
         }
-        println!("{}", "⚠️  No PLAN block found. Proceed with caution.".yellow());
+        println!("{}", "⚠️  No PLAN block found. Please ALWAYS include a plan block.".yellow());
         return confirm("Apply these changes without a plan?");
     };
 
@@ -134,10 +134,13 @@ fn verify_and_commit(outcome: &ApplyOutcome, ctx: &ApplyContext, plan: Option<&s
          return Ok(());
     }
 
-    if verify_application(ctx)? {
+    let (success, log) = verification::verify_application(ctx)?;
+    
+    if success {
         handle_success(plan);
     } else {
-        handle_failure(plan);
+        let msg = messages::format_verification_failure(&log);
+        handle_failure(plan, &msg);
     }
     Ok(())
 }
@@ -160,9 +163,13 @@ fn handle_success(plan: Option<&str>) {
     }
 }
 
-fn handle_failure(plan: Option<&str>) {
+fn handle_failure(plan: Option<&str>, failure_log: &str) {
     println!("{}", "\n❌ Verification Failed. Changes applied but NOT committed.".red().bold());
     println!("Fix the issues manually and then commit.");
+    
+    // Auto-copy failure log
+    messages::print_ai_feedback(failure_log);
+
     if let Some(p) = plan {
          save_intent(p);
     }
@@ -191,30 +198,6 @@ fn construct_commit_message(current_plan: Option<&str>) -> String {
         }
     }
     current
-}
-
-fn verify_application(ctx: &ApplyContext) -> Result<bool> {
-    println!("{}", "\n🔍 Verifying changes...".blue().bold());
-
-    if let Some(commands) = ctx.config.commands.get("check") {
-        for cmd in commands {
-            if !run_check_command(cmd)? {
-                return Ok(false);
-            }
-        }
-    }
-
-    println!("Running structural scan...");
-    let status = Command::new("warden").status()?;
-    Ok(status.success())
-}
-
-fn run_check_command(cmd: &str) -> Result<bool> {
-    println!("Running check: {}", cmd.dimmed());
-    let parts: Vec<&str> = cmd.split_whitespace().collect();
-    let Some((prog, args)) = parts.split_first() else { return Ok(true); };
-    let status = Command::new(prog).args(args).status()?;
-    Ok(status.success())
 }
 
 fn validate_plan_structure(plan: &str) {
