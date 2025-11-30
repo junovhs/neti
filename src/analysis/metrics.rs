@@ -36,6 +36,10 @@ fn walk_depth(node: Node, current: usize) -> usize {
                 | "switch_case"
                 | "catch_clause"
                 | "try_statement"
+                | "closure_expression" // Rust closures
+                | "arrow_function" // JS/TS
+                | "function_expression" // JS/TS
+                | "lambda" // Python
         ) {
             max = std::cmp::max(max, walk_depth(child, current + 1));
         } else {

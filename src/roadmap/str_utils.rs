@@ -12,15 +12,8 @@ pub fn split_first_word(s: &str) -> (&str, &str) {
 /// # Errors
 /// Returns error if a starting quote is not closed.
 pub fn parse_quoted(s: &str) -> Result<String, String> {
-    let s = s.trim();
-    if let Some(stripped) = s.strip_prefix('"') {
-        stripped
-            .find('"')
-            .map(|end| stripped[..end].to_string())
-            .ok_or_else(|| "Unclosed quote".into())
-    } else {
-        Ok(s.to_string())
-    }
+    let (text, _) = extract_quoted_text(s)?;
+    Ok(text)
 }
 
 /// Parses "text" [AFTER target].
@@ -41,19 +34,39 @@ pub fn parse_quoted_with_after(s: &str) -> Result<(String, Option<String>), Stri
 }
 
 /// Extracts quoted text and returns the remainder of the string.
+/// Handles escaped quotes (\") inside the string.
 ///
 /// # Errors
 /// Returns error if quotes are unbalanced.
 pub fn extract_quoted_text(s: &str) -> Result<(String, &str), String> {
     let s = s.trim();
     if let Some(stripped) = s.strip_prefix('"') {
-        let end = stripped.find('"').ok_or("Unclosed quote")?;
-        Ok((stripped[..end].to_string(), stripped[end + 1..].trim()))
-    } else if let Some((text, rest)) = s.split_once(" AFTER ") {
-        Ok((text.trim().to_string(), rest.trim()))
+        let end = find_closing_quote(stripped).ok_or("Unclosed quote")?;
+        // Unescape: \" -> "
+        let content = stripped[..end].replace(r#"\""#, "\"");
+        Ok((content, stripped[end + 1..].trim()))
+    } else if let Some(idx) = s.find(" AFTER ") {
+        // Return text BEFORE ' AFTER ', and keep ' AFTER ' in the rest for parsing
+        Ok((s[..idx].trim().to_string(), s[idx..].trim()))
     } else {
         Ok((s.to_string(), ""))
     }
+}
+
+fn find_closing_quote(s: &str) -> Option<usize> {
+    let mut escaped = false;
+    for (i, c) in s.char_indices() {
+        if escaped {
+            escaped = false;
+            continue;
+        }
+        if c == '\\' {
+            escaped = true;
+        } else if c == '"' {
+            return Some(i);
+        }
+    }
+    None
 }
 
 #[must_use]
