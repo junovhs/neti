@@ -61,29 +61,12 @@ fn default_ignore_tokens() -> Vec<String> {
     vec!["README.md".to_string(), "lock".to_string()]
 }
 
-/// Helper enum to deserialize commands as either a single string or a list of strings.
-#[derive(Debug, Clone, Deserialize)]
-#[serde(untagged)]
-pub enum CommandEntry {
-    Single(String),
-    List(Vec<String>),
-}
-
-impl CommandEntry {
-    fn into_vec(self) -> Vec<String> {
-        match self {
-            Self::Single(s) => vec![s],
-            Self::List(v) => v,
-        }
-    }
-}
-
 #[derive(Debug, Clone, Deserialize, Default)]
 pub struct WardenToml {
     #[serde(default)]
     pub rules: RuleConfig,
     #[serde(default)]
-    pub commands: HashMap<String, CommandEntry>,
+    pub commands: HashMap<String, String>,
 }
 
 #[derive(Debug, Clone)]
@@ -101,8 +84,7 @@ pub struct Config {
     pub code_only: bool,
     pub verbose: bool,
     pub rules: RuleConfig,
-    // Normalized to always be a list of commands
-    pub commands: HashMap<String, Vec<String>>,
+    pub commands: HashMap<String, String>,
 }
 
 impl Default for Config {
@@ -182,45 +164,35 @@ impl Config {
             return;
         };
         self.rules = parsed.rules;
-        self.commands = parsed
-            .commands
-            .into_iter()
-            .map(|(k, v)| (k, v.into_vec()))
-            .collect();
+        self.commands = parsed.commands;
     }
 }
 
-fn project_defaults(project: ProjectType) -> HashMap<String, Vec<String>> {
+fn project_defaults(project: ProjectType) -> HashMap<String, String> {
     let mut m = HashMap::new();
     match project {
         ProjectType::Rust => {
             m.insert(
                 "check".into(),
-                vec![
-                    "cargo clippy --all-targets -- -D warnings -D clippy::pedantic".into(),
-                    "cargo test".into(),
-                ],
+                "cargo clippy --all-targets -- -D warnings -D clippy::pedantic".into(),
             );
-            m.insert("fix".into(), vec!["cargo fmt".into()]);
+            m.insert("fix".into(), "cargo fmt".into());
         }
         ProjectType::Node => {
             let npx = project::npx_cmd();
-            m.insert(
-                "check".into(),
-                vec![format!("{npx} @biomejs/biome check src/")],
-            );
+            m.insert("check".into(), format!("{npx} @biomejs/biome check src/"));
             m.insert(
                 "fix".into(),
-                vec![format!("{npx} @biomejs/biome check --write src/")],
+                format!("{npx} @biomejs/biome check --write src/"),
             );
         }
         ProjectType::Python => {
-            m.insert("check".into(), vec!["ruff check .".into()]);
-            m.insert("fix".into(), vec!["ruff check --fix .".into()]);
+            m.insert("check".into(), "ruff check .".into());
+            m.insert("fix".into(), "ruff check --fix .".into());
         }
         ProjectType::Go => {
-            m.insert("check".into(), vec!["go vet ./...".into()]);
-            m.insert("fix".into(), vec!["go fmt ./...".into()]);
+            m.insert("check".into(), "go vet ./...".into());
+            m.insert("fix".into(), "go fmt ./...".into());
         }
         ProjectType::Unknown => {}
     }

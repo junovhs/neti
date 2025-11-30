@@ -80,6 +80,7 @@ These aren't style preferences. They're **containment protocols**.
 
 ## v0.6.0 — Context Intelligence
 - [x] **Smart Context (Focus Mode)**
+- [ ] **Config Wizard**
   *Implemented: warden pack <target> skeletonizes background files*
 
 **Theme:** The Map vs. Territory problem.
@@ -113,6 +114,7 @@ Strip function bodies, keep signatures:
 ---
 
 ## v0.7.0 — Verification & Safety
+- [ ] **Test Traceability**
 
 **Theme:** Beyond "it compiles."
 

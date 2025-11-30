@@ -181,7 +181,7 @@ fn run_command(name: &str) -> Result<()> {
     let mut config = Config::new();
     config.load_local_config();
 
-    let Some(commands) = config.commands.get(name) else {
+    let Some(cmd_str) = config.commands.get(name) else {
         eprintln!(
             "{} No '{}' command configured in warden.toml",
             "error:".red(),
@@ -190,25 +190,21 @@ fn run_command(name: &str) -> Result<()> {
         process::exit(1);
     };
 
-    println!("{} Running '{}' pipeline...", "🚀".green(), name);
+    println!("{} Running '{}': {}", "🚀".green(), name, cmd_str.dimmed());
 
-    for cmd_str in commands {
-        println!("   {} {}", "exec:".dimmed(), cmd_str.dimmed());
-        let parts: Vec<&str> = cmd_str.split_whitespace().collect();
-        let (prog, args) = parts.split_first().unwrap_or((&"", &[]));
+    let parts: Vec<&str> = cmd_str.split_whitespace().collect();
+    let (prog, args) = parts.split_first().unwrap_or((&"", &[]));
 
-        let status = Command::new(prog).args(args).status();
+    let status = Command::new(prog).args(args).status();
 
-        match status {
-            Ok(s) if !s.success() => exit_with_code(s.code().unwrap_or(1))?,
-            Ok(_) => {}
-            Err(e) => {
-                handle_exec_error(&e, prog);
-                process::exit(1);
-            }
+    match status {
+        Ok(s) if s.success() => Ok(()),
+        Ok(s) => exit_with_code(s.code().unwrap_or(1)),
+        Err(e) => {
+            handle_exec_error(&e, prog);
+            process::exit(1);
         }
     }
-    Ok(())
 }
 
 fn exit_with_code(code: i32) -> Result<()> {

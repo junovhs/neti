@@ -196,11 +196,9 @@ fn construct_commit_message(current_plan: Option<&str>) -> String {
 fn verify_application(ctx: &ApplyContext) -> Result<bool> {
     println!("{}", "\n🔍 Verifying changes...".blue().bold());
 
-    if let Some(commands) = ctx.config.commands.get("check") {
-        for cmd in commands {
-            if !run_check_command(cmd)? {
-                return Ok(false);
-            }
+    if let Some(cmd) = ctx.config.commands.get("check") {
+        if !run_check_command(cmd)? {
+            return Ok(false);
         }
     }
 
