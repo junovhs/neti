@@ -20,7 +20,7 @@ These aren't style preferences. They're **containment protocols**.
 
 - [x] **Core loop: knit → chat → apply → verify <!-- test: tests/integration_core.rs -->**
 - [x] **Self-hosting (Warden passes its own rules) <!-- test: tests/integration_core.rs -->**
-- [x] **Path safety validation <!-- test: tests/security_validation.rs -->**
+- [x] **Path safety validation (See v0.4.1) [no-test]**
 - [x] **Markdown block rejection <!-- test: tests/integration_apply.rs -->**
 - [x] **Backup system <!-- test: tests/integration_apply.rs -->**
 
@@ -28,10 +28,10 @@ These aren't style preferences. They're **containment protocols**.
 
 ## v0.5.0 — Bulletproof Apply
 - [x] **Roadmap Integration (warden roadmap) <!-- test: tests/integration_roadmap.rs -->**
-- [x] **Update README with roadmap docs**
+- [x] **Update README with roadmap docs [no-test]**
 - [x] **Pack defaults to --prompt, --noprompt to disable <!-- test: tests/integration_pack.rs -->**
-- [x] **Pack copies file path to clipboard for attachment paste**
-- [x] **TypeScript auto-detection uses biome**
+- [x] **Pack copies file path to clipboard for attachment paste [no-test]**
+- [x] **TypeScript auto-detection uses biome [no-test]**
 - [x] **Integration tests for all features <!-- test: tests/integration_core.rs -->**
 - [x] **Unified Apply <!-- test: tests/integration_apply.rs -->**
   *Implemented: warden apply now scans for ===ROADMAP=== blocks*
@@ -69,10 +69,10 @@ These aren't style preferences. They're **containment protocols**.
 
 ### Workflow Enhancement
 
-- [x] **Error injection in knit**
+- [x] **Error injection in knit <!-- test: src/pack.rs -->**
   When `knit --prompt` runs, append current violations.
 
-- [x] **`warden apply --commit`**
+- [x] **`warden apply --commit` [no-test]**
   On success: `git add .` → auto-generate commit message → commit.
   
   *If it passes validation, commit it. Git is your undo.*

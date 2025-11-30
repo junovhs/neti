@@ -24,43 +24,17 @@ pub fn run(roadmap: &Roadmap, root: &Path, _opts: AuditOptions) {
         return;
     }
 
-    // Heuristic scan for un-anchored tasks
-    let scanned_test_files = scan_test_files(root);
+    let test_files = find_test_files(root);
     let mut missing_count = 0;
 
     for task in completed {
-        // Skip if marked as [no-test]
-        if task.text.contains("[no-test]") {
-            continue;
-        }
-
-        if !verify_task(task, root, &scanned_test_files) {
+        if !has_test(task, &test_files) {
             print_missing(task);
             missing_count += 1;
         }
     }
 
     print_summary(missing_count);
-}
-
-fn verify_task(task: &Task, root: &Path, scanned_files: &[String]) -> bool {
-    // 1. Priority: Explicit Anchors
-    if !task.tests.is_empty() {
-        return task.tests.iter().all(|t| {
-            // Check if the explicitly linked file exists relative to root
-            // We strip "test:" prefix handling in parser, so here it's just the path
-            let path = root.join(t.trim());
-            path.exists() && path.is_file()
-        });
-    }
-
-    // 2. Fallback: Slug Heuristic
-    let slug = slugify(&task.text).replace('-', "_");
-    let id_slug = task.id.replace('-', "_");
-
-    scanned_files
-        .iter()
-        .any(|f| f.contains(&slug) || f.contains(&id_slug))
 }
 
 fn print_missing(task: &Task) {
@@ -75,23 +49,23 @@ fn print_missing(task: &Task) {
 fn print_summary(missing: usize) {
     println!();
     if missing == 0 {
-        println!("{}", "✅ All completed tasks have verified tests!".green().bold());
+        println!("{}", "✅ All completed tasks have associated tests!".green().bold());
     } else {
         println!(
             "{}",
-            format!("❌ Found {missing} tasks without verified tests.").red().bold()
+            format!("❌ Found {missing} tasks without detected tests.").red().bold()
         );
         println!("   (Tip: Add <!-- test: tests/my_test.rs --> to the task in ROADMAP.md)");
     }
 }
 
-fn scan_test_files(root: &Path) -> Vec<String> {
+fn find_test_files(root: &Path) -> Vec<String> {
     WalkDir::new(root)
         .follow_links(false)
         .into_iter()
         .filter_entry(|e| !is_ignored_dir(e))
         .flatten()
-        .filter(is_heuristic_match)
+        .filter(is_test_file)
         .filter_map(|e| e.path().to_str().map(str::to_lowercase))
         .collect()
 }
@@ -101,9 +75,7 @@ fn is_ignored_dir(entry: &DirEntry) -> bool {
     name.starts_with('.') || name == "target" || name == "node_modules" || name == "vendor"
 }
 
-/// Strict filter for the heuristic scanner.
-/// Only picks up files that explicitly look like tests.
-fn is_heuristic_match(entry: &DirEntry) -> bool {
+fn is_test_file(entry: &DirEntry) -> bool {
     if !entry.file_type().is_file() {
         return false;
     }
@@ -123,11 +95,29 @@ fn is_heuristic_match(entry: &DirEntry) -> bool {
 
 fn has_code_extension(path: &Path) -> bool {
     path.extension()
-        .and_then(|s| s.to_str())
         .is_some_and(|ext| {
-            matches!(
-                ext.to_ascii_lowercase().as_str(),
-                "rs" | "ts" | "js" | "py" | "go"
-            )
+            ext.eq_ignore_ascii_case("rs")
+                || ext.eq_ignore_ascii_case("ts")
+                || ext.eq_ignore_ascii_case("js")
+                || ext.eq_ignore_ascii_case("py")
+                || ext.eq_ignore_ascii_case("go")
         })
+}
+
+fn has_test(task: &Task, test_files: &[String]) -> bool {
+    // 1. Check for explicit anchor
+    if !task.tests.is_empty() {
+        return task.tests.iter().all(|t| {
+             let target = t.to_lowercase();
+             test_files.iter().any(|f| f.contains(&target))
+        });
+    }
+
+    // 2. Fallback to slug heuristic
+    let slug = slugify(&task.text).replace('-', "_");
+    let id_slug = task.id.replace('-', "_");
+
+    test_files
+        .iter()
+        .any(|f| f.contains(&slug) || f.contains(&id_slug))
 }
