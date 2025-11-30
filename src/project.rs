@@ -18,21 +18,28 @@ pub enum Strictness {
 }
 
 impl ProjectType {
+    /// Detects project type from current directory.
     #[must_use]
     pub fn detect() -> Self {
-        if Path::new("Cargo.toml").exists() {
+        Self::detect_in(Path::new("."))
+    }
+
+    /// Detects project type in a specific directory.
+    #[must_use]
+    pub fn detect_in(root: &Path) -> Self {
+        if root.join("Cargo.toml").exists() {
             return Self::Rust;
         }
-        if Path::new("package.json").exists() {
+        if root.join("package.json").exists() {
             return Self::Node;
         }
-        if Path::new("pyproject.toml").exists()
-            || Path::new("requirements.txt").exists()
-            || Path::new("Pipfile").exists()
+        if root.join("pyproject.toml").exists()
+            || root.join("requirements.txt").exists()
+            || root.join("Pipfile").exists()
         {
             return Self::Python;
         }
-        if Path::new("go.mod").exists() {
+        if root.join("go.mod").exists() {
             return Self::Go;
         }
         Self::Unknown
