@@ -1,4 +1,5 @@
 use crate::roadmap::types::{Roadmap, RoadmapStats, Section, Task, TaskStatus};
+use std::collections::HashMap;
 use std::path::Path;
 
 impl Roadmap {
@@ -122,6 +123,8 @@ fn parse_section(lines: &[&str], i: &mut usize, lvl: u8, heading: String) -> Sec
         *i += 1;
     }
 
+    deduplicate_task_ids(&mut tasks, &id);
+
     Section {
         id,
         heading,
@@ -132,6 +135,19 @@ fn parse_section(lines: &[&str], i: &mut usize, lvl: u8, heading: String) -> Sec
         raw_content: raw,
         line_start: start,
         line_end: *i,
+    }
+}
+
+fn deduplicate_task_ids(tasks: &mut [Task], section_id: &str) {
+    let mut seen: HashMap<String, usize> = HashMap::new();
+    for task in tasks.iter_mut() {
+        let base_id = task.id.clone();
+        let count = seen.entry(base_id.clone()).or_insert(0);
+        if *count > 0 {
+            task.id = format!("{base_id}-{count}");
+            task.path = format!("{section_id}/{}", task.id);
+        }
+        *count += 1;
     }
 }
 
@@ -159,7 +175,7 @@ fn parse_task(line: &str, line_num: usize) -> Option<Task> {
     for part in parts {
         if let Some(content) = part.split("-->").next() {
             if let Some(path) = content.trim().strip_prefix("test:") {
-                 tests.push(path.trim().to_string());
+                tests.push(path.trim().to_string());
             }
         }
     }
