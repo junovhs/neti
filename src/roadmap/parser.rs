@@ -79,8 +79,6 @@ impl Roadmap {
     }
 }
 
-// --- Parsing helpers ---
-
 fn parse_heading(line: &str) -> Option<(u8, String)> {
     let t = line.trim();
     if !t.starts_with("##") {
@@ -91,7 +89,6 @@ fn parse_heading(line: &str) -> Option<(u8, String)> {
         return None;
     }
 
-    // Fix: Safe cast using try_from
     let level = u8::try_from(lvl).ok()?;
     Some((level, t[lvl..].trim().into()))
 }
@@ -154,7 +151,10 @@ fn parse_task(line: &str, line_num: usize) -> Option<Task> {
     let text_part = parts.next()?.trim().trim_matches(|c| c == '*' || c == ' ');
     let id = crate::roadmap::slugify(text_part);
 
-    // Extract tests from comments: <!-- test: path/to/file.rs -->
+    if id.is_empty() {
+        return None;
+    }
+
     let mut tests = Vec::new();
     for part in parts {
         if let Some(content) = part.split("-->").next() {
