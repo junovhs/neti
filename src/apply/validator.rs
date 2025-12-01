@@ -1,7 +1,7 @@
 // src/apply/validator.rs
 use crate::apply::messages;
 use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
-use crate::roadmap::{diff, Roadmap, Command};
+use crate::roadmap::{diff, Roadmap, Command, MovePosition};
 use regex::Regex;
 use std::path::Path;
 use std::sync::LazyLock;
@@ -130,6 +130,14 @@ fn handle_roadmap_rewrite(path: &str, incoming_content: &str) -> Option<ApplyOut
             Command::Update { path, text } => { let _ = writeln!(msg, "UPDATE {path} \"{text}\""); },
             Command::Add { parent, text, .. } => { let _ = writeln!(msg, "ADD {parent} \"{text}\""); },
             Command::Delete { path } => { let _ = writeln!(msg, "DELETE {path}"); },
+            Command::AddSection { heading } => { let _ = writeln!(msg, "SECTION \"{heading}\""); },
+            Command::Move { path, position } => {
+                match position {
+                    MovePosition::After(t) => { let _ = writeln!(msg, "MOVE {path} AFTER {t}"); },
+                    MovePosition::Before(t) => { let _ = writeln!(msg, "MOVE {path} BEFORE {t}"); },
+                    MovePosition::EndOfSection(s) => { let _ = writeln!(msg, "MOVE {path} TO {s}"); },
+                }
+            },
             _ => {}
         }
     }
