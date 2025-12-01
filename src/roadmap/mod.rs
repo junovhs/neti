@@ -1,5 +1,6 @@
 pub mod audit;
 pub mod cli;
+pub mod cmd_handlers;
 pub mod cmd_parser;
 pub mod cmd_runner;
 pub mod diff;

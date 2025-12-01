@@ -60,6 +60,9 @@ pub enum Command {
         text: String,
         after: Option<String>,
     },
+    AddSection {
+        heading: String,
+    },
     Delete {
         path: String,
     },
@@ -81,10 +84,11 @@ pub enum Command {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum MovePosition {
     After(String),
     Before(String),
+    EndOfSection(String),
 }
 
 /// A batch of commands parsed from AI output

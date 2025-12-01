@@ -53,6 +53,7 @@ fn cmd_name(cmd: &Command) -> &'static str {
         Command::Uncheck { .. } => "UNCHECK",
         Command::Add { .. } => "ADD",
         Command::Delete { .. } => "DELETE",
+        Command::AddSection { .. } => "ADD_SECTION",
         _ => cmd_name_extended(cmd),
     }
 }
@@ -62,7 +63,7 @@ fn cmd_name_extended(cmd: &Command) -> &'static str {
         Command::Update { .. } => "UPDATE",
         Command::Note { .. } => "NOTE",
         Command::Move { .. } => "MOVE",
-        Command::ReplaceSection { .. } => "SECTION",
+        Command::ReplaceSection { .. } => "SECTION_REPLACE",
         _ => "UNKNOWN",
     }
 }
@@ -102,7 +103,7 @@ fn is_content(cmd: &str) -> bool {
     matches!(cmd, "ADD" | "UPDATE" | "NOTE")
 }
 fn is_struct(cmd: &str) -> bool {
-    matches!(cmd, "MOVE" | "SECTION")
+    matches!(cmd, "MOVE" | "SECTION" | "REPLACE_SECTION")
 }
 
 fn parse_basic(cmd: &str, args: &str) -> Result<Command, String> {
@@ -127,7 +128,8 @@ fn parse_content(cmd: &str, args: &str) -> Result<Command, String> {
 fn parse_struct(cmd: &str, args: &str) -> Result<Command, String> {
     match cmd {
         "MOVE" => parse_move(args),
-        "SECTION" => parse_section(args),
+        "SECTION" => parse_add_section(args),
+        "REPLACE_SECTION" => parse_replace_section(args),
         _ => unreachable!(),
     }
 }
@@ -188,13 +190,14 @@ fn parse_note(args: &str) -> Result<Command, String> {
 fn parse_move(args: &str) -> Result<Command, String> {
     let parts: Vec<&str> = args.split_whitespace().collect();
     if parts.len() < 3 {
-        return Err("MOVE: path AFTER|BEFORE target".into());
+        return Err("MOVE: path AFTER|BEFORE|TO target".into());
     }
 
     let pos = match parts[1].to_uppercase().as_str() {
         "AFTER" => MovePosition::After(parts[2].into()),
         "BEFORE" => MovePosition::Before(parts[2].into()),
-        _ => return Err("Invalid position".into()),
+        "TO" => MovePosition::EndOfSection(parts[2].into()),
+        _ => return Err("Invalid position (use AFTER, BEFORE, or TO)".into()),
     };
     Ok(Command::Move {
         path: parts[0].into(),
@@ -202,10 +205,20 @@ fn parse_move(args: &str) -> Result<Command, String> {
     })
 }
 
-fn parse_section(args: &str) -> Result<Command, String> {
+fn parse_add_section(args: &str) -> Result<Command, String> {
+    let heading = str_utils::parse_quoted(args)
+        .or_else(|_| Ok::<String, String>(args.trim().to_string()))?;
+        
+    if heading.is_empty() {
+        return Err("SECTION needs heading".into());
+    }
+    Ok(Command::AddSection { heading })
+}
+
+fn parse_replace_section(args: &str) -> Result<Command, String> {
     let id = args.trim();
     if id.is_empty() {
-        return Err("SECTION needs ID".into());
+        return Err("REPLACE_SECTION needs ID".into());
     }
     Ok(Command::ReplaceSection {
         id: id.into(),
