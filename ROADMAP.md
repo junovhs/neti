@@ -36,7 +36,8 @@
 ### Configuration
 - [x] **TOML config loading** <!-- test: tests/unit_config.rs::test_load_toml -->
 - [x] **Default rule values** <!-- test: tests/unit_config.rs::test_defaults -->
-- [x] **Command string parsing** <!-- test: tests/unit_config.rs::test_command_single -->
+- [x] **<!-- test: tests/unit_roadmap.rs::test_update_command -->**
+  *<!-- test: tests/unit_roadmap.rs::test_note_command -->*
 - [x] **Command list parsing** <!-- test: tests/unit_config.rs::test_command_list -->
 - [x] **.wardenignore loading** <!-- test: tests/unit_config.rs::test_wardenignore -->
 - [x] **Auto-config generation** [no-test] *(side effect on first run)*
@@ -232,15 +233,15 @@
 ### Command Parsing
 - [x] **===ROADMAP=== block detection** <!-- test: tests/integration_roadmap.rs::test_parse_extracts_from_larger_text -->
 - [x] **CHECK command** <!-- test: tests/integration_roadmap.rs::test_parse_check_command -->
-- [x] **UNCHECK command** <!-- test: tests/integration_roadmap.rs::test_parse_multiple_commands -->
+- [ ] **UNCHECK command** <!-- test: tests/integration_roadmap.rs::test_parse_multiple_commands -->
 - [x] **ADD command** <!-- test: tests/integration_roadmap.rs::test_parse_multiple_commands -->
 - [x] **ADD with AFTER** <!-- test: tests/integration_roadmap.rs::test_parse_add_with_after -->
-- [x] **DELETE command** <!-- test: tests/unit_roadmap.rs::test_delete_command -->
 - [x] **UPDATE command** <!-- test: tests/unit_roadmap.rs::test_update_command -->
 - [x] **NOTE command** <!-- test: tests/unit_roadmap.rs::test_note_command -->
 - [x] **MOVE command** <!-- test: tests/unit_roadmap.rs::test_move_command -->
 - [x] **Comment skipping** <!-- test: tests/integration_roadmap.rs::test_parse_ignores_comments -->
 - [x] **Summary generation** <!-- test: tests/integration_roadmap.rs::test_summary_format -->
+- [ ] **<!-- test: tests/integration_roadmap.rs::test_parse_multiple_commands -->**
 
 ### Roadmap CLI
 - [x] **roadmap init** <!-- test: tests/cli_roadmap.rs::test_init_creates_file -->

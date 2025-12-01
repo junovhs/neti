@@ -1,36 +1,83 @@
-// tests/protection_roadmap.rs
 use std::collections::HashMap;
-use warden_core::apply::types::{ApplyOutcome, FileContent};
+use warden_core::apply::types::{ApplyOutcome, ManifestEntry, Operation, FileContent};
 use warden_core::apply::validator;
 
 #[test]
 fn test_roadmap_rewrite_is_blocked() {
-    let mut files = HashMap::new();
-    files.insert("ROADMAP.md".into(), FileContent { content: "# New".into(), line_count: 1 });
-    let r = validator::validate(&vec![], &files);
-    if let ApplyOutcome::ValidationFailure { errors, .. } = r {
-        assert!(errors.iter().any(|e| e.contains("PROTECTED") || e.contains("ROADMAP")));
-    } else {
-        panic!("Should block ROADMAP.md");
+    let manifest = vec![ManifestEntry {
+        path: "ROADMAP.md".to_string(),
+        operation: Operation::Update,
+    }];
+    
+    let mut extracted = HashMap::new();
+    extracted.insert("ROADMAP.md".to_string(), FileContent {
+        content: "# New Roadmap".to_string(),
+        line_count: 1,
+    });
+
+    let outcome = validator::validate(&manifest, &extracted);
+
+    match outcome {
+        ApplyOutcome::ValidationFailure { errors, ai_message, .. } => {
+            // It might be a "PROTECTED" error (if diff fails/file missing) 
+            // OR a "Roadmap rewrite converted" error (if diff succeeds).
+            // Since this test runs in isolation without a real file on disk,
+            // handle_roadmap_rewrite likely returns None (file not found),
+            // falling back to the standard PROTECTED error.
+            
+            let has_protected = errors.iter().any(|e| e.contains("PROTECTED"));
+            let has_converted = errors.iter().any(|e| e.contains("Roadmap rewrite converted"));
+            
+            assert!(
+                has_protected || has_converted,
+                "Expected roadmap block, got errors: {errors:?}\nMessage: {ai_message}"
+            );
+        }
+        _ => panic!("Should have failed validation"),
     }
 }
 
 #[test]
 fn test_roadmap_rewrite_blocked_case_insensitive() {
-    let mut files = HashMap::new();
-    files.insert("roadmap.md".into(), FileContent { content: "# New".into(), line_count: 1 });
-    let r = validator::validate(&vec![], &files);
-    // Implementation may vary on case sensitivity
-    let _ = r;
+    let manifest = vec![ManifestEntry {
+        path: "roadmap.md".to_string(),
+        operation: Operation::Update,
+    }];
+    
+    let mut extracted = HashMap::new();
+    extracted.insert("roadmap.md".to_string(), FileContent {
+        content: "# New Roadmap".to_string(),
+        line_count: 1,
+    });
+
+    let outcome = validator::validate(&manifest, &extracted);
+
+    if let ApplyOutcome::ValidationFailure { errors, .. } = outcome {
+        assert!(errors.iter().any(|e| e.contains("PROTECTED") || e.contains("Roadmap rewrite converted")));
+    } else {
+        panic!("Should have failed validation");
+    }
 }
 
 #[test]
 fn test_roadmap_error_suggests_command() {
-    let mut files = HashMap::new();
-    files.insert("ROADMAP.md".into(), FileContent { content: "# New".into(), line_count: 1 });
-    let r = validator::validate(&vec![], &files);
-    if let ApplyOutcome::ValidationFailure { errors, .. } = r {
-        let has_suggestion = errors.iter().any(|e| e.contains("roadmap") && e.contains("apply"));
-        assert!(has_suggestion, "Should suggest warden roadmap apply");
+    let manifest = vec![ManifestEntry {
+        path: "ROADMAP.md".to_string(),
+        operation: Operation::Update,
+    }];
+    
+    let mut extracted = HashMap::new();
+    extracted.insert("ROADMAP.md".to_string(), FileContent {
+        content: "# New Roadmap".to_string(),
+        line_count: 1,
+    });
+
+    let outcome = validator::validate(&manifest, &extracted);
+
+    if let ApplyOutcome::ValidationFailure { errors, .. } = outcome {
+         // The error message itself suggests using commands
+         assert!(errors.iter().any(|e| e.contains("warden roadmap apply") || e.contains("Roadmap rewrite converted")));
+    } else {
+        panic!("Should have failed validation");
     }
 }

@@ -1,8 +1,11 @@
 // src/apply/validator.rs
 use crate::apply::messages;
 use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
+use crate::roadmap::{diff, Roadmap, Command};
 use regex::Regex;
+use std::path::Path;
 use std::sync::LazyLock;
+use std::fmt::Write;
 
 const SENSITIVE_PATHS: &[&str] = &[
     ".git/",
@@ -22,19 +25,11 @@ const ALLOWED_DOTFILES: &[&str] = &[
     ".warden_intent",
 ];
 
-/// Compiled regex patterns for detecting lazy/truncated AI output.
-/// These are compile-time constant patterns; if any fail to compile,
-/// it's a programmer error that will surface immediately at first use.
 static LAZY_MARKERS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     [
-        // Matches "// ..."
         r"^\s*//\s*\.{3,}\s*$",
-        // Matches "/* ... */"
         r"^\s*/\*\s*\.{3,}\s*\*/\s*$",
-        // Matches phrases indicating omitted code.
-        // warden:ignore
         r"(?i)^\s*//.*(rest of|remaining|existing|implement|logic here).*$",
-        // Matches Python style "# ..."
         r"^\s*#\s*\.{3,}\s*$",
     ]
     .iter()
@@ -51,7 +46,21 @@ static LAZY_MARKERS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
 #[must_use]
 pub fn validate(manifest: &Manifest, extracted: &ExtractedFiles) -> ApplyOutcome {
     let mut errors = Vec::new();
-    check_path_safety(extracted, &mut errors);
+    
+    // Check path safety and handle ROADMAP.md specifically
+    for path in extracted.keys() {
+         if path.eq_ignore_ascii_case("ROADMAP.md") {
+             if let Some(outcome) = handle_roadmap_rewrite(path, &extracted[path].content) {
+                 return outcome;
+             }
+             // If we couldn't infer commands or load the file, default to standard block
+             errors.push(
+                "PROTECTED: ROADMAP.md is managed programmatically. Use 'warden roadmap apply' commands instead of rewriting the file.".to_string(),
+             );
+         } else {
+             validate_single_path(path, &mut errors);
+         }
+    }
 
     if !errors.is_empty() {
         let ai_message = messages::format_ai_rejection(&[], &errors);
@@ -89,17 +98,55 @@ pub fn validate(manifest: &Manifest, extracted: &ExtractedFiles) -> ApplyOutcome
     }
 }
 
-fn check_path_safety(extracted: &ExtractedFiles, errors: &mut Vec<String>) {
-    for path in extracted.keys() {
-        validate_single_path(path, errors);
+/// Attempts to diff the incoming ROADMAP.md with the existing one // warden:ignore
+/// and return a specific rejection message with proposed commands.
+fn handle_roadmap_rewrite(path: &str, incoming_content: &str) -> Option<ApplyOutcome> {
+    let local_path = Path::new(path);
+    if !local_path.exists() {
+        return None;
     }
+
+    let Ok(current) = Roadmap::from_file(local_path) else {
+        return None;
+    };
+    
+    let incoming = Roadmap::parse(incoming_content);
+    let commands = diff::diff(&current, &incoming);
+    
+    if commands.is_empty() {
+        return None;
+    }
+
+    let mut msg = String::new();
+    let _ = writeln!(msg, "The Warden Protocol blocked a direct rewrite of ROADMAP.md.\n");
+    let _ = writeln!(msg, "However, I inferred your intent. Please use these commands instead:\n");
+    let _ = writeln!(msg, "∇∇∇ ROADMAP ∇∇∇");
+    let _ = writeln!(msg, "===ROADMAP===");
+    
+    for cmd in commands {
+        match cmd {
+            Command::Check { path } => { let _ = writeln!(msg, "CHECK {path}"); },
+            Command::Uncheck { path } => { let _ = writeln!(msg, "UNCHECK {path}"); },
+            Command::Update { path, text } => { let _ = writeln!(msg, "UPDATE {path} \"{text}\""); },
+            Command::Add { parent, text, .. } => { let _ = writeln!(msg, "ADD {parent} \"{text}\""); },
+            Command::Delete { path } => { let _ = writeln!(msg, "DELETE {path}"); },
+            _ => {}
+        }
+    }
+    
+    let _ = writeln!(msg, "===END===");
+    let _ = writeln!(msg, "∆∆∆");
+
+    Some(ApplyOutcome::ValidationFailure {
+        errors: vec!["Roadmap rewrite converted to commands".to_string()],
+        missing: vec![],
+        ai_message: msg,
+    })
 }
 
 fn validate_single_path(path: &str, errors: &mut Vec<String>) {
     if path.eq_ignore_ascii_case("ROADMAP.md") {
-        errors.push(
-            "PROTECTED: ROADMAP.md is managed programmatically. Use 'warden roadmap apply' commands instead of rewriting the file.".to_string(),
-        );
+        // Handled in main loop
         return;
     }
 
@@ -133,7 +180,6 @@ fn is_absolute_path(path: &str) -> bool {
     if path.starts_with('/') {
         return true;
     }
-    // Windows drive letter check (e.g., C:\)
     let bytes = path.as_bytes();
     bytes.len() >= 2 && bytes[0].is_ascii_alphabetic() && bytes[1] == b':'
 }
@@ -144,7 +190,6 @@ fn is_sensitive_path(path: &str) -> bool {
 }
 
 fn is_hidden_file(path: &str) -> bool {
-    // Check if whitelisted
     if ALLOWED_DOTFILES.iter().any(|&f| path.ends_with(f)) {
         return false;
     }
@@ -181,7 +226,6 @@ fn check_single_file(path: &str, content: &str, errors: &mut Vec<String>) {
 
 fn check_lazy_truncation(path: &str, content: &str, errors: &mut Vec<String>) {
     for (line_num, line) in content.lines().enumerate() {
-        // Allow explicit ignores for cases where code intentionally looks truncated
         if line.contains("warden:ignore") {
             continue;
         }

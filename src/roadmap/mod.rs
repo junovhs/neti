@@ -2,6 +2,7 @@ pub mod audit;
 pub mod cli;
 pub mod cmd_parser;
 pub mod cmd_runner;
+pub mod diff;
 pub mod display;
 pub mod parser;
 pub mod prompt;
