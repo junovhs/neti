@@ -384,6 +384,7 @@
 - [ ] **--json flag (machine-readable map)** <!-- test: tests/cli_map.rs::test_map_json -->
 - [ ] **Module description extraction (//! or docstring)** <!-- test: tests/cli_map.rs::test_map_docs -->
 - [ ] **Entry point detection (main.rs, lib.rs, index.ts)** <!-- test: tests/cli_map.rs::test_entry_point -->
+- [ ] **apply --force flag**"**
 
 ### Error-Driven Packing
 - [ ] **warden pack --from-errors flag** <!-- test: tests/integration_error_pack.rs::test_from_errors_flag -->

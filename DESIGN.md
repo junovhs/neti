@@ -232,6 +232,20 @@ let value = thing?;
 
 **Implementation:** Tree-sitter query matches `call_expression` where method is `unwrap` or `expect`.
 
+### Law of Clarity (Naming)
+
+**Function names should reveal intent.**
+```toml
+[rules]
+max_function_words = 5   # Words in function name
+```
+
+**Why:** A function named `validate_user_input_and_send_email_notification_async` is doing too much. Short names force single responsibility.
+
+**Implementation:** Tree-sitter extracts function names, then counts words by splitting on `_` (snake_case) or uppercase boundaries (CamelCase).
+
+**Note:** In violation reports, this appears as `LAW OF BLUNTNESS` — a reminder that good names are blunt about what a function does.
+
 ---
 
 ## The Nabla Protocol
@@ -297,6 +311,49 @@ src/old.rs [DELETE]
 2. File content must be **complete** — no `// ...` or "remaining code"
 3. Paths must be relative, no traversal (`../`), no absolute paths
 4. No touching sensitive files (`.env`, `.git/`, etc.)
+
+---
+
+## Adoption Tiers
+
+Warden can be adopted incrementally:
+
+### Tier 1: Structural Linting Only
+
+Use Warden as a code quality scanner without any AI integration.
+```bash
+warden              # Scan for violations
+warden check        # Run tests/linters
+```
+
+**What you get:** The Three Laws enforcement, complexity metrics, consistent standards across the team.
+
+**Who it's for:** Teams that want code quality tooling but aren't using AI assistants yet.
+
+### Tier 2: AI-Assisted Development
+
+Add the pack/apply loop for AI coding sessions.
+```bash
+warden pack         # Generate context for AI
+warden apply        # Validate and apply AI responses
+```
+
+**What you get:** Automatic rejection of oversized/complex/truncated AI output, backup system, auto-commit on success, structured rejection messages.
+
+**Who it's for:** Individual developers or teams actively using AI coding assistants.
+
+### Tier 3: Full Traceability
+
+Add roadmap management and audit enforcement.
+```bash
+warden roadmap audit --strict   # Verify test coverage
+```
+
+**What you get:** Every feature tied to a test, programmatic progress tracking, unified apply (code + roadmap in one paste), CI enforcement of the test contract.
+
+**Who it's for:** Teams that want rigorous test traceability and project management integration.
+
+Teams can start at Tier 1 and graduate upward as trust in the workflow grows.
 
 ---
 
@@ -431,6 +488,17 @@ check = [
 
 - **All pass:** Auto-commit and push
 - **Any fail:** Generate rejection message, copy to clipboard
+
+### Escape Hatch (Planned)
+
+For situations where strict rejection causes friction (AI failing repeatedly, deadline pressure), a future `warden apply --force` flag will:
+
+1. Apply the code despite violations
+2. Mark affected files with `// warden:quarantine`
+3. Add them to a temporary ignore list
+4. Report quarantined files in subsequent `warden` scans
+
+This allows forward progress while maintaining visibility into technical debt. See ROADMAP.md v0.7.0 "Escape Hatches."
 
 ### Git Integration
 
