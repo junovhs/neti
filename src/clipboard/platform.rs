@@ -3,12 +3,17 @@
 
 use anyhow::{Context, Result};
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 // --- Linux / WSL Helpers ---
 
 #[cfg(target_os = "linux")]
 fn is_wsl() -> bool {
+    // Check 1: Environment variable (Fastest)
+    if std::env::var("WSL_DISTRO_NAME").is_ok() {
+        return true;
+    }
+    // Check 2: /proc/version (Fallback)
     if let Ok(version) = std::fs::read_to_string("/proc/version") {
         let v = version.to_lowercase();
         return v.contains("microsoft") || v.contains("wsl");
@@ -68,7 +73,7 @@ pub fn copy_file_handle(path: &Path) -> Result<()> {
     // Try wl-copy (Wayland)
     if let Ok(mut child) = Command::new("wl-copy")
         .args(["--type", "text/uri-list"])
-        .stdin(std::process::Stdio::piped())
+        .stdin(Stdio::piped())
         .spawn()
     {
         if let Some(mut stdin) = child.stdin.take() {
@@ -83,14 +88,15 @@ pub fn copy_file_handle(path: &Path) -> Result<()> {
     // Fallback to xclip (X11)
     let mut child = Command::new("xclip")
         .args(["-selection", "clipboard", "-t", "text/uri-list", "-i"])
-        .stdin(std::process::Stdio::piped())
-        .spawn()?;
+        .stdin(Stdio::piped())
+        .spawn()
+        .context("Failed to spawn xclip")?;
 
     if let Some(mut stdin) = child.stdin.take() {
         use std::io::Write;
-        write!(stdin, "{uri}")?;
+        write!(stdin, "{uri}").context("Failed to write to xclip")?;
     }
-    child.wait()?;
+    child.wait().context("Failed to wait for xclip")?;
     Ok(())
 }
 
@@ -127,9 +133,7 @@ fn copy_file_handle_wsl(path: &Path) -> Result<()> {
 /// Returns error if the external clipboard command fails.
 pub fn perform_copy(text: &str) -> Result<()> {
     use std::io::Write;
-    let mut child = Command::new("pbcopy")
-        .stdin(std::process::Stdio::piped())
-        .spawn()?;
+    let mut child = Command::new("pbcopy").stdin(Stdio::piped()).spawn()?;
     if let Some(mut stdin) = child.stdin.take() {
         stdin.write_all(text.as_bytes())?;
     }
@@ -153,40 +157,95 @@ pub fn perform_read() -> Result<String> {
 /// # Errors
 /// Returns error if the external clipboard command fails.
 pub fn perform_copy(text: &str) -> Result<()> {
-    use std::io::Write;
-
     if is_wsl() {
-        let mut child = Command::new("clip.exe")
-            .stdin(std::process::Stdio::piped())
-            .spawn()
-            .context("Failed to spawn clip.exe")?;
-
-        if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(text.as_bytes())?;
+        // Strategy A: clip.exe
+        if let Err(err_clip) = try_wsl_clip(text) {
+            // Strategy B: powershell.exe Set-Clipboard
+            if let Err(err_ps) = try_wsl_powershell(text) {
+                // If both fail, report both errors
+                return Err(anyhow::anyhow!(
+                    "WSL clipboard failed.\n  clip.exe: {err_clip}\n  powershell.exe: {err_ps}"
+                ));
+            }
         }
-        child.wait()?;
         return Ok(());
     }
 
+    // Native Linux Logic
+    perform_copy_native(text)
+}
+
+#[cfg(target_os = "linux")]
+fn try_wsl_clip(text: &str) -> Result<()> {
+    use std::io::Write;
+    let mut child = Command::new("clip.exe")
+        .stdin(Stdio::piped())
+        .spawn()
+        .context("Failed to spawn clip.exe")?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(text.as_bytes())
+            .context("Failed to write to clip.exe")?;
+    }
+    child.wait().context("Failed to wait for clip.exe")?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn try_wsl_powershell(text: &str) -> Result<()> {
+    use std::io::Write;
+    let mut child = Command::new("powershell.exe")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            "$Input | Set-Clipboard",
+        ])
+        .stdin(Stdio::piped())
+        .spawn()
+        .context("Failed to spawn powershell.exe")?;
+
+    if let Some(mut stdin) = child.stdin.take() {
+        stdin
+            .write_all(text.as_bytes())
+            .context("Failed to write to powershell.exe")?;
+    }
+    child.wait().context("Failed to wait for powershell.exe")?;
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn perform_copy_native(text: &str) -> Result<()> {
+    use std::io::Write;
+
+    // Try xclip first
     if let Ok(mut child) = Command::new("xclip")
         .args(["-selection", "clipboard", "-in"])
-        .stdin(std::process::Stdio::piped())
+        .stdin(Stdio::piped())
         .spawn()
     {
         if let Some(mut stdin) = child.stdin.take() {
-            stdin.write_all(text.as_bytes())?;
+            stdin
+                .write_all(text.as_bytes())
+                .context("Failed to write to xclip")?;
         }
-        child.wait()?;
+        child.wait().context("Failed to wait for xclip")?;
         return Ok(());
     }
 
+    // Try wl-copy next
     let mut child = Command::new("wl-copy")
-        .stdin(std::process::Stdio::piped())
-        .spawn()?;
+        .stdin(Stdio::piped())
+        .spawn()
+        .context("Failed to spawn wl-copy")?;
+
     if let Some(mut stdin) = child.stdin.take() {
-        stdin.write_all(text.as_bytes())?;
+        stdin
+            .write_all(text.as_bytes())
+            .context("Failed to write to wl-copy")?;
     }
-    child.wait()?;
+    child.wait().context("Failed to wait for wl-copy")?;
     Ok(())
 }
 
@@ -223,9 +282,7 @@ pub fn perform_read() -> Result<String> {
 /// Returns error if the external clipboard command fails.
 pub fn perform_copy(text: &str) -> Result<()> {
     use std::io::Write;
-    let mut child = Command::new("clip")
-        .stdin(std::process::Stdio::piped())
-        .spawn()?;
+    let mut child = Command::new("clip").stdin(Stdio::piped()).spawn()?;
     if let Some(mut stdin) = child.stdin.take() {
         stdin.write_all(text.as_bytes())?;
     }
