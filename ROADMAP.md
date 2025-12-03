@@ -298,6 +298,12 @@
 - [ ] **Traceability" "warden verify-session command (audit current work)"**
 - [ ] **Traceability" "Incremental roadmap sync (update after each file)"**
 - [ ] **Traceability" "Session manifest tracking (files touched this session)"**
+- [ ] **Traceability" "Enforce test-first registration during AI sessions"**
+- [ ] **Traceability" "Block feature completion without matching test file"**
+- [ ] **Traceability" "warden register <feature> command (pre-declares intent)"**
+- [ ] **Traceability" "warden verify-session command (audit current work)"**
+- [ ] **Traceability" "Incremental roadmap sync (update after each file)"**
+- [ ] **Traceability" "Session manifest tracking (files touched this session)"**
 
 ### Roadmap Hardening
 - [ ] **SECTION command (create version headers)** <!-- test: tests/unit_roadmap_cmd.rs::test_section_command -->
