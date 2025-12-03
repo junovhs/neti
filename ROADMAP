@@ -1,0 +1,6 @@
+===ROADMAP===
+UPDATE missing-test-function-detection "**Missing test function detection** <!-- test: tests/unit_audit.rs::test_missing_function_detection -->"
+CHECK missing-test-function-detection
+UPDATE exit-code-1-on-any-failure "**Exit code 1 on any failure** [no-test] *(CLI exit behavior)*"
+CHECK exit-code-1-on-any-failure
+===END===

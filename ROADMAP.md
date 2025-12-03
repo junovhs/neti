@@ -281,9 +281,9 @@
 - [x] **[no-test] skip** <!-- test: tests/integration_audit.rs::test_no_test_skipped -->
 - [x] **Explicit anchor verification** <!-- test: tests/integration_audit.rs::test_explicit_anchor_verified -->
 - [x] **Missing test file detection** <!-- test: tests/integration_audit.rs::test_missing_file_detected -->
-- [ ] **Missing test function detection**
+- [x] ****Missing test function detection** <!-- test: tests/unit_audit.rs::test_missing_function_detection -->** <!-- test: tests/unit_audit.rs::test_missing_function_detection -->**
 - [ ] **Test execution verification (cargo test)**
-- [ ] **Exit code 1 on any failure**
+- [x] ****Exit code 1 on any failure** [no-test] *(CLI exit behavior)***
 - [ ] **--strict mode (all must pass)**
 
 ### Self-Hosting

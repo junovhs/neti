@@ -41,7 +41,8 @@ impl AuditReport {
     }
 }
 
-pub fn run(roadmap: &Roadmap, root: &Path, opts: AuditOptions) {
+#[must_use]
+pub fn run(roadmap: &Roadmap, root: &Path, opts: AuditOptions) -> bool {
     println!("{}", "🕵️  Roadmap Traceability Audit".bold().cyan());
     println!("{}", "─────────────────────────────────────".dimmed());
 
@@ -49,7 +50,7 @@ pub fn run(roadmap: &Roadmap, root: &Path, opts: AuditOptions) {
 
     if report.total_checked == 0 {
         println!("{}", "No completed tasks to audit.".yellow());
-        return;
+        return true;
     }
 
     for violation in &report.violations {
@@ -57,6 +58,7 @@ pub fn run(roadmap: &Roadmap, root: &Path, opts: AuditOptions) {
     }
 
     print_summary(report.violations.len());
+    report.violations.is_empty()
 }
 
 #[must_use]
