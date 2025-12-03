@@ -1,6 +1,3 @@
 ===ROADMAP===
-UPDATE exit-code-1-on-any-failure "**Exit code 1 on any failure** [no-test] *(CLI exit behavior)*"
-CHECK exit-code-1-on-any-failure
-UPDATE strict-mode-all-must-pass "**--strict mode (all must pass)** [no-test] *(CLI flag)*"
-CHECK strict-mode-all-must-pass
+CHECK warden-passes-own-rules
 ===END===

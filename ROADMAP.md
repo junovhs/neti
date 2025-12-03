@@ -287,7 +287,7 @@
 - [x] ****--strict mode (all must pass)** [no-test] *(CLI flag)***
 
 ### Self-Hosting
-- [ ] **Warden passes own rules** <!-- test: tests/integration_self_host.rs::test_warden_passes_own_rules -->
+- [x] **Warden passes own rules** <!-- test: tests/integration_self_host.rs::test_warden_passes_own_rules -->
 
 ### Test Naming Convention
 - [ ] **Feature ID → test function mapping**
