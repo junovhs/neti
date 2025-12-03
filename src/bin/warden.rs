@@ -97,32 +97,63 @@ fn run() -> Result<()> {
 
 fn dispatch(cli: &Cli) -> Result<()> {
     match &cli.command {
-        Some(Commands::Check) => {
-            run_pipeline("check");
-            Ok(())
-        }
-        Some(Commands::Fix) => {
-            run_pipeline("fix");
-            Ok(())
-        }
-        Some(Commands::Config) => warden_core::tui::run_config(),
-        Some(Commands::Apply) => handle_apply(),
-        Some(Commands::Map) => {
-            println!("{}", trace::map()?);
-            Ok(())
-        }
-        Some(Commands::Prompt { copy }) => handle_prompt(*copy),
-        Some(Commands::Clean { commit }) => warden_core::clean::run(*commit),
-        Some(Commands::Roadmap(sub)) => handle_command(sub.clone()),
-        Some(cmd @ Commands::Pack { .. }) => handle_pack(cmd),
-        Some(Commands::Trace {
-            file,
-            depth,
-            budget,
-        }) => handle_trace(file, *depth, *budget),
-        None if cli.ui => run_tui(),
-        None => run_scan(),
+        Some(cmd) => dispatch_command(cmd),
+        None => dispatch_default(cli.ui),
     }
+}
+
+fn dispatch_default(ui: bool) -> Result<()> {
+    if ui {
+        run_tui()
+    } else {
+        run_scan()
+    }
+}
+
+fn dispatch_command(cmd: &Commands) -> Result<()> {
+    if let Some(result) = try_simple_commands(cmd) {
+        return result;
+    }
+    dispatch_complex_commands(cmd)
+}
+
+fn try_simple_commands(cmd: &Commands) -> Option<Result<()>> {
+    match cmd {
+        Commands::Check => Some(handle_check()),
+        Commands::Fix => Some(handle_fix()),
+        Commands::Config => Some(warden_core::tui::run_config()),
+        Commands::Apply => Some(handle_apply()),
+        Commands::Map => Some(handle_map()),
+        _ => None,
+    }
+}
+
+fn dispatch_complex_commands(cmd: &Commands) -> Result<()> {
+    match cmd {
+        Commands::Prompt { copy } => handle_prompt(*copy),
+        Commands::Clean { commit } => warden_core::clean::run(*commit),
+        Commands::Roadmap(sub) => handle_command(sub.clone()),
+        Commands::Pack { .. } => handle_pack(cmd),
+        Commands::Trace { file, depth, budget } => handle_trace(file, *depth, *budget),
+        _ => Ok(()),
+    }
+}
+
+#[allow(clippy::unnecessary_wraps)]
+fn handle_check() -> Result<()> {
+    run_pipeline("check");
+    Ok(())
+}
+
+#[allow(clippy::unnecessary_wraps)]
+fn handle_fix() -> Result<()> {
+    run_pipeline("fix");
+    Ok(())
+}
+
+fn handle_map() -> Result<()> {
+    println!("{}", trace::map()?);
+    Ok(())
 }
 
 fn handle_trace(file: &Path, depth: usize, budget: usize) -> Result<()> {
@@ -181,7 +212,7 @@ fn ensure_config_exists() {
     let content =
         warden_core::project::generate_toml(project, warden_core::project::Strictness::Standard);
     if fs::write("warden.toml", &content).is_ok() {
-        eprintln!("{}", "📝 Created warden.toml".dimmed());
+        eprintln!("{}", "?? Created warden.toml".dimmed());
     }
 }
 
@@ -191,7 +222,7 @@ fn handle_prompt(copy: bool) -> Result<()> {
     let prompt = PromptGenerator::new(config.rules.clone()).generate()?;
     if copy {
         warden_core::clipboard::copy_to_clipboard(&prompt)?;
-        println!("{}", "✓ Copied to clipboard".green());
+        println!("{}", "� Copied to clipboard".green());
     } else {
         println!("{prompt}");
     }
@@ -205,7 +236,7 @@ fn run_pipeline(name: &str) {
         eprintln!("{} No '{}' command configured", "error:".red(), name);
         process::exit(1);
     };
-    println!("{} Running '{}' pipeline...", "🚀".green(), name);
+    println!("{} Running '{}' pipeline...", "??".green(), name);
     for cmd in commands {
         exec_cmd(cmd);
     }
@@ -218,7 +249,7 @@ fn exec_cmd(cmd: &str) {
     match Command::new(prog).args(args).status() {
         Ok(s) if s.success() => {}
         Ok(s) => {
-            eprintln!("{} Exit code {}", "❌".red(), s.code().unwrap_or(1));
+            eprintln!("{} Exit code {}", "?".red(), s.code().unwrap_or(1));
             process::exit(s.code().unwrap_or(1));
         }
         Err(e) if e.kind() == io::ErrorKind::NotFound => {
@@ -271,4 +302,4 @@ fn load_config() -> Config {
     let mut c = Config::new();
     c.load_local_config();
     c
-}
+}
