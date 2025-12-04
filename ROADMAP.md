@@ -335,7 +335,7 @@
 ### Import Extraction — Rust
 - [x] **Rust use declaration extraction** <!-- test: tests/unit_graph.rs::test_rust_use_extraction -->
 - [x] ****Rust mod declaration extraction** <!-- test: src/graph/imports.rs::tests::test_rust_imports -->** <!-- test: tests/unit_graph.rs::test_rust_mod_extraction -->
-- [ ] **Rust re-export handling (pub use)** <!-- test: tests/unit_graph.rs::test_rust_reexport -->
+- [x] ****Rust re-export handling (pub use)** <!-- test: src/graph/imports.rs::tests::test_rust_reexport -->** <!-- test: tests/unit_graph.rs::test_rust_reexport -->
 - [x] ****Rust crate:: path resolution** <!-- test: src/graph/resolver.rs::tests::test_resolve_rust_crate -->** <!-- test: tests/unit_graph.rs::test_rust_crate_path -->
 - [x] **Rust self:: path resolution** <!-- test: tests/unit_graph.rs::test_rust_self_path -->
 - [x] **Rust super:: path resolution** <!-- test: tests/unit_graph.rs::test_rust_super_path -->

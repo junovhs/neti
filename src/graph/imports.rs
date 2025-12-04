@@ -158,4 +158,15 @@ mod tests {
         assert!(imports.contains(&"fs".to_string()));
         assert!(imports.contains(&"./utils".to_string()));
     }
+
+    #[test]
+    fn test_rust_reexport() {
+        let code = r"
+            pub use std::collections::HashMap;
+            pub use crate::config;
+        ";
+        let imports = extract(Path::new("lib.rs"), code);
+        assert!(imports.contains(&"std::collections::HashMap".to_string()));
+        assert!(imports.contains(&"crate::config".to_string()));
+    }
 }
