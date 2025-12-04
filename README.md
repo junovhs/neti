@@ -6,9 +6,9 @@
 
 ## The Story
 
-I'm mainly a product designer. This tool is the embodiment of a workflow I've developed over the last several years playing with LLMs. Every line of Rust came from Claude and ChatGPT.
+I'm mainly a product designer. This tool is the embodiment of a workflow I've developed over the last several years playing with LLMs. Every line came from whatever smarty-pants AI model was kicking ass that week.
 
-While senior devs and teams can use this as a linter (same rules, no AI required), the full suite is really geared at low/no-code folk like myself who are building entire projects through conversation.
+While senior devs and teams can use this as a sort of structural/code quality linter (same rules, no AI required), the full suite is really geared at low/no-code folk like myself who are building entire projects through conversation with a traditional chat interface for the AI.
 
 How does that even work?
 
