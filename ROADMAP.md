@@ -225,6 +225,7 @@
 ### Roadmap Parsing
 - [x] **Title extraction (# Title)** <!-- test: tests/integration_roadmap.rs::test_parse_simple_roadmap -->
 - [x] **Section heading detection** <!-- test: tests/integration_roadmap.rs::test_parse_simple_roadmap -->
+  *Additional info*
 - [x] **Task checkbox detection** <!-- test: tests/integration_roadmap.rs::test_parse_extracts_tasks -->
 - [x] **Task status: pending** <!-- test: tests/integration_roadmap.rs::test_parse_extracts_tasks -->
 - [x] **Task status: complete** <!-- test: tests/integration_roadmap.rs::test_parse_extracts_tasks -->

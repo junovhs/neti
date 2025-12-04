@@ -133,8 +133,7 @@ pub fn handle_pack(args: PackArgs) -> Result<()> {
 }
 
 fn run_pipeline(name: &str) {
-    use std::io;
-    use std::process::{self, Command};
+    use std::process;
 
     let mut config = Config::new();
     config.load_local_config();

@@ -92,33 +92,68 @@ fn dispatch(cli: &Cli) -> Result<()> {
 
 fn dispatch_command(cmd: &Commands) -> Result<()> {
     match cmd {
+        Commands::Pack { .. }
+        | Commands::Trace { .. }
+        | Commands::Map { .. }
+        | Commands::Context { .. } => dispatch_analysis(cmd),
+
+        Commands::Check
+        | Commands::Fix
+        | Commands::Apply
+        | Commands::Clean { .. } => dispatch_action(cmd),
+
+        Commands::Config | Commands::Prompt { .. } | Commands::Roadmap(_) => dispatch_util(cmd),
+    }
+}
+
+fn dispatch_action(cmd: &Commands) -> Result<()> {
+    match cmd {
         Commands::Check => { cli::handle_check(); Ok(()) }
         Commands::Fix => { cli::handle_fix(); Ok(()) }
-        Commands::Config => warden_core::tui::run_config(),
         Commands::Apply => cli::handle_apply(),
-        Commands::Prompt { copy } => cli::handle_prompt(*copy),
         Commands::Clean { commit } => warden_core::clean::run(*commit),
+        _ => unreachable!(),
+    }
+}
+
+fn dispatch_util(cmd: &Commands) -> Result<()> {
+    match cmd {
+        Commands::Config => warden_core::tui::run_config(),
+        Commands::Prompt { copy } => cli::handle_prompt(*copy),
         Commands::Roadmap(sub) => handle_command(sub.clone()),
+        _ => unreachable!(),
+    }
+}
+
+fn dispatch_analysis(cmd: &Commands) -> Result<()> {
+    match cmd {
         Commands::Trace { file, depth, budget } => cli::handle_trace(file, *depth, *budget),
         Commands::Map { deps } => cli::handle_map(*deps),
         Commands::Context { verbose, copy } => cli::handle_context(*verbose, *copy),
-        Commands::Pack { stdout, copy, noprompt, format, skeleton, git_only, no_git,
-            code_only, verbose, target, focus, depth } => {
-            cli::handle_pack(PackArgs {
-                stdout: *stdout,
-                copy: *copy,
-                noprompt: *noprompt,
-                format: format.clone(),
-                skeleton: *skeleton,
-                git_only: *git_only,
-                no_git: *no_git,
-                code_only: *code_only,
-                verbose: *verbose,
-                target: target.clone(),
-                focus: focus.clone(),
-                depth: *depth,
-            })
-        }
+        Commands::Pack { .. } => dispatch_pack(cmd),
+        _ => unreachable!(),
+    }
+}
+
+fn dispatch_pack(cmd: &Commands) -> Result<()> {
+    if let Commands::Pack { stdout, copy, noprompt, format, skeleton, git_only, no_git,
+        code_only, verbose, target, focus, depth } = cmd {
+        cli::handle_pack(PackArgs {
+            stdout: *stdout,
+            copy: *copy,
+            noprompt: *noprompt,
+            format: format.clone(),
+            skeleton: *skeleton,
+            git_only: *git_only,
+            no_git: *no_git,
+            code_only: *code_only,
+            verbose: *verbose,
+            target: target.clone(),
+            focus: focus.clone(),
+            depth: *depth,
+        })
+    } else {
+        Ok(())
     }
 }
 
