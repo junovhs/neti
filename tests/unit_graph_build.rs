@@ -1,8 +1,8 @@
 // tests/unit_graph_build.rs
 //! Tests for dependency graph construction.
 
+use slopchop_core::graph::rank::RepoGraph;
 use std::path::PathBuf;
-use warden_core::graph::rank::RepoGraph;
 
 #[test]
 fn test_node_creation() {
@@ -68,4 +68,4 @@ fn test_reverse_index() {
     let importers = graph.neighbors(std::path::Path::new("src/shared.rs"));
     // Both a.rs and b.rs import shared.rs
     assert!(importers.len() <= 2, "Reverse index should track importers");
-}
+}

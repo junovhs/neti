@@ -1,9 +1,9 @@
 // tests/cli_map.rs
 use anyhow::Result;
+use slopchop_core::trace;
 use std::fs;
 use std::sync::{LazyLock, Mutex, PoisonError};
 use tempfile::tempdir;
-use warden_core::trace;
 
 // Protect CWD changes with a global mutex
 static CWD_LOCK: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
@@ -18,7 +18,7 @@ fn test_map_basic() -> Result<()> {
     let _lock = CWD_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
     let temp = tempdir()?;
     let _guard = TestDirectoryGuard::new(temp.path());
-    
+
     fs::write("main.rs", "fn main() {}")?;
 
     let result = trace::map(false)?;
@@ -43,7 +43,7 @@ fn test_map_tree() -> Result<()> {
 
     let result = trace::map(false)?;
     let clean = strip_ansi(&result);
-    
+
     assert!(clean.contains("src/"));
     assert!(clean.contains("lib.rs"));
     Ok(())
@@ -55,13 +55,13 @@ fn test_map_deps() -> Result<()> {
     let temp = tempdir()?;
     let _guard = TestDirectoryGuard::new(temp.path());
     fs::create_dir("src")?;
-    
+
     fs::write("src/lib.rs", "use crate::utils::Helper;")?;
     fs::write("src/utils.rs", "pub struct Helper;")?;
 
     let result = trace::map(true)?;
     let clean = strip_ansi(&result);
-    
+
     assert!(clean.contains("src/"));
     assert!(clean.contains("lib.rs"));
     assert!(clean.contains("🔗"));
@@ -86,3 +86,4 @@ impl Drop for TestDirectoryGuard {
         let _ = std::env::set_current_dir(&self.original);
     }
 }
+

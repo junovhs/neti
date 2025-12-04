@@ -26,7 +26,7 @@ pub fn print_outcome(outcome: &ApplyOutcome) {
 fn print_success(written: &[String], deleted: &[String], roadmap: &[String], backed_up: bool) {
     println!("{}", "✅ Apply successful!".green().bold());
     if backed_up {
-        println!("   (Backup created in .warden_apply_backup/)");
+        println!("   (Backup created in .slopchop_apply_backup/)");
     }
     println!();
 
@@ -45,7 +45,7 @@ fn print_success(written: &[String], deleted: &[String], roadmap: &[String], bac
     }
 
     println!();
-    println!("Run {} to verify.", "warden check".yellow());
+    println!("Run {} to verify.", "slopchop check".yellow());
 }
 
 fn print_validation_errors(errors: &[String], missing: &[String]) {
@@ -88,7 +88,7 @@ pub fn format_ai_rejection(missing: &[String], errors: &[String]) -> String {
 
     if !missing.is_empty() {
         msg.push_str(
-            "MISSING FILES (Declared in MANIFEST but no #__WARDEN_FILE__# block found):\n",
+            "MISSING FILES (Declared in MANIFEST but no #__SLOPCHOP_FILE__# block found):\n",
         );
         for f in missing {
             let _ = writeln!(msg, "- {f}");
@@ -108,12 +108,12 @@ pub fn format_ai_rejection(missing: &[String], errors: &[String]) -> String {
         msg.push('\n');
 
         if hint_dogfood {
-            msg.push_str("TIP: If you are actively 'dogfooding' or intentionally using banned patterns, use '// warden:ignore' to bypass.\n\n");
+            msg.push_str("TIP: If you are actively 'dogfooding' or intentionally using banned patterns, use '// slopchop:ignore' to bypass.\n\n");
         }
     }
 
     msg.push_str(
-        "Please provide the missing or corrected files using #__WARDEN_FILE__# path ... #__WARDEN_END__#",
+        "Please provide the missing or corrected files using #__SLOPCHOP_FILE__# path ... #__SLOPCHOP_END__#",
     );
     msg
 }

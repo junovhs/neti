@@ -1,4 +1,4 @@
-use warden_core::roadmap::{diff::diff, Roadmap, Command};
+use slopchop_core::roadmap::{diff::diff, Command, Roadmap};
 
 #[test]
 fn test_text_change_is_update() {
@@ -22,13 +22,13 @@ fn test_text_change_is_update() {
     let commands = diff(&current, &incoming);
 
     assert_eq!(commands.len(), 1);
-    
+
     match &commands[0] {
         Command::Update { path, text } => {
             // ID should be 'stable-id' derived from anchor
             assert_eq!(path, "stable-id");
             assert_eq!(text, "Updated Text");
-        },
+        }
         _ => panic!("Expected UPDATE command, got {:?}", commands[0]),
     }
 }

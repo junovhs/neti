@@ -87,7 +87,7 @@ fn get_filter_label(active: bool) -> &'static str {
 fn build_header_line(health: f64, info: &str) -> Line<'_> {
     Line::from(vec![
         Span::styled(
-            " 🛡️ WARDEN PROTOCOL ",
+            " 🛡️ SLOPCHOP PROTOCOL ",
             Style::default()
                 .fg(Color::Cyan)
                 .add_modifier(Modifier::BOLD),

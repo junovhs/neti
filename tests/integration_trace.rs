@@ -1,10 +1,10 @@
 // tests/integration_trace.rs
+use slopchop_core::graph::defs;
+use slopchop_core::graph::rank::RepoGraph;
 use std::path::PathBuf;
-use warden_core::graph::defs;
-use warden_core::graph::rank::RepoGraph;
 
 #[test]
-fn test_graph_builds_on_warden_itself() {
+fn test_graph_builds_on_slopchop_itself() {
     let files = vec![
         (
             PathBuf::from("src/lib.rs"),

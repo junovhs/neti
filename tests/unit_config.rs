@@ -1,5 +1,5 @@
 // tests/unit_config.rs
-use warden_core::config::Config;
+use slopchop_core::config::Config;
 
 #[test]
 fn test_load_toml() {
@@ -58,7 +58,7 @@ fn test_command_list() {
 }
 
 #[test]
-fn test_wardenignore() {
+fn test_slopchopignore() {
     let mut config = Config::new();
 
     // Should be ignored

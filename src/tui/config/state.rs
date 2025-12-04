@@ -116,8 +116,10 @@ impl ConfigApp {
         if let Err(e) = save_to_file(&self.rules, &self.preferences, &self.commands) {
             self.saved_message = Some((format!("Error: {e}"), std::time::Instant::now()));
         } else {
-            self.saved_message =
-                Some(("Saved warden.toml!".to_string(), std::time::Instant::now()));
+            self.saved_message = Some((
+                "Saved slopchop.toml!".to_string(),
+                std::time::Instant::now(),
+            ));
             self.modified = false;
         }
     }

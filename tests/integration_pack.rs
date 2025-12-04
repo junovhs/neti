@@ -1,7 +1,7 @@
+use slopchop_core::config::Config;
+use slopchop_core::pack::{self, PackOptions};
 use std::fs;
 use tempfile::tempdir;
-use warden_core::config::Config;
-use warden_core::pack::{self, PackOptions};
 
 #[test]
 fn test_nabla_delimiters_are_unique() {
@@ -19,8 +19,8 @@ fn test_nabla_delimiters_are_unique() {
 
     let content = pack::generate_content(&[file_path], &opts, &config).unwrap();
 
-    assert!(content.contains("#__WARDEN_FILE__#"));
-    assert!(content.contains("#__WARDEN_END__#"));
+    assert!(content.contains("#__SLOPCHOP_FILE__#"));
+    assert!(content.contains("#__SLOPCHOP_END__#"));
     // Verify old unicode symbols are gone
     assert!(!content.contains("∇∇∇"));
 }
@@ -41,29 +41,29 @@ fn test_nabla_format_structure() {
 
     // Normalize path for test consistency
     let p_str = file_path.to_string_lossy().replace('\\', "/");
-    let header = format!("#__WARDEN_FILE__# {p_str}");
+    let header = format!("#__SLOPCHOP_FILE__# {p_str}");
 
     assert!(content.contains(&header));
     assert!(content.contains("code"));
-    assert!(content.contains("#__WARDEN_END__#"));
+    assert!(content.contains("#__SLOPCHOP_END__#"));
 }
 
 #[test]
 fn test_prompt_includes_nabla_instructions() {
     // Legacy name. Checks for SlopChop Protocol instructions.
     let config = Config::default();
-    let generator = warden_core::prompt::PromptGenerator::new(config.rules);
+    let generator = slopchop_core::prompt::PromptGenerator::new(config.rules);
     let prompt = generator.generate().unwrap();
 
-    assert!(prompt.contains("#__WARDEN_FILE__#"));
-    assert!(prompt.contains("#__WARDEN_MANIFEST__#"));
+    assert!(prompt.contains("#__SLOPCHOP_FILE__#"));
+    assert!(prompt.contains("#__SLOPCHOP_MANIFEST__#"));
     assert!(prompt.contains("OUTPUT FORMAT (MANDATORY)"));
 }
 
 #[test]
 fn test_prompt_includes_laws() {
     let config = Config::default();
-    let generator = warden_core::prompt::PromptGenerator::new(config.rules);
+    let generator = slopchop_core::prompt::PromptGenerator::new(config.rules);
     let prompt = generator.generate().unwrap();
 
     assert!(prompt.contains("THE 3 LAWS"));
@@ -73,7 +73,7 @@ fn test_prompt_includes_laws() {
 #[test]
 fn test_prompt_includes_limits() {
     let config = Config::default();
-    let generator = warden_core::prompt::PromptGenerator::new(config.rules);
+    let generator = slopchop_core::prompt::PromptGenerator::new(config.rules);
     let prompt = generator.generate().unwrap();
 
     assert!(prompt.contains("Files: MUST be < 2000 tokens"));
@@ -83,11 +83,11 @@ fn test_prompt_includes_limits() {
 #[test]
 fn test_reminder_is_concise() {
     let config = Config::default();
-    let generator = warden_core::prompt::PromptGenerator::new(config.rules);
+    let generator = slopchop_core::prompt::PromptGenerator::new(config.rules);
     let reminder = generator.generate_reminder().unwrap();
 
-    assert!(reminder.contains("WARDEN CONSTRAINTS"));
-    assert!(reminder.contains("#__WARDEN_FILE__#"));
+    assert!(reminder.contains("SLOPCHOP CONSTRAINTS"));
+    assert!(reminder.contains("#__SLOPCHOP_FILE__#"));
 }
 
 #[test]

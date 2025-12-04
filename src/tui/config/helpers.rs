@@ -48,7 +48,7 @@ fn cycle_theme(app: &mut ConfigApp, forward: bool) {
 }
 
 fn cycle_prefix(app: &mut ConfigApp) {
-    let prefixes = ["AI: ", "feat: ", "fix: ", "warden: "];
+    let prefixes = ["AI: ", "feat: ", "fix: ", "slopchop: "];
     let current = prefixes
         .iter()
         .position(|p| *p == app.preferences.commit_prefix)
@@ -108,7 +108,7 @@ const DESCRIPTIONS: &[&str] = &[
     "Limits function naming verbosity. Long names often mask poor abstraction.\n\nGoal: Concise intent.",
     "Automatically copy the generated 'context.txt' to the clipboard.\n\nGoal: Eliminate manual steps.",
     "Run the project's formatter (e.g., cargo fmt, prettier) immediately after applying changes.\n\nGoal: Maintain style guide.",
-    "Automatically stage and commit changes if the application succeeds and 'warden check' passes.\n\nGoal: High-velocity iteration.",
+    "Automatically stage and commit changes if the application succeeds and 'slopchop check' passes.\n\nGoal: High-velocity iteration.",
     "Prefix for auto-generated commits to distinguish them in git history.\n\nGoal: Traceability.",
     "Color scheme for the TUI.\nNASA: High Contrast.\nCyberpunk: Neon.\nCorporate: Subtle.\n\nGoal: Eye Candy.",
     "Show animated progress bars during scans and operations.\n\nGoal: Feedback.",

@@ -62,7 +62,7 @@ fn read_all_files(files: &[PathBuf]) -> HashMap<PathBuf, String> {
 
 fn write_header(out: &mut String) {
     let _ = writeln!(out, "{}", "═".repeat(70));
-    let _ = writeln!(out, "🔭 WARDEN CONTEXT MAP");
+    let _ = writeln!(out, "🔭 SLOPCHOP CONTEXT MAP");
     let _ = writeln!(out, "{}", "═".repeat(70));
     let _ = writeln!(out);
 }
@@ -176,11 +176,11 @@ fn write_request_protocol(out: &mut String) {
     let _ = writeln!(out, "To get code for specific files:");
     let _ = writeln!(
         out,
-        "  warden pack --focus <file1> [file2...] [--depth N]\n"
+        "  slopchop pack --focus <file1> [file2...] [--depth N]\n"
     );
     let _ = writeln!(out, "Examples:");
-    let _ = writeln!(out, "  warden pack --focus src/graph/resolver.rs");
-    let _ = writeln!(out, "  warden pack --focus src/lib.rs --depth 2");
+    let _ = writeln!(out, "  slopchop pack --focus src/graph/resolver.rs");
+    let _ = writeln!(out, "  slopchop pack --focus src/lib.rs --depth 2");
     let _ = writeln!(out, "{}", "═".repeat(70));
 }
 

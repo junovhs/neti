@@ -1,8 +1,8 @@
 // tests/unit_graph.rs
 //! Tests for import extraction across languages.
 
+use slopchop_core::graph::imports;
 use std::path::Path;
-use warden_core::graph::imports;
 
 #[test]
 fn test_rust_use_extraction() {
@@ -56,7 +56,10 @@ from typing import Optional, List
 from .utils import helper
 ";
     let imports = imports::extract(Path::new("main.py"), content);
-    assert!(!imports.is_empty(), "Should extract from...import statements");
+    assert!(
+        !imports.is_empty(),
+        "Should extract from...import statements"
+    );
 }
 
 #[test]
@@ -68,4 +71,4 @@ import * as utils from './utils';
 ";
     let imports = imports::extract(Path::new("app.ts"), content);
     assert!(!imports.is_empty(), "Should extract TypeScript imports");
-}
+}

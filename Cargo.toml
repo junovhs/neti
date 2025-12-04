@@ -1,15 +1,15 @@
 [package]
-name = "warden"
+name = "slopchop"
 version = "0.7.0"
 edition = "2021"
 
 [lib]
-name = "warden_core"
+name = "slopchop_core"
 path = "src/lib.rs"
 
 [[bin]]
-name = "warden"
-path = "src/bin/warden.rs"
+name = "slopchop"
+path = "src/bin/slopchop.rs"
 
 [dependencies]
 anyhow = "1.0"

@@ -1,6 +1,6 @@
 // tests/cli_exit.rs - Exit code tests
-use warden_core::config::Config;
-use warden_core::analysis::RuleEngine;
+use slopchop_core::analysis::RuleEngine;
+use slopchop_core::config::Config;
 use std::fs;
 use tempfile::TempDir;
 

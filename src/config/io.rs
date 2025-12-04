@@ -8,7 +8,7 @@ use std::fs;
 use std::path::Path;
 
 pub fn load_ignore_file(config: &mut Config) {
-    let Ok(content) = fs::read_to_string(".wardenignore") else {
+    let Ok(content) = fs::read_to_string(".slopchopignore") else {
         return;
     };
     for line in content.lines() {
@@ -27,10 +27,10 @@ pub fn process_ignore_line(config: &mut Config, line: &str) {
 }
 
 pub fn load_toml_config(config: &mut Config) {
-    if !Path::new("warden.toml").exists() {
+    if !Path::new("slopchop.toml").exists() {
         return;
     }
-    let Ok(content) = fs::read_to_string("warden.toml") else {
+    let Ok(content) = fs::read_to_string("slopchop.toml") else {
         return;
     };
     parse_toml(config, &content);
@@ -84,7 +84,7 @@ pub fn save_to_file(
         crate::error::SlopChopError::Other(format!("Failed to serialize config: {e}"))
     })?;
 
-    fs::write("warden.toml", content)?;
+    fs::write("slopchop.toml", content)?;
     Ok(())
 }
 

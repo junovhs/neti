@@ -9,7 +9,7 @@ use regex::Regex;
 /// # Errors
 /// Returns error if regex compilation fails.
 pub fn parse_manifest(response: &str) -> Result<Option<Vec<ManifestEntry>>> {
-    if let Some((start, end)) = find_warden_manifest(response)? {
+    if let Some((start, end)) = find_slopchop_manifest(response)? {
         let block = &response[start..end];
         let entries = parse_manifest_lines(block)?;
         return Ok(Some(entries));
@@ -24,9 +24,9 @@ pub fn parse_manifest(response: &str) -> Result<Option<Vec<ManifestEntry>>> {
     Ok(None)
 }
 
-fn find_warden_manifest(response: &str) -> Result<Option<(usize, usize)>> {
-    let open_re = Regex::new(r"#__WARDEN_MANIFEST__#")?;
-    let close_re = Regex::new(r"#__WARDEN_END__#")?;
+fn find_slopchop_manifest(response: &str) -> Result<Option<(usize, usize)>> {
+    let open_re = Regex::new(r"#__SLOPCHOP_MANIFEST__#")?;
+    let close_re = Regex::new(r"#__SLOPCHOP_END__#")?;
 
     let Some(start_match) = open_re.find(response) else {
         return Ok(None);

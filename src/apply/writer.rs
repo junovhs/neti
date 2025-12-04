@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const BACKUP_DIR: &str = ".warden_apply_backup";
+const BACKUP_DIR: &str = ".slopchop_apply_backup";
 
 /// Writes changes (updates, new files, deletes) to disk.
 ///

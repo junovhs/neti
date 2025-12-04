@@ -1,6 +1,6 @@
+use slopchop_core::apply::types::{ApplyOutcome, FileContent, ManifestEntry, Operation};
+use slopchop_core::apply::validator;
 use std::collections::HashMap;
-use warden_core::apply::types::{ApplyOutcome, ManifestEntry, Operation, FileContent};
-use warden_core::apply::validator;
 
 #[test]
 fn test_roadmap_rewrite_is_blocked() {
@@ -8,26 +8,33 @@ fn test_roadmap_rewrite_is_blocked() {
         path: "ROADMAP.md".to_string(),
         operation: Operation::Update,
     }];
-    
+
     let mut extracted = HashMap::new();
-    extracted.insert("ROADMAP.md".to_string(), FileContent {
-        content: "# New Roadmap".to_string(),
-        line_count: 1,
-    });
+    extracted.insert(
+        "ROADMAP.md".to_string(),
+        FileContent {
+            content: "# New Roadmap".to_string(),
+            line_count: 1,
+        },
+    );
 
     let outcome = validator::validate(&manifest, &extracted);
 
     match outcome {
-        ApplyOutcome::ValidationFailure { errors, ai_message, .. } => {
-            // It might be a "PROTECTED" error (if diff fails/file missing) 
+        ApplyOutcome::ValidationFailure {
+            errors, ai_message, ..
+        } => {
+            // It might be a "PROTECTED" error (if diff fails/file missing)
             // OR a "Roadmap rewrite converted" error (if diff succeeds).
             // Since this test runs in isolation without a real file on disk,
             // handle_roadmap_rewrite likely returns None (file not found),
             // falling back to the standard PROTECTED error.
-            
+
             let has_protected = errors.iter().any(|e| e.contains("PROTECTED"));
-            let has_converted = errors.iter().any(|e| e.contains("Roadmap rewrite converted"));
-            
+            let has_converted = errors
+                .iter()
+                .any(|e| e.contains("Roadmap rewrite converted"));
+
             assert!(
                 has_protected || has_converted,
                 "Expected roadmap block, got errors: {errors:?}\nMessage: {ai_message}"
@@ -43,17 +50,22 @@ fn test_roadmap_rewrite_blocked_case_insensitive() {
         path: "roadmap.md".to_string(),
         operation: Operation::Update,
     }];
-    
+
     let mut extracted = HashMap::new();
-    extracted.insert("roadmap.md".to_string(), FileContent {
-        content: "# New Roadmap".to_string(),
-        line_count: 1,
-    });
+    extracted.insert(
+        "roadmap.md".to_string(),
+        FileContent {
+            content: "# New Roadmap".to_string(),
+            line_count: 1,
+        },
+    );
 
     let outcome = validator::validate(&manifest, &extracted);
 
     if let ApplyOutcome::ValidationFailure { errors, .. } = outcome {
-        assert!(errors.iter().any(|e| e.contains("PROTECTED") || e.contains("Roadmap rewrite converted")));
+        assert!(errors
+            .iter()
+            .any(|e| e.contains("PROTECTED") || e.contains("Roadmap rewrite converted")));
     } else {
         panic!("Should have failed validation");
     }
@@ -65,19 +77,25 @@ fn test_roadmap_error_suggests_command() {
         path: "ROADMAP.md".to_string(),
         operation: Operation::Update,
     }];
-    
+
     let mut extracted = HashMap::new();
-    extracted.insert("ROADMAP.md".to_string(), FileContent {
-        content: "# New Roadmap".to_string(),
-        line_count: 1,
-    });
+    extracted.insert(
+        "ROADMAP.md".to_string(),
+        FileContent {
+            content: "# New Roadmap".to_string(),
+            line_count: 1,
+        },
+    );
 
     let outcome = validator::validate(&manifest, &extracted);
 
     if let ApplyOutcome::ValidationFailure { errors, .. } = outcome {
-         // The error message itself suggests using commands
-         assert!(errors.iter().any(|e| e.contains("warden roadmap apply") || e.contains("Roadmap rewrite converted")));
+        // The error message itself suggests using commands
+        assert!(errors.iter().any(
+            |e| e.contains("slopchop roadmap apply") || e.contains("Roadmap rewrite converted")
+        ));
     } else {
         panic!("Should have failed validation");
     }
 }
+

@@ -41,7 +41,7 @@ impl PromptGenerator {
         let output_format = build_output_format();
 
         format!(
-            r"🛡️ SYSTEM MANDATE: THE WARDEN PROTOCOL
+            r"🛡️ SYSTEM MANDATE: THE SLOPCHOP PROTOCOL
 ROLE: High-Integrity Systems Architect (NASA/JPL Standard).
 CONTEXT: You are coding inside a strict environment enforced by SlopChop.
 
@@ -72,13 +72,13 @@ THE 3 LAWS (Non-Negotiable):
         let args = self.config.max_function_args;
 
         format!(
-            r"WARDEN CONSTRAINTS:
+            r"SLOPCHOP CONSTRAINTS:
 □ Files < {tokens} tokens
 □ Complexity ≤ {complexity}
 □ Nesting ≤ {depth}
 □ Args ≤ {args}
 □ No .unwrap() or .expect()
-□ Use SlopChop Format (#__WARDEN_FILE__# ... #__WARDEN_END__#)"
+□ Use SlopChop Format (#__SLOPCHOP_FILE__# ... #__SLOPCHOP_END__#)"
         )
     }
 }
@@ -90,30 +90,30 @@ fn build_output_format() -> String {
    - Must start with "GOAL:"
    - Must include "CHANGES:" list
 
-#__WARDEN_PLAN__#
+#__SLOPCHOP_PLAN__#
 GOAL: Refactor authentication module.
 CHANGES:
 1. Extract user validation to new file.
 2. Update config parser.
-#__WARDEN_END__#
+#__SLOPCHOP_END__#
 
 2. Declare the plan (Manifest):
 
-#__WARDEN_MANIFEST__#
+#__SLOPCHOP_MANIFEST__#
 path/to/file1.rs
 path/to/file2.rs [NEW]
-#__WARDEN_END__#
+#__SLOPCHOP_END__#
 
 3. Provide EACH file:
 
-#__WARDEN_FILE__# path/to/file1.rs
+#__SLOPCHOP_FILE__# path/to/file1.rs
 [file content]
-#__WARDEN_END__#
+#__SLOPCHOP_END__#
 
 RULES:
-- Do NOT use markdown code blocks (e.g. triple backticks) to wrap the file. The #__WARDEN_FILE__# delimiters ARE the fence.
+- Do NOT use markdown code blocks (e.g. triple backticks) to wrap the file. The #__SLOPCHOP_FILE__# delimiters ARE the fence.
 - You MAY use markdown inside the file content.
-- Every file in the manifest MUST have a matching #__WARDEN_FILE__# block.
+- Every file in the manifest MUST have a matching #__SLOPCHOP_FILE__# block.
 - Paths must match exactly.
 - Do NOT truncate files (No "// ...")."#.to_string()
 }

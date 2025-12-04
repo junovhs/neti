@@ -12,9 +12,9 @@ use crate::skeleton;
 ///
 /// # Errors
 /// Returns an error if file reading fails.
-pub fn pack_warden(files: &[PathBuf], out: &mut String, opts: &PackOptions) -> Result<()> {
+pub fn pack_slopchop(files: &[PathBuf], out: &mut String, opts: &PackOptions) -> Result<()> {
     for path in files {
-        write_warden_file(out, path, should_skeletonize(path, opts))?;
+        write_slopchop_file(out, path, should_skeletonize(path, opts))?;
     }
     Ok(())
 }
@@ -23,14 +23,14 @@ pub fn pack_warden(files: &[PathBuf], out: &mut String, opts: &PackOptions) -> R
 ///
 /// # Errors
 /// Returns an error if file reading fails.
-pub fn pack_warden_focus(
+pub fn pack_slopchop_focus(
     files: &[PathBuf],
     out: &mut String,
     opts: &PackOptions,
     focus: &FocusContext,
 ) -> Result<()> {
     if focus.foveal.is_empty() && focus.peripheral.is_empty() {
-        return pack_warden(files, out, opts);
+        return pack_slopchop(files, out, opts);
     }
 
     write_foveal_section(out, files, focus)?;
@@ -47,7 +47,7 @@ fn write_foveal_section(out: &mut String, files: &[PathBuf], focus: &FocusContex
 
     writeln!(out, "# ═══ FOVEAL (full content) ═══\n")?;
     for path in foveal {
-        write_warden_file(out, path, false)?;
+        write_slopchop_file(out, path, false)?;
     }
     Ok(())
 }
@@ -67,14 +67,14 @@ fn write_peripheral_section(
 
     writeln!(out, "# ═══ PERIPHERAL (signatures only) ═══\n")?;
     for path in peripheral {
-        write_warden_file_skeleton(out, path)?;
+        write_slopchop_file_skeleton(out, path)?;
     }
     Ok(())
 }
 
-fn write_warden_file(out: &mut String, path: &Path, skeletonize: bool) -> Result<()> {
+fn write_slopchop_file(out: &mut String, path: &Path, skeletonize: bool) -> Result<()> {
     let p_str = path.to_string_lossy().replace('\\', "/");
-    writeln!(out, "#__WARDEN_FILE__# {p_str}")?;
+    writeln!(out, "#__SLOPCHOP_FILE__# {p_str}")?;
 
     match fs::read_to_string(path) {
         Ok(content) if skeletonize => out.push_str(&skeleton::clean(path, &content)),
@@ -82,20 +82,20 @@ fn write_warden_file(out: &mut String, path: &Path, skeletonize: bool) -> Result
         Err(e) => writeln!(out, "// <ERROR READING FILE: {e}>")?,
     }
 
-    writeln!(out, "\n#__WARDEN_END__#\n")?;
+    writeln!(out, "\n#__SLOPCHOP_END__#\n")?;
     Ok(())
 }
 
-fn write_warden_file_skeleton(out: &mut String, path: &Path) -> Result<()> {
+fn write_slopchop_file_skeleton(out: &mut String, path: &Path) -> Result<()> {
     let p_str = path.to_string_lossy().replace('\\', "/");
-    writeln!(out, "#__WARDEN_FILE__# {p_str} [SKELETON]")?;
+    writeln!(out, "#__SLOPCHOP_FILE__# {p_str} [SKELETON]")?;
 
     match fs::read_to_string(path) {
         Ok(content) => out.push_str(&skeleton::clean(path, &content)),
         Err(e) => writeln!(out, "// <ERROR READING FILE: {e}>")?,
     }
 
-    writeln!(out, "\n#__WARDEN_END__#\n")?;
+    writeln!(out, "\n#__SLOPCHOP_END__#\n")?;
     Ok(())
 }
 

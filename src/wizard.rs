@@ -13,8 +13,8 @@ pub fn run() -> Result<()> {
     println!("{}", "🧙 SlopChop Configuration Wizard".bold().cyan());
     println!("{}", "─────────────────────────────────────".dimmed());
 
-    if Path::new("warden.toml").exists() {
-        println!("{}", "⚠️  warden.toml already exists.".yellow());
+    if Path::new("slopchop.toml").exists() {
+        println!("{}", "⚠️  slopchop.toml already exists.".yellow());
         if !confirm("Overwrite it?")? {
             println!("Operation cancelled.");
             return Ok(());
@@ -30,14 +30,14 @@ pub fn run() -> Result<()> {
     println!("  Strictness: {}", format!("{strictness:?}").green());
 
     let content = project::generate_toml(project_type, strictness);
-    std::fs::write("warden.toml", content)?;
+    std::fs::write("slopchop.toml", content)?;
 
     println!();
     println!(
         "{}",
         "✅ Configuration created successfully!".green().bold()
     );
-    println!("Run {} to analyze your project.", "warden".yellow());
+    println!("Run {} to analyze your project.", "slopchop".yellow());
 
     Ok(())
 }

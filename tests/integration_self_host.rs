@@ -1,16 +1,16 @@
 // tests/integration_self_host.rs
-use warden_core::analysis::RuleEngine;
-use warden_core::config::Config;
-use warden_core::discovery;
+use slopchop_core::analysis::RuleEngine;
+use slopchop_core::config::Config;
+use slopchop_core::discovery;
 
 #[test]
-fn test_warden_passes_own_rules() {
+fn test_slopchop_passes_own_rules() {
     // 1. Load the actual configuration of the project
     let mut config = Config::new();
     config.load_local_config();
 
     // 2. Discover files in the current directory (project root)
-    // This respects .wardenignore, so generated files/target are skipped.
+    // This respects .slopchopignore, so generated files/target are skipped.
     let files = discovery::discover(&config).expect("Discovery failed");
 
     assert!(!files.is_empty(), "Self-host check found no files!");
@@ -21,7 +21,7 @@ fn test_warden_passes_own_rules() {
 
     // 4. Fail if any violations are found
     if report.has_errors() {
-        println!("\n⚠️  WARDEN SELF-HOST VIOLATIONS FOUND:");
+        println!("\n⚠️  SLOPCHOP SELF-HOST VIOLATIONS FOUND:");
         for file in &report.files {
             for v in &file.violations {
                 println!(
@@ -39,4 +39,3 @@ fn test_warden_passes_own_rules() {
         );
     }
 }
-

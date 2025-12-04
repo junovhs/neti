@@ -7,12 +7,12 @@
 //! 3. Safety: Tests verify that safe alternatives do not trigger violations.
 
 use anyhow::Result;
+use slopchop_core::analysis::RuleEngine;
+use slopchop_core::config::{Config, RuleConfig};
+use slopchop_core::types::Violation;
 use std::fs::File;
 use std::io::Write;
 use tempfile::TempDir;
-use warden_core::analysis::RuleEngine;
-use warden_core::config::{Config, RuleConfig};
-use warden_core::types::Violation;
 
 // --- Helpers ---
 
@@ -97,10 +97,7 @@ fn test_complexity_boundary_check() -> Result<()> {
 
     // Case 1: Limit = 2 (Should Pass)
     let violations = scan(content, config_complexity(2))?;
-    assert!(
-        violations.is_empty(),
-        "Complexity 2 should pass limit 2"
-    );
+    assert!(violations.is_empty(), "Complexity 2 should pass limit 2");
 
     // Case 2: Limit = 1 (Should Fail)
     let violations = scan(content, config_complexity(1))?;
@@ -126,7 +123,9 @@ fn test_complexity_construct_match() -> Result<()> {
     ";
     let violations = scan(content, config_complexity(2))?;
     assert!(
-        violations.iter().any(|v| v.message.contains("High Complexity")),
+        violations
+            .iter()
+            .any(|v| v.message.contains("High Complexity")),
         "Match arms must increment complexity"
     );
     Ok(())
@@ -144,7 +143,9 @@ fn test_complexity_construct_loops() -> Result<()> {
     ";
     let violations = scan(content, config_complexity(2))?;
     assert!(
-        violations.iter().any(|v| v.message.contains("High Complexity")),
+        violations
+            .iter()
+            .any(|v| v.message.contains("High Complexity")),
         "Loops must increment complexity"
     );
     Ok(())
@@ -155,13 +156,15 @@ fn test_complexity_construct_logic_ops() -> Result<()> {
     // Boolean operators count as branches (short-circuiting).
     // Base(1) + &&(1) + ||(1) = 3
     let content = "fn f(a: bool, b: bool, c: bool) { if a && b || c {} }";
-    
+
     // Note: The 'if' itself counts (1), plus && (1), plus || (1).
     // Total for this function: Base(1) + If(1) + &&(1) + ||(1) = 4.
-    
+
     let violations = scan(content, config_complexity(3))?;
     assert!(
-        violations.iter().any(|v| v.message.contains("High Complexity")),
+        violations
+            .iter()
+            .any(|v| v.message.contains("High Complexity")),
         "Logic operators (&&, ||) must increment complexity"
     );
     Ok(())
@@ -181,12 +184,14 @@ fn test_nesting_boundary() -> Result<()> {
     // The engine treats function body as depth 0, first block as 1.
     // Let's verify depth 2 fails limit 1.
     let deep = "fn f() { if true { if true {} } }"; // Depth 2
-    
+
     assert!(scan(deep, config_depth(2))?.is_empty());
-    
+
     let violations = scan(deep, config_depth(1))?;
     assert!(
-        violations.iter().any(|v| v.message.contains("Deep Nesting")),
+        violations
+            .iter()
+            .any(|v| v.message.contains("Deep Nesting")),
         "Depth 2 should fail limit 1"
     );
     Ok(())
@@ -239,30 +244,36 @@ fn test_paranoia_safe_alternatives_pass() -> Result<()> {
     // Ensure we don't flag valid alternatives or other methods
     // We use r#...# to allow quotes inside the string.
     let content = r#"
-        fn safe() { 
-            let x = Some(1); 
+        fn safe() {
+            let x = Some(1);
             x.unwrap_or(0);
             x.unwrap_or_else(|| 0);
             // Result operator should be fine
-            let _ = File::open("foo")?; 
+            let _ = File::open("foo")?;
         }
     "#;
     let violations = scan(content, RuleConfig::default())?;
-    assert!(violations.is_empty(), "Safe error handling should not trigger violations");
+    assert!(
+        violations.is_empty(),
+        "Safe error handling should not trigger violations"
+    );
     Ok(())
 }
 
 // --- Ignore Mechanics ---
 
 #[test]
-fn test_warden_ignore_skips_file() -> Result<()> {
+fn test_slopchop_ignore_skips_file() -> Result<()> {
     let content = r"
-        // warden:ignore
+        // slopchop:ignore
         fn extremely_complex_and_bad(a:i32,b:i32,c:i32,d:i32,e:i32) {
              if true { if true { if true { x.unwrap(); } } }
         }
     ";
     let violations = scan(content, config_complexity(1))?;
-    assert!(violations.is_empty(), "warden:ignore should bypass all checks");
+    assert!(
+        violations.is_empty(),
+        "slopchop:ignore should bypass all checks"
+    );
     Ok(())
 }

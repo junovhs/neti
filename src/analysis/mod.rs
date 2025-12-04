@@ -50,9 +50,9 @@ impl RuleEngine {
         let content = fs::read_to_string(path).ok()?;
 
         // Support C-style, Hash-style, and HTML-style (Markdown) ignores
-        if content.contains("// warden:ignore")
-            || content.contains("# warden:ignore")
-            || content.contains("<!-- warden:ignore -->")
+        if content.contains("// slopchop:ignore")
+            || content.contains("# slopchop:ignore")
+            || content.contains("<!-- slopchop:ignore -->")
         {
             return None;
         }

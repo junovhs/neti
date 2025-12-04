@@ -1,4 +1,4 @@
-.warden_apply_backup
+.slopchop_apply_backup
 target
 node_modules
 .git

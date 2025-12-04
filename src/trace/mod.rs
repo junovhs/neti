@@ -1,5 +1,5 @@
 // src/trace/mod.rs
-//! The `warden trace` command - Smart context generation.
+//! The `slopchop trace` command - Smart context generation.
 
 mod options;
 mod output;

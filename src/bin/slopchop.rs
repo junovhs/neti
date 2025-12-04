@@ -1,4 +1,4 @@
-// src/bin/warden.rs
+// src/bin/slopchop.rs
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -8,19 +8,19 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use colored::Colorize;
 
-use warden_core::analysis::RuleEngine;
-use warden_core::cli::{self, PackArgs};
-use warden_core::config::Config;
-use warden_core::discovery;
-use warden_core::pack::OutputFormat;
-use warden_core::project;
-use warden_core::reporting;
-use warden_core::roadmap::cli::{handle_command, RoadmapCommand};
-use warden_core::tui::state::App;
-use warden_core::wizard;
+use slopchop_core::analysis::RuleEngine;
+use slopchop_core::cli::{self, PackArgs};
+use slopchop_core::config::Config;
+use slopchop_core::discovery;
+use slopchop_core::pack::OutputFormat;
+use slopchop_core::project;
+use slopchop_core::reporting;
+use slopchop_core::roadmap::cli::{handle_command, RoadmapCommand};
+use slopchop_core::tui::state::App;
+use slopchop_core::wizard;
 
 #[derive(Parser)]
-#[command(name = "warden", version, about = "Code quality guardian")]
+#[command(name = "slopchop", version, about = "Code quality guardian")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
@@ -32,37 +32,63 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    Prompt { #[arg(long, short)] copy: bool },
+    Prompt {
+        #[arg(long, short)]
+        copy: bool,
+    },
     Check,
     Fix,
     Apply,
-    Clean { #[arg(long, short)] commit: bool },
+    Clean {
+        #[arg(long, short)]
+        commit: bool,
+    },
     Config,
     #[command(subcommand)]
     Roadmap(RoadmapCommand),
     Pack {
-        #[arg(long, short)] stdout: bool,
-        #[arg(long, short)] copy: bool,
-        #[arg(long)] noprompt: bool,
-        #[arg(long, value_enum, default_value_t = OutputFormat::Text)] format: OutputFormat,
-        #[arg(long)] skeleton: bool,
-        #[arg(long)] git_only: bool,
-        #[arg(long)] no_git: bool,
-        #[arg(long)] code_only: bool,
-        #[arg(long, short)] verbose: bool,
-        #[arg(long, value_name = "FILE")] target: Option<PathBuf>,
-        #[arg(long, short, value_name = "FILE")] focus: Vec<PathBuf>,
-        #[arg(long, default_value = "1")] depth: usize,
+        #[arg(long, short)]
+        stdout: bool,
+        #[arg(long, short)]
+        copy: bool,
+        #[arg(long)]
+        noprompt: bool,
+        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
+        format: OutputFormat,
+        #[arg(long)]
+        skeleton: bool,
+        #[arg(long)]
+        git_only: bool,
+        #[arg(long)]
+        no_git: bool,
+        #[arg(long)]
+        code_only: bool,
+        #[arg(long, short)]
+        verbose: bool,
+        #[arg(long, value_name = "FILE")]
+        target: Option<PathBuf>,
+        #[arg(long, short, value_name = "FILE")]
+        focus: Vec<PathBuf>,
+        #[arg(long, default_value = "1")]
+        depth: usize,
     },
     Trace {
-        #[arg(value_name = "FILE")] file: PathBuf,
-        #[arg(long, short, default_value = "2")] depth: usize,
-        #[arg(long, short, default_value = "4000")] budget: usize,
+        #[arg(value_name = "FILE")]
+        file: PathBuf,
+        #[arg(long, short, default_value = "2")]
+        depth: usize,
+        #[arg(long, short, default_value = "4000")]
+        budget: usize,
     },
-    Map { #[arg(long, short)] deps: bool },
+    Map {
+        #[arg(long, short)]
+        deps: bool,
+    },
     Context {
-        #[arg(long, short)] verbose: bool,
-        #[arg(long, short)] copy: bool,
+        #[arg(long, short)]
+        verbose: bool,
+        #[arg(long, short)]
+        copy: bool,
     },
 }
 
@@ -115,8 +141,8 @@ fn dispatch_maintenance(cmd: &Commands) -> Result<()> {
             cli::handle_fix();
             Ok(())
         }
-        Commands::Config => warden_core::tui::run_config(),
-        Commands::Clean { commit } => warden_core::clean::run(*commit),
+        Commands::Config => slopchop_core::tui::run_config(),
+        Commands::Clean { commit } => slopchop_core::clean::run(*commit),
         _ => unreachable!(),
     }
 }
@@ -225,12 +251,12 @@ fn load_config() -> Config {
 }
 
 fn ensure_config_exists() {
-    if Path::new("warden.toml").exists() {
+    if Path::new("slopchop.toml").exists() {
         return;
     }
     let proj = project::ProjectType::detect();
     let content = project::generate_toml(proj, project::Strictness::Standard);
-    if fs::write("warden.toml", &content).is_ok() {
-        eprintln!("{}", "✨ Created warden.toml".dimmed());
+    if fs::write("slopchop.toml", &content).is_ok() {
+        eprintln!("{}", "✨ Created slopchop.toml".dimmed());
     }
 }

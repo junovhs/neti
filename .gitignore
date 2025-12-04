@@ -48,6 +48,6 @@ venv/
 chaos_examples/
 
 # SlopChop backups
-.warden_apply_backup/
-.warden_intent
+.slopchop_apply_backup/
+.slopchop_intent
 context.txt

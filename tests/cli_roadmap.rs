@@ -1,6 +1,6 @@
 // tests/cli_roadmap.rs
+use slopchop_core::roadmap::Roadmap;
 use std::fs;
-use warden_core::roadmap::Roadmap;
 
 #[test]
 fn test_init_creates_file() {
@@ -13,16 +13,24 @@ fn test_init_creates_file() {
 #[test]
 fn test_prompt_generates() {
     let r = Roadmap::parse("# Test\n\n## v0.1.0\n\n- [ ] Task\n");
-    let opts = warden_core::roadmap::PromptOptions::default();
-    let p = warden_core::roadmap::generate_prompt(&r, &opts);
+    let opts = slopchop_core::roadmap::PromptOptions::default();
+    let p = slopchop_core::roadmap::generate_prompt(&r, &opts);
     assert!(!p.is_empty());
 }
 
-#[test] fn test_apply_from_clipboard() {}
-#[test] fn test_show_tree() {}
-#[test] fn test_tasks_list() {}
-#[test] fn test_tasks_pending_filter() {}
-#[test] fn test_tasks_complete_filter() {}
-#[test] fn test_audit_runs() {}
-#[test] fn test_apply_dry_run() {}
-#[test] fn test_verbose_plan() {}
+#[test]
+fn test_apply_from_clipboard() {}
+#[test]
+fn test_show_tree() {}
+#[test]
+fn test_tasks_list() {}
+#[test]
+fn test_tasks_pending_filter() {}
+#[test]
+fn test_tasks_complete_filter() {}
+#[test]
+fn test_audit_runs() {}
+#[test]
+fn test_apply_dry_run() {}
+#[test]
+fn test_verbose_plan() {}

@@ -39,7 +39,7 @@ pub use crate::constants::{
     BIN_EXT_PATTERN, CODE_BARE_PATTERN, CODE_EXT_PATTERN, PRUNE_DIRS, SECRET_PATTERN,
 };
 
-/// Saves the current configuration to `warden.toml`.
+/// Saves the current configuration to `slopchop.toml`.
 /// # Errors
 /// Returns error if file write fails or serialization fails.
 #[allow(clippy::implicit_hasher)]

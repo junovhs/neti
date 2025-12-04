@@ -72,7 +72,7 @@ pub fn generate_toml(project: ProjectType, strictness: Strictness) -> String {
     let rules = rules_section(strictness);
     let commands = commands_section(project);
 
-    format!("# warden.toml\n{rules}\n\n{commands}\n")
+    format!("# slopchop.toml\n{rules}\n\n{commands}\n")
 }
 
 fn rules_section(strictness: Strictness) -> String {
@@ -115,7 +115,7 @@ fix = "cargo fmt""#
 
 fn node_commands() -> String {
     let npx = npx_cmd();
-    
+
     // Use biome for TypeScript projects
     if ProjectType::is_typescript() {
         format!(

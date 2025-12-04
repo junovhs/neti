@@ -1,5 +1,5 @@
 // tests/integration_roadmap.rs
-use warden_core::roadmap::{slugify, CommandBatch, Roadmap};
+use slopchop_core::roadmap::{slugify, CommandBatch, Roadmap};
 
 const SAMPLE: &str = "# Test\n\n## v0.1.0\n\n- [x] **Done**\n- [ ] **Todo**\n";
 

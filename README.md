@@ -35,7 +35,7 @@ If the AI produces garbage, SlopChop rejects it and tells the AI *exactly why*.
 ### 1. The Protocol (Certainty in Transport)
 Markdown code blocks (` ```rust `) are fragile. AIs mess them up constantly.
 
-SlopChop teaches the AI a specific, delimiter-based protocol (`#__WARDEN_FILE__#`). When you run `warden apply`, it doesn't just regex-match text; it parses a structured manifest.
+SlopChop teaches the AI a specific, delimiter-based protocol (`#__SLOPCHOP_FILE__#`). When you run `slopchop apply`, it doesn't just regex-match text; it parses a structured manifest.
 
 **Result:** No more copy-paste errors. No more "files ending in the middle." If the protocol is valid, the file lands.
 
@@ -53,7 +53,7 @@ You paste that error back to the chat. The AI apologizes and breaks the function
 We've all seen it:
 ```rust
 fn complicated_logic() {
-    // ... existing logic ... // warden:ignore
+    // ... existing logic ... // slopchop:ignore
     new_logic();
 }
 ```
@@ -79,7 +79,7 @@ ADD "auth-logout" AFTER "auth-login"
 Not all files are equal. SlopChop understands your codebase's structure.
 
 ```bash
-warden trace src/apply/mod.rs --depth 2
+slopchop trace src/apply/mod.rs --depth 2
 ```
 
 SlopChop walks the import graph, packs your anchor file in full, and includes dependencies as skeletons—optimizing the AI's context window.
@@ -90,7 +90,7 @@ SlopChop walks the import graph, packs your anchor file in full, and includes de
 
 **You:** "I need to fix the login bug. Let's look at the auth module."
 ```bash
-warden pack src/auth/
+slopchop pack src/auth/
 # Context is now on your clipboard.
 ```
 
@@ -101,7 +101,7 @@ warden pack src/auth/
 
 **You:** [Copy Response]
 ```bash
-warden apply
+slopchop apply
 ```
 
 **SlopChop:**
@@ -119,7 +119,7 @@ warden apply
 
 **You:** [Copy Response]
 ```bash
-warden apply
+slopchop apply
 ```
 
 **SlopChop:**
@@ -148,10 +148,10 @@ cargo install --path .
 
 ```bash
 # Initialize configuration (interactive wizard)
-warden --init
+slopchop --init
 
-# Or let SlopChop auto-detect and create warden.toml
-warden
+# Or let SlopChop auto-detect and create slopchop.toml
+slopchop
 ```
 
 ---
@@ -162,46 +162,46 @@ warden
 
 | Command | Description |
 |---------|-------------|
-| `warden` | Scan codebase for violations |
-| `warden --ui` | Interactive TUI dashboard |
-| `warden pack [options]` | Pack context for AI consumption |
-| `warden apply` | Apply AI response from clipboard |
-| `warden check` | Run configured check commands |
-| `warden fix` | Run configured fix commands |
+| `slopchop` | Scan codebase for violations |
+| `slopchop --ui` | Interactive TUI dashboard |
+| `slopchop pack [options]` | Pack context for AI consumption |
+| `slopchop apply` | Apply AI response from clipboard |
+| `slopchop check` | Run configured check commands |
+| `slopchop fix` | Run configured fix commands |
 
 ### Smart Context
 
 | Command | Description |
 |---------|-------------|
-| `warden trace <FILE>` | Trace dependencies from anchor file |
-| `warden map [--deps]` | Show repository structure map |
-| `warden context [--copy]` | Generate context map |
-| `warden prompt [--copy]` | Generate system prompt |
+| `slopchop trace <FILE>` | Trace dependencies from anchor file |
+| `slopchop map [--deps]` | Show repository structure map |
+| `slopchop context [--copy]` | Generate context map |
+| `slopchop prompt [--copy]` | Generate system prompt |
 
 ### Configuration & Maintenance
 
 | Command | Description |
 |---------|-------------|
-| `warden --init` | Interactive configuration wizard |
-| `warden config` | TUI configuration editor |
-| `warden clean [--commit]` | Clean backup files |
+| `slopchop --init` | Interactive configuration wizard |
+| `slopchop config` | TUI configuration editor |
+| `slopchop clean [--commit]` | Clean backup files |
 
 ### Roadmap Management
 
 | Command | Description |
 |---------|-------------|
-| `warden roadmap show` | Display roadmap tree |
-| `warden roadmap tasks` | List all tasks |
-| `warden roadmap apply` | Apply roadmap commands |
-| `warden roadmap audit` | Verify test coverage |
-| `warden roadmap prompt` | Generate roadmap prompt |
+| `slopchop roadmap show` | Display roadmap tree |
+| `slopchop roadmap tasks` | List all tasks |
+| `slopchop roadmap apply` | Apply roadmap commands |
+| `slopchop roadmap audit` | Verify test coverage |
+| `slopchop roadmap prompt` | Generate roadmap prompt |
 
 ---
 
 ## Pack Options
 
 ```bash
-warden pack [OPTIONS]
+slopchop pack [OPTIONS]
 
 Options:
   -s, --stdout         Output to stdout instead of file
@@ -222,10 +222,10 @@ Options:
 
 ```bash
 # Target file in full, everything else skeletonized
-warden pack --target src/apply/mod.rs
+slopchop pack --target src/apply/mod.rs
 
 # Multiple focus files
-warden pack --focus src/apply/mod.rs --focus src/types.rs
+slopchop pack --focus src/apply/mod.rs --focus src/types.rs
 ```
 
 ---
@@ -233,7 +233,7 @@ warden pack --focus src/apply/mod.rs --focus src/types.rs
 ## Trace Command
 
 ```bash
-warden trace <FILE> [OPTIONS]
+slopchop trace <FILE> [OPTIONS]
 
 Options:
   -d, --depth <N>    Dependency depth (default: 2)
@@ -247,7 +247,7 @@ Traces dependencies from an anchor file, generating optimized context:
 
 ---
 
-## Configuration (`warden.toml`)
+## Configuration (`slopchop.toml`)
 
 SlopChop is opinionated, but you can negotiate.
 
@@ -274,27 +274,27 @@ fix = "cargo fmt"
 AI outputs follow this structure:
 
 ```
-#__WARDEN_PLAN__#
+#__SLOPCHOP_PLAN__#
 GOAL: What you're doing
 CHANGES:
 1. First change
 2. Second change
-#__WARDEN_END__#
+#__SLOPCHOP_END__#
 
-#__WARDEN_MANIFEST__#
+#__SLOPCHOP_MANIFEST__#
 src/file1.rs
 src/file2.rs [NEW]
 src/old.rs [DELETE]
-#__WARDEN_END__#
+#__SLOPCHOP_END__#
 
-#__WARDEN_FILE__# src/file1.rs
+#__SLOPCHOP_FILE__# src/file1.rs
 // Complete file content
 // No truncation allowed
-#__WARDEN_END__#
+#__SLOPCHOP_END__#
 
-#__WARDEN_FILE__# src/file2.rs
+#__SLOPCHOP_FILE__# src/file2.rs
 // Another complete file
-#__WARDEN_END__#
+#__SLOPCHOP_END__#
 ```
 
 ### Block Types
@@ -350,21 +350,21 @@ SlopChop is the navigation system and the safety interlocks. It allows you to us
 
 ### Tier 1: Structural Linting Only
 ```bash
-warden              # Scan for violations
-warden check        # Run tests/linters
+slopchop              # Scan for violations
+slopchop check        # Run tests/linters
 ```
 Use SlopChop as a code quality scanner without AI integration.
 
 ### Tier 2: AI-Assisted Development
 ```bash
-warden pack         # Generate context for AI
-warden apply        # Apply AI responses
+slopchop pack         # Generate context for AI
+slopchop apply        # Apply AI responses
 ```
 Add the pack/apply loop for AI coding sessions.
 
 ### Tier 3: Full Traceability
 ```bash
-warden roadmap audit --strict
+slopchop roadmap audit --strict
 ```
 Every feature tied to a test, programmatic progress tracking.
 

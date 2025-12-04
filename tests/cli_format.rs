@@ -21,6 +21,6 @@ fn test_sarif_output_structure() {
 
 #[test]
 fn test_sarif_includes_tool_info() {
-    let sarif = r#"{"tool":{"driver":{"name":"warden"}}}"#;
-    assert!(sarif.contains("warden"));
+    let sarif = r#"{"tool":{"driver":{"name":"slopchop"}}}"#;
+    assert!(sarif.contains("slopchop"));
 }

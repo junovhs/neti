@@ -1,5 +1,5 @@
 // tests/unit_roadmap.rs
-use warden_core::roadmap::{CommandBatch, Roadmap};
+use slopchop_core::roadmap::{CommandBatch, Roadmap};
 
 #[test]
 fn test_anchor_extraction() {

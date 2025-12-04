@@ -16,10 +16,10 @@ const SENSITIVE_PATHS: &[&str] = &[
     "id_rsa",
     "id_ed25519",
     "credentials",
-    ".warden_apply_backup/",
+    ".slopchop_apply_backup/",
 ];
 
-const ALLOWED_DOTFILES: &[&str] = &[".gitignore", ".wardenignore", ".warden_intent"];
+const ALLOWED_DOTFILES: &[&str] = &[".gitignore", ".slopchopignore", ".slopchop_intent"];
 
 static LAZY_MARKERS: LazyLock<Vec<Regex>> = LazyLock::new(|| {
     [
@@ -49,7 +49,7 @@ pub fn validate(manifest: &Manifest, extracted: &ExtractedFiles) -> ApplyOutcome
                 return outcome;
             }
             errors.push(
-                "PROTECTED: ROADMAP.md is managed programmatically. Use 'warden roadmap apply' commands instead of rewriting the file.".to_string(),
+                "PROTECTED: ROADMAP.md is managed programmatically. Use 'slopchop roadmap apply' commands instead of rewriting the file.".to_string(),
             );
         } else {
             validate_single_path(path, &mut errors);
@@ -133,7 +133,7 @@ fn build_roadmap_rejection_message(commands: &[Command]) -> String {
         msg,
         "However, I inferred your intent. Please use these commands instead:\n"
     );
-    let _ = writeln!(msg, "#__WARDEN_FILE__# ROADMAP");
+    let _ = writeln!(msg, "#__SLOPCHOP_FILE__# ROADMAP");
     let _ = writeln!(msg, "===ROADMAP===");
 
     for cmd in commands {
@@ -141,7 +141,7 @@ fn build_roadmap_rejection_message(commands: &[Command]) -> String {
     }
 
     let _ = writeln!(msg, "===END===");
-    let _ = writeln!(msg, "#__WARDEN_END__#");
+    let _ = writeln!(msg, "#__SLOPCHOP_END__#");
     msg
 }
 
@@ -227,7 +227,7 @@ fn check_single_file(path: &str, content: &str, errors: &mut Vec<String>) {
 
 fn check_lazy_truncation(path: &str, content: &str, errors: &mut Vec<String>) {
     for (line_num, line) in content.lines().enumerate() {
-        if line.contains("warden:ignore") {
+        if line.contains("slopchop:ignore") {
             continue;
         }
 

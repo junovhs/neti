@@ -7,8 +7,8 @@ use std::collections::HashMap;
 /// Extracts the optional PLAN block.
 #[must_use]
 pub fn extract_plan(response: &str) -> Option<String> {
-    let open_re = Regex::new(r"(?m)^#__WARDEN_PLAN__#\s*$").ok()?;
-    let close_re = Regex::new(r"(?m)^#__WARDEN_END__#\s*$").ok()?;
+    let open_re = Regex::new(r"(?m)^#__SLOPCHOP_PLAN__#\s*$").ok()?;
+    let close_re = Regex::new(r"(?m)^#__SLOPCHOP_END__#\s*$").ok()?;
 
     let start_match = open_re.find(response)?;
     let end_match = close_re.find_at(response, start_match.end())?;
@@ -19,16 +19,16 @@ pub fn extract_plan(response: &str) -> Option<String> {
 /// Extracts file blocks using the SlopChop Delimiter Protocol.
 ///
 /// Format:
-/// `#__WARDEN_FILE__#` path/to/file.rs
+/// `#__SLOPCHOP_FILE__#` path/to/file.rs
 /// [content]
-/// `#__WARDEN_END__#`
+/// `#__SLOPCHOP_END__#`
 ///
 /// # Errors
 /// Returns error if regex compilation fails.
 pub fn extract_files(response: &str) -> Result<HashMap<String, FileContent>> {
     let mut files = HashMap::new();
-    let header_re = Regex::new(r"(?m)^#__WARDEN_FILE__#\s*(.+?)\s*$")?;
-    let footer_re = Regex::new(r"(?m)^#__WARDEN_END__#\s*$")?;
+    let header_re = Regex::new(r"(?m)^#__SLOPCHOP_FILE__#\s*(.+?)\s*$")?;
+    let footer_re = Regex::new(r"(?m)^#__SLOPCHOP_END__#\s*$")?;
 
     let mut current_pos = 0;
     while let Some(header_match) = header_re.find_at(response, current_pos) {

@@ -1,13 +1,13 @@
-# Warden Protocol Roadmap
+# SlopChop Protocol Roadmap
 
 ## Philosophy
 
-**Source of Truth:** This roadmap is the authoritative registry of all Warden features.
+**Source of Truth:** This roadmap is the authoritative registry of all SlopChop features.
 
 **The Contract:**
 1. Every `[x]` feature MUST have a `<!-- test: path::function -->` reference
 2. Every referenced test MUST exist and pass
-3. `warden roadmap audit --strict` enforces this before any commit
+3. `slopchop roadmap audit --strict` enforces this before any commit
 4. Features without tests use `[no-test]` (docs, config, UI-only)
 
 **Versioning:**
@@ -22,7 +22,7 @@
 - **Contributors:** Look at the `🔄 CURRENT` version's unchecked tasks.
 - **AI Assistants:** Never rewrite this file directly. Emit `===ROADMAP===` command blocks only.
 
-**Current Status (v0.7.x):** Warden fully supports the Three Laws, Protocol format, and basic roadmap management. Smart Context (dependency graphs, cluster packing) is implemented in v0.8-0.9.
+**Current Status (v0.7.x):** SlopChop fully supports the Three Laws, Protocol format, and basic roadmap management. Smart Context (dependency graphs, cluster packing) is implemented in v0.8-0.9.
 
 ---
 
@@ -47,7 +47,7 @@
 - [x] **TOML config loading** <!-- test: tests/unit_config.rs::test_load_toml -->
 - [x] **Default rule values** <!-- test: tests/unit_config.rs::test_defaults -->
 - [x] **Command list parsing** <!-- test: tests/unit_config.rs::test_command_list -->
-- [x] **.wardenignore loading** <!-- test: tests/unit_config.rs::test_wardenignore -->
+- [x] **.slopchopignore loading** <!-- test: tests/unit_config.rs::test_slopchopignore -->
 - [x] **Auto-config generation** [no-test] *(side effect on first run)*
 
 ---
@@ -86,9 +86,9 @@
 - [x] **Safe alternatives allowed (.unwrap_or)** <!-- test: tests/integration_core.rs::test_paranoia_safe_alternatives_pass -->
 
 ### File Ignores
-- [x] **warden:ignore (C-style //)** <!-- test: tests/integration_core.rs::test_warden_ignore_skips_file -->
-- [x] **warden:ignore (Hash-style #)** <!-- test: tests/unit_analysis.rs::test_warden_ignore_hash -->
-- [x] **warden:ignore (HTML-style)** <!-- test: tests/unit_analysis.rs::test_warden_ignore_html -->
+- [x] **slopchop:ignore (C-style //)** <!-- test: tests/integration_core.rs::test_slopchop_ignore_skips_file -->
+- [x] **slopchop:ignore (Hash-style #)** <!-- test: tests/unit_analysis.rs::test_slopchop_ignore_hash -->
+- [x] **slopchop:ignore (HTML-style)** <!-- test: tests/unit_analysis.rs::test_slopchop_ignore_html -->
 
 ---
 
@@ -97,8 +97,8 @@
 *AI response parsing and file writing.*
 
 ### Protocol Format Extraction
-- [x] **Header detection (#__WARDEN_FILE__#)** <!-- test: tests/integration_apply.rs::test_extract_single_file -->
-- [x] **Footer detection (#__WARDEN_END__#)** <!-- test: tests/integration_apply.rs::test_extract_single_file -->
+- [x] **Header detection (#__SLOPCHOP_FILE__#)** <!-- test: tests/integration_apply.rs::test_extract_single_file -->
+- [x] **Footer detection (#__SLOPCHOP_END__#)** <!-- test: tests/integration_apply.rs::test_extract_single_file -->
 - [x] **Path extraction from header** <!-- test: tests/integration_apply.rs::test_extract_single_file -->
 - [x] **Content extraction** <!-- test: tests/integration_apply.rs::test_extract_single_file -->
 - [x] **Multiple file extraction** <!-- test: tests/integration_apply.rs::test_extract_multiple_files -->
@@ -163,7 +163,7 @@
 - [x] **Pattern: # ...** <!-- test: tests/unit_validator.rs::test_hash_ellipsis -->
 - [x] **Pattern: "rest of" phrases** <!-- test: tests/unit_validator.rs::test_lazy_phrase_rest_of -->
 - [x] **Pattern: "remaining" phrases** <!-- test: tests/unit_validator.rs::test_lazy_phrase_remaining -->
-- [x] **warden:ignore bypass** <!-- test: tests/integration_apply.rs::test_truncation_allows_warden_ignore -->
+- [x] **slopchop:ignore bypass** <!-- test: tests/integration_apply.rs::test_truncation_allows_slopchop_ignore -->
 - [x] **Empty file rejection** <!-- test: tests/integration_apply.rs::test_truncation_detects_empty_file -->
 - [x] **Line number in error** <!-- test: tests/unit_validator.rs::test_line_number_reported -->
 
@@ -287,15 +287,15 @@
 - [x] **--strict mode (all must pass)** [no-test] *(CLI flag)*
 
 ### Self-Hosting
-- [x] **Warden passes own rules** <!-- test: tests/integration_self_host.rs::test_warden_passes_own_rules -->
+- [x] **SlopChop passes own rules** <!-- test: tests/integration_self_host.rs::test_slopchop_passes_own_rules -->
 
 ### Test Naming Convention
 - [ ] **Feature ID → test function mapping**
 - [x] **Audit validates naming convention** <!-- test: tests/unit_audit.rs::test_naming_convention_mismatch -->
 - [ ] **Enforce test-first registration during AI sessions**
 - [ ] **Block feature completion without matching test file**
-- [ ] **warden register <feature> command (pre-declares intent)**
-- [ ] **warden verify-session command (audit current work)**
+- [ ] **slopchop register <feature> command (pre-declares intent)**
+- [ ] **slopchop verify-session command (audit current work)**
 - [ ] **Incremental roadmap sync (update after each file)**
 - [ ] **Session manifest tracking (files touched this session)**
 
@@ -320,9 +320,9 @@
 - [ ] **Verbose plan output** <!-- test: tests/cli_roadmap.rs::test_verbose_plan -->
 
 ### Escape Hatches
-- [ ] **warden apply --force flag** <!-- test: tests/cli_apply.rs::test_force_flag -->
-- [ ] **Quarantine mode (// warden:quarantine marker)** <!-- test: tests/integration_apply.rs::test_quarantine_marker -->
-- [ ] **Quarantine report in warden scan** <!-- test: tests/integration_core.rs::test_quarantine_report -->
+- [ ] **slopchop apply --force flag** <!-- test: tests/cli_apply.rs::test_force_flag -->
+- [ ] **Quarantine mode (// slopchop:quarantine marker)** <!-- test: tests/integration_apply.rs::test_quarantine_marker -->
+- [ ] **Quarantine report in slopchop scan** <!-- test: tests/integration_core.rs::test_quarantine_report -->
 
 ---
 
@@ -384,8 +384,8 @@
 - [ ] **Cluster boundary identification** <!-- test: tests/unit_cluster.rs::test_boundary -->
 - [ ] **Cross-cluster edge detection** <!-- test: tests/unit_cluster.rs::test_cross_cluster -->
 - [ ] **Cluster size metrics (files, tokens)** <!-- test: tests/unit_cluster.rs::test_metrics -->
-- [ ] **warden.toml [clusters] definition** <!-- test: tests/unit_cluster.rs::test_toml_clusters -->
-- [ ] **// warden:cluster(name) annotation** <!-- test: tests/unit_cluster.rs::test_annotation -->
+- [ ] **slopchop.toml [clusters] definition** <!-- test: tests/unit_cluster.rs::test_toml_clusters -->
+- [ ] **// slopchop:cluster(name) annotation** <!-- test: tests/unit_cluster.rs::test_annotation -->
 
 ---
 
@@ -393,8 +393,8 @@
 
 *Give AI exactly what it needs, nothing more.*
 
-### Warden Map Command
-- [x] **warden map basic output** <!-- test: tests/cli_map.rs::test_map_basic -->
+### SlopChop Map Command
+- [x] **slopchop map basic output** <!-- test: tests/cli_map.rs::test_map_basic -->
 - [x] **Directory tree with file counts** <!-- test: tests/cli_map.rs::test_map_tree -->
 - [ ] **Cluster summary display** <!-- test: tests/cli_map.rs::test_map_clusters -->
 - [x] **--deps flag (show dependency arrows)** <!-- test: tests/cli_map.rs::test_map_deps -->
@@ -404,7 +404,7 @@
 - [ ] **Entry point detection (main.rs, lib.rs, index.ts)** <!-- test: tests/cli_map.rs::test_entry_point -->
 
 ### Error-Driven Packing
-- [ ] **warden pack --from-errors flag** <!-- test: tests/integration_error_pack.rs::test_from_errors_flag -->
+- [ ] **slopchop pack --from-errors flag** <!-- test: tests/integration_error_pack.rs::test_from_errors_flag -->
 - [ ] **Cargo/rustc error parsing** <!-- test: tests/unit_error_parse.rs::test_cargo_errors -->
 - [ ] **Clippy warning parsing** <!-- test: tests/unit_error_parse.rs::test_clippy_warnings -->
 - [ ] **TypeScript/tsc error parsing** <!-- test: tests/unit_error_parse.rs::test_tsc_errors -->
@@ -418,7 +418,7 @@
 - [ ] **--from-clipboard-errors flag** <!-- test: tests/integration_error_pack.rs::test_clipboard_errors -->
 
 ### Cluster Packing
-- [ ] **warden pack --cluster NAME flag** <!-- test: tests/integration_cluster_pack.rs::test_cluster_flag -->
+- [ ] **slopchop pack --cluster NAME flag** <!-- test: tests/integration_cluster_pack.rs::test_cluster_flag -->
 - [ ] **Cluster resolution by name** <!-- test: tests/integration_cluster_pack.rs::test_by_name -->
 - [ ] **Cluster resolution by directory path** <!-- test: tests/integration_cluster_pack.rs::test_by_dir -->
 - [ ] **--with-tests flag (include test files)** <!-- test: tests/integration_cluster_pack.rs::test_with_tests -->
@@ -427,7 +427,7 @@
 - [ ] **Multiple cluster inclusion (--cluster a --cluster b)** <!-- test: tests/integration_cluster_pack.rs::test_multi_cluster -->
 
 ### Trace Packing
-- [ ] **warden pack --trace PATH flag** <!-- test: tests/integration_trace_pack.rs::test_trace_flag -->
+- [ ] **slopchop pack --trace PATH flag** <!-- test: tests/integration_trace_pack.rs::test_trace_flag -->
 - [ ] **--depth N limit for trace** <!-- test: tests/integration_trace_pack.rs::test_depth_limit -->
 - [ ] **--forward flag (dependencies only)** <!-- test: tests/integration_trace_pack.rs::test_forward -->
 - [ ] **--reverse flag (dependents only)** <!-- test: tests/integration_trace_pack.rs::test_reverse -->
@@ -447,7 +447,7 @@
 - [ ] **AI can emit cluster requests** <!-- test: tests/integration_fulfill.rs::test_cluster_request -->
 - [ ] **AI can emit trace requests** <!-- test: tests/integration_fulfill.rs::test_trace_request -->
 - [ ] **AI can emit file requests** <!-- test: tests/integration_fulfill.rs::test_file_request -->
-- [ ] **warden fulfill command (parse AI request)** <!-- test: tests/integration_fulfill.rs::test_fulfill_command -->
+- [ ] **slopchop fulfill command (parse AI request)** <!-- test: tests/integration_fulfill.rs::test_fulfill_command -->
 - [ ] **Request validation (cluster/file exists)** <!-- test: tests/integration_fulfill.rs::test_validation -->
 
 ---
@@ -481,7 +481,7 @@
 - [ ] **SARIF output for GitHub** <!-- test: tests/cli_format.rs::test_sarif_output -->
 
 ### Git Hooks
-- [ ] **warden hook install** <!-- test: tests/cli_hooks.rs::test_hook_install -->
+- [ ] **slopchop hook install** <!-- test: tests/cli_hooks.rs::test_hook_install -->
 - [ ] **Pre-commit hook script** <!-- test: tests/cli_hooks.rs::test_precommit_runs -->
 
 ### Exit Codes
@@ -492,7 +492,7 @@
 ### CI Templates
 - [ ] **GitHub Actions workflow template** <!-- test: tests/cli_ci.rs::test_github_template -->
 - [ ] **GitLab CI template** <!-- test: tests/cli_ci.rs::test_gitlab_template -->
-- [ ] **warden init --ci flag (generate workflow)** <!-- test: tests/cli_ci.rs::test_init_ci -->
+- [ ] **slopchop init --ci flag (generate workflow)** <!-- test: tests/cli_ci.rs::test_init_ci -->
 - [ ] **Fail-fast vs report-all modes** <!-- test: tests/cli_ci.rs::test_fail_modes -->
 - [ ] **Annotation output for GitHub PR comments** <!-- test: tests/cli_ci.rs::test_annotations -->
 
@@ -503,7 +503,7 @@
 *See your codebase structure.*
 
 ### Visualization Formats
-- [ ] **warden graph command** <!-- test: tests/cli_graph.rs::test_graph_command -->
+- [ ] **slopchop graph command** <!-- test: tests/cli_graph.rs::test_graph_command -->
 - [ ] **DOT format export (Graphviz)** <!-- test: tests/cli_graph.rs::test_dot_export -->
 - [ ] **Mermaid format export** <!-- test: tests/cli_graph.rs::test_mermaid_export -->
 - [ ] **--cluster-only flag (show clusters, not files)** <!-- test: tests/cli_graph.rs::test_cluster_only -->
@@ -515,14 +515,14 @@
 
 ## v0.13.0 — Legacy Adoption
 
-*Make Warden adoptable in existing codebases.*
+*Make SlopChop adoptable in existing codebases.*
 
 ### Baseline System
-- [ ] **warden baseline command (snapshot current violations)** <!-- test: tests/cli_baseline.rs::test_baseline_creation -->
-- [ ] **Baseline file format (.warden-baseline.json)** <!-- test: tests/unit_baseline.rs::test_baseline_format -->
+- [ ] **slopchop baseline command (snapshot current violations)** <!-- test: tests/cli_baseline.rs::test_baseline_creation -->
+- [ ] **Baseline file format (.slopchop-baseline.json)** <!-- test: tests/unit_baseline.rs::test_baseline_format -->
 - [ ] **Baseline comparison mode (only report new violations)** <!-- test: tests/integration_baseline.rs::test_baseline_comparison -->
-- [ ] **--baseline flag for warden scan** <!-- test: tests/cli_baseline.rs::test_baseline_flag -->
-- [ ] **Auto-generate warden:ignore for existing violations** <!-- test: tests/cli_baseline.rs::test_auto_ignore -->
+- [ ] **--baseline flag for slopchop scan** <!-- test: tests/cli_baseline.rs::test_baseline_flag -->
+- [ ] **Auto-generate slopchop:ignore for existing violations** <!-- test: tests/cli_baseline.rs::test_auto_ignore -->
 - [ ] **Gradual tightening guide** [no-test] *(documentation)*
 
 ---
@@ -555,11 +555,11 @@
 ## Principles
 
 1. **Every [x] feature has a verified test** — No exceptions (except [no-test])
-2. **Reject bad input, don't fix it** — Warden is a gatekeeper
+2. **Reject bad input, don't fix it** — SlopChop is a gatekeeper
 3. **Git is the undo system** — Don't reinvent version control
 4. **Explicit > Magic** — Fail loudly on format violations
 5. **Containment over craftsmanship** — Constraints are safety, not style
-6. **Self-hosting** — Warden passes its own rules
+6. **Self-hosting** — SlopChop passes its own rules
 7. **Context is king** — Give AI exactly what it needs, nothing more
 8. **Graph over glob** — Understand structure, don't just pattern match
 9. **Errors are context** — Parse failures to understand scope
@@ -571,7 +571,7 @@
 - **VS Code Extension** — IDE lock-in, maintenance burden
 - **Watch mode** — Complexity without clear benefit
 - **Markdown fallback parsing** — Enforce format discipline
-- **"Smart" fixing** — Warden rejects, doesn't repair
+- **"Smart" fixing** — SlopChop rejects, doesn't repair
 - **Full LSP implementation** — Use tree-sitter queries, not language servers
 - **Multi-repo support** — One project at a time
 - **Incremental graph updates** — Rebuild on each run (fast enough)

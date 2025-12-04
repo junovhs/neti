@@ -16,7 +16,7 @@ use std::io::{self, Write};
 use std::path::Path;
 use types::{ApplyContext, ApplyOutcome, ExtractedFiles, Manifest};
 
-const INTENT_FILE: &str = ".warden_intent";
+const INTENT_FILE: &str = ".slopchop_intent";
 
 /// Runs the apply command logic.
 ///
@@ -37,13 +37,17 @@ pub fn print_result(outcome: &ApplyOutcome) {
 /// Returns error if extraction, write, or git operations fail.
 pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> {
     if content.trim().is_empty() {
-        return Ok(ApplyOutcome::ParseError("Clipboard/Input is empty".to_string()));
+        return Ok(ApplyOutcome::ParseError(
+            "Clipboard/Input is empty".to_string(),
+        ));
     }
 
     let plan_opt = extractor::extract_plan(content);
 
     if !ensure_consent(plan_opt.as_deref(), ctx)? {
-        return Ok(ApplyOutcome::ParseError("Operation cancelled by user.".to_string()));
+        return Ok(ApplyOutcome::ParseError(
+            "Operation cancelled by user.".to_string(),
+        ));
     }
 
     let validation = validate_payload(content);
@@ -61,7 +65,10 @@ fn ensure_consent(plan: Option<&str>, ctx: &ApplyContext) -> Result<bool> {
         if ctx.force || ctx.dry_run {
             return Ok(true);
         }
-        println!("{}", "⚠️  No PLAN block found. Please ALWAYS include a plan block.".yellow());
+        println!(
+            "{}",
+            "⚠️  No PLAN block found. Please ALWAYS include a plan block.".yellow()
+        );
         return confirm("Apply these changes without a plan?");
     };
 
@@ -116,7 +123,11 @@ fn apply_and_verify(content: &str, ctx: &ApplyContext, plan: Option<&str>) -> Re
             Err(e) => eprintln!("{} Roadmap update failed: {e}", "⚠️".yellow()),
         }
     }
-    if let ApplyOutcome::Success { roadmap_results: ref mut rr, .. } = outcome {
+    if let ApplyOutcome::Success {
+        roadmap_results: ref mut rr,
+        ..
+    } = outcome
+    {
         rr.append(&mut roadmap_results);
     }
 
@@ -128,14 +139,14 @@ fn verify_and_commit(outcome: &ApplyOutcome, ctx: &ApplyContext, plan: Option<&s
     if !matches!(outcome, ApplyOutcome::Success { .. }) {
         return Ok(());
     }
-    
+
     if !has_changes(outcome) {
-         println!("{}", "No changes detected.".yellow());
-         return Ok(());
+        println!("{}", "No changes detected.".yellow());
+        return Ok(());
     }
 
     let (success, log) = verification::verify_application(ctx)?;
-    
+
     if success {
         handle_success(plan);
     } else {
@@ -146,7 +157,13 @@ fn verify_and_commit(outcome: &ApplyOutcome, ctx: &ApplyContext, plan: Option<&s
 }
 
 fn has_changes(outcome: &ApplyOutcome) -> bool {
-    if let ApplyOutcome::Success { written, deleted, roadmap_results, .. } = outcome {
+    if let ApplyOutcome::Success {
+        written,
+        deleted,
+        roadmap_results,
+        ..
+    } = outcome
+    {
         !written.is_empty() || !deleted.is_empty() || !roadmap_results.is_empty()
     } else {
         false
@@ -154,7 +171,12 @@ fn has_changes(outcome: &ApplyOutcome) -> bool {
 }
 
 fn handle_success(plan: Option<&str>) {
-    println!("{}", "\n✨ Verification Passed. Committing & Pushing...".green().bold());
+    println!(
+        "{}",
+        "\n✨ Verification Passed. Committing & Pushing..."
+            .green()
+            .bold()
+    );
     let message = construct_commit_message(plan);
     if let Err(e) = git::commit_and_push(&message) {
         eprintln!("{} Git operation failed: {e}", "⚠️".yellow());
@@ -164,14 +186,19 @@ fn handle_success(plan: Option<&str>) {
 }
 
 fn handle_failure(plan: Option<&str>, failure_log: &str) {
-    println!("{}", "\n❌ Verification Failed. Changes applied but NOT committed.".red().bold());
+    println!(
+        "{}",
+        "\n❌ Verification Failed. Changes applied but NOT committed."
+            .red()
+            .bold()
+    );
     println!("Fix the issues manually and then commit.");
-    
+
     // Auto-copy failure log
     messages::print_ai_feedback(failure_log);
 
     if let Some(p) = plan {
-         save_intent(p);
+        save_intent(p);
     }
 }
 
@@ -189,8 +216,12 @@ fn clear_intent() {
 }
 
 fn construct_commit_message(current_plan: Option<&str>) -> String {
-    let current = current_plan.unwrap_or("Automated update").replace("GOAL:", "").trim().to_string();
-    
+    let current = current_plan
+        .unwrap_or("Automated update")
+        .replace("GOAL:", "")
+        .trim()
+        .to_string();
+
     if let Ok(stored) = std::fs::read_to_string(INTENT_FILE) {
         let stored = stored.trim();
         if !stored.is_empty() && stored != current {
@@ -202,7 +233,10 @@ fn construct_commit_message(current_plan: Option<&str>) -> String {
 
 fn validate_plan_structure(plan: &str) {
     if !plan.contains("GOAL:") || !plan.contains("CHANGES:") {
-        println!("{}", "⚠️  Plan is unstructured (missing GOAL/CHANGES).".yellow());
+        println!(
+            "{}",
+            "⚠️  Plan is unstructured (missing GOAL/CHANGES).".yellow()
+        );
     }
 }
 
@@ -225,3 +259,4 @@ fn parse_manifest_step(content: &str) -> Result<Manifest, String> {
 fn extract_files_step(content: &str) -> Result<ExtractedFiles, String> {
     extractor::extract_files(content).map_err(|e| format!("Extraction Error: {e}"))
 }
+

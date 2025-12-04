@@ -144,7 +144,7 @@ fn pack_files_to_output(
     focus: &FocusContext,
 ) -> Result<()> {
     match opts.format {
-        OutputFormat::Text => formats::pack_warden_focus(files, ctx, opts, focus),
+        OutputFormat::Text => formats::pack_slopchop_focus(files, ctx, opts, focus),
         OutputFormat::Xml => formats::pack_xml_focus(files, ctx, opts, focus),
     }
 }

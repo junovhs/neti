@@ -73,7 +73,7 @@ pub fn is_ignorable(line: &str) -> bool {
     u.starts_with("===")
         || u.starts_with("---")
         || u.starts_with("```")
-        || u.starts_with("#__WARDEN_")
+        || u.starts_with("#__SLOPCHOP_")
         || u == "ROADMAP"
         || u == "END"
 }

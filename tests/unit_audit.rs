@@ -1,6 +1,6 @@
 // tests/unit_audit.rs
-use warden_core::roadmap::audit::{scan, AuditOptions, ViolationReason};
-use warden_core::roadmap::types::{Roadmap, Task, TaskStatus};
+use slopchop_core::roadmap::audit::{scan, AuditOptions, ViolationReason};
+use slopchop_core::roadmap::types::{Roadmap, Task, TaskStatus};
 use std::fs;
 use tempfile::tempdir;
 
@@ -18,8 +18,8 @@ fn make_task(id: &str, tests: Vec<String>) -> Task {
 }
 
 fn make_roadmap(tasks: Vec<Task>) -> Roadmap {
-    use warden_core::roadmap::types::Section;
-    
+    use slopchop_core::roadmap::types::Section;
+
     let section = Section {
         id: "main".into(),
         heading: "Main".into(),
@@ -31,7 +31,7 @@ fn make_roadmap(tasks: Vec<Task>) -> Roadmap {
         line_start: 0,
         line_end: 0,
     };
-    
+
     Roadmap {
         path: None,
         title: "Test Roadmap".into(),
@@ -44,13 +44,13 @@ fn make_roadmap(tasks: Vec<Task>) -> Roadmap {
 fn test_missing_file_detection() {
     let dir = tempdir().unwrap();
     let root = dir.path();
-    
+
     let task = make_task("t1", vec!["missing_file.rs".into()]);
     let roadmap = make_roadmap(vec![task]);
     let opts = AuditOptions { strict: true };
 
     let report = scan(&roadmap, root, &opts);
-    
+
     assert_eq!(report.violations.len(), 1);
     match &report.violations[0].reason {
         ViolationReason::MissingTestFile(f) => assert_eq!(f, "missing_file.rs"),
@@ -62,17 +62,17 @@ fn test_missing_file_detection() {
 fn test_missing_function_detection() {
     let dir = tempdir().unwrap();
     let root = dir.path();
-    
+
     let file_path = root.join("tests/my_test.rs");
     fs::create_dir_all(file_path.parent().unwrap()).unwrap();
     fs::write(&file_path, "fn other_function() {}").unwrap();
-    
+
     let task = make_task("t2", vec!["tests/my_test.rs::target_function".into()]);
     let roadmap = make_roadmap(vec![task]);
     let opts = AuditOptions { strict: true };
 
     let report = scan(&roadmap, root, &opts);
-    
+
     assert_eq!(report.violations.len(), 1);
     match &report.violations[0].reason {
         ViolationReason::MissingTestFunction { file, function } => {
@@ -87,18 +87,21 @@ fn test_missing_function_detection() {
 fn test_successful_verification() {
     let dir = tempdir().unwrap();
     let root = dir.path();
-    
+
     let file_path = root.join("tests/valid_test.rs");
     fs::create_dir_all(file_path.parent().unwrap()).unwrap();
     fs::write(&file_path, "fn test_my_cool_test() {}").unwrap();
-    
+
     // Task ID "my-cool-test" matches function "test_my_cool_test"
-    let task = make_task("my-cool-test", vec!["tests/valid_test.rs::test_my_cool_test".into()]);
+    let task = make_task(
+        "my-cool-test",
+        vec!["tests/valid_test.rs::test_my_cool_test".into()],
+    );
     let roadmap = make_roadmap(vec![task]);
     let opts = AuditOptions { strict: true };
 
     let report = scan(&roadmap, root, &opts);
-    
+
     assert_eq!(report.violations.len(), 0);
     assert_eq!(report.total_checked, 1);
 }
@@ -107,18 +110,21 @@ fn test_successful_verification() {
 fn test_naming_convention_mismatch() {
     let dir = tempdir().unwrap();
     let root = dir.path();
-    
+
     let file_path = root.join("tests/naming.rs");
     fs::create_dir_all(file_path.parent().unwrap()).unwrap();
     fs::write(&file_path, "fn test_wrong_name() {}").unwrap();
-    
+
     // Task ID "my-feature" vs "test_wrong_name"
-    let task = make_task("my-feature", vec!["tests/naming.rs::test_wrong_name".into()]);
+    let task = make_task(
+        "my-feature",
+        vec!["tests/naming.rs::test_wrong_name".into()],
+    );
     let roadmap = make_roadmap(vec![task]);
     let opts = AuditOptions { strict: true };
 
     let report = scan(&roadmap, root, &opts);
-    
+
     assert_eq!(report.violations.len(), 1);
     match &report.violations[0].reason {
         ViolationReason::NamingConventionMismatch { expected, actual } => {

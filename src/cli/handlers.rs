@@ -1,5 +1,5 @@
 // src/cli/handlers.rs
-//! Command handlers for the warden CLI.
+//! Command handlers for the slopchop CLI.
 
 use std::path::Path;
 

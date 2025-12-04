@@ -1,12 +1,12 @@
 // tests/integration_apply.rs
+use slopchop_core::apply::extractor;
+use slopchop_core::apply::types::{ApplyOutcome, FileContent};
+use slopchop_core::apply::validator;
 use std::collections::HashMap;
-use warden_core::apply::extractor;
-use warden_core::apply::types::{ApplyOutcome, FileContent};
-use warden_core::apply::validator;
 
 #[test]
 fn test_extract_single_file() {
-    let input = "#__WARDEN_FILE__# src/main.rs\nfn main() {}\n#__WARDEN_END__#";
+    let input = "#__SLOPCHOP_FILE__# src/main.rs\nfn main() {}\n#__SLOPCHOP_END__#";
     let files = extractor::extract_files(input).unwrap();
     assert_eq!(files.len(), 1);
     assert!(files.contains_key("src/main.rs"));
@@ -14,14 +14,14 @@ fn test_extract_single_file() {
 
 #[test]
 fn test_extract_multiple_files() {
-    let input = "#__WARDEN_FILE__# a.rs\nfn a(){}\n#__WARDEN_END__#\n#__WARDEN_FILE__# b.rs\nfn b(){}\n#__WARDEN_END__#";
+    let input = "#__SLOPCHOP_FILE__# a.rs\nfn a(){}\n#__SLOPCHOP_END__#\n#__SLOPCHOP_FILE__# b.rs\nfn b(){}\n#__SLOPCHOP_END__#";
     let files = extractor::extract_files(input).unwrap();
     assert_eq!(files.len(), 2);
 }
 
 #[test]
 fn test_extract_skips_manifest() {
-    let input = "#__WARDEN_MANIFEST__#\na.rs\n#__WARDEN_END__#\n#__WARDEN_FILE__# a.rs\nfn a(){}\n#__WARDEN_END__#";
+    let input = "#__SLOPCHOP_MANIFEST__#\na.rs\n#__SLOPCHOP_END__#\n#__SLOPCHOP_FILE__# a.rs\nfn a(){}\n#__SLOPCHOP_END__#";
     let files = extractor::extract_files(input).unwrap();
     assert_eq!(files.len(), 1);
     assert!(!files.contains_key("MANIFEST"));
@@ -29,7 +29,7 @@ fn test_extract_skips_manifest() {
 
 #[test]
 fn test_extract_plan() {
-    let input = "#__WARDEN_PLAN__#\nGOAL: Test\n#__WARDEN_END__#";
+    let input = "#__SLOPCHOP_PLAN__#\nGOAL: Test\n#__SLOPCHOP_END__#";
     let plan = extractor::extract_plan(input);
     assert!(plan.is_some());
     assert!(plan.unwrap().contains("GOAL"));
@@ -124,19 +124,19 @@ fn test_truncation_detects_ellipsis_comment() {
 }
 
 #[test]
-fn test_truncation_allows_warden_ignore() {
+fn test_truncation_allows_slopchop_ignore() {
     let mut files = HashMap::new();
     files.insert(
         "a.rs".into(),
         FileContent {
-            content: "fn f() {\n// ... warden:ignore\n}".into(),
+            content: "fn f() {\n// ... slopchop:ignore\n}".into(),
             line_count: 3,
         },
     );
     let r = validator::validate(&vec![], &files);
     if let ApplyOutcome::ValidationFailure { errors, .. } = r {
         let trunc: Vec<_> = errors.iter().filter(|e| e.contains("truncation")).collect();
-        assert!(trunc.is_empty(), "warden:ignore should bypass");
+        assert!(trunc.is_empty(), "slopchop:ignore should bypass");
     }
 }
 
@@ -185,7 +185,7 @@ fn test_unified_apply_roadmap() {
 #[test]
 fn test_unified_apply_combined() {
     let input =
-        "===ROADMAP===\nCHECK task\n===END===\n#__WARDEN_FILE__# a.rs\nfn a(){}\n#__WARDEN_END__#";
+        "===ROADMAP===\nCHECK task\n===END===\n#__SLOPCHOP_FILE__# a.rs\nfn a(){}\n#__SLOPCHOP_END__#";
     assert!(input.contains("===ROADMAP==="));
     let files = extractor::extract_files(input).unwrap();
     assert!(files.contains_key("a.rs"));

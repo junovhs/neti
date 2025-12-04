@@ -4,7 +4,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-const TEMP_PREFIX: &str = "warden_clipboard_";
+const TEMP_PREFIX: &str = "slopchop_clipboard_";
 
 /// Writes content to a temporary file.
 ///

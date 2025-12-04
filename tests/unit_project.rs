@@ -1,7 +1,7 @@
 // tests/unit_project.rs
+use slopchop_core::project::ProjectType;
 use std::fs::File;
 use tempfile::TempDir;
-use warden_core::project::ProjectType;
 
 #[test]
 fn test_detect_rust() {

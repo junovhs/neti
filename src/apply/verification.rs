@@ -26,8 +26,8 @@ pub fn verify_application(ctx: &ApplyContext) -> Result<(bool, String)> {
     }
 
     println!("Running structural scan...");
-    let (success, output) = run_warden_check()?;
-    let _ = writeln!(log_buffer, "> warden scan\n{output}");
+    let (success, output) = run_slopchop_check()?;
+    let _ = writeln!(log_buffer, "> slopchop scan\n{output}");
 
     Ok((success, log_buffer))
 }
@@ -50,8 +50,8 @@ fn run_check_command(cmd: &str) -> Result<(bool, String)> {
     Ok((output.status.success(), combined))
 }
 
-fn run_warden_check() -> Result<(bool, String)> {
-    let output = Command::new("warden").output()?;
+fn run_slopchop_check() -> Result<(bool, String)> {
+    let output = Command::new("slopchop").output()?;
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
 

@@ -10,7 +10,7 @@ use ratatui::Frame;
 
 pub fn draw_header(f: &mut Frame, app: &ConfigApp, area: Rect, pal: &Palette) {
     let title = Span::styled(
-        " 🛡️ WARDEN PROTOCOL ",
+        " 🛡️ SLOPCHOP PROTOCOL ",
         Style::default()
             .fg(pal.primary)
             .add_modifier(Modifier::BOLD),
@@ -79,17 +79,72 @@ fn build_table_rows(app: &ConfigApp, pal: &Palette) -> Vec<Row<'static>> {
 
     let items = vec![
         ("Global Preset", preset.to_string(), preset_color, "ACTIVE"),
-        ("Max File Tokens", app.rules.max_file_tokens.to_string(), pal.text, "ACTIVE"),
-        ("Cyclo. Complexity", app.rules.max_cyclomatic_complexity.to_string(), pal.text, "ACTIVE"),
-        ("Nesting Depth", app.rules.max_nesting_depth.to_string(), pal.text, "ACTIVE"),
-        ("Func. Arguments", app.rules.max_function_args.to_string(), pal.text, "ACTIVE"),
-        ("Func. Words", app.rules.max_function_words.to_string(), pal.text, "ACTIVE"),
-        ("Auto-Copy Ctx", bool_str(app.preferences.auto_copy), bool_col(app.preferences.auto_copy), "READY"),
-        ("Auto-Format", bool_str(app.preferences.auto_format), bool_col(app.preferences.auto_format), "READY"),
-        ("Auto-Commit", bool_str(app.preferences.auto_commit), bool_col(app.preferences.auto_commit), "STANDBY"),
-        ("Commit Prefix", format!("\"{}\"", app.preferences.commit_prefix), pal.text, "SET"),
-        ("UI Theme", format!("{:?}", app.preferences.theme).to_uppercase(), pal.primary, "LOADED"),
-        ("Progress Bars", bool_str(app.preferences.progress_bars), pal.text, "OKAY"),
+        (
+            "Max File Tokens",
+            app.rules.max_file_tokens.to_string(),
+            pal.text,
+            "ACTIVE",
+        ),
+        (
+            "Cyclo. Complexity",
+            app.rules.max_cyclomatic_complexity.to_string(),
+            pal.text,
+            "ACTIVE",
+        ),
+        (
+            "Nesting Depth",
+            app.rules.max_nesting_depth.to_string(),
+            pal.text,
+            "ACTIVE",
+        ),
+        (
+            "Func. Arguments",
+            app.rules.max_function_args.to_string(),
+            pal.text,
+            "ACTIVE",
+        ),
+        (
+            "Func. Words",
+            app.rules.max_function_words.to_string(),
+            pal.text,
+            "ACTIVE",
+        ),
+        (
+            "Auto-Copy Ctx",
+            bool_str(app.preferences.auto_copy),
+            bool_col(app.preferences.auto_copy),
+            "READY",
+        ),
+        (
+            "Auto-Format",
+            bool_str(app.preferences.auto_format),
+            bool_col(app.preferences.auto_format),
+            "READY",
+        ),
+        (
+            "Auto-Commit",
+            bool_str(app.preferences.auto_commit),
+            bool_col(app.preferences.auto_commit),
+            "STANDBY",
+        ),
+        (
+            "Commit Prefix",
+            format!("\"{}\"", app.preferences.commit_prefix),
+            pal.text,
+            "SET",
+        ),
+        (
+            "UI Theme",
+            format!("{:?}", app.preferences.theme).to_uppercase(),
+            pal.primary,
+            "LOADED",
+        ),
+        (
+            "Progress Bars",
+            bool_str(app.preferences.progress_bars),
+            pal.text,
+            "OKAY",
+        ),
     ];
 
     items
@@ -205,13 +260,15 @@ pub fn draw_context_panel(f: &mut Frame, app: &ConfigApp, area: Rect, pal: &Pale
         .ratio(ratio)
         .label(Span::styled(
             format!("INTEGRITY: {:.1}% [{label}]", ratio * 100.0),
-            Style::default().fg(Color::Black).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Black)
+                .add_modifier(Modifier::BOLD),
         ));
 
     f.render_widget(gauge, inner_chunks[1]);
 
     let decoration = Paragraph::new(
-        "\n[LOG] 2025.11.24 ORBITAL_ADJUSTMENT_COMPLETE\n[LOG] SECURITY_PATCH: LVL 5 ACTIVE\n[LOG] WARDEN PROTOCOL ENGAGED"
+        "\n[LOG] 2025.11.24 ORBITAL_ADJUSTMENT_COMPLETE\n[LOG] SECURITY_PATCH: LVL 5 ACTIVE\n[LOG] SLOPCHOP PROTOCOL ENGAGED"
     ).style(Style::default().fg(Color::DarkGray));
     f.render_widget(decoration, inner_chunks[2]);
 }
@@ -225,3 +282,4 @@ pub fn draw_footer(f: &mut Frame, area: Rect, pal: &Palette) {
         area,
     );
 }
+

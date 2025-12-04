@@ -1,6 +1,6 @@
 // tests/integration_skeleton.rs
+use slopchop_core::skeleton;
 use std::path::Path;
-use warden_core::skeleton;
 
 #[test]
 fn test_clean_rust_basic() {
