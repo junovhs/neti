@@ -148,19 +148,32 @@ fn route_tab_input(app: &mut DashboardApp, key: KeyCode) {
 }
 
 fn handle_checks_input(app: &mut DashboardApp, key: KeyCode) {
-    if key == KeyCode::Char('r') && !app.check_running {
-        app.check_running = true;
-        app.check_logs.clear();
-        app.check_logs.push("Starting checks...".into());
-        spawn_checks(app.check_tx.clone());
+    match key {
+        KeyCode::Char('r') if !app.check_running => {
+            app.check_running = true;
+            app.check_logs.clear();
+            app.check_logs.push("Starting checks...".into());
+            spawn_checks(app.check_tx.clone());
+        }
+        KeyCode::Char('c') => {
+            app.check_logs.clear();
+            app.log_system("Logs cleared.");
+        }
+        _ => handle_scroll(app, key),
     }
 }
 
 fn handle_roadmap_input(app: &mut DashboardApp, key: KeyCode) {
     match key {
+        KeyCode::Char(' ') | KeyCode::Enter => toggle_roadmap_task(app),
+        _ => handle_scroll(app, key),
+    }
+}
+
+fn handle_scroll(app: &mut DashboardApp, key: KeyCode) {
+    match key {
         KeyCode::Char('j') | KeyCode::Down => app.scroll_down(),
         KeyCode::Char('k') | KeyCode::Up => app.scroll_up(),
-        KeyCode::Char(' ') | KeyCode::Enter => toggle_roadmap_task(app),
         _ => {}
     }
 }
@@ -194,6 +207,11 @@ fn update_roadmap_task(app: &mut DashboardApp, path: &str, status: TaskStatus) -
 
     if matches!(res, crate::roadmap::ApplyResult::Success(_)) {
         let _ = roadmap.save(Path::new("ROADMAP.md"));
+        
+        // CRITICAL FIX: The UI depends on `sections` structure, but commands modify `raw` string.
+        // We must re-parse `raw` to update `sections` so the UI reflects the change.
+        *roadmap = Roadmap::parse(&roadmap.raw);
+        
         return true;
     }
     false
