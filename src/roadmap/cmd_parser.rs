@@ -46,7 +46,6 @@ impl CommandBatch {
     }
 }
 
-// Split match to reduce Cyclomatic Complexity (Max 8)
 fn cmd_name(cmd: &Command) -> &'static str {
     match cmd {
         Command::Check { .. } => "CHECK",
@@ -54,6 +53,7 @@ fn cmd_name(cmd: &Command) -> &'static str {
         Command::Add { .. } => "ADD",
         Command::Delete { .. } => "DELETE",
         Command::AddSection { .. } => "ADD_SECTION",
+        Command::AddSubsection { .. } => "ADD_SUBSECTION",
         _ => cmd_name_extended(cmd),
     }
 }
@@ -103,7 +103,7 @@ fn is_content(cmd: &str) -> bool {
     matches!(cmd, "ADD" | "UPDATE" | "NOTE")
 }
 fn is_struct(cmd: &str) -> bool {
-    matches!(cmd, "MOVE" | "SECTION" | "REPLACE_SECTION")
+    matches!(cmd, "MOVE" | "SECTION" | "SUBSECTION" | "REPLACE_SECTION")
 }
 
 fn parse_basic(cmd: &str, args: &str) -> Result<Command, String> {
@@ -129,6 +129,7 @@ fn parse_struct(cmd: &str, args: &str) -> Result<Command, String> {
     match cmd {
         "MOVE" => parse_move(args),
         "SECTION" => parse_add_section(args),
+        "SUBSECTION" => parse_subsection(args),
         "REPLACE_SECTION" => parse_replace_section(args),
         _ => unreachable!(),
     }
@@ -208,11 +209,28 @@ fn parse_move(args: &str) -> Result<Command, String> {
 fn parse_add_section(args: &str) -> Result<Command, String> {
     let heading = str_utils::parse_quoted(args)
         .or_else(|_| Ok::<String, String>(args.trim().to_string()))?;
-        
+
     if heading.is_empty() {
         return Err("SECTION needs heading".into());
     }
     Ok(Command::AddSection { heading })
+}
+
+fn parse_subsection(args: &str) -> Result<Command, String> {
+    let (parent, rest) = str_utils::split_first_word(args);
+    if parent.is_empty() {
+        return Err("SUBSECTION needs parent section".into());
+    }
+    let heading = str_utils::parse_quoted(rest)
+        .or_else(|_| Ok::<String, String>(rest.trim().to_string()))?;
+
+    if heading.is_empty() {
+        return Err("SUBSECTION needs heading".into());
+    }
+    Ok(Command::AddSubsection {
+        parent: parent.into(),
+        heading,
+    })
 }
 
 fn parse_replace_section(args: &str) -> Result<Command, String> {

@@ -64,6 +64,10 @@ pub enum Command {
     AddSection {
         heading: String,
     },
+    AddSubsection {
+        parent: String,
+        heading: String,
+    },
     Delete {
         path: String,
     },
@@ -92,6 +96,9 @@ impl fmt::Display for Command {
             Self::Uncheck { path } => write!(f, "UNCHECK {path}"),
             Self::Delete { path } => write!(f, "DELETE {path}"),
             Self::AddSection { heading } => write!(f, "SECTION \"{heading}\""),
+            Self::AddSubsection { parent, heading } => {
+                write!(f, "SUBSECTION {parent} \"{heading}\"")
+            }
             Self::ReplaceSection { id, .. } => write!(f, "REPLACE {id}"),
             _ => write!(f, "{}", format_complex_command(self)),
         }

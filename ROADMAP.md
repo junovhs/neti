@@ -300,7 +300,7 @@
 - [ ] **Session manifest tracking (files touched this session)**
 
 ### Roadmap Hardening
-- [ ] **SECTION command (create version headers)** <!-- test: tests/unit_roadmap_cmd.rs::test_section_command -->
+- [x] **SECTION command (create version headers)** <!-- test: tests/unit_roadmap_cmd.rs::test_section_command -->
 - [ ] **SUBSECTION command (create ### headers)** <!-- test: tests/unit_roadmap_cmd.rs::test_subsection_command -->
 - [ ] **CHAIN command (sequential adds)** <!-- test: tests/unit_roadmap_cmd.rs::test_chain_command -->
 - [ ] **AFTER PREVIOUS keyword** <!-- test: tests/unit_roadmap_cmd.rs::test_after_previous -->

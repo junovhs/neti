@@ -17,7 +17,9 @@ fn run_cmd(roadmap: &mut Roadmap, cmd: &Command) -> ApplyResult {
         Command::Add { .. } | Command::Update { .. } | Command::Note { .. } => {
             handle_content_cmd(roadmap, cmd)
         }
-        Command::Move { .. } | Command::AddSection { .. } => handle_struct_cmd(roadmap, cmd),
+        Command::Move { .. } | Command::AddSection { .. } | Command::AddSubsection { .. } => {
+            handle_struct_cmd(roadmap, cmd)
+        }
         Command::ReplaceSection { .. } => ApplyResult::Error("Command not supported".into()),
     }
 }
@@ -47,6 +49,9 @@ fn handle_content_cmd(roadmap: &mut Roadmap, cmd: &Command) -> ApplyResult {
 fn handle_struct_cmd(roadmap: &mut Roadmap, cmd: &Command) -> ApplyResult {
     match cmd {
         Command::AddSection { heading } => cmd_handlers::handle_add_section(roadmap, heading),
+        Command::AddSubsection { parent, heading } => {
+            cmd_handlers::handle_add_subsection(roadmap, parent, heading)
+        }
         Command::Move { path, position } => cmd_handlers::handle_move(roadmap, path, position),
         _ => unreachable!(),
     }
