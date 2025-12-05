@@ -106,7 +106,7 @@ fn commands_section(project: ProjectType) -> String {
 fn rust_commands() -> String {
     r#"[commands]
 check = [
-    "cargo clippy --all-targets -- -D warnings -D clippy::pedantic",
+    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic",
     "cargo test"
 ]
 fix = "cargo fmt""#

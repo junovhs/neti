@@ -95,7 +95,7 @@ fn project_defaults(project: ProjectType) -> HashMap<String, Vec<String>> {
             m.insert(
                 "check".into(),
                 vec![
-                    "cargo clippy --all-targets -- -D warnings -D clippy::pedantic".into(),
+                    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic".into(),
                     "cargo test".into(),
                 ],
             );
