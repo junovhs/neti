@@ -2,57 +2,45 @@ use crate::roadmap::cmd_handlers;
 use crate::roadmap::types::{ApplyResult, Command, CommandBatch, Roadmap};
 
 pub fn apply_commands(roadmap: &mut Roadmap, batch: &CommandBatch) -> Vec<ApplyResult> {
-    batch
-        .commands
-        .iter()
-        .map(|cmd| run_cmd(roadmap, cmd))
-        .collect()
+    batch.commands.iter().flat_map(|cmd| run_cmd(roadmap, cmd)).collect()
 }
 
-fn run_cmd(roadmap: &mut Roadmap, cmd: &Command) -> ApplyResult {
+fn run_cmd(roadmap: &mut Roadmap, cmd: &Command) -> Vec<ApplyResult> {
     match cmd {
-        Command::Check { .. } | Command::Uncheck { .. } | Command::Delete { .. } => {
-            handle_basic_cmd(roadmap, cmd)
-        }
-        Command::Add { .. } | Command::Update { .. } | Command::Note { .. } => {
-            handle_content_cmd(roadmap, cmd)
-        }
-        Command::Move { .. } | Command::AddSection { .. } | Command::AddSubsection { .. } => {
-            handle_struct_cmd(roadmap, cmd)
-        }
-        Command::ReplaceSection { .. } => ApplyResult::Error("Command not supported".into()),
+        Command::Chain { parent, items } => expand_chain(roadmap, parent, items),
+        _ => vec![run_single(roadmap, cmd)],
     }
 }
 
-fn handle_basic_cmd(roadmap: &mut Roadmap, cmd: &Command) -> ApplyResult {
+fn run_single(roadmap: &mut Roadmap, cmd: &Command) -> ApplyResult {
     match cmd {
         Command::Check { path } => cmd_handlers::handle_check(roadmap, path),
         Command::Uncheck { path } => cmd_handlers::handle_uncheck(roadmap, path),
         Command::Delete { path } => cmd_handlers::handle_delete(roadmap, path),
-        _ => unreachable!(),
+        Command::Add { parent, text, after } => {
+            cmd_handlers::handle_add(roadmap, parent, text, after.as_deref())
+        }
+        _ => run_single_ext(roadmap, cmd),
     }
 }
 
-fn handle_content_cmd(roadmap: &mut Roadmap, cmd: &Command) -> ApplyResult {
+fn run_single_ext(roadmap: &mut Roadmap, cmd: &Command) -> ApplyResult {
     match cmd {
-        Command::Add {
-            parent,
-            text,
-            after,
-        } => cmd_handlers::handle_add(roadmap, parent, text, after.as_deref()),
         Command::Update { path, text } => cmd_handlers::handle_update(roadmap, path, text),
         Command::Note { path, note } => cmd_handlers::handle_note(roadmap, path, note),
-        _ => unreachable!(),
-    }
-}
-
-fn handle_struct_cmd(roadmap: &mut Roadmap, cmd: &Command) -> ApplyResult {
-    match cmd {
         Command::AddSection { heading } => cmd_handlers::handle_add_section(roadmap, heading),
         Command::AddSubsection { parent, heading } => {
             cmd_handlers::handle_add_subsection(roadmap, parent, heading)
         }
         Command::Move { path, position } => cmd_handlers::handle_move(roadmap, path, position),
-        _ => unreachable!(),
+        Command::ReplaceSection { .. } => ApplyResult::Error("Not supported".into()),
+        _ => ApplyResult::Error("Unknown command".into()),
     }
 }
+
+fn expand_chain(roadmap: &mut Roadmap, parent: &str, items: &[String]) -> Vec<ApplyResult> {
+    items
+        .iter()
+        .map(|text| cmd_handlers::handle_add(roadmap, parent, text, None))
+        .collect()
+}

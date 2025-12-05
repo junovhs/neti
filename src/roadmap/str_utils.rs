@@ -16,6 +16,25 @@ pub fn parse_quoted(s: &str) -> Result<String, String> {
     Ok(text)
 }
 
+/// Parses multiple quoted strings: "a" "b" "c" -> vec!["a", "b", "c"]
+///
+/// # Errors
+/// Returns error if any quote is unclosed.
+pub fn parse_quoted_list(s: &str) -> Result<Vec<String>, String> {
+    let mut items = Vec::new();
+    let mut remaining = s.trim();
+
+    while !remaining.is_empty() {
+        let (text, rest) = extract_quoted_text(remaining)?;
+        if !text.is_empty() {
+            items.push(text);
+        }
+        remaining = rest.trim();
+    }
+
+    Ok(items)
+}
+
 /// Parses "text" [AFTER target].
 ///
 /// # Errors
@@ -34,7 +53,6 @@ pub fn parse_quoted_with_after(s: &str) -> Result<(String, Option<String>), Stri
 }
 
 /// Extracts quoted text and returns the remainder of the string.
-/// Handles escaped quotes (\") inside the string.
 ///
 /// # Errors
 /// Returns error if quotes are unbalanced.
@@ -86,4 +104,4 @@ pub fn truncate(s: &str, max_chars: usize) -> String {
         let truncated: String = s.chars().take(max_chars).collect();
         format!("{truncated}...")
     }
-}
+}

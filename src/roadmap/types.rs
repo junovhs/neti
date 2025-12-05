@@ -47,66 +47,42 @@ pub struct RoadmapStats {
     pub pending: usize,
 }
 
-/// A single command from AI
 #[derive(Debug, Clone)]
 pub enum Command {
-    Check {
-        path: String,
-    },
-    Uncheck {
-        path: String,
-    },
-    Add {
-        parent: String,
-        text: String,
-        after: Option<String>,
-    },
-    AddSection {
-        heading: String,
-    },
-    AddSubsection {
-        parent: String,
-        heading: String,
-    },
-    Delete {
-        path: String,
-    },
-    Update {
-        path: String,
-        text: String,
-    },
-    Note {
-        path: String,
-        note: String,
-    },
-    Move {
-        path: String,
-        position: MovePosition,
-    },
-    ReplaceSection {
-        id: String,
-        content: String,
-    },
+    Check { path: String },
+    Uncheck { path: String },
+    Add { parent: String, text: String, after: Option<String> },
+    AddSection { heading: String },
+    AddSubsection { parent: String, heading: String },
+    Delete { path: String },
+    Update { path: String, text: String },
+    Note { path: String, note: String },
+    Move { path: String, position: MovePosition },
+    ReplaceSection { id: String, content: String },
+    Chain { parent: String, items: Vec<String> },
 }
 
 impl fmt::Display for Command {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Check { path } => write!(f, "CHECK {path}"),
-            Self::Uncheck { path } => write!(f, "UNCHECK {path}"),
-            Self::Delete { path } => write!(f, "DELETE {path}"),
-            Self::AddSection { heading } => write!(f, "SECTION \"{heading}\""),
-            Self::AddSubsection { parent, heading } => {
-                write!(f, "SUBSECTION {parent} \"{heading}\"")
-            }
-            Self::ReplaceSection { id, .. } => write!(f, "REPLACE {id}"),
-            _ => write!(f, "{}", format_complex_command(self)),
-        }
+        write!(f, "{}", format_command(self))
     }
 }
 
-fn format_complex_command(cmd: &Command) -> String {
+fn format_command(cmd: &Command) -> String {
     match cmd {
+        Command::Check { path } => format!("CHECK {path}"),
+        Command::Uncheck { path } => format!("UNCHECK {path}"),
+        Command::Delete { path } => format!("DELETE {path}"),
+        Command::AddSection { heading } => format!("SECTION \"{heading}\""),
+        Command::AddSubsection { parent, heading } => format!("SUBSECTION {parent} \"{heading}\""),
+        _ => format_command_content(cmd),
+    }
+}
+
+fn format_command_content(cmd: &Command) -> String {
+    match cmd {
+        Command::ReplaceSection { id, .. } => format!("REPLACE {id}"),
+        Command::Chain { parent, items } => format!("CHAIN {parent} ({} items)", items.len()),
         Command::Update { path, text } => format!("UPDATE {path} \"{text}\""),
         Command::Add { parent, text, .. } => format!("ADD {parent} \"{text}\""),
         Command::Note { path, note } => format!("NOTE {path} \"{note}\""),
@@ -132,14 +108,12 @@ impl fmt::Display for MovePosition {
     }
 }
 
-/// A batch of commands parsed from AI output
 #[derive(Debug, Clone)]
 pub struct CommandBatch {
     pub commands: Vec<Command>,
     pub errors: Vec<String>,
 }
 
-/// Result of applying a command
 #[derive(Debug)]
 pub enum ApplyResult {
     Success(String),
@@ -150,9 +124,9 @@ pub enum ApplyResult {
 impl fmt::Display for ApplyResult {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Success(msg) => write!(f, "✓ {msg}"),
-            Self::NotFound(msg) => write!(f, "✗ Not found: {msg}"),
-            Self::Error(msg) => write!(f, "✗ Error: {msg}"),
+            Self::Success(msg) => write!(f, "� {msg}"),
+            Self::NotFound(msg) => write!(f, "? Not found: {msg}"),
+            Self::Error(msg) => write!(f, "? Error: {msg}"),
         }
     }
-}
+}
