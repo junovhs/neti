@@ -267,7 +267,7 @@
 ---
 
 ## v0.7.0 — Test Traceability 🔄 CURRENT
-- [ ] **Clean check output (failures only)**
+- [x] **Clean check output (failures only)**
 
 *Enforce the contract: every feature has verified tests.*
 
@@ -387,6 +387,10 @@
 - [ ] **Relative path resolution (./)** <!-- test: tests/unit_resolver.rs::test_relative_path -->
 - [ ] **Parent path resolution (../)** <!-- test: tests/unit_resolver.rs::test_parent_path -->
 - [ ] **External dependency detection (skip)** <!-- test: tests/unit_resolver.rs::test_external_skipped -->
+- [x] **Extraction" "**Rust use/mod extraction** <!-- test: src/graph/imports.rs::test_rust_imports -->"**
+- [x] **Extraction" "**Rust path resolution** <!-- test: src/graph/resolver.rs::test_resolve_rust_crate -->"**
+- [x] **Extraction" "**Python import extraction** <!-- test: tests/unit_graph.rs::test_python_import -->"**
+- [ ] **Extraction" "**TypeScript import extraction** <!-- test: tests/unit_graph.rs::test_ts_import -->"**
 
 ### Graph Construction
 - [x] **Graph node creation (file → vertex)** <!-- test: tests/unit_graph_build.rs::test_node_creation -->
@@ -418,6 +422,12 @@
 - [ ] **// slopchop:cluster(name) annotation** <!-- test: tests/unit_cluster.rs::test_annotation -->
 
 ---
+
+
+### - Dependency Graph ?" "Import Extraction"
+
+
+### - Dependency Graph ?" "Graph Construction"
 
 ## v0.9.0 — Smart Context ✅
 
@@ -617,3 +627,16 @@
 ## v0.99.0 — Future
 
 ## v0.99.0 - Future
+
+## TUI Consolidation (Mission Control)
+- [ ] **Consolidation (Mission Control)" "TUI: Unified Dashboard** (Single entry point `slopchop dashboard`)"**
+- [ ] **Consolidation (Mission Control)" "TUI: Check Runner** (Live test/lint output in pane)"**
+- [ ] **Consolidation (Mission Control)" "TUI: Roadmap Explorer** (Navigate and check tasks interactively)"**
+- [ ] **Consolidation (Mission Control)" "TUI: Log Stream** (Replace stdout scrolling)"**
+
+## v0.8.0 - Dependency Graph ?
+- [ ] **- Dependency Graph ?" "**slopchop watch command** <!-- test: tests/cli_watch.rs::test_watch_starts -->"**
+- [ ] **- Dependency Graph ?" "**Background process management** <!-- test: tests/unit_daemon.rs::test_daemon_lifecycle -->"**
+- [ ] **- Dependency Graph ?" "**Graceful shutdown (SIGTERM)** <!-- test: tests/unit_daemon.rs::test_graceful_shutdown -->"**
+- [x] **Construction" "**Graph node/edge creation** <!-- test: tests/unit_graph_build.rs::test_node_creation -->"**
+- [ ] **Construction" "**Reverse index construction** <!-- test: tests/unit_graph_build.rs::test_reverse_index -->"**

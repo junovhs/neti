@@ -1,0 +1,30 @@
+===ROADMAP===
+CHECK clean-check-output-failures-only
+
+SECTION "TUI Consolidation (Mission Control)"
+ADD "TUI Consolidation (Mission Control)" "TUI: Unified Dashboard** (Single entry point `slopchop dashboard`)"
+ADD "TUI Consolidation (Mission Control)" "TUI: Check Runner** (Live test/lint output in pane)"
+ADD "TUI Consolidation (Mission Control)" "TUI: Roadmap Explorer** (Navigate and check tasks interactively)"
+ADD "TUI Consolidation (Mission Control)" "TUI: Log Stream** (Replace stdout scrolling)"
+
+SECTION "v0.8.0 - Dependency Graph ?"
+ADD "v0.8.0 - Dependency Graph ?" "**slopchop watch command** <!-- test: tests/cli_watch.rs::test_watch_starts -->"
+ADD "v0.8.0 - Dependency Graph ?" "**Background process management** <!-- test: tests/unit_daemon.rs::test_daemon_lifecycle -->"
+ADD "v0.8.0 - Dependency Graph ?" "**Graceful shutdown (SIGTERM)** <!-- test: tests/unit_daemon.rs::test_graceful_shutdown -->"
+
+SUBSECTION "v0.8.0 - Dependency Graph ?" "Import Extraction"
+ADD "Import Extraction" "**Rust use/mod extraction** <!-- test: src/graph/imports.rs::test_rust_imports -->"
+ADD "Import Extraction" "**Rust path resolution** <!-- test: src/graph/resolver.rs::test_resolve_rust_crate -->"
+ADD "Import Extraction" "**Python import extraction** <!-- test: tests/unit_graph.rs::test_python_import -->"
+ADD "Import Extraction" "**TypeScript import extraction** <!-- test: tests/unit_graph.rs::test_ts_import -->"
+CHECK rust-use-mod-extraction
+CHECK rust-path-resolution
+CHECK python-import-extraction
+CHECK typescript-import-extraction
+
+SUBSECTION "v0.8.0 - Dependency Graph ?" "Graph Construction"
+ADD "Graph Construction" "**Graph node/edge creation** <!-- test: tests/unit_graph_build.rs::test_node_creation -->"
+ADD "Graph Construction" "**Reverse index construction** <!-- test: tests/unit_graph_build.rs::test_reverse_index -->"
+CHECK graph-node-edge-creation
+CHECK reverse-index-construction
+===END===
