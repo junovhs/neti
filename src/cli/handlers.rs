@@ -3,7 +3,6 @@ use crate::analysis::RuleEngine;
 use crate::apply;
 use crate::apply::types::ApplyContext;
 use crate::config::Config;
-use crate::context::{self, ContextOptions};
 use crate::error::Result;
 use crate::pack::{self, OutputFormat, PackOptions};
 use crate::prompt::PromptGenerator;
@@ -194,23 +193,6 @@ pub fn handle_trace(file: &Path, depth: usize, budget: usize) -> Result<()> {
 pub fn handle_map(deps: bool) -> Result<()> {
     let output = trace::map(deps)?;
     println!("{output}");
-    Ok(())
-}
-
-/// Handles the context command.
-///
-/// # Errors
-/// Returns error if context generation fails.
-pub fn handle_context(verbose: bool, copy: bool) -> Result<()> {
-    let opts = ContextOptions { verbose };
-    let output = context::run(&opts)?;
-    
-    if copy {
-        crate::clipboard::smart_copy(&output)?;
-        println!("Context map copied to clipboard.");
-    } else {
-        println!("{output}");
-    }
     Ok(())
 }
 

@@ -6,7 +6,6 @@ pub mod cli;
 pub mod clipboard;
 pub mod config;
 pub mod constants;
-pub mod context;
 pub mod detection;
 pub mod discovery;
 pub mod error;

@@ -85,12 +85,6 @@ enum Commands {
         #[arg(long, short)]
         deps: bool,
     },
-    Context {
-        #[arg(long, short)]
-        verbose: bool,
-        #[arg(long, short)]
-        copy: bool,
-    },
 }
 
 fn main() {
@@ -122,8 +116,7 @@ fn dispatch_command(cmd: &Commands) -> Result<()> {
     match cmd {
         Commands::Pack { .. }
         | Commands::Trace { .. }
-        | Commands::Map { .. }
-        | Commands::Context { .. } => dispatch_analysis(cmd),
+        | Commands::Map { .. } => dispatch_analysis(cmd),
 
         Commands::Check
         | Commands::Fix
@@ -191,10 +184,6 @@ fn dispatch_analysis(cmd: &Commands) -> Result<()> {
         }
         Commands::Map { deps } => {
             cli::handle_map(*deps)?;
-            Ok(())
-        }
-        Commands::Context { verbose, copy } => {
-            cli::handle_context(*verbose, *copy)?;
             Ok(())
         }
         Commands::Pack { .. } => dispatch_pack(cmd),
