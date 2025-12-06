@@ -11,7 +11,10 @@ use super::display;
 
 pub fn run_init(output: &Path, name: Option<String>) -> Result<()> {
     if output.exists() {
-        return Err(anyhow!("{} already exists. Use --output.", output.display()));
+        return Err(anyhow!(
+            "{} already exists. Use --output.",
+            output.display()
+        ));
     }
 
     let title = name.unwrap_or_else(|| "Project".to_string());
@@ -171,6 +174,7 @@ fn count_audit_failures(store: &TaskStore, root: &Path) -> usize {
 
 fn check_task_test(task: &crate::roadmap_v2::Task, root: &Path) -> Option<&'static str> {
     match &task.test {
+        Some(t) if t == "[no-test]" => None,
         Some(test_path) if !verify_test_exists(root, test_path) => Some("test not found"),
         None => Some("no test anchor"),
         Some(_) => None,
