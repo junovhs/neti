@@ -1,59 +1,7 @@
 // src/skeleton.rs
+use crate::lang::Lang;
 use std::path::Path;
-use std::sync::LazyLock;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
-
-static SKELETONIZER: LazyLock<Skeletonizer> = LazyLock::new(Skeletonizer::new);
-
-struct Skeletonizer {
-    rust: Query,
-    python: Query,
-    javascript: Query,
-}
-
-impl Skeletonizer {
-    fn new() -> Self {
-        Self {
-            rust: compile_query(
-                tree_sitter_rust::language(),
-                "(function_item body: (block) @body)",
-            ),
-            python: compile_query(
-                tree_sitter_python::language(),
-                "(function_definition body: (block) @body)",
-            ),
-            javascript: compile_query(
-                tree_sitter_typescript::language_typescript(),
-                r"
-                (function_declaration body: (statement_block) @body)
-                (method_definition body: (statement_block) @body)
-                (arrow_function body: (statement_block) @body)
-                ",
-            ),
-        }
-    }
-
-    fn get_config<'a>(&'a self, lang: &str) -> Option<(Language, &'a Query, &'static str)> {
-        match lang {
-            "rs" => Some((
-                tree_sitter_rust::language(),
-                &self.rust,
-                "{ ... }",
-            )),
-            "py" => Some((
-                tree_sitter_python::language(),
-                &self.python,
-                "...",
-            )),
-            "js" | "jsx" | "ts" | "tsx" => Some((
-                tree_sitter_typescript::language_typescript(),
-                &self.javascript,
-                "{ ... }",
-            )),
-            _ => None,
-        }
-    }
-}
 
 /// Reduces code to its structural skeleton (signatures only).
 ///
@@ -69,11 +17,16 @@ pub fn clean(path: &Path, content: &str) -> String {
         return content.to_string();
     };
 
-    let Some((lang, query, replacement)) = SKELETONIZER.get_config(ext) else {
+    let Some(lang) = Lang::from_ext(ext) else {
         return content.to_string();
     };
 
-    apply_skeleton(content, lang, query, replacement)
+    let query_str = lang.q_skeleton();
+    let replacement = lang.skeleton_replacement();
+    let grammar = lang.grammar();
+    let query = compile_query(grammar, query_str);
+
+    apply_skeleton(content, grammar, &query, replacement)
 }
 
 fn apply_skeleton(source: &str, lang: Language, query: &Query, replacement: &str) -> String {
@@ -113,9 +66,6 @@ fn filter_nested_ranges(mut ranges: Vec<std::ops::Range<usize>>) -> Vec<std::ops
         let current = &ranges[i];
         
         // Check if this range is contained by any already added range.
-        // Since we sort by start, if A contains B, A comes before B.
-        // We just check if 'current' is inside the 'last' added range.
-        
         if let Some(last) = result.last() {
             if last.end >= current.end {
                 // Current is inside Last. Skip Current.
@@ -147,7 +97,7 @@ fn replace_ranges(source: &str, ranges: &[std::ops::Range<usize>], replacement: 
         last_pos = range.end;
     }
 
-    // Append trailing content (renamed to avoid validator regex match)
+    // Append trailing content
     if last_pos < source.len() {
         result.push_str(&source[last_pos..]);
     }
