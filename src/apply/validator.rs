@@ -5,7 +5,7 @@ use crate::apply::ApplyOutcome;
 use std::path::{Component, Path};
 
 const PROTECTED_FILES: &[&str] = &[
-    "ROADMAP.md",
+    "ROADMAP.md", // We protect the roadmap structure but allow specific updates via commands
     ".slopchopignore",
     "slopchop.toml",
     "Cargo.lock",
@@ -106,6 +106,9 @@ fn validate_path(path_str: &str) -> Result<(), String> {
 }
 
 fn is_protected(path_str: &str) -> bool {
+    // Exceptions for specific workflows (like updating README if needed) can be handled here,
+    // but generally we protect config files.
+    // NOTE: 'ROADMAP.md' is protected because it should be updated via commands, not raw overwrites.
     PROTECTED_FILES.iter().any(|&f| f.eq_ignore_ascii_case(path_str))
 }
 
@@ -114,12 +117,19 @@ fn validate_content(path: &str, content: &str) -> Result<(), String> {
         return Err(format!("File is empty: {path}"));
     }
 
-    // Use escape sequences to prevent self-rejection
-    // \x60 = backtick, \x7E = tilde
-    if content.contains("\x60\x60\x60") || content.contains("\x7E\x7E\x7E") {
-        return Err(format!(
-            "Markdown fences detected in {path}. Content must be raw code."
-        ));
+    // Allow markdown fences in markdown files
+    let is_markdown = Path::new(path).extension().is_some_and(|ext| {
+        ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown")
+    });
+
+    if !is_markdown {
+        // Use escape sequences to prevent self-rejection
+        // \x60 = backtick, \x7E = tilde
+        if content.contains("\x60\x60\x60") || content.contains("\x7E\x7E\x7E") {
+            return Err(format!(
+                "Markdown fences detected in {path}. Content must be raw code."
+            ));
+        }
     }
 
     if let Some(line) = detect_truncation(content) {
