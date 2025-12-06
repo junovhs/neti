@@ -1,60 +1,7 @@
 // src/graph/imports.rs
+use crate::lang::Lang;
 use std::path::Path;
-use std::sync::LazyLock;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
-
-static EXTRACTOR: LazyLock<ImportExtractor> = LazyLock::new(ImportExtractor::new);
-
-struct ImportExtractor {
-    rust: Query,
-    python: Query,
-    javascript: Query,
-}
-
-impl ImportExtractor {
-    fn new() -> Self {
-        Self {
-            rust: compile_query(
-                tree_sitter_rust::language(),
-                r"
-                (use_declaration argument: (_) @import)
-                (mod_item name: (identifier) @mod)
-                ",
-            ),
-            python: compile_query(
-                tree_sitter_python::language(),
-                r"
-                (import_statement name: (dotted_name) @import)
-                (aliased_import name: (dotted_name) @import)
-                (import_from_statement module_name: (dotted_name) @import)
-                ",
-            ),
-            javascript: compile_query(
-                tree_sitter_typescript::language_typescript(),
-                r#"
-                (import_statement source: (string) @import)
-                (export_statement source: (string) @import)
-                (call_expression
-                  function: (identifier) @func
-                  arguments: (arguments (string) @import)
-                  (#eq? @func "require"))
-                "#,
-            ),
-        }
-    }
-
-    fn get_config<'a>(&'a self, lang: &str) -> Option<(Language, &'a Query)> {
-        match lang {
-            "rs" => Some((tree_sitter_rust::language(), &self.rust)),
-            "py" => Some((tree_sitter_python::language(), &self.python)),
-            "js" | "jsx" | "ts" | "tsx" => Some((
-                tree_sitter_typescript::language_typescript(),
-                &self.javascript,
-            )),
-            _ => None,
-        }
-    }
-}
 
 /// Extracts raw import strings from the given file content.
 ///
@@ -70,11 +17,14 @@ pub fn extract(path: &Path, content: &str) -> Vec<String> {
         return Vec::new();
     };
 
-    let Some((lang, query)) = EXTRACTOR.get_config(ext) else {
+    let Some(lang) = Lang::from_ext(ext) else {
         return Vec::new();
     };
 
-    run_query(content, lang, query)
+    let grammar = lang.grammar();
+    let query = compile_query(grammar, lang.q_imports());
+
+    run_query(content, grammar, &query)
 }
 
 fn run_query(source: &str, lang: Language, query: &Query) -> Vec<String> {
