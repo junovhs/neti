@@ -1,29 +1,3 @@
-The current README is solid, but it's now slightly out of date given the major features we just shipped (`signatures`, `focus` mode, and the new prompt workflow).
-
-We should update it to reflect the **"Self-Driving Context"** workflow and the new commands.
-
-Here is the plan:
-1.  **Add `slopchop signatures`** to the Context Tools section.
-2.  **Update "The Workflow"** to include the new 2-step context loop (Signatures -> Pack).
-3.  **Update "Adoption Tiers"** to mention the new capabilities.
-4.  **Mention `slopchop map`** properly.
-
-**GOAL:** Update README.md to reflect v0.8.0 features.
-**CHANGES:**
-1. Update `README.md` with new commands and workflow explanation.
-
-#__SLOPCHOP_PLAN__#
-GOAL: Update README.md with v0.8.0 features.
-CHANGES:
-1. Rewrite "The Workflow" section to include Signatures/Architect mode.
-2. Update Commands reference.
-#__SLOPCHOP_END__#
-
-#__SLOPCHOP_MANIFEST__#
-README.md
-#__SLOPCHOP_END__#
-
-#__SLOPCHOP_FILE__# README.md
 # SlopChop
 
 **AI writes slop. You chop it clean.**
@@ -46,7 +20,7 @@ Here's what that actually means in practice:
 * **Small files** — AI reasons better over code it can see entirely. So does your reviewer (you).
 * **Low complexity** — Deeply nested logic confuses AI. It confuses humans too. Keep it flat. Why not be draconian about it? If AI is writing the code, who cares if in the end you used fewer tokens and the outcome is cleaner.
 * **No panic paths** — In Rust, .unwrap() is a hidden crash. SlopChop bans it, forcing proper error handling.
-* **No truncation** — When AI writes // ... rest of implementation, that's not code. That's giving up. Rejected.
+* **No truncation** — When AI writes // ... rest of implementation, that's not code. That's giving up. Rejected. <!-- slopchop:ignore -->
 
 The result: code that's modular, testable, and honest. Not because AI is smart, but because you refused to let it be lazy.
 This tool is the proof. It passes its own rules.
@@ -60,7 +34,7 @@ SlopChop is the bridge between your AI chat and your codebase.
 You (and I) love coding with traditional chat interfaces. The conversation is where the thinking happens. But the last mile **sucks**:
 
 - Copy code, miss a bracket, **broken file**
-- AI gives you `// rest of implementation`, **deletes your code**
+- AI gives you `// rest of implementation`, **deletes your code** <!-- slopchop:ignore -->
 - 300-line god function **you didn't ask for**
 - Context window forgets everything between sessions
 
@@ -84,6 +58,7 @@ When you have a bug or need a feature, but don't know where to start:
 slopchop signatures
 ```
 *Copies a high-level map of all types and functions to your clipboard.*
+*Automatically includes the System Prompt & Rules.*
 
 **You:** "I'm getting error X. Here is the map."
 **AI:** "I see the issue. It's likely in `src/config.rs`. Please pack that file."
@@ -91,11 +66,12 @@ slopchop signatures
 ### 3. Surgery (The Pack)
 The AI tells you what it needs. You execute.
 ```bash
-slopchop pack src/config.rs --copy
+slopchop pack --focus src/config.rs
 ```
-*Copies full source code of that file to your clipboard.*
+*Copies `src/config.rs` (Full Source) + Dependencies (Skeletons).*
+*Smart Copy automatically puts it in clipboard (or attaches file if huge).*
 
-**You:** "Here is the file."
+**You:** "Here is the context."
 **AI:** [Responds with corrected code in SlopChop format]
 
 ### 4. Application
@@ -104,6 +80,22 @@ You copy the AI's response.
 slopchop apply
 ```
 *Validates constraints, runs tests, and commits changes automatically.*
+
+If the AI gives you slop:
+
+```
+    slopchop apply
+    
+    ✗ REJECTED
+    - src/auth/login.rs: complexity 12 (max 8)
+    - src/auth/login.rs: detected "// ..." truncation <!-- slopchop:ignore -->
+    
+    [error copied to clipboard]
+```
+
+Paste the error back. AI apologizes. Fixes it. Resubmit.
+
+**The AI learns your standards through rejection, not instruction.**
 
 ---
 
@@ -182,11 +174,11 @@ Or just run `slopchop` and it auto-generates config.
 
 | Command | What it does |
 |---------|--------------|
-| `slopchop signatures` | Generate Type Map (The "Header File") |
+| `slopchop signatures` | Generate Map (Header + Signatures + Footer) |
 | `slopchop map` | Show directory tree & sizes |
 | `slopchop map --deps` | Show dependency graph visual |
 | `slopchop trace <file>` | Trace dependencies deep |
-| `slopchop prompt` | Generate system prompt |
+| `slopchop prompt` | Generate system prompt text |
 
 ### Project Management
 
@@ -226,96 +218,3 @@ pub fn login(creds: &Credentials) -> Result<Session, AuthError> {
     // complete implementation
     // no truncation
 }
-#__SLOPCHOP_END__#
-```
-
-SlopChop parses this, validates it, writes files atomically, runs tests, commits on success.
-
-If AI uses markdown fences or truncates code, rejected.
-
----
-
-## Who Is This For?
-
-**AI-Native Builders**
-
-You've fully embraced AI coding. You're not scared of it, you're not skeptical of it. You use it daily. Your pain is the copy-paste friction and the quality inconsistency.
-
-If you think AI code is categorically bad: this isn't for you.
-
-If you think AI code needs guardrails to be good: welcome.
-
----
-
-## The Proof
-
-This tool was built by a product designer chatting with various AI models in chat interfaces. 
-
-It's ~10,000 lines of Rust across 50+ files. It has tree-sitter parsing, a TUI dashboard, dependency graph analysis, and a roadmap system with test traceability.
-
-Run `slopchop` on this repo. It passes its own rules.
-
-That's the point.
-
----
-
-## Adoption Tiers
-
-### Tier 1: Quality Scanner
-```bash
-slopchop          # find violations
-slopchop check    # run tests
-```
-Use it as a linter. No AI required.
-
-### Tier 2: AI Workflow
-```bash
-slopchop signatures # get the map
-slopchop pack       # get the code
-slopchop apply      # land the changes
-```
-The core loop.
-
-### Tier 3: Full System
-```bash
-slopchop roadmap audit    # test traceability
-```
-For serious projects.
-
----
-
-## FAQ
-
-**Is this like Cursor?**
-
-No. Cursor replaces your editor with an AI-integrated IDE. SlopChop doesn't touch your editor. It bridges the gap between any chat UI and your existing workflow. Use it with Claude.ai, ChatGPT, local LLMs, whatever.
-
-**Is this like Copilot?**
-
-No. Copilot is autocomplete. SlopChop is for the conversational workflow where you discuss architecture, debug together, and get back complete files.
-
-**Why Rust?**
-
-Fast, single binary, no runtime dependencies, great tree-sitter support, and the tool enforces the same discipline on itself.
-
-**Can I use this with languages other than Rust?**
-
-Yes. Complexity analysis works for Rust, TypeScript, JavaScript, and Python. Token limits and truncation detection work for any file type.
-
----
-
-## Chop the Slop
-
-AI generates more code than ever. Most of it is slop.
-
-You can reject AI entirely. You can accept slop and drown in tech debt. Or you can chop it.
-
-```
-slopchop apply
-```
-
----
-
-*MIT License*
-
-#__SLOPCHOP_END__#
