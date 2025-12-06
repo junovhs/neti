@@ -1,3 +1,29 @@
+The current README is solid, but it's now slightly out of date given the major features we just shipped (`signatures`, `focus` mode, and the new prompt workflow).
+
+We should update it to reflect the **"Self-Driving Context"** workflow and the new commands.
+
+Here is the plan:
+1.  **Add `slopchop signatures`** to the Context Tools section.
+2.  **Update "The Workflow"** to include the new 2-step context loop (Signatures -> Pack).
+3.  **Update "Adoption Tiers"** to mention the new capabilities.
+4.  **Mention `slopchop map`** properly.
+
+**GOAL:** Update README.md to reflect v0.8.0 features.
+**CHANGES:**
+1. Update `README.md` with new commands and workflow explanation.
+
+#__SLOPCHOP_PLAN__#
+GOAL: Update README.md with v0.8.0 features.
+CHANGES:
+1. Rewrite "The Workflow" section to include Signatures/Architect mode.
+2. Update Commands reference.
+#__SLOPCHOP_END__#
+
+#__SLOPCHOP_MANIFEST__#
+README.md
+#__SLOPCHOP_END__#
+
+#__SLOPCHOP_FILE__# README.md
 # SlopChop
 
 **AI writes slop. You chop it clean.**
@@ -42,46 +68,46 @@ SlopChop **fixes all of this.**
 
 ---
 
-## The Workflow
+## The Workflow: Self-Driving Context
 
-```
-You: "Fix the auth bug"
+SlopChop doesn't just check code; it teaches the AI how to navigate your repo.
 
-    slopchop pack src/auth/
-    [context copied to clipboard]
-
-You: [paste to Claude] "Here's the code. The login fails when..."
-
-Claude: [responds with code in SlopChop format]
-
-You: [copy response]
-
-    slopchop apply
-    
-    ✓ 3 files written
-    ✓ tests passed  
-    ✓ committed
+### 1. Setup
+Copy the system prompt into your AI settings (Claude Project / ChatGPT Instructions).
+```bash
+slopchop prompt --copy
 ```
 
-If the AI gives you slop:
-
+### 2. Diagnosis (The Map)
+When you have a bug or need a feature, but don't know where to start:
+```bash
+slopchop signatures
 ```
-    slopchop apply
-    
-    ✗ REJECTED
-    - src/auth/login.rs: complexity 12 (max 8)
-    - src/auth/login.rs: detected "// ..." truncation
-    
-    [error copied to clipboard]
+*Copies a high-level map of all types and functions to your clipboard.*
+
+**You:** "I'm getting error X. Here is the map."
+**AI:** "I see the issue. It's likely in `src/config.rs`. Please pack that file."
+
+### 3. Surgery (The Pack)
+The AI tells you what it needs. You execute.
+```bash
+slopchop pack src/config.rs --copy
 ```
+*Copies full source code of that file to your clipboard.*
 
-Paste the error back. AI apologizes. Fixes it. Resubmit.
+**You:** "Here is the file."
+**AI:** [Responds with corrected code in SlopChop format]
 
-**The AI learns your standards through rejection, not instruction.**
+### 4. Application
+You copy the AI's response.
+```bash
+slopchop apply
+```
+*Validates constraints, runs tests, and commits changes automatically.*
 
 ---
 
-## The Killer Feature: Watch Mode
+## The Killer Feature: Watch Mode (Coming Soon)
 
 ```
 slopchop watch
@@ -148,16 +174,18 @@ Or just run `slopchop` and it auto-generates config.
 | Command | What it does |
 |---------|--------------|
 | `slopchop` | Scan codebase for violations |
-| `slopchop pack [path]` | Generate context for AI |
 | `slopchop apply` | Apply AI response from clipboard |
-| `slopchop watch` | Background daemon with hotkey |
+| `slopchop pack <file>` | Pack specific file (full source) |
+| `slopchop pack --focus <file>` | Pack file + skeleton of dependencies |
 
 ### Context Tools
 
 | Command | What it does |
 |---------|--------------|
-| `slopchop trace <file>` | Pack file + its dependencies |
-| `slopchop map` | Show codebase structure |
+| `slopchop signatures` | Generate Type Map (The "Header File") |
+| `slopchop map` | Show directory tree & sizes |
+| `slopchop map --deps` | Show dependency graph visual |
+| `slopchop trace <file>` | Trace dependencies deep |
 | `slopchop prompt` | Generate system prompt |
 
 ### Project Management
@@ -242,14 +270,14 @@ Use it as a linter. No AI required.
 
 ### Tier 2: AI Workflow
 ```bash
-slopchop pack     # context for AI
-slopchop apply    # land AI code
+slopchop signatures # get the map
+slopchop pack       # get the code
+slopchop apply      # land the changes
 ```
 The core loop.
 
 ### Tier 3: Full System
 ```bash
-slopchop watch            # daemon mode
 slopchop roadmap audit    # test traceability
 ```
 For serious projects.
@@ -283,9 +311,11 @@ AI generates more code than ever. Most of it is slop.
 You can reject AI entirely. You can accept slop and drown in tech debt. Or you can chop it.
 
 ```
-slopchop watch
+slopchop apply
 ```
 
 ---
 
 *MIT License*
+
+#__SLOPCHOP_END__#
