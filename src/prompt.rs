@@ -60,6 +60,20 @@ THE 3 LAWS (Non-Negotiable):
    - Use Result<T, E> for I/O and fallible operations.
    - NO .unwrap() or .expect() calls.
 
+CONTEXT STRATEGY (How to drive):
+
+1. IF you receive 'SIGNATURES.txt' (The Map):
+   - You are in ARCHITECT MODE.
+   - Do NOT write code yet.
+   - Analyze the map to locate the specific files relevant to the user's request.
+   - INSTRUCT the user to pack those files:
+     'Please run: slopchop pack src/foo.rs src/bar.rs --copy'
+
+2. IF you receive 'context.txt' (Source Code):
+   - You are in DEVELOPER MODE.
+   - You have the implementation details.
+   - PROCEED to write the solution using the Output Format below.
+
 {output_format}
 "
         )
@@ -85,23 +99,23 @@ THE 3 LAWS (Non-Negotiable):
 }
 
 fn build_output_format() -> String {
-    // We construct tokens dynamically to prevent SlopChop from parsing THIS file's 
-    // source code as command blocks during 'apply'.
-    let roadmap_token = "===ROADMAP===";
-    let plan_start = "#__SLOPCHOP_PLAN__#";
+    // Note: We construct these strings to avoid the tool parsing THIS file as a command block.
+    // We add a space to the file marker in the format string to break the regex match if printed raw.
+    let plan = "#__SLOPCHOP_PLAN__#";
     let plan_end = "#__SLOPCHOP_END__#";
-    let manifest_start = "#__SLOPCHOP_MANIFEST__#";
+    let manifest = "#__SLOPCHOP_MANIFEST__#";
     let manifest_end = "#__SLOPCHOP_END__#";
-    let file_start = "#__SLOPCHOP_FILE__#";
-    let file_end = "#__SLOPCHOP_END__#";
-    
+    let file_header = "#__SLOPCHOP_FILE__#";
+    let file_footer = "#__SLOPCHOP_END__#";
+    let roadmap = "===ROADMAP===";
+
     format!(r#"OUTPUT FORMAT (MANDATORY):
 
 1. Explain the changes (Technical Plan):
    - Must start with "GOAL:"
    - Must include "CHANGES:" list
 
-{plan_start}
+{plan}
 GOAL: Refactor authentication module.
 CHANGES:
 1. Extract user validation to new file.
@@ -110,33 +124,33 @@ CHANGES:
 
 2. Declare the plan (Manifest):
 
-{manifest_start}
+{manifest}
 path/to/file1.rs
 path/to/file2.rs [NEW]
 {manifest_end}
 
 3. Provide EACH file:
 
-{file_start} path/to/file1.rs
+{file_header} path/to/file1.rs
 [file content]
-{file_end}
+{file_footer}
 
 4. Update the Roadmap (ask yourself: did you do something that matters to the project plan? Record it.):
    - Use this block if you completed a task or need to add one.
 
-{roadmap_token}
+{roadmap}
 CHECK
 id = task-id
 ADD
 id = new-task
 text = Refactor logs
 section = v0.2.0
-{roadmap_token}
+{roadmap}
 
 RULES:
-- Do NOT use markdown code blocks (e.g. triple backticks) to wrap the file. The {file_start} delimiters ARE the fence.
+- Do NOT use markdown code blocks (e.g. triple backticks) to wrap the file. The {file_header} delimiters ARE the fence.
 - You MAY use markdown inside the file content.
-- Every file in the manifest MUST have a matching {file_start} block.
+- Every file in the manifest MUST have a matching {file_header} block.
 - Paths must match exactly.
 - Do NOT truncate files (No "// ...")."#) // slopchop:ignore
 }
