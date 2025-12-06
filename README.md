@@ -53,7 +53,7 @@ Here's a rewrite that separates the one-time setup from the repeating loop, and 
 SlopChop teaches the AI to navigate your repo through a simple loop: **Map → Pack → Apply**.
 
 ### The Loop
-
+```mermaid
 flowchart TD
     subgraph Loop
         M[🗺️ Map<br><i>you show codebase</i>]
@@ -64,7 +64,7 @@ flowchart TD
     M --> P --> A
     A -->|"✗ Rejected"| P
     A -->|"✓ Committed"| E(( ))
-
+```
 #### 1. Map — Show the AI your codebase
 
 ```bash
