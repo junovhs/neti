@@ -7,16 +7,7 @@ use std::thread;
 use std::time::Duration;
 
 /// The "8-Point Orbit" frames requested.
-const FRAMES: &[&str] = &[
-    "⣾⣽⣻⢿⡿⣟⣯⣷",
-    "⣽⣻⢿⡿⣟⣯⣷⣾",
-    "⣻⢿⡿⣟⣯⣷⣾⣽",
-    "⢿⡿⣟⣯⣷⣾⣽⣻",
-    "⡿⣟⣯⣷⣾⣽⣻⢿",
-    "⣟⣯⣷⣾⣽⣻⢿⡿",
-    "⣯⣷⣾⣽⣻⢿⡿⣟",
-    "?⣷⣾⣽⣻⢿⡿⣟⣯",
-];
+const FRAMES: &[&str] = &["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠇"];
 
 const INTERVAL: u64 = 70;
 

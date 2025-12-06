@@ -44,11 +44,21 @@ pub fn handle_init(path: Option<PathBuf>) -> Result<()> {
 /// Handles the check command.
 ///
 /// # Errors
-/// Returns error if discovery or analysis fails.
+/// Returns error if discovery, analysis, or external commands fail.
 pub fn handle_check() -> Result<()> {
     let mut config = Config::new();
     config.load_local_config();
 
+    // 1. Run external check commands (cargo test, clippy, etc.)
+    println!("> Running 'check' pipeline...");
+    if let Some(check_cmds) = config.commands.get("check") {
+        for cmd in check_cmds {
+            run_check_command(cmd)?;
+        }
+    }
+
+    // 2. Run internal structural scan
+    println!("> Running structural scan...");
     let engine = RuleEngine::new(config.clone());
     let files = crate::discovery::discover(&config)?;
     let report = engine.scan(files);
@@ -59,6 +69,26 @@ pub fn handle_check() -> Result<()> {
         std::process::exit(1);
     }
     Ok(())
+}
+
+fn run_check_command(cmd: &str) -> Result<()> {
+    print!("   > {cmd} ");
+    let parts: Vec<&str> = cmd.split_whitespace().collect();
+    
+    let Some((prog, args)) = parts.split_first() else {
+        return Ok(());
+    };
+
+    let status = Command::new(prog).args(args).status()?;
+    if status.success() {
+        println!("ok");
+        Ok(())
+    } else {
+        println!("err");
+        Err(crate::error::SlopChopError::Other(format!(
+            "Command failed: {cmd}"
+        )))
+    }
 }
 
 /// Handles the fix command.
