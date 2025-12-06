@@ -155,7 +155,8 @@ fn count_audit_failures(store: &TaskStore, root: &Path) -> usize {
     let mut failures = 0;
 
     for task in &store.tasks {
-        if task.status == TaskStatus::NoTest {
+        // Only audit completed tasks - skip pending and no-test
+        if task.status != TaskStatus::Done {
             continue;
         }
 
@@ -169,10 +170,10 @@ fn count_audit_failures(store: &TaskStore, root: &Path) -> usize {
 }
 
 fn check_task_test(task: &crate::roadmap_v2::Task, root: &Path) -> Option<&'static str> {
-    match (&task.test, &task.status) {
-        (Some(test_path), _) if !verify_test_exists(root, test_path) => Some("test not found"),
-        (None, TaskStatus::Done) => Some("no test anchor"),
-        _ => None,
+    match &task.test {
+        Some(test_path) if !verify_test_exists(root, test_path) => Some("test not found"),
+        None => Some("no test anchor"),
+        Some(_) => None,
     }
 }
 

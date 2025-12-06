@@ -1,0 +1,2826 @@
+[meta]
+title = "SlopChop Protocol Roadmap"
+description = ""
+
+[[sections]]
+id = "philosophy"
+title = "Philosophy"
+status = "pending"
+order = 0
+
+[[sections]]
+id = "how-to-read-this-file"
+title = "How to Read This File"
+status = "pending"
+order = 1
+
+[[sections]]
+id = "v0.1.0-foundation"
+title = "v0.1.0 — Foundation ✅"
+status = "pending"
+order = 2
+
+[[sections]]
+id = "v0.2.0-the-3-laws"
+title = "v0.2.0 — The 3 Laws ✅"
+status = "pending"
+order = 3
+
+[[sections]]
+id = "v0.3.0-apply-system"
+title = "v0.3.0 — Apply System ✅"
+status = "pending"
+order = 4
+
+[[sections]]
+id = "v0.4.0-safety-validation"
+title = "v0.4.0 — Safety & Validation ✅"
+status = "pending"
+order = 5
+
+[[sections]]
+id = "v0.5.0-pack-context"
+title = "v0.5.0 — Pack & Context ✅"
+status = "pending"
+order = 6
+
+[[sections]]
+id = "v0.6.0-roadmap-system"
+title = "v0.6.0 — Roadmap System ✅"
+status = "pending"
+order = 7
+
+[[sections]]
+id = "v0.7.0-test-traceability-current"
+title = "v0.7.0 — Test Traceability 🔄 CURRENT"
+status = "current"
+order = 8
+
+[[sections]]
+id = "v0.8.0-dependency-graph"
+title = "v0.8.0 — Dependency Graph ✅"
+status = "pending"
+order = 9
+
+[[sections]]
+id = "v0.9.0-smart-context"
+title = "v0.9.0 — Smart Context ✅"
+status = "pending"
+order = 10
+
+[[sections]]
+id = "v0.10.0-validation-hardening"
+title = "v0.10.0 — Validation Hardening"
+status = "pending"
+order = 11
+
+[[sections]]
+id = "v0.11.0-cicd-integration"
+title = "v0.11.0 — CI/CD Integration"
+status = "pending"
+order = 12
+
+[[sections]]
+id = "v0.12.0-graph-visualization"
+title = "v0.12.0 — Graph Visualization"
+status = "pending"
+order = 13
+
+[[sections]]
+id = "v0.13.0-legacy-adoption"
+title = "v0.13.0 — Legacy Adoption"
+status = "pending"
+order = 14
+
+[[sections]]
+id = "v1.0.0-release"
+title = "v1.0.0 — Release"
+status = "pending"
+order = 15
+
+[[sections]]
+id = "principles"
+title = "Principles"
+status = "pending"
+order = 16
+
+[[sections]]
+id = "not-doing"
+title = "Not Doing"
+status = "pending"
+order = 17
+
+[[tasks]]
+id = "tokenizer-initialization-cl100kbase"
+text = "Tokenizer initialization (cl100k_base)"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Token Counting"
+test = "tests/unit_tokens.rs::test_tokenizer_available"
+order = 0
+
+[[tasks]]
+id = "token-count-function"
+text = "Token count function"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Token Counting"
+test = "tests/unit_tokens.rs::test_count_basic"
+order = 1
+
+[[tasks]]
+id = "token-limit-check"
+text = "Token limit check"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Token Counting"
+test = "tests/unit_tokens.rs::test_exceeds_limit"
+order = 2
+
+[[tasks]]
+id = "rust-project-detection-cargo.toml"
+text = "Rust project detection (Cargo.toml)"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Project Detection"
+test = "tests/unit_project.rs::test_detect_rust"
+order = 3
+
+[[tasks]]
+id = "node-project-detection-package.json"
+text = "Node project detection (package.json)"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Project Detection"
+test = "tests/unit_project.rs::test_detect_node"
+order = 4
+
+[[tasks]]
+id = "python-project-detection"
+text = "Python project detection"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Project Detection"
+test = "tests/unit_project.rs::test_detect_python"
+order = 5
+
+[[tasks]]
+id = "go-project-detection-go.mod"
+text = "Go project detection (go.mod)"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Project Detection"
+test = "tests/unit_project.rs::test_detect_go"
+order = 6
+
+[[tasks]]
+id = "toml-config-loading"
+text = "TOML config loading"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Configuration"
+test = "tests/unit_config.rs::test_load_toml"
+order = 7
+
+[[tasks]]
+id = "default-rule-values"
+text = "Default rule values"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Configuration"
+test = "tests/unit_config.rs::test_defaults"
+order = 8
+
+[[tasks]]
+id = "command-list-parsing"
+text = "Command list parsing"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Configuration"
+test = "tests/unit_config.rs::test_command_list"
+order = 9
+
+[[tasks]]
+id = ".slopchopignore-loading"
+text = ".slopchopignore loading"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Configuration"
+test = "tests/unit_config.rs::test_slopchopignore"
+order = 10
+
+[[tasks]]
+id = "auto-config-generation-no-test-side-effect-on-first-run"
+text = "Auto-config generation** [no-test] *(side effect on first run)*"
+status = "done"
+section = "v0.1.0-foundation"
+group = "Configuration"
+order = 11
+
+[[tasks]]
+id = "file-token-counting"
+text = "File token counting"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Atomicity"
+test = "tests/integration_core.rs::test_atomicity_clean_file_passes"
+order = 0
+
+[[tasks]]
+id = "token-limit-violation"
+text = "Token limit violation"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Atomicity"
+test = "tests/integration_core.rs::test_atomicity_large_file_fails"
+order = 1
+
+[[tasks]]
+id = "token-exemption-patterns"
+text = "Token exemption patterns"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Atomicity"
+test = "tests/unit_config.rs::test_ignore_tokens_on"
+order = 2
+
+[[tasks]]
+id = "rust-complexity-query-ifmatchforwhile"
+text = "Rust complexity query (if/match/for/while/&&/||)"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Cyclomatic"
+test = "tests/integration_core.rs::test_complexity_boundary_check"
+order = 3
+
+[[tasks]]
+id = "complexity-violation-detection"
+text = "Complexity violation detection"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Cyclomatic"
+test = "tests/integration_core.rs::test_complexity_construct_match"
+order = 4
+
+[[tasks]]
+id = "jsts-complexity-query"
+text = "JS/TS complexity query"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Cyclomatic"
+test = "tests/unit_analysis.rs::test_js_complexity"
+order = 5
+
+[[tasks]]
+id = "python-complexity-query"
+text = "Python complexity query"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Cyclomatic"
+test = "tests/unit_analysis.rs::test_python_complexity"
+order = 6
+
+[[tasks]]
+id = "depth-calculation-blockbody-traversal"
+text = "Depth calculation (block/body traversal)"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Nesting Depth"
+test = "tests/integration_core.rs::test_nesting_boundary"
+order = 7
+
+[[tasks]]
+id = "deep-nesting-violation"
+text = "Deep nesting violation"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Nesting Depth"
+test = "tests/integration_core.rs::test_nesting_boundary"
+order = 8
+
+[[tasks]]
+id = "parameter-counting"
+text = "Parameter counting"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Arity"
+test = "tests/integration_core.rs::test_arity_boundary"
+order = 9
+
+[[tasks]]
+id = "high-arity-violation"
+text = "High arity violation"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Arity"
+test = "tests/integration_core.rs::test_arity_boundary"
+order = 10
+
+[[tasks]]
+id = "snakecase-word-counting"
+text = "Snake_case word counting"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Naming"
+test = "tests/unit_analysis.rs::test_snake_case_words"
+order = 11
+
+[[tasks]]
+id = "camelcase-word-counting"
+text = "CamelCase word counting"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Naming"
+test = "tests/unit_analysis.rs::test_camel_case_words"
+order = 12
+
+[[tasks]]
+id = "naming-ignore-patterns"
+text = "Naming ignore patterns"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Complexity — Naming"
+test = "tests/unit_config.rs::test_ignore_naming_on"
+order = 13
+
+[[tasks]]
+id = ".expect-detection"
+text = ".expect() detection"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Paranoia (Rust)"
+test = "tests/integration_core.rs::test_paranoia_expect_fails"
+order = 14
+
+[[tasks]]
+id = "safe-alternatives-allowed-.unwrapor"
+text = "Safe alternatives allowed (.unwrap_or)"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "Law of Paranoia (Rust)"
+test = "tests/integration_core.rs::test_paranoia_safe_alternatives_pass"
+order = 15
+
+[[tasks]]
+id = "slopchopignore-c-style"
+text = "slopchop:ignore (C-style //)"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "File Ignores"
+test = "tests/integration_core.rs::test_slopchop_ignore_skips_file"
+order = 16
+
+[[tasks]]
+id = "slopchopignore-hash-style"
+text = "slopchop:ignore (Hash-style #)"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "File Ignores"
+test = "tests/unit_analysis.rs::test_slopchop_ignore_hash"
+order = 17
+
+[[tasks]]
+id = "slopchopignore-html-style"
+text = "slopchop:ignore (HTML-style)"
+status = "done"
+section = "v0.2.0-the-3-laws"
+group = "File Ignores"
+test = "tests/unit_analysis.rs::test_slopchop_ignore_html"
+order = 18
+
+[[tasks]]
+id = "header-detection-slopchopfile"
+text = "Header detection (#__SLOPCHOP_FILE__#)"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Protocol Format Extraction"
+test = "tests/integration_apply.rs::test_extract_single_file"
+order = 0
+
+[[tasks]]
+id = "footer-detection-slopchopend"
+text = "Footer detection (#__SLOPCHOP_END__#)"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Protocol Format Extraction"
+test = "tests/integration_apply.rs::test_extract_single_file"
+order = 1
+
+[[tasks]]
+id = "path-extraction-from-header"
+text = "Path extraction from header"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Protocol Format Extraction"
+test = "tests/integration_apply.rs::test_extract_single_file"
+order = 2
+
+[[tasks]]
+id = "content-extraction"
+text = "Content extraction"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Protocol Format Extraction"
+test = "tests/integration_apply.rs::test_extract_single_file"
+order = 3
+
+[[tasks]]
+id = "multiple-file-extraction"
+text = "Multiple file extraction"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Protocol Format Extraction"
+test = "tests/integration_apply.rs::test_extract_multiple_files"
+order = 4
+
+[[tasks]]
+id = "manifest-block-skipping"
+text = "MANIFEST block skipping"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Protocol Format Extraction"
+test = "tests/integration_apply.rs::test_extract_skips_manifest"
+order = 5
+
+[[tasks]]
+id = "plan-block-extraction"
+text = "PLAN block extraction"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Protocol Format Extraction"
+test = "tests/integration_apply.rs::test_extract_plan"
+order = 6
+
+[[tasks]]
+id = "malformed-block-handling"
+text = "Malformed block handling"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Protocol Format Extraction"
+test = "tests/unit_extractor.rs::test_malformed_block_skipped"
+order = 7
+
+[[tasks]]
+id = "manifest-block-detection"
+text = "Manifest block detection"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Manifest Parsing"
+test = "tests/unit_manifest.rs::test_parse_manifest"
+order = 8
+
+[[tasks]]
+id = "new-marker-detection"
+text = "[NEW] marker detection"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Manifest Parsing"
+test = "tests/unit_manifest.rs::test_new_marker"
+order = 9
+
+[[tasks]]
+id = "delete-marker-detection"
+text = "[DELETE] marker detection"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Manifest Parsing"
+test = "tests/unit_manifest.rs::test_delete_marker"
+order = 10
+
+[[tasks]]
+id = "default-update-operation"
+text = "Default Update operation"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Manifest Parsing"
+test = "tests/unit_manifest.rs::test_default_update"
+order = 11
+
+[[tasks]]
+id = "parent-directory-creation"
+text = "Parent directory creation"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "File Writing"
+test = "tests/unit_writer.rs::test_creates_parent_dirs"
+order = 12
+
+[[tasks]]
+id = "file-content-writing"
+text = "File content writing"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "File Writing"
+test = "tests/unit_writer.rs::test_writes_content"
+order = 13
+
+[[tasks]]
+id = "delete-operation"
+text = "Delete operation"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "File Writing"
+test = "tests/unit_writer.rs::test_delete_file"
+order = 14
+
+[[tasks]]
+id = "written-files-tracking"
+text = "Written files tracking"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "File Writing"
+test = "tests/unit_writer.rs::test_tracks_written"
+order = 15
+
+[[tasks]]
+id = "backup-directory-creation"
+text = "Backup directory creation"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Backup System"
+test = "tests/integration_backup.rs::test_backup_dir_created"
+order = 16
+
+[[tasks]]
+id = "timestamp-subfolder"
+text = "Timestamp subfolder"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Backup System"
+test = "tests/integration_backup.rs::test_timestamp_folder"
+order = 17
+
+[[tasks]]
+id = "existing-file-backup"
+text = "Existing file backup"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Backup System"
+test = "tests/integration_backup.rs::test_existing_backed_up"
+order = 18
+
+[[tasks]]
+id = "new-file-skip-no-backup-needed"
+text = "New file skip (no backup needed)"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Backup System"
+test = "tests/integration_backup.rs::test_new_file_no_backup"
+order = 19
+
+[[tasks]]
+id = "backup-path-structure-preserved"
+text = "Backup path structure preserved"
+status = "done"
+section = "v0.3.0-apply-system"
+group = "Backup System"
+test = "tests/integration_backup.rs::test_path_structure"
+order = 20
+
+[[tasks]]
+id = "block-..-traversal"
+text = "Block ../ traversal"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Traversal"
+test = "tests/integration_apply.rs::test_path_safety_blocks_traversal"
+order = 0
+
+[[tasks]]
+id = "block-..-prefix"
+text = "Block .. prefix"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Traversal"
+test = "tests/security_validation.rs::test_traversal_blocked"
+order = 1
+
+[[tasks]]
+id = "block-unix-absolute"
+text = "Block Unix absolute (/)"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Absolute"
+test = "tests/integration_apply.rs::test_path_safety_blocks_absolute"
+order = 2
+
+[[tasks]]
+id = "block-windows-absolute-c"
+text = "Block Windows absolute (C:)"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Absolute"
+test = "tests/security_validation.rs::test_absolute_paths_blocked"
+order = 3
+
+[[tasks]]
+id = "block-.git"
+text = "Block .git/"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Sensitive"
+test = "tests/integration_apply.rs::test_path_safety_blocks_git"
+order = 4
+
+[[tasks]]
+id = "block-.env"
+text = "Block .env"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Sensitive"
+test = "tests/security_validation.rs::test_sensitive_paths_blocked"
+order = 5
+
+[[tasks]]
+id = "block-.ssh"
+text = "Block .ssh/"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Sensitive"
+test = "tests/security_validation.rs::test_sensitive_paths_blocked"
+order = 6
+
+[[tasks]]
+id = "block-.aws"
+text = "Block .aws/"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Sensitive"
+test = "tests/security_validation.rs::test_sensitive_paths_blocked"
+order = 7
+
+[[tasks]]
+id = "block-.gnupg"
+text = "Block .gnupg/"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Sensitive"
+test = "tests/unit_validator.rs::test_gnupg_blocked"
+order = 8
+
+[[tasks]]
+id = "block-idrsa"
+text = "Block id_rsa"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Sensitive"
+test = "tests/unit_validator.rs::test_id_rsa_blocked"
+order = 9
+
+[[tasks]]
+id = "block-credentials"
+text = "Block credentials"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Sensitive"
+test = "tests/unit_validator.rs::test_credentials_blocked"
+order = 10
+
+[[tasks]]
+id = "block-backup-directory"
+text = "Block backup directory"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Sensitive"
+test = "tests/unit_validator.rs::test_backup_dir_blocked"
+order = 11
+
+[[tasks]]
+id = "block-hidden-files-."
+text = "Block hidden files (.*)"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Hidden Files"
+test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
+order = 12
+
+[[tasks]]
+id = "allow-.-and-..-segments"
+text = "Allow . and .. segments"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Hidden Files"
+test = "tests/security_validation.rs::test_valid_paths_allowed"
+order = 13
+
+[[tasks]]
+id = "block-roadmap.md-rewrite"
+text = "Block ROADMAP.md rewrite"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Protected Files"
+test = "tests/protection_roadmap.rs::test_roadmap_rewrite_is_blocked"
+order = 14
+
+[[tasks]]
+id = "case-insensitive-protection"
+text = "Case-insensitive protection"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Path Safety — Protected Files"
+test = "tests/protection_roadmap.rs::test_roadmap_rewrite_blocked_case_insensitive"
+order = 15
+
+[[tasks]]
+id = "pattern-..."
+text = "Pattern: // ..."
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Truncation Detection"
+test = "tests/integration_apply.rs::test_truncation_detects_ellipsis_comment"
+order = 16
+
+[[tasks]]
+id = "pattern-..."
+text = "Pattern: /* ... */"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Truncation Detection"
+test = "tests/unit_validator.rs::test_block_comment_ellipsis"
+order = 17
+
+[[tasks]]
+id = "pattern-..."
+text = "Pattern: # ..."
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Truncation Detection"
+test = "tests/unit_validator.rs::test_hash_ellipsis"
+order = 18
+
+[[tasks]]
+id = "pattern-rest-of-phrases"
+text = 'Pattern: "rest of" phrases'
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Truncation Detection"
+test = "tests/unit_validator.rs::test_lazy_phrase_rest_of"
+order = 19
+
+[[tasks]]
+id = "pattern-remaining-phrases"
+text = 'Pattern: "remaining" phrases'
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Truncation Detection"
+test = "tests/unit_validator.rs::test_lazy_phrase_remaining"
+order = 20
+
+[[tasks]]
+id = "slopchopignore-bypass"
+text = "slopchop:ignore bypass"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Truncation Detection"
+test = "tests/integration_apply.rs::test_truncation_allows_slopchop_ignore"
+order = 21
+
+[[tasks]]
+id = "empty-file-rejection"
+text = "Empty file rejection"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Truncation Detection"
+test = "tests/integration_apply.rs::test_truncation_detects_empty_file"
+order = 22
+
+[[tasks]]
+id = "line-number-in-error"
+text = "Line number in error"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Truncation Detection"
+test = "tests/unit_validator.rs::test_line_number_reported"
+order = 23
+
+[[tasks]]
+id = "normal-paths-accepted"
+text = "Normal paths accepted"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Valid Paths"
+test = "tests/integration_apply.rs::test_path_safety_allows_valid"
+order = 24
+
+[[tasks]]
+id = "nested-src-paths-accepted"
+text = "Nested src paths accepted"
+status = "done"
+section = "v0.4.0-safety-validation"
+group = "Valid Paths"
+test = "tests/security_validation.rs::test_valid_paths_allowed"
+order = 25
+
+[[tasks]]
+id = "file-discovery-integration"
+text = "File discovery integration"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Core"
+test = "tests/integration_pack.rs::test_nabla_delimiters_are_unique"
+order = 0
+
+[[tasks]]
+id = "protocol-format-output"
+text = "Protocol format output"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Core"
+test = "tests/integration_pack.rs::test_nabla_format_structure"
+order = 1
+
+[[tasks]]
+id = "token-count-display"
+text = "Token count display"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Core"
+test = "tests/unit_pack.rs::test_token_count_shown"
+order = 2
+
+[[tasks]]
+id = "file-write-to-context.txt"
+text = "File write to context.txt"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Core"
+test = "tests/unit_pack.rs::test_writes_context_file"
+order = 3
+
+[[tasks]]
+id = "--stdout-output"
+text = "--stdout output"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Options"
+test = "tests/unit_pack.rs::test_stdout_option"
+order = 4
+
+[[tasks]]
+id = "--copy-to-clipboard"
+text = "--copy to clipboard"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Options"
+test = "tests/unit_pack.rs::test_copy_option"
+order = 5
+
+[[tasks]]
+id = "--noprompt-excludes-header"
+text = "--noprompt excludes header"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Options"
+test = "tests/unit_pack.rs::test_noprompt"
+order = 6
+
+[[tasks]]
+id = "--git-only-mode"
+text = "--git-only mode"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Options"
+test = "tests/unit_pack.rs::test_git_only"
+order = 7
+
+[[tasks]]
+id = "--no-git-mode"
+text = "--no-git mode"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Options"
+test = "tests/unit_pack.rs::test_no_git"
+order = 8
+
+[[tasks]]
+id = "--code-only-mode"
+text = "--code-only mode"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Options"
+test = "tests/unit_pack.rs::test_code_only"
+order = 9
+
+[[tasks]]
+id = "--verbose-progress-no-test-output-only"
+text = "--verbose progress** [no-test] *(output only)*"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Pack Options"
+order = 10
+
+[[tasks]]
+id = "system-prompt-header"
+text = "System prompt header"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Prompt Generation"
+test = "tests/integration_pack.rs::test_prompt_includes_laws"
+order = 11
+
+[[tasks]]
+id = "law-of-atomicity-in-prompt"
+text = "Law of Atomicity in prompt"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Prompt Generation"
+test = "tests/integration_pack.rs::test_prompt_includes_limits"
+order = 12
+
+[[tasks]]
+id = "law-of-complexity-in-prompt"
+text = "Law of Complexity in prompt"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Prompt Generation"
+test = "tests/integration_pack.rs::test_prompt_includes_limits"
+order = 13
+
+[[tasks]]
+id = "protocol-format-instructions"
+text = "Protocol format instructions"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Prompt Generation"
+test = "tests/integration_pack.rs::test_prompt_includes_nabla_instructions"
+order = 14
+
+[[tasks]]
+id = "footer-reminder"
+text = "Footer reminder"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Prompt Generation"
+test = "tests/integration_pack.rs::test_reminder_is_concise"
+order = 15
+
+[[tasks]]
+id = "violation-injection"
+text = "Violation injection"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Prompt Generation"
+test = "tests/unit_pack_violations.rs::test_violations_injected"
+order = 16
+
+[[tasks]]
+id = "rust-body-..."
+text = "Rust body → { ... }"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Skeleton System"
+test = "tests/integration_skeleton.rs::test_clean_rust_basic"
+order = 17
+
+[[tasks]]
+id = "rust-nested-functions"
+text = "Rust nested functions"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Skeleton System"
+test = "tests/integration_skeleton.rs::test_clean_rust_nested"
+order = 18
+
+[[tasks]]
+id = "python-body-..."
+text = "Python body → ..."
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Skeleton System"
+test = "tests/integration_skeleton.rs::test_clean_python"
+order = 19
+
+[[tasks]]
+id = "typescriptjs-body"
+text = "TypeScript/JS body"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Skeleton System"
+test = "tests/integration_skeleton.rs::test_clean_typescript"
+order = 20
+
+[[tasks]]
+id = "arrow-function-support"
+text = "Arrow function support"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Skeleton System"
+test = "tests/integration_skeleton.rs::test_clean_typescript"
+order = 21
+
+[[tasks]]
+id = "unsupported-passthrough"
+text = "Unsupported passthrough"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Skeleton System"
+test = "tests/integration_skeleton.rs::test_clean_unsupported_extension"
+order = 22
+
+[[tasks]]
+id = "--skeleton-all-files"
+text = "--skeleton all files"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Focus Mode"
+test = "tests/integration_pack.rs::test_pack_skeleton_integration"
+order = 23
+
+[[tasks]]
+id = "--target-focus-mode"
+text = "--target focus mode"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Focus Mode"
+test = "tests/integration_pack.rs::test_smart_context_focus_mode"
+order = 24
+
+[[tasks]]
+id = "target-full-rest-skeleton"
+text = "Target full, rest skeleton"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "Focus Mode"
+test = "tests/integration_pack.rs::test_smart_context_focus_mode"
+order = 25
+
+[[tasks]]
+id = "copy-file-path-for-attachment-no-test-platform-specific-side-effect"
+text = "Copy file path for attachment** [no-test] *(platform-specific side effect)*"
+status = "done"
+section = "v0.5.0-pack-context"
+group = "File Path Clipboard"
+order = 26
+
+[[tasks]]
+id = "title-extraction-title"
+text = "Title extraction (# Title)"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap Parsing"
+test = "tests/integration_roadmap.rs::test_parse_simple_roadmap"
+order = 0
+
+[[tasks]]
+id = "section-heading-detection"
+text = "Section heading detection"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap Parsing"
+test = "tests/integration_roadmap.rs::test_parse_simple_roadmap"
+order = 1
+
+[[tasks]]
+id = "task-checkbox-detection"
+text = "Task checkbox detection"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap Parsing"
+test = "tests/integration_roadmap.rs::test_parse_extracts_tasks"
+order = 2
+
+[[tasks]]
+id = "task-status-pending"
+text = "Task status: pending"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap Parsing"
+test = "tests/integration_roadmap.rs::test_parse_extracts_tasks"
+order = 3
+
+[[tasks]]
+id = "task-status-complete"
+text = "Task status: complete"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap Parsing"
+test = "tests/integration_roadmap.rs::test_parse_extracts_tasks"
+order = 4
+
+[[tasks]]
+id = "stats-calculation"
+text = "Stats calculation"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap Parsing"
+test = "tests/integration_roadmap.rs::test_stats_are_correct"
+order = 5
+
+[[tasks]]
+id = "test-anchor-extraction"
+text = "Test anchor extraction"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap Parsing"
+test = "tests/unit_roadmap.rs::test_anchor_extraction"
+order = 6
+
+[[tasks]]
+id = "task-path-generation"
+text = "Task path generation"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap Parsing"
+test = "tests/integration_roadmap.rs::test_find_task_by_path"
+order = 7
+
+[[tasks]]
+id = "compact-state-display"
+text = "Compact state display"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap Parsing"
+test = "tests/integration_roadmap.rs::test_compact_state_format"
+order = 8
+
+[[tasks]]
+id = "lowercase-conversion"
+text = "Lowercase conversion"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Slugification"
+test = "tests/integration_roadmap.rs::test_slugify_basic"
+order = 9
+
+[[tasks]]
+id = "special-char-to-dash"
+text = "Special char to dash"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Slugification"
+test = "tests/integration_roadmap.rs::test_slugify_special_chars"
+order = 10
+
+[[tasks]]
+id = "number-preservation"
+text = "Number preservation"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Slugification"
+test = "tests/integration_roadmap.rs::test_slugify_preserves_numbers"
+order = 11
+
+[[tasks]]
+id = "roadmap-block-detection"
+text = "===ROADMAP=== block detection"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Command Parsing"
+test = "tests/integration_roadmap.rs::test_parse_extracts_from_larger_text"
+order = 12
+
+[[tasks]]
+id = "check-command"
+text = "CHECK command"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Command Parsing"
+test = "tests/integration_roadmap.rs::test_parse_check_command"
+order = 13
+
+[[tasks]]
+id = "uncheck-command"
+text = "UNCHECK command"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Command Parsing"
+test = "tests/integration_roadmap.rs::test_parse_uncheck_command"
+order = 14
+
+[[tasks]]
+id = "add-command"
+text = "ADD command"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Command Parsing"
+test = "tests/integration_roadmap.rs::test_parse_multiple_commands"
+order = 15
+
+[[tasks]]
+id = "add-with-after"
+text = "ADD with AFTER"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Command Parsing"
+test = "tests/integration_roadmap.rs::test_parse_add_with_after"
+order = 16
+
+[[tasks]]
+id = "update-command"
+text = "UPDATE command"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Command Parsing"
+test = "tests/unit_roadmap.rs::test_update_command"
+order = 17
+
+[[tasks]]
+id = "note-command"
+text = "NOTE command"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Command Parsing"
+test = "tests/unit_roadmap.rs::test_note_command"
+order = 18
+
+[[tasks]]
+id = "move-command"
+text = "MOVE command"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Command Parsing"
+test = "tests/unit_roadmap.rs::test_move_command"
+order = 19
+
+[[tasks]]
+id = "comment-skipping"
+text = "Comment skipping"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Command Parsing"
+test = "tests/integration_roadmap.rs::test_parse_ignores_comments"
+order = 20
+
+[[tasks]]
+id = "summary-generation"
+text = "Summary generation"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Command Parsing"
+test = "tests/integration_roadmap.rs::test_summary_format"
+order = 21
+
+[[tasks]]
+id = "roadmap-init"
+text = "roadmap init"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap CLI"
+test = "tests/cli_roadmap.rs::test_init_creates_file"
+order = 22
+
+[[tasks]]
+id = "roadmap-prompt"
+text = "roadmap prompt"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap CLI"
+test = "tests/cli_roadmap.rs::test_prompt_generates"
+order = 23
+
+[[tasks]]
+id = "roadmap-apply"
+text = "roadmap apply"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap CLI"
+test = "tests/cli_roadmap.rs::test_apply_from_clipboard"
+order = 24
+
+[[tasks]]
+id = "roadmap-show"
+text = "roadmap show"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap CLI"
+test = "tests/cli_roadmap.rs::test_show_tree"
+order = 25
+
+[[tasks]]
+id = "roadmap-tasks"
+text = "roadmap tasks"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap CLI"
+test = "tests/cli_roadmap.rs::test_tasks_list"
+order = 26
+
+[[tasks]]
+id = "roadmap-tasks---pending"
+text = "roadmap tasks --pending"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap CLI"
+test = "tests/cli_roadmap.rs::test_tasks_pending_filter"
+order = 27
+
+[[tasks]]
+id = "roadmap-tasks---complete"
+text = "roadmap tasks --complete"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap CLI"
+test = "tests/cli_roadmap.rs::test_tasks_complete_filter"
+order = 28
+
+[[tasks]]
+id = "roadmap-audit"
+text = "roadmap audit"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Roadmap CLI"
+test = "tests/cli_roadmap.rs::test_audit_runs"
+order = 29
+
+[[tasks]]
+id = "detect-roadmap-in-apply"
+text = "Detect ===ROADMAP=== in apply"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Unified Apply"
+test = "tests/integration_apply.rs::test_unified_apply_roadmap"
+order = 30
+
+[[tasks]]
+id = "apply-roadmap-files-together"
+text = "Apply roadmap + files together"
+status = "done"
+section = "v0.6.0-roadmap-system"
+group = "Unified Apply"
+test = "tests/integration_apply.rs::test_unified_apply_combined"
+order = 31
+
+[[tasks]]
+id = "clean-check-output-failures-only"
+text = "Clean check output (failures only)"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+order = 0
+
+[[tasks]]
+id = "empty-task-id-filtering"
+text = "Empty task ID filtering"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Parser Hardening"
+test = "tests/unit_parser.rs::test_empty_id_skipped"
+order = 1
+
+[[tasks]]
+id = "task-id-collision-detection"
+text = "Task ID collision detection"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Parser Hardening"
+test = "tests/unit_parser.rs::test_id_collision_resolved"
+order = 2
+
+[[tasks]]
+id = "anchor-based-task-matching"
+text = "Anchor-based task matching"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Parser Hardening"
+test = "tests/unit_parser.rs::test_anchor_id_extraction"
+order = 3
+
+[[tasks]]
+id = "smart-update-inference-vs-deleteadd"
+text = "Smart UPDATE inference (vs DELETE+ADD)"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Parser Hardening"
+test = "tests/unit_diff.rs::test_text_change_is_update"
+order = 4
+
+[[tasks]]
+id = "scan-completed-tasks"
+text = "Scan completed tasks"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Audit System"
+test = "tests/integration_audit.rs::test_scans_completed_only"
+order = 5
+
+[[tasks]]
+id = "no-test-skip"
+text = "[no-test] skip"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Audit System"
+test = "tests/integration_audit.rs::test_no_test_skipped"
+order = 6
+
+[[tasks]]
+id = "explicit-anchor-verification"
+text = "Explicit anchor verification"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Audit System"
+test = "tests/integration_audit.rs::test_explicit_anchor_verified"
+order = 7
+
+[[tasks]]
+id = "missing-test-file-detection"
+text = "Missing test file detection"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Audit System"
+test = "tests/integration_audit.rs::test_missing_file_detected"
+order = 8
+
+[[tasks]]
+id = "missing-test-function-detection"
+text = "Missing test function detection"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Audit System"
+test = "tests/unit_audit.rs::test_missing_function_detection"
+order = 9
+
+[[tasks]]
+id = "test-execution-verification-cargo-test"
+text = "Test execution verification (cargo test)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Audit System"
+order = 10
+
+[[tasks]]
+id = "exit-code-1-on-any-failure-no-test-cli-exit-behavior"
+text = "Exit code 1 on any failure** [no-test] *(CLI exit behavior)*"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Audit System"
+order = 11
+
+[[tasks]]
+id = "--strict-mode-all-must-pass-no-test-cli-flag"
+text = "--strict mode (all must pass)** [no-test] *(CLI flag)*"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Audit System"
+order = 12
+
+[[tasks]]
+id = "slopchop-passes-own-rules"
+text = "SlopChop passes own rules"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Self-Hosting"
+test = "tests/integration_self_host.rs::test_slopchop_passes_own_rules"
+order = 13
+
+[[tasks]]
+id = "feature-id-test-function-mapping"
+text = "Feature ID → test function mapping"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Test Naming Convention"
+order = 14
+
+[[tasks]]
+id = "audit-validates-naming-convention"
+text = "Audit validates naming convention"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Test Naming Convention"
+test = "tests/unit_audit.rs::test_naming_convention_mismatch"
+order = 15
+
+[[tasks]]
+id = "enforce-test-first-registration-during-ai-sessions"
+text = "Enforce test-first registration during AI sessions"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Test Naming Convention"
+order = 16
+
+[[tasks]]
+id = "block-feature-completion-without-matching-test-file"
+text = "Block feature completion without matching test file"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Test Naming Convention"
+order = 17
+
+[[tasks]]
+id = "slopchop-register-feature-command-pre-declares-intent"
+text = "slopchop register <feature> command (pre-declares intent)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Test Naming Convention"
+order = 18
+
+[[tasks]]
+id = "slopchop-verify-session-command-audit-current-work"
+text = "slopchop verify-session command (audit current work)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Test Naming Convention"
+order = 19
+
+[[tasks]]
+id = "incremental-roadmap-sync-update-after-each-file"
+text = "Incremental roadmap sync (update after each file)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Test Naming Convention"
+order = 20
+
+[[tasks]]
+id = "session-manifest-tracking-files-touched-this-session"
+text = "Session manifest tracking (files touched this session)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Test Naming Convention"
+order = 21
+
+[[tasks]]
+id = "section-command-create-version-headers"
+text = "SECTION command (create version headers)"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_cmd.rs::test_section_command"
+order = 22
+
+[[tasks]]
+id = "subsection-command-create-headers"
+text = "SUBSECTION command (create ### headers)"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_cmd.rs::test_subsection_command"
+order = 23
+
+[[tasks]]
+id = "chain-command-sequential-adds"
+text = "CHAIN command (sequential adds)"
+status = "done"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_cmd.rs::test_chain_command"
+order = 24
+
+[[tasks]]
+id = "after-previous-keyword"
+text = "AFTER PREVIOUS keyword"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_cmd.rs::test_after_previous"
+order = 25
+
+[[tasks]]
+id = "after-text-exact-match"
+text = 'AFTER TEXT "exact" match'
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_cmd.rs::test_after_text_exact"
+order = 26
+
+[[tasks]]
+id = "after-line-n-match"
+text = "AFTER LINE N match"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_cmd.rs::test_after_line_number"
+order = 27
+
+[[tasks]]
+id = "in-sectionsubsection-location"
+text = 'IN "section/subsection" location'
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_cmd.rs::test_in_location"
+order = 28
+
+[[tasks]]
+id = "slug-echo-on-add-show-generated-slug"
+text = "Slug echo on ADD (show generated slug)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_cmd.rs::test_slug_echo"
+order = 29
+
+[[tasks]]
+id = "pre-validation-all-after-targets-exist"
+text = "Pre-validation: all AFTER targets exist"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_validate.rs::test_after_target_exists"
+order = 30
+
+[[tasks]]
+id = "pre-validation-no-slug-collisions"
+text = "Pre-validation: no slug collisions"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_validate.rs::test_slug_collision"
+order = 31
+
+[[tasks]]
+id = "pre-validation-no-circular-after-chains"
+text = "Pre-validation: no circular AFTER chains"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_validate.rs::test_circular_detection"
+order = 32
+
+[[tasks]]
+id = "batch-dependency-resolution-topological-sort"
+text = "Batch dependency resolution (topological sort)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_validate.rs::test_batch_topo_sort"
+order = 33
+
+[[tasks]]
+id = "fuzzy-match-suggestions-on-after-miss"
+text = "Fuzzy match suggestions on AFTER miss"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_validate.rs::test_fuzzy_suggest"
+order = 34
+
+[[tasks]]
+id = "dry-run-mode---dry-run-flag"
+text = "Dry-run mode (--dry-run flag)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/cli_roadmap.rs::test_apply_dry_run"
+order = 35
+
+[[tasks]]
+id = "atomic-file-write-temp-rename"
+text = "Atomic file write (temp → rename)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_write.rs::test_atomic_write"
+order = 36
+
+[[tasks]]
+id = "backup-creation-.md.bak"
+text = "Backup creation (.md.bak)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/unit_roadmap_write.rs::test_backup_created"
+order = 37
+
+[[tasks]]
+id = "all-or-nothing-execution-rollback-on-error"
+text = "All-or-nothing execution (rollback on error)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/integration_roadmap.rs::test_rollback_on_error"
+order = 38
+
+[[tasks]]
+id = "verbose-plan-output"
+text = "Verbose plan output"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Roadmap Hardening"
+test = "tests/cli_roadmap.rs::test_verbose_plan"
+order = 39
+
+[[tasks]]
+id = "slopchop-apply---force-flag"
+text = "slopchop apply --force flag"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Escape Hatches"
+test = "tests/cli_apply.rs::test_force_flag"
+order = 40
+
+[[tasks]]
+id = "quarantine-mode-slopchopquarantine-marker"
+text = "Quarantine mode (// slopchop:quarantine marker)"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Escape Hatches"
+test = "tests/integration_apply.rs::test_quarantine_marker"
+order = 41
+
+[[tasks]]
+id = "quarantine-report-in-slopchop-scan"
+text = "Quarantine report in slopchop scan"
+status = "pending"
+section = "v0.7.0-test-traceability-current"
+group = "Escape Hatches"
+test = "tests/integration_core.rs::test_quarantine_report"
+order = 42
+
+[[tasks]]
+id = "slopchop-watch-command"
+text = "slopchop watch command"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Daemon Core"
+test = "tests/cli_watch.rs::test_watch_starts"
+order = 0
+
+[[tasks]]
+id = "background-process-management"
+text = "Background process management"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Daemon Core"
+test = "tests/unit_daemon.rs::test_daemon_lifecycle"
+order = 1
+
+[[tasks]]
+id = "graceful-shutdown-sigterm"
+text = "Graceful shutdown (SIGTERM)"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Daemon Core"
+test = "tests/unit_daemon.rs::test_graceful_shutdown"
+order = 2
+
+[[tasks]]
+id = "single-instance-enforcement"
+text = "Single instance enforcement"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Daemon Core"
+test = "tests/unit_daemon.rs::test_single_instance"
+order = 3
+
+[[tasks]]
+id = "clipboard-polling-loop"
+text = "Clipboard polling loop"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Clipboard Monitoring"
+test = "tests/unit_clipboard.rs::test_polling"
+order = 4
+
+[[tasks]]
+id = "protocol-detection-in-clipboard"
+text = "Protocol detection in clipboard"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Clipboard Monitoring"
+test = "tests/unit_clipboard.rs::test_protocol_detection"
+order = 5
+
+[[tasks]]
+id = "deduplication-ignore-same-content"
+text = "Deduplication (ignore same content)"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Clipboard Monitoring"
+test = "tests/unit_clipboard.rs::test_dedup"
+order = 6
+
+[[tasks]]
+id = "stage-content-for-apply"
+text = "Stage content for apply"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Clipboard Monitoring"
+test = "tests/unit_daemon.rs::test_staging"
+order = 7
+
+[[tasks]]
+id = "register-global-hotkey-default-l-ctrlshiftl"
+text = "Register global hotkey (default ⌘⇧L / Ctrl+Shift+L)"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Global Hotkey"
+test = "tests/unit_hotkey.rs::test_register"
+order = 8
+
+[[tasks]]
+id = "configurable-hotkey-binding"
+text = "Configurable hotkey binding"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Global Hotkey"
+test = "tests/unit_hotkey.rs::test_custom_binding"
+order = 9
+
+[[tasks]]
+id = "hotkey-triggers-apply"
+text = "Hotkey triggers apply"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Global Hotkey"
+test = "tests/unit_hotkey.rs::test_triggers_apply"
+order = 10
+
+[[tasks]]
+id = "ready-notification-on-protocol-detect"
+text = '"Ready" notification on protocol detect'
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "System Notifications"
+test = "tests/unit_notify.rs::test_ready_notification"
+order = 11
+
+[[tasks]]
+id = "success-notification-with-file-count"
+text = "Success notification with file count"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "System Notifications"
+test = "tests/unit_notify.rs::test_success_notification"
+order = 12
+
+[[tasks]]
+id = "failure-notification-with-error-summary"
+text = "Failure notification with error summary"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "System Notifications"
+test = "tests/unit_notify.rs::test_failure_notification"
+order = 13
+
+[[tasks]]
+id = "cross-platform-notification-linuxmacoswindows"
+text = "Cross-platform notification (Linux/macOS/Windows)"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "System Notifications"
+test = "tests/unit_notify.rs::test_cross_platform"
+order = 14
+
+[[tasks]]
+id = "watch-section-in-slopchop.toml"
+text = "[watch] section in slopchop.toml"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Configuration"
+test = "tests/unit_config.rs::test_watch_config"
+order = 15
+
+[[tasks]]
+id = "hotkey-option"
+text = "hotkey option"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Configuration"
+test = "tests/unit_config.rs::test_hotkey_option"
+order = 16
+
+[[tasks]]
+id = "autocommit-option"
+text = "auto_commit option"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Configuration"
+test = "tests/unit_config.rs::test_auto_commit_option"
+order = 17
+
+[[tasks]]
+id = "notify-option-enabledisable"
+text = "notify option (enable/disable)"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "Configuration"
+test = "tests/unit_config.rs::test_notify_option"
+order = 18
+
+[[tasks]]
+id = "rust-usemod-extraction"
+text = "Rust use/mod extraction"
+status = "done"
+section = "v0.8.0-dependency-graph"
+group = "Import Extraction"
+test = "src/graph/imports.rs::test_rust_imports"
+order = 19
+
+[[tasks]]
+id = "rust-path-resolution"
+text = "Rust path resolution"
+status = "done"
+section = "v0.8.0-dependency-graph"
+group = "Import Extraction"
+test = "src/graph/resolver.rs::test_resolve_rust_crate"
+order = 20
+
+[[tasks]]
+id = "python-import-extraction"
+text = "Python import extraction"
+status = "done"
+section = "v0.8.0-dependency-graph"
+group = "Import Extraction"
+test = "tests/unit_graph.rs::test_python_import"
+order = 21
+
+[[tasks]]
+id = "typescript-import-extraction"
+text = "TypeScript import extraction"
+status = "done"
+section = "v0.8.0-dependency-graph"
+group = "Import Extraction"
+test = "tests/unit_graph.rs::test_ts_import"
+order = 22
+
+[[tasks]]
+id = "graph-nodeedge-creation"
+text = "Graph node/edge creation"
+status = "done"
+section = "v0.8.0-dependency-graph"
+group = "Graph Construction"
+test = "tests/unit_graph_build.rs::test_node_creation"
+order = 23
+
+[[tasks]]
+id = "reverse-index-construction"
+text = "Reverse index construction"
+status = "done"
+section = "v0.8.0-dependency-graph"
+group = "Graph Construction"
+test = "tests/unit_graph_build.rs::test_reverse_index"
+order = 24
+
+[[tasks]]
+id = "unified-dashboard-single-entry-point-slopchop-dashboard"
+text = "Unified Dashboard** (Single entry point `slopchop dashboard`)"
+status = "done"
+section = "v0.8.0-dependency-graph"
+group = "TUI Mission Control"
+order = 25
+
+[[tasks]]
+id = "check-runner-live-testlint-output-in-pane"
+text = "Check Runner** (Live test/lint output in pane)"
+status = "done"
+section = "v0.8.0-dependency-graph"
+group = "TUI Mission Control"
+order = 26
+
+[[tasks]]
+id = "roadmap-explorer-navigate-and-check-tasks-interactively"
+text = "Roadmap Explorer** (Navigate and check tasks interactively)"
+status = "done"
+section = "v0.8.0-dependency-graph"
+group = "TUI Mission Control"
+order = 27
+
+[[tasks]]
+id = "log-stream-replace-stdout-scrolling"
+text = "Log Stream** (Replace stdout scrolling)"
+status = "done"
+section = "v0.8.0-dependency-graph"
+group = "TUI Mission Control"
+order = 28
+
+[[tasks]]
+id = "view-filters-pendingdoneall"
+text = "View Filters** (Pending/Done/All)"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "TUI Mission Control"
+order = 29
+
+[[tasks]]
+id = "copy-view-to-clipboard"
+text = "Copy View to Clipboard"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "TUI Mission Control"
+order = 30
+
+[[tasks]]
+id = "mouse-support-clickable-buttons"
+text = "Mouse Support** (Clickable Buttons)"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "TUI Mission Control"
+order = 31
+
+[[tasks]]
+id = "interactive-staging-workflow-apply---diff---confirm"
+text = "Interactive Staging Workflow** (Apply -> Diff -> Confirm)"
+status = "pending"
+section = "v0.8.0-dependency-graph"
+group = "TUI Mission Control"
+order = 32
+
+[[tasks]]
+id = "slopchop-map-basic-output"
+text = "slopchop map basic output"
+status = "done"
+section = "v0.9.0-smart-context"
+group = "SlopChop Map Command"
+test = "tests/cli_map.rs::test_map_basic"
+order = 0
+
+[[tasks]]
+id = "directory-tree-with-file-counts"
+text = "Directory tree with file counts"
+status = "done"
+section = "v0.9.0-smart-context"
+group = "SlopChop Map Command"
+test = "tests/cli_map.rs::test_map_tree"
+order = 1
+
+[[tasks]]
+id = "cluster-summary-display"
+text = "Cluster summary display"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "SlopChop Map Command"
+test = "tests/cli_map.rs::test_map_clusters"
+order = 2
+
+[[tasks]]
+id = "--deps-flag-show-dependency-arrows"
+text = "--deps flag (show dependency arrows)"
+status = "done"
+section = "v0.9.0-smart-context"
+group = "SlopChop Map Command"
+test = "tests/cli_map.rs::test_map_deps"
+order = 3
+
+[[tasks]]
+id = "--stats-flag-token-counts-per-cluster"
+text = "--stats flag (token counts per cluster)"
+status = "done"
+section = "v0.9.0-smart-context"
+group = "SlopChop Map Command"
+test = "tests/cli_map.rs::test_map_stats"
+order = 4
+
+[[tasks]]
+id = "--json-flag-machine-readable-map"
+text = "--json flag (machine-readable map)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "SlopChop Map Command"
+test = "tests/cli_map.rs::test_map_json"
+order = 5
+
+[[tasks]]
+id = "module-description-extraction-or-docstring"
+text = "Module description extraction (//! or docstring)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "SlopChop Map Command"
+test = "tests/cli_map.rs::test_map_docs"
+order = 6
+
+[[tasks]]
+id = "entry-point-detection-main.rs-lib.rs-index.ts"
+text = "Entry point detection (main.rs, lib.rs, index.ts)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "SlopChop Map Command"
+test = "tests/cli_map.rs::test_entry_point"
+order = 7
+
+[[tasks]]
+id = "slopchop-pack---from-errors-flag"
+text = "slopchop pack --from-errors flag"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/integration_error_pack.rs::test_from_errors_flag"
+order = 8
+
+[[tasks]]
+id = "cargorustc-error-parsing"
+text = "Cargo/rustc error parsing"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/unit_error_parse.rs::test_cargo_errors"
+order = 9
+
+[[tasks]]
+id = "clippy-warning-parsing"
+text = "Clippy warning parsing"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/unit_error_parse.rs::test_clippy_warnings"
+order = 10
+
+[[tasks]]
+id = "typescripttsc-error-parsing"
+text = "TypeScript/tsc error parsing"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/unit_error_parse.rs::test_tsc_errors"
+order = 11
+
+[[tasks]]
+id = "python-traceback-parsing"
+text = "Python traceback parsing"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/unit_error_parse.rs::test_python_traceback"
+order = 12
+
+[[tasks]]
+id = "eslint-output-parsing"
+text = "ESLint output parsing"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/unit_error_parse.rs::test_eslint_output"
+order = 13
+
+[[tasks]]
+id = "file-path-extraction-from-errors"
+text = "File path extraction from errors"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/unit_error_parse.rs::test_path_extraction"
+order = 14
+
+[[tasks]]
+id = "line-number-extraction-from-errors"
+text = "Line number extraction from errors"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/unit_error_parse.rs::test_line_extraction"
+order = 15
+
+[[tasks]]
+id = "unique-file-deduplication"
+text = "Unique file deduplication"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/unit_error_parse.rs::test_dedup"
+order = 16
+
+[[tasks]]
+id = "auto-include-test-files-for-src-errors"
+text = "Auto-include test files for src errors"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/integration_error_pack.rs::test_auto_tests"
+order = 17
+
+[[tasks]]
+id = "piped-input-support-cargo-clippy-21"
+text = "Piped input support (cargo clippy 2>&1 |)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/integration_error_pack.rs::test_piped"
+order = 18
+
+[[tasks]]
+id = "--from-clipboard-errors-flag"
+text = "--from-clipboard-errors flag"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Error-Driven Packing"
+test = "tests/integration_error_pack.rs::test_clipboard_errors"
+order = 19
+
+[[tasks]]
+id = "slopchop-pack---cluster-name-flag"
+text = "slopchop pack --cluster NAME flag"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Cluster Packing"
+test = "tests/integration_cluster_pack.rs::test_cluster_flag"
+order = 20
+
+[[tasks]]
+id = "cluster-resolution-by-name"
+text = "Cluster resolution by name"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Cluster Packing"
+test = "tests/integration_cluster_pack.rs::test_by_name"
+order = 21
+
+[[tasks]]
+id = "cluster-resolution-by-directory-path"
+text = "Cluster resolution by directory path"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Cluster Packing"
+test = "tests/integration_cluster_pack.rs::test_by_dir"
+order = 22
+
+[[tasks]]
+id = "--with-tests-flag-include-test-files"
+text = "--with-tests flag (include test files)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Cluster Packing"
+test = "tests/integration_cluster_pack.rs::test_with_tests"
+order = 23
+
+[[tasks]]
+id = "--with-boundary-flag-skeleton-boundary-files"
+text = "--with-boundary flag (skeleton boundary files)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Cluster Packing"
+test = "tests/integration_cluster_pack.rs::test_with_boundary"
+order = 24
+
+[[tasks]]
+id = "--no-boundary-flag-exclude-boundary-files"
+text = "--no-boundary flag (exclude boundary files)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Cluster Packing"
+test = "tests/integration_cluster_pack.rs::test_no_boundary"
+order = 25
+
+[[tasks]]
+id = "multiple-cluster-inclusion---cluster-a---cluster-b"
+text = "Multiple cluster inclusion (--cluster a --cluster b)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Cluster Packing"
+test = "tests/integration_cluster_pack.rs::test_multi_cluster"
+order = 26
+
+[[tasks]]
+id = "slopchop-pack---trace-path-flag"
+text = "slopchop pack --trace PATH flag"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Trace Packing"
+test = "tests/integration_trace_pack.rs::test_trace_flag"
+order = 27
+
+[[tasks]]
+id = "--depth-n-limit-for-trace"
+text = "--depth N limit for trace"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Trace Packing"
+test = "tests/integration_trace_pack.rs::test_depth_limit"
+order = 28
+
+[[tasks]]
+id = "--forward-flag-dependencies-only"
+text = "--forward flag (dependencies only)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Trace Packing"
+test = "tests/integration_trace_pack.rs::test_forward"
+order = 29
+
+[[tasks]]
+id = "--reverse-flag-dependents-only"
+text = "--reverse flag (dependents only)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Trace Packing"
+test = "tests/integration_trace_pack.rs::test_reverse"
+order = 30
+
+[[tasks]]
+id = "default-bidirectional-trace"
+text = "Default: bidirectional trace"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Trace Packing"
+test = "tests/integration_trace_pack.rs::test_bidirectional"
+order = 31
+
+[[tasks]]
+id = "trace-skeleton-hybrid-output"
+text = "Trace + skeleton hybrid output"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Trace Packing"
+test = "tests/integration_trace_pack.rs::test_hybrid"
+order = 32
+
+[[tasks]]
+id = "multiple-trace-roots---trace-a---trace-b"
+text = "Multiple trace roots (--trace a --trace b)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Trace Packing"
+test = "tests/integration_trace_pack.rs::test_multi_trace"
+order = 33
+
+[[tasks]]
+id = "dependency-first-ordering-topological"
+text = "Dependency-first ordering (topological)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Context Ordering"
+test = "tests/unit_ordering.rs::test_topo_order"
+order = 34
+
+[[tasks]]
+id = "leaf-files-appear-first"
+text = "Leaf files appear first"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Context Ordering"
+test = "tests/unit_ordering.rs::test_leaves_first"
+order = 35
+
+[[tasks]]
+id = "targetfocus-file-appears-last"
+text = "Target/focus file appears last"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Context Ordering"
+test = "tests/unit_ordering.rs::test_target_last"
+order = 36
+
+[[tasks]]
+id = "circular-dependency-handling-break-arbitrarily"
+text = "Circular dependency handling (break arbitrarily)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Context Ordering"
+test = "tests/unit_ordering.rs::test_cycle_break"
+order = 37
+
+[[tasks]]
+id = "shared-dependency-hoisting"
+text = "Shared dependency hoisting"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "Context Ordering"
+test = "tests/unit_ordering.rs::test_hoisting"
+order = 38
+
+[[tasks]]
+id = "contextrequest-format-specification-no-test-documentation"
+text = "CONTEXT_REQUEST format specification** [no-test] *(documentation)*"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "AI Context Protocol"
+order = 39
+
+[[tasks]]
+id = "ai-can-emit-cluster-requests"
+text = "AI can emit cluster requests"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "AI Context Protocol"
+test = "tests/integration_fulfill.rs::test_cluster_request"
+order = 40
+
+[[tasks]]
+id = "ai-can-emit-trace-requests"
+text = "AI can emit trace requests"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "AI Context Protocol"
+test = "tests/integration_fulfill.rs::test_trace_request"
+order = 41
+
+[[tasks]]
+id = "ai-can-emit-file-requests"
+text = "AI can emit file requests"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "AI Context Protocol"
+test = "tests/integration_fulfill.rs::test_file_request"
+order = 42
+
+[[tasks]]
+id = "slopchop-fulfill-command-parse-ai-request"
+text = "slopchop fulfill command (parse AI request)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "AI Context Protocol"
+test = "tests/integration_fulfill.rs::test_fulfill_command"
+order = 43
+
+[[tasks]]
+id = "request-validation-clusterfile-exists"
+text = "Request validation (cluster/file exists)"
+status = "pending"
+section = "v0.9.0-smart-context"
+group = "AI Context Protocol"
+test = "tests/integration_fulfill.rs::test_validation"
+order = 44
+
+[[tasks]]
+id = "block-triple-backticks"
+text = "Block triple backticks (```)"
+status = "pending"
+section = "v0.10.0-validation-hardening"
+group = "Markdown Rejection"
+test = "tests/integration_apply.rs::test_rejects_markdown_fences"
+order = 0
+
+[[tasks]]
+id = "block-tilde-fences"
+text = "Block tilde fences (~~~)"
+status = "pending"
+section = "v0.10.0-validation-hardening"
+group = "Markdown Rejection"
+test = "tests/integration_apply.rs::test_rejects_tilde_fences"
+order = 1
+
+[[tasks]]
+id = "markdown-fence-rejection-rationale-no-test-documentation-ai-escape-issues"
+text = "Markdown fence rejection rationale** [no-test] *(documentation: AI escape issues)*"
+status = "pending"
+section = "v0.10.0-validation-hardening"
+group = "Markdown Rejection"
+order = 2
+
+[[tasks]]
+id = "detect-unbalanced"
+text = "Detect unbalanced {"
+status = "pending"
+section = "v0.10.0-validation-hardening"
+group = "Brace Balancing"
+test = "tests/integration_apply.rs::test_detects_unbalanced_open_brace"
+order = 3
+
+[[tasks]]
+id = "detect-unbalanced"
+text = "Detect unbalanced }"
+status = "pending"
+section = "v0.10.0-validation-hardening"
+group = "Brace Balancing"
+test = "tests/integration_apply.rs::test_detects_unbalanced_close_brace"
+order = 4
+
+[[tasks]]
+id = "detect-unbalanced"
+text = "Detect unbalanced ["
+status = "pending"
+section = "v0.10.0-validation-hardening"
+group = "Brace Balancing"
+test = "tests/integration_apply.rs::test_detects_unbalanced_bracket"
+order = 5
+
+[[tasks]]
+id = "detect-unbalanced"
+text = "Detect unbalanced ("
+status = "pending"
+section = "v0.10.0-validation-hardening"
+group = "Brace Balancing"
+test = "tests/integration_apply.rs::test_detects_unbalanced_paren"
+order = 6
+
+[[tasks]]
+id = "brace-balance-algorithm-selection-no-test-design-decision"
+text = "Brace balance algorithm selection** [no-test] *(design decision)*"
+status = "pending"
+section = "v0.10.0-validation-hardening"
+group = "Brace Balancing"
+order = 7
+
+[[tasks]]
+id = "string-literal-exclusion-from-brace-count"
+text = "String literal exclusion from brace count"
+status = "pending"
+section = "v0.10.0-validation-hardening"
+group = "Brace Balancing"
+test = "tests/unit_brace.rs::test_string_exclusion"
+order = 8
+
+[[tasks]]
+id = "comment-exclusion-from-brace-count"
+text = "Comment exclusion from brace count"
+status = "pending"
+section = "v0.10.0-validation-hardening"
+group = "Brace Balancing"
+test = "tests/unit_brace.rs::test_comment_exclusion"
+order = 9
+
+[[tasks]]
+id = "--format-json"
+text = "--format json"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "Output Formats"
+test = "tests/cli_format.rs::test_json_output"
+order = 0
+
+[[tasks]]
+id = "sarif-output-for-github"
+text = "SARIF output for GitHub"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "Output Formats"
+test = "tests/cli_format.rs::test_sarif_output"
+order = 1
+
+[[tasks]]
+id = "slopchop-hook-install"
+text = "slopchop hook install"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "Git Hooks"
+test = "tests/cli_hooks.rs::test_hook_install"
+order = 2
+
+[[tasks]]
+id = "pre-commit-hook-script"
+text = "Pre-commit hook script"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "Git Hooks"
+test = "tests/cli_hooks.rs::test_precommit_runs"
+order = 3
+
+[[tasks]]
+id = "exit-0-on-clean"
+text = "Exit 0 on clean"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "Exit Codes"
+test = "tests/cli_exit.rs::test_exit_0_clean"
+order = 4
+
+[[tasks]]
+id = "exit-1-on-violations"
+text = "Exit 1 on violations"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "Exit Codes"
+test = "tests/cli_exit.rs::test_exit_1_violations"
+order = 5
+
+[[tasks]]
+id = "exit-2-on-error"
+text = "Exit 2 on error"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "Exit Codes"
+test = "tests/cli_exit.rs::test_exit_2_error"
+order = 6
+
+[[tasks]]
+id = "github-actions-workflow-template"
+text = "GitHub Actions workflow template"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "CI Templates"
+test = "tests/cli_ci.rs::test_github_template"
+order = 7
+
+[[tasks]]
+id = "gitlab-ci-template"
+text = "GitLab CI template"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "CI Templates"
+test = "tests/cli_ci.rs::test_gitlab_template"
+order = 8
+
+[[tasks]]
+id = "slopchop-init---ci-flag-generate-workflow"
+text = "slopchop init --ci flag (generate workflow)"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "CI Templates"
+test = "tests/cli_ci.rs::test_init_ci"
+order = 9
+
+[[tasks]]
+id = "fail-fast-vs-report-all-modes"
+text = "Fail-fast vs report-all modes"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "CI Templates"
+test = "tests/cli_ci.rs::test_fail_modes"
+order = 10
+
+[[tasks]]
+id = "annotation-output-for-github-pr-comments"
+text = "Annotation output for GitHub PR comments"
+status = "pending"
+section = "v0.11.0-cicd-integration"
+group = "CI Templates"
+test = "tests/cli_ci.rs::test_annotations"
+order = 11
+
+[[tasks]]
+id = "slopchop-graph-command"
+text = "slopchop graph command"
+status = "pending"
+section = "v0.12.0-graph-visualization"
+group = "Visualization Formats"
+test = "tests/cli_graph.rs::test_graph_command"
+order = 0
+
+[[tasks]]
+id = "dot-format-export-graphviz"
+text = "DOT format export (Graphviz)"
+status = "pending"
+section = "v0.12.0-graph-visualization"
+group = "Visualization Formats"
+test = "tests/cli_graph.rs::test_dot_export"
+order = 1
+
+[[tasks]]
+id = "mermaid-format-export"
+text = "Mermaid format export"
+status = "pending"
+section = "v0.12.0-graph-visualization"
+group = "Visualization Formats"
+test = "tests/cli_graph.rs::test_mermaid_export"
+order = 2
+
+[[tasks]]
+id = "--cluster-only-flag-show-clusters-not-files"
+text = "--cluster-only flag (show clusters, not files)"
+status = "pending"
+section = "v0.12.0-graph-visualization"
+group = "Visualization Formats"
+test = "tests/cli_graph.rs::test_cluster_only"
+order = 3
+
+[[tasks]]
+id = "--highlight-path-flag-color-specific-subgraph"
+text = "--highlight PATH flag (color specific subgraph)"
+status = "pending"
+section = "v0.12.0-graph-visualization"
+group = "Visualization Formats"
+test = "tests/cli_graph.rs::test_highlight"
+order = 4
+
+[[tasks]]
+id = "interactive-html-export-d3.js"
+text = "Interactive HTML export (D3.js)"
+status = "pending"
+section = "v0.12.0-graph-visualization"
+group = "Visualization Formats"
+test = "tests/cli_graph.rs::test_html_export"
+order = 5
+
+[[tasks]]
+id = "terminal-ascii-graph-small-projects"
+text = "Terminal ASCII graph (small projects)"
+status = "pending"
+section = "v0.12.0-graph-visualization"
+group = "Visualization Formats"
+test = "tests/cli_graph.rs::test_ascii_graph"
+order = 6
+
+[[tasks]]
+id = "slopchop-baseline-command-snapshot-current-violations"
+text = "slopchop baseline command (snapshot current violations)"
+status = "pending"
+section = "v0.13.0-legacy-adoption"
+group = "Baseline System"
+test = "tests/cli_baseline.rs::test_baseline_creation"
+order = 0
+
+[[tasks]]
+id = "baseline-file-format-.slopchop-baseline.json"
+text = "Baseline file format (.slopchop-baseline.json)"
+status = "pending"
+section = "v0.13.0-legacy-adoption"
+group = "Baseline System"
+test = "tests/unit_baseline.rs::test_baseline_format"
+order = 1
+
+[[tasks]]
+id = "baseline-comparison-mode-only-report-new-violations"
+text = "Baseline comparison mode (only report new violations)"
+status = "pending"
+section = "v0.13.0-legacy-adoption"
+group = "Baseline System"
+test = "tests/integration_baseline.rs::test_baseline_comparison"
+order = 2
+
+[[tasks]]
+id = "--baseline-flag-for-slopchop-scan"
+text = "--baseline flag for slopchop scan"
+status = "pending"
+section = "v0.13.0-legacy-adoption"
+group = "Baseline System"
+test = "tests/cli_baseline.rs::test_baseline_flag"
+order = 3
+
+[[tasks]]
+id = "auto-generate-slopchopignore-for-existing-violations"
+text = "Auto-generate slopchop:ignore for existing violations"
+status = "pending"
+section = "v0.13.0-legacy-adoption"
+group = "Baseline System"
+test = "tests/cli_baseline.rs::test_auto_ignore"
+order = 4
+
+[[tasks]]
+id = "gradual-tightening-guide-no-test-documentation"
+text = "Gradual tightening guide** [no-test] *(documentation)*"
+status = "pending"
+section = "v0.13.0-legacy-adoption"
+group = "Baseline System"
+order = 5
+
+[[tasks]]
+id = "published-to-crates.io-no-test"
+text = "Published to crates.io** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Distribution"
+order = 0
+
+[[tasks]]
+id = "homebrew-formula-no-test"
+text = "Homebrew formula** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Distribution"
+order = 1
+
+[[tasks]]
+id = "scoopwinget-packages-no-test"
+text = "Scoop/Winget packages** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Distribution"
+order = 2
+
+[[tasks]]
+id = "documentation-site-no-test"
+text = "Documentation site** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Documentation"
+order = 3
+
+[[tasks]]
+id = "logo-and-branding-no-test"
+text = "Logo and branding** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Documentation"
+order = 4
+
+[[tasks]]
+id = "readme-finalized-no-test"
+text = "README finalized** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Documentation"
+order = 5
+
+[[tasks]]
+id = "changelog.md-generation-no-test"
+text = "CHANGELOG.md generation** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Documentation"
+order = 6
+
+[[tasks]]
+id = "contributing.md-guide-no-test"
+text = "CONTRIBUTING.md guide** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Documentation"
+order = 7
+
+[[tasks]]
+id = "security-policy-security.md-no-test"
+text = "Security policy (SECURITY.md)** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Documentation"
+order = 8
+
+[[tasks]]
+id = "license-audit-dependency-licenses"
+text = "License audit (dependency licenses)"
+status = "pending"
+section = "v1.0.0-release"
+group = "Polish"
+test = "tests/release.rs::test_license_audit"
+order = 9
+
+[[tasks]]
+id = "binary-size-optimization-no-test"
+text = "Binary size optimization** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Polish"
+order = 10
+
+[[tasks]]
+id = "startup-time-benchmarking-no-test"
+text = "Startup time benchmarking** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Polish"
+order = 11
+
+[[tasks]]
+id = "cross-compilation-ci-linuxmacwindows-no-test"
+text = "Cross-compilation CI (linux/mac/windows)** [no-test]"
+status = "pending"
+section = "v1.0.0-release"
+group = "Polish"
+order = 12

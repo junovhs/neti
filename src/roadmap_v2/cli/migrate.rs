@@ -90,11 +90,16 @@ fn add_section(store: &mut TaskStore, ctx: &mut ParseContext, heading: &str) {
 
 fn parse_task_line(line: &str, ctx: &ParseContext) -> Option<Task> {
     let section_id = ctx.current_section.as_ref()?;
-    let (status, rest) = extract_task_status(line)?;
+    let (base_status, rest) = extract_task_status(line)?;
 
     let rest = rest.trim();
     let (task_text, test_anchor) = extract_test_anchor(rest);
     let task_text = clean_task_text(&task_text);
+
+    // Detect [no-test] marker and override status
+    let status = detect_no_test_marker(&task_text, base_status);
+    let task_text = strip_no_test_marker(&task_text);
+
     let id = slugify(&task_text);
 
     Some(Task {
@@ -106,6 +111,20 @@ fn parse_task_line(line: &str, ctx: &ParseContext) -> Option<Task> {
         test: test_anchor,
         order: ctx.task_order,
     })
+}
+
+fn detect_no_test_marker(text: &str, base_status: TaskStatus) -> TaskStatus {
+    if text.contains("[no-test]") {
+        return TaskStatus::NoTest;
+    }
+    base_status
+}
+
+fn strip_no_test_marker(text: &str) -> String {
+    text.replace("[no-test]", "")
+        .replace("  ", " ")
+        .trim()
+        .to_string()
 }
 
 fn extract_task_status(line: &str) -> Option<(TaskStatus, &str)> {
