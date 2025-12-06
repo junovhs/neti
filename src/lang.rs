@@ -138,10 +138,35 @@ impl Lang {
         }
     }
 
+    /// Queries for identifying public/exported items.
+    #[must_use]
+    pub fn q_exports(&self) -> &'static str {
+        match self {
+            Self::Rust => r"
+                (function_item (visibility_modifier)) @export
+                (struct_item (visibility_modifier)) @export
+                (enum_item (visibility_modifier)) @export
+                (trait_item (visibility_modifier)) @export
+                (const_item (visibility_modifier)) @export
+                (static_item (visibility_modifier)) @export
+                (type_item (visibility_modifier)) @export
+                (impl_item) @export
+                (mod_item (visibility_modifier)) @export
+            ",
+            Self::TypeScript => r"
+                (export_statement) @export
+            ",
+            Self::Python => r"
+                (function_definition) @export
+                (class_definition) @export
+            ",
+        }
+    }
+
     #[must_use]
     pub fn q_skeleton(&self) -> &'static str {
         match self {
-            Self::Rust => "(function_item body: (block) @body)",
+            Self::Rust => "(function_item body: (block) @body) (impl_item body: (declaration_list) @body)",
             Self::Python => "(function_definition body: (block) @body)",
             Self::TypeScript => r"
                 (function_declaration body: (statement_block) @body)

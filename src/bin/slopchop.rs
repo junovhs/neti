@@ -16,6 +16,7 @@ use slopchop_core::pack::OutputFormat;
 use slopchop_core::project;
 use slopchop_core::reporting;
 use slopchop_core::roadmap_v2::{handle_command, RoadmapV2Command};
+use slopchop_core::signatures::SignatureOptions;
 use slopchop_core::tui::state::App;
 use slopchop_core::wizard;
 
@@ -85,6 +86,13 @@ enum Commands {
         #[arg(long, short)]
         deps: bool,
     },
+    /// Generate a compact type signature map of the codebase
+    Signatures {
+        #[arg(long, short)]
+        copy: bool,
+        #[arg(long, short)]
+        stdout: bool,
+    },
 }
 
 fn main() {
@@ -116,7 +124,8 @@ fn dispatch_command(cmd: &Commands) -> Result<()> {
     match cmd {
         Commands::Pack { .. }
         | Commands::Trace { .. }
-        | Commands::Map { .. } => dispatch_analysis(cmd),
+        | Commands::Map { .. }
+        | Commands::Signatures { .. } => dispatch_analysis(cmd),
 
         Commands::Check
         | Commands::Fix
@@ -187,6 +196,13 @@ fn dispatch_analysis(cmd: &Commands) -> Result<()> {
             Ok(())
         }
         Commands::Pack { .. } => dispatch_pack(cmd),
+        Commands::Signatures { copy, stdout } => {
+            cli::handle_signatures(SignatureOptions {
+                copy: *copy,
+                stdout: *stdout,
+            })?;
+            Ok(())
+        }
         _ => unreachable!(),
     }
 }

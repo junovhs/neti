@@ -16,6 +16,7 @@ pub mod project;
 pub mod prompt;
 pub mod reporting;
 pub mod roadmap_v2;
+pub mod signatures;
 pub mod skeleton;
 pub mod spinner;
 pub mod tokens;

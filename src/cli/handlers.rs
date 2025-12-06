@@ -7,6 +7,7 @@ use crate::error::Result;
 use crate::pack::{self, OutputFormat, PackOptions};
 use crate::prompt::PromptGenerator;
 use crate::reporting;
+use crate::signatures::{self, SignatureOptions};
 use crate::trace::{self, TraceOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -204,6 +205,15 @@ pub fn handle_trace(file: &Path, depth: usize, budget: usize) -> Result<()> {
 pub fn handle_map(deps: bool) -> Result<()> {
     let output = trace::map(deps)?;
     println!("{output}");
+    Ok(())
+}
+
+/// Handles the signatures command.
+///
+/// # Errors
+/// Returns error if extraction fails.
+pub fn handle_signatures(opts: SignatureOptions) -> Result<()> {
+    signatures::run(&opts).map_err(|e| crate::error::SlopChopError::Other(e.to_string()))?;
     Ok(())
 }
 

@@ -9,7 +9,7 @@ use std::time::Duration;
 /// The "8-Point Orbit" frames requested.
 const FRAMES: &[&str] = &["∙", "•", "∗", "✻", "✽", "✶", "+"];
 
-const INTERVAL: u64 = 70;
+const INTERVAL: u64 = 110;
 
 pub struct Spinner {
     running: Arc<AtomicBool>,
