@@ -1,12 +1,11 @@
 // src/graph/defs/extract.rs
-//! Core extraction logic for symbol definitions.
-
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::LazyLock;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 
-use super::queries::EXTRACTOR;
+use super::queries::DefExtractor;
+use crate::lang::Lang;
 
 /// A symbol definition found in source code.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -54,10 +53,12 @@ pub fn extract(path: &Path, content: &str) -> Vec<Definition> {
     let Some(ext) = path.extension().and_then(|s| s.to_str()) else {
         return Vec::new();
     };
-    let Some((lang, query)) = EXTRACTOR.get_config(ext) else {
+    let Some(lang) = Lang::from_ext(ext) else {
         return Vec::new();
     };
-    run_extraction(content, lang, query)
+    
+    let (grammar, query) = DefExtractor::get_config(lang);
+    run_extraction(content, grammar, &query)
 }
 
 fn run_extraction(source: &str, lang: Language, query: &Query) -> Vec<Definition> {
