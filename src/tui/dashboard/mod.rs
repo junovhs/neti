@@ -93,11 +93,20 @@ fn handle_global_navigation(
     modifiers: KeyModifiers,
     app: &mut DashboardApp,
 ) -> bool {
+    if matches!((modifiers, code), (_, KeyCode::Char('q'))) {
+        app.quit();
+        return true;
+    }
+
+    if handle_tab_nav(code, modifiers, app) {
+        return true;
+    }
+
+    handle_view_switch(code, app)
+}
+
+fn handle_tab_nav(code: KeyCode, modifiers: KeyModifiers, app: &mut DashboardApp) -> bool {
     match (modifiers, code) {
-        (_, KeyCode::Char('q')) => {
-            app.quit();
-            true
-        }
         (_, KeyCode::Tab) => {
             app.next_tab();
             true
@@ -106,19 +115,25 @@ fn handle_global_navigation(
             app.previous_tab();
             true
         }
-        (_, KeyCode::Char('1')) => {
+        _ => false,
+    }
+}
+
+fn handle_view_switch(code: KeyCode, app: &mut DashboardApp) -> bool {
+    match code {
+        KeyCode::Char('1') => {
             app.active_tab = Tab::Dashboard;
             true
         }
-        (_, KeyCode::Char('2')) => {
+        KeyCode::Char('2') => {
             app.active_tab = Tab::Roadmap;
             true
         }
-        (_, KeyCode::Char('3')) => {
+        KeyCode::Char('3') => {
             app.active_tab = Tab::Config;
             true
         }
-        (_, KeyCode::Char('4')) => {
+        KeyCode::Char('4') => {
             app.active_tab = Tab::Logs;
             true
         }

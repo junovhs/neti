@@ -20,6 +20,7 @@ pub fn is_dirty() -> Result<bool> {
 }
 
 /// Checks if we're inside a git repository.
+#[must_use]
 pub fn in_repo() -> bool {
     Command::new("git")
         .args(["rev-parse", "--is-inside-work-tree"])

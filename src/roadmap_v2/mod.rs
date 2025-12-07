@@ -9,6 +9,7 @@ pub mod parser;
 pub mod storage;
 pub mod types;
 
+pub use cli::{handle_command, RoadmapV2Command};
 pub use parser::parse_commands;
 pub use types::{RoadmapCommand, Task, TaskStatus, TaskStore};
 

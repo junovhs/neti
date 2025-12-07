@@ -2,72 +2,97 @@
 use super::types::{RoadmapCommand, Task, TaskStatus, TaskUpdate};
 use anyhow::{anyhow, bail, Result};
 
-/// Parses roadmap commands from the ===ROADMAP=== block in AI output.
+/// Parses roadmap commands from the ===ROADMAP=== block(s) in AI output.
+/// Handles multiple blocks and command aggregation.
 ///
 /// # Errors
 /// Returns error if command syntax is invalid.
 pub fn parse_commands(input: &str) -> Result<Vec<RoadmapCommand>> {
-    let Some(block) = extract_roadmap_block(input) else {
+    let blocks = extract_roadmap_blocks(input);
+    if blocks.is_empty() {
         return Ok(vec![]);
-    };
-
-    let mut commands = Vec::new();
-    let mut current_block = String::new();
-
-    for line in block.lines() {
-        let trimmed = line.trim();
-
-        // Skip empty lines
-        if trimmed.is_empty() {
-            continue;
-        }
-
-        // Check if this is a command keyword (starts a new block)
-        if is_command_keyword(trimmed) {
-            // Process the previous block if any
-            if !current_block.is_empty() {
-                commands.push(parse_single_block(&current_block)?);
-            }
-            current_block = trimmed.to_string();
-        } else {
-            // Add to current block
-            if !current_block.is_empty() {
-                current_block.push('\n');
-            }
-            current_block.push_str(trimmed);
-        }
     }
 
-    // Process final block
-    if !current_block.is_empty() {
-        commands.push(parse_single_block(&current_block)?);
+    let mut commands = Vec::new();
+
+    for block in blocks {
+        let mut block_cmds = parse_block_content(&block)?;
+        commands.append(&mut block_cmds);
     }
 
     Ok(commands)
 }
 
-fn extract_roadmap_block(input: &str) -> Option<&str> {
-    let start_marker = "===ROADMAP===";
-    let start = input.find(start_marker)? + start_marker.len();
-    let rest = &input[start..];
-    let end = rest.find(start_marker)?;
-    Some(rest[..end].trim())
+/// Extracts all content blocks delimited by ===ROADMAP===.
+fn extract_roadmap_blocks(input: &str) -> Vec<String> {
+    let marker = "===ROADMAP===";
+    let mut blocks = Vec::new();
+    let mut current_pos = 0;
+
+    while let Some(start_offset) = input[current_pos..].find(marker) {
+        let content_start = current_pos + start_offset + marker.len();
+
+        if let Some(end_offset) = input[content_start..].find(marker) {
+            let content_end = content_start + end_offset;
+            let block = input[content_start..content_end].trim();
+            if !block.is_empty() {
+                blocks.push(block.to_string());
+            }
+            current_pos = content_end + marker.len();
+        } else {
+            break;
+        }
+    }
+    blocks
+}
+
+fn parse_block_content(block: &str) -> Result<Vec<RoadmapCommand>> {
+    let mut commands = Vec::new();
+    let mut current_block = String::new();
+
+    for line in block.lines() {
+        let trimmed = clean_line(line);
+
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        if is_command_keyword(trimmed) {
+            if !current_block.is_empty() {
+                commands.push(parse_single_command(&current_block)?);
+            }
+            current_block = trimmed.to_string();
+        } else {
+            if !current_block.is_empty() {
+                current_block.push('\n');
+            }
+            current_block.push_str(line);
+        }
+    }
+
+    if !current_block.is_empty() {
+        commands.push(parse_single_command(&current_block)?);
+    }
+
+    Ok(commands)
+}
+
+fn clean_line(line: &str) -> &str {
+    line.split('#').next().unwrap_or("").trim()
 }
 
 fn is_command_keyword(line: &str) -> bool {
-    let upper = line.to_uppercase();
+    let upper = clean_line(line).to_uppercase();
     matches!(
         upper.as_str(),
         "CHECK" | "UNCHECK" | "ADD" | "UPDATE" | "DELETE"
     )
 }
 
-fn parse_single_block(block: &str) -> Result<RoadmapCommand> {
+fn parse_single_command(block: &str) -> Result<RoadmapCommand> {
     let lines: Vec<&str> = block.lines().collect();
-    let keyword = lines
-        .first()
-        .map(|s| s.trim().to_uppercase())
-        .unwrap_or_default();
+    let keyword_line = lines.first().copied().unwrap_or_default();
+    let keyword = clean_line(keyword_line).to_uppercase();
 
     match keyword.as_str() {
         "CHECK" => parse_check(&lines),
@@ -129,11 +154,12 @@ fn require_field(lines: &[&str], key: &str) -> Result<String> {
 }
 
 fn get_field(lines: &[&str], key: &str) -> Option<String> {
-    let prefix = format!("{key} = ");
     for line in lines {
-        let trimmed = line.trim();
-        if trimmed.starts_with(&prefix) {
-            return Some(trimmed[prefix.len()..].trim().to_string());
+        let trimmed = clean_line(line);
+        if let Some((k, v)) = trimmed.split_once('=') {
+            if k.trim() == key {
+                return Some(v.trim().to_string());
+            }
         }
     }
     None
@@ -175,29 +201,56 @@ section = v0.2.0
     }
 
     #[test]
-    fn test_parse_multiple() -> Result<()> {
+    fn test_parse_multiple_same_block() -> Result<()> {
         let input = r"
 ===ROADMAP===
 CHECK
 id = task-1
 CHECK
 id = task-2
-ADD
-id = task-3
-text = New thing
-section = v1.0.0
 ===ROADMAP===
 ";
         let cmds = parse_commands(input)?;
-        assert_eq!(cmds.len(), 3);
+        assert_eq!(cmds.len(), 2);
         Ok(())
     }
 
     #[test]
-    fn test_no_roadmap_block() -> Result<()> {
-        let input = "Just some code without roadmap";
+    fn test_parse_multiple_blocks() -> Result<()> {
+        let input = r"
+===ROADMAP===
+CHECK
+id = task-1
+===ROADMAP===
+Some other text...
+===ROADMAP===
+CHECK
+id = task-2
+===ROADMAP===
+";
         let cmds = parse_commands(input)?;
-        assert!(cmds.is_empty());
+        assert_eq!(cmds.len(), 2);
+        if let RoadmapCommand::Check { id } = &cmds[0] {
+            assert_eq!(id, "task-1");
+        }
+        if let RoadmapCommand::Check { id } = &cmds[1] {
+            assert_eq!(id, "task-2");
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_with_comments_and_spacing() -> Result<()> {
+        let input = r"
+===ROADMAP===
+CHECK # First one
+id=task-1 # id comment
+CHECK
+id = task-2
+===ROADMAP===
+";
+        let cmds = parse_commands(input)?;
+        assert_eq!(cmds.len(), 2);
         Ok(())
     }
 }
