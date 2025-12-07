@@ -1,7 +1,7 @@
 # SlopChop Design Document
 
 > **Audience:** Developers (human or AI) working on or extending SlopChop.  
-> **See also:** [README.md](README.md) for user guide, [ROADMAP.md](ROADMAP.md) for feature tracking.
+> **See also:** [README.md](README.md) for user guide.
 
 ---
 
@@ -10,17 +10,18 @@
 1. [Vision & Philosophy](#vision--philosophy)
 2. [Architecture Overview](#architecture-overview)
 3. [The Three Laws](#the-three-laws)
-4. [The SlopChop Protocol](#the-SlopChop-protocol)
+4. [The SlopChop Protocol](#the-slopchop-protocol)
 5. [Analysis Engine](#analysis-engine)
 6. [Apply System](#apply-system)
-7. [Pack & Context System](#pack--context-system)
-8. [Smart Context](#smart-context)
-9. [Roadmap System](#roadmap-system)
-10. [Security Model](#security-model)
-11. [Key Decisions & Rationale](#key-decisions--rationale)
-12. [Module Map](#module-map)
-13. [Testing Philosophy](#testing-philosophy)
-14. [Future Considerations](#future-considerations)
+7. [Context Generation](#context-generation)
+8. [Dependency Graph](#dependency-graph)
+9. [Roadmap System (V2)](#roadmap-system-v2)
+10. [TUI Dashboard](#tui-dashboard)
+11. [Security Model](#security-model)
+12. [Key Decisions & Rationale](#key-decisions--rationale)
+13. [Module Map](#module-map)
+14. [Testing Philosophy](#testing-philosophy)
+15. [Future Work](#future-work)
 
 ---
 
@@ -35,8 +36,6 @@ AI coding assistants are powerful but unreliable. They:
 - Escape markdown fences incorrectly, corrupting output
 - Have no memory of project constraints between sessions
 
-Developers end up manually reviewing every line, defeating the productivity gains.
-
 ### The Solution
 
 **SlopChop is a gatekeeper, not a fixer.** It creates a feedback loop:
@@ -44,10 +43,10 @@ Developers end up manually reviewing every line, defeating the productivity gain
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                                                                 │
-│   SlopChop pack ──► AI ──► SlopChop apply ──► verify ──► commit    │
-│        ▲                      │                                 │
-│        │                      ▼                                 │
-│        └────── rejection ◄── FAIL                               │
+│   slopchop pack ──► AI ──► slopchop apply ──► verify ──► commit │
+│        ▲                         │                              │
+│        │                         ▼                              │
+│        └────── rejection ◄───── FAIL                            │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -64,22 +63,19 @@ When AI output violates constraints:
 
 | # | Principle | Meaning |
 |---|-----------|---------|
-| 1 | **Every feature has a verified test** | No exceptions. The roadmap enforces this. |
-| 2 | **Reject bad input, don't fix it** | SlopChop is a gatekeeper, not a linter with autofix. |
-| 3 | **Git is the undo system** | Don't reinvent version control. Commit on success. |
-| 4 | **Explicit > Magic** | Fail loudly on format violations. |
-| 5 | **Containment over craftsmanship** | Constraints are safety, not style. |
-| 6 | **Self-hosting** | SlopChop passes its own rules. |
-| 7 | **Context is king** | Give AI exactly what it needs, nothing more. |
-| 8 | **Graph over glob** | Understand structure, don't just pattern match. |
-| 9 | **Errors are context** | Parse failures to understand scope. |
+| 1 | **Reject bad input, don't fix it** | SlopChop is a gatekeeper, not a linter with autofix |
+| 2 | **Git is the undo system** | Don't reinvent version control. Commit on success |
+| 3 | **Explicit > Magic** | Fail loudly on format violations |
+| 4 | **Context is king** | Give AI exactly what it needs, nothing more |
+| 5 | **Graph over glob** | Understand structure, don't just pattern match |
+| 6 | **Self-hosting** | SlopChop passes its own rules |
 
 ### What SlopChop Is NOT
 
 - **Not a linter** — It doesn't suggest fixes, it rejects
-- **Not an IDE plugin** — It's CLI-first, composable with any editor
+- **Not an IDE plugin** — CLI-first, composable with any editor
 - **Not AI-specific** — The constraints help human reviewers too
-- **Not prescriptive about style** — It cares about size and complexity, not formatting
+- **Not prescriptive about style** — Cares about size and complexity, not formatting
 
 ---
 
@@ -87,8 +83,8 @@ When AI output violates constraints:
 
 ```
 src/
-├── analysis/          # The Three Laws enforcement (tree-sitter)
-│   ├── ast.rs         # Language-specific query compilation
+├── analysis/          # The Three Laws enforcement
+│   ├── ast.rs         # Tree-sitter query compilation
 │   ├── checks.rs      # Violation detection logic
 │   ├── metrics.rs     # Complexity, depth, arity calculations
 │   └── mod.rs         # RuleEngine orchestration
@@ -99,6 +95,7 @@ src/
 │   ├── validator.rs   # Path safety, truncation detection
 │   ├── writer.rs      # Atomic file writes with backup
 │   ├── verification.rs# Post-apply check commands
+│   ├── git.rs         # Git commit/push operations
 │   ├── messages.rs    # Error message formatting
 │   ├── types.rs       # ApplyContext, ApplyOutcome types
 │   └── mod.rs         # Orchestration and flow control
@@ -111,7 +108,7 @@ src/
 │   │   ├── queries.rs # Tree-sitter queries for symbols
 │   │   └── mod.rs
 │   └── rank/          # PageRank-based importance
-│       ├── graph.rs   # Dependency graph structure
+│       ├── graph.rs   # RepoGraph structure
 │       ├── pagerank.rs# PageRank algorithm
 │       ├── tags.rs    # Tag kinds and definitions
 │       └── mod.rs
@@ -127,78 +124,78 @@ src/
 │   ├── runner.rs      # Trace execution logic
 │   └── mod.rs
 │
-├── context/           # Context map generation
-│   └── mod.rs
+├── roadmap_v2/        # TOML-based task management
+│   ├── types.rs       # TaskStore, Task, Section types
+│   ├── parser.rs      # Command parsing
+│   ├── executor.rs    # Command execution
+│   ├── storage.rs     # TOML serialization
+│   └── cli/           # Subcommand handlers
+│       ├── display.rs # Output formatting
+│       ├── handlers.rs# Command implementations
+│       └── mod.rs
 │
-├── roadmap/           # Programmatic roadmap management
-│   ├── parser.rs      # Markdown → structured data
-│   ├── cmd_parser.rs  # Command parsing
-│   ├── cmd_runner.rs  # Command execution
-│   ├── cmd_handlers.rs# Individual command handlers
-│   ├── diff.rs        # Roadmap diffing
-│   ├── display.rs     # Output formatting
-│   ├── prompt.rs      # Prompt generation
-│   ├── str_utils.rs   # String utilities
-│   ├── types.rs       # Roadmap types
-│   ├── audit/         # Test traceability verification
-│   │   ├── checker.rs # Audit logic
-│   │   ├── scanner.rs # Test file scanning
-│   │   ├── display.rs # Audit output
-│   │   └── types.rs
-│   └── cli.rs         # Subcommand handlers
-│
-├── skeleton.rs        # Code compression (full → signatures)
-│
-├── tui/               # Interactive dashboard
-│   ├── state.rs       # App state management
-│   ├── config/        # TUI configuration editor
+├── tui/               # Terminal UI
+│   ├── dashboard/     # Main dashboard with tabs
+│   │   ├── mod.rs
+│   │   ├── state.rs   # DashboardApp state
+│   │   └── ui.rs      # Ratatui rendering
+│   ├── config/        # Configuration editor
 │   │   ├── components.rs
 │   │   ├── helpers.rs
-│   │   ├── state.rs
+│   │   ├── state.rs   # ConfigApp state
 │   │   └── view.rs
-│   └── view/          # Ratatui rendering
-│       ├── components.rs
-│       └── layout.rs
-│
-├── cli/               # CLI command handlers
-│   ├── handlers.rs    # Command implementations
+│   ├── view/          # Scan results viewer
+│   │   ├── components.rs
+│   │   └── layout.rs
+│   ├── watcher.rs     # Clipboard monitoring
+│   ├── runner.rs      # Terminal setup/restore
+│   ├── state.rs       # App state for scan view
 │   └── mod.rs
 │
 ├── clipboard/         # Cross-platform clipboard
-│   ├── linux.rs
-│   ├── macos.rs
-│   ├── windows.rs
-│   ├── platform.rs
-│   └── temp.rs
+│   ├── linux.rs       # xclip/wl-copy + WSL support
+│   ├── macos.rs       # pbcopy/pbpaste
+│   ├── windows.rs     # PowerShell clipboard
+│   ├── platform.rs    # Platform detection
+│   ├── temp.rs        # Temp file management for large content
+│   └── mod.rs         # smart_copy logic
 │
-├── config/            # Configuration management
-│   ├── io.rs          # File I/O
-│   ├── types.rs       # Config types
+├── cli/               # CLI command handlers
+│   ├── handlers.rs    # All command implementations
 │   └── mod.rs
 │
+├── config/            # Configuration management
+│   ├── io.rs          # File I/O, TOML parsing
+│   ├── types.rs       # Config, RuleConfig, Preferences
+│   └── mod.rs
+│
+├── lang.rs            # Language detection and queries
+├── skeleton.rs        # Code → signatures compression
+├── signatures.rs      # Type surface map generation
+├── discovery.rs       # File enumeration (git + walk)
+├── tokens.rs          # tiktoken integration
+├── prompt.rs          # System prompt generation
+├── reporting.rs       # Scan report formatting
+├── spinner.rs         # Loading indicator
+├── project.rs         # Project type detection
+├── wizard.rs          # Interactive config wizard
 ├── clean.rs           # Cleanup utilities
 ├── constants.rs       # Global constants
 ├── detection.rs       # File type detection
-├── discovery.rs       # File enumeration (git + walk)
 ├── error.rs           # Error types
-├── project.rs         # Project detection and TOML generation
-├── prompt.rs          # System prompt generation
-├── reporting.rs       # Scan report formatting
-├── tokens.rs          # tiktoken integration
-├── types.rs           # Shared types (Violation, FileReport, etc.)
-├── wizard.rs          # Interactive configuration wizard
-└── lib.rs             # Public API (SlopChop_core)
+├── types.rs           # Shared types (Violation, FileReport, ScanReport)
+└── lib.rs             # Public API (slopchop_core)
 ```
 
 ### Data Flow
 
 ```
-User runs "SlopChop pack"
+User runs "slopchop pack --focus file.rs"
          │
          ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│    discovery    │────►│    analysis     │────►│      pack       │
-│   (find files)  │     │  (check rules)  │     │ (generate ctx)  │
+│    discovery    │────►│      graph      │────►│      pack       │
+│   (find files)  │     │  (build deps)   │     │ (generate ctx)  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                                                          │
                                                          ▼
@@ -212,7 +209,7 @@ User runs "SlopChop pack"
                                                          ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │    extractor    │────►│    validator    │────►│     writer      │
-│ (parse Blocks)  │     │ (safety checks) │     │ (atomic write)  │
+│ (parse blocks)  │     │ (safety checks) │     │ (atomic write)  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
                                                          │
                                                          ▼
@@ -233,7 +230,7 @@ User runs "SlopChop pack"
 
 ## The Three Laws
 
-SlopChop enforces structural constraints inspired by code review best practices. These are configurable but opinionated defaults.
+SlopChop enforces structural constraints. These are configurable but opinionated defaults.
 
 ### Law of Atomicity
 
@@ -241,12 +238,10 @@ SlopChop enforces structural constraints inspired by code review best practices.
 
 ```toml
 [rules]
-max_file_tokens = 2000  # Default: ~500 lines of code
+max_file_tokens = 2000  # ~500 lines of code
 ```
 
-**Why:** A 5000-token file can't be meaningfully reviewed. AI-generated code especially tends toward monolithic files. Forcing small files creates natural modularity.
-
-**Escape hatch:** `ignore_tokens_on = [".lock", ".md"]`
+**Why:** Large files can't be meaningfully reviewed. AI-generated code tends toward monolithic files. Forcing small files creates natural modularity.
 
 ### Law of Complexity
 
@@ -286,23 +281,9 @@ let value = thing.unwrap_or_else(|| compute());
 let value = thing?;
 ```
 
-**Why:** `.unwrap()` and `.expect()` are fine for prototyping but represent silent panic paths. In production, explicit error handling is safer.
+**Why:** `.unwrap()` and `.expect()` are hidden crash paths. In production, explicit error handling is safer.
 
 **Implementation:** Tree-sitter query matches `call_expression` where method is `unwrap` or `expect`.
-
-### Law of Clarity (Naming)
-
-**Function names should reveal intent.**
-```toml
-[rules]
-max_function_words = 5   # Words in function name
-```
-
-**Why:** A function named `validate_user_input_and_send_email_notification_async` is doing too much. Short names force single responsibility.
-
-**Implementation:** Tree-sitter extracts function names, then counts words by splitting on `_` (snake_case) or uppercase boundaries (CamelCase).
-
-**Note:** In violation reports, this appears as `LAW OF BLUNTNESS` — a reminder that good names are blunt about what a function does.
 
 ---
 
@@ -311,50 +292,55 @@ max_function_words = 5   # Words in function name
 ### Why Not Markdown Fences?
 
 AI models frequently mess up markdown code fences:
-- Nested fences get escaped wrong: ` ```rust ` inside ` ``` ` 
-- Some models emit fences with wrong language tags
-- Closing fences get matched incorrectly with earlier opens
+- Nested fences get escaped wrong
+- Closing fences match incorrectly
+- Language tags vary unpredictably
 
-The `#__SlopChop_FILE__#` and `#__SlopChop_END__#` delimiters:
+The `#__SLOPCHOP_FILE__#` and `#__SLOPCHOP_END__#` delimiters:
 - Never appear in normal code
-- Unambiguous start/end delimiters
-- Visually distinctive
+- Unambiguous start/end
 - Don't require escape sequences
 - Machine-parseable
 
 ### Format Specification
 
 ```
-#__SlopChop_PLAN__#
+#__SLOPCHOP_PLAN__#
 GOAL: What you're doing
 CHANGES:
 1. First change
 2. Second change
-#__SlopChop_END__#
+#__SLOPCHOP_END__#
 
-#__SlopChop_MANIFEST__#
+#__SLOPCHOP_MANIFEST__#
 src/file1.rs
 src/file2.rs [NEW]
 src/old.rs [DELETE]
-#__SlopChop_END__#
+#__SLOPCHOP_END__#
 
-#__SlopChop_FILE__# src/file1.rs
+#__SLOPCHOP_FILE__# src/file1.rs
 // Complete file content
 // No truncation allowed
-#__SlopChop_END__#
+#__SLOPCHOP_END__#
 
-#__SlopChop_FILE__# src/file2.rs
-// Another complete file
-#__SlopChop_END__#
+===ROADMAP===
+CHECK
+id = task-id
+ADD
+id = new-task
+text = New feature
+section = v0.2.0
+===ROADMAP===
 ```
 
 ### Block Types
 
 | Block | Purpose | Required |
 |-------|---------|----------|
-| `PLAN` | Human-readable summary for review | Recommended |
+| `PLAN` | Human-readable summary | Recommended |
 | `MANIFEST` | Declares all files being touched | Optional but validated |
-| File paths | Actual file content | Required |
+| File blocks | Actual file content | Required |
+| `ROADMAP` | Task updates | Optional |
 
 ### Markers
 
@@ -364,76 +350,29 @@ src/old.rs [DELETE]
 | `[DELETE]` | File will be removed |
 | *(none)* | File exists, will be updated |
 
-### The Contract
-
-1. Every file in MANIFEST must have a corresponding block (unless DELETE)
-2. File content must be **complete** — no `// ...` or "remaining code"
-3. Paths must be relative, no traversal (`../`), no absolute paths
-4. No touching sensitive files (`.env`, `.git/`, etc.)
-
 ---
 
 ## Analysis Engine
 
-### Tree-sitter Integration
+### Language Support
 
-SlopChop uses [tree-sitter](https://tree-sitter.github.io/) for structural code analysis. This provides:
-- Language-agnostic AST access
-- Incremental parsing (though we don't use it yet)
-- Battle-tested grammars
+| Language | Complexity | Skeleton | Imports | Banned Patterns |
+|----------|:----------:|:--------:|:-------:|:---------------:|
+| Rust | ✅ | ✅ | ✅ | `.unwrap()/.expect()` |
+| TypeScript | ✅ | ✅ | ✅ | — |
+| JavaScript | ✅ | ✅ | ✅ | — |
+| Python | ✅ | ✅ | ✅ | — |
 
-### Supported Languages
-
-| Language | Complexity | Skeleton | Imports | Notes |
-|----------|:----------:|:--------:|:-------:|-------|
-| Rust | ✅ | ✅ | ✅ | + `.unwrap()`/`.expect()` detection |
-| TypeScript | ✅ | ✅ | ✅ | Shared with JavaScript |
-| JavaScript | ✅ | ✅ | ✅ | ESM and CJS |
-| Python | ✅ | ✅ | ✅ | |
-| Go | — | — | — | Project detection only |
-| Others | — | — | — | Token counting only |
+Languages are defined in `src/lang.rs` with their tree-sitter grammars and query patterns.
 
 ### Query Architecture
 
-```rust
-// src/analysis/ast.rs
-
-struct Analyzer {
-    rust_naming: Query,
-    rust_complexity: Query,
-    rust_banned: Query,
-    js_naming: Query,
-    js_complexity: Query,
-    py_naming: Query,
-    py_complexity: Query,
-}
-```
-
-Example complexity query (Rust):
-```
-(if_expression) @branch
-(match_arm) @branch  
-(for_expression) @branch
-(while_expression) @branch
-(binary_expression operator: "&&") @branch
-(binary_expression operator: "||") @branch
-```
-
-### Analysis Flow
-
-```rust
-// src/analysis/mod.rs
-
-pub struct RuleEngine { config: Config }
-
-impl RuleEngine {
-    pub fn scan(&self, files: Vec<PathBuf>) -> ScanReport {
-        files.par_iter()                          // Parallel via rayon
-            .filter_map(|path| self.analyze_file(path))
-            .collect()
-    }
-}
-```
+Each language defines:
+- `q_naming()` — Function definition queries
+- `q_complexity()` — Branch/loop queries  
+- `q_skeleton()` — Function body queries for skeletonization
+- `q_exports()` — Public API queries for signatures
+- `q_banned()` — Optional banned pattern queries (Rust only)
 
 ---
 
@@ -443,90 +382,66 @@ impl RuleEngine {
 
 ```
 Clipboard ──► Extract ──► Validate ──► Backup ──► Write ──► Verify ──► Commit
-                │            │           │          │          │          │
-                │            │           │          │          │          ▼
-                │            │           │          │          │     git commit/push
-                │            │           │          │          ▼
-                │            │           │          │     Run check commands
-                │            │           │          ▼
-                │            │           │     Write files atomically
-                │            │           ▼
-                │            │     Backup existing files to .SlopChop_apply_backup/
-                │            ▼
-                │     Path safety, truncation detection, manifest validation
-                ▼
-          Parse blocks, extract PLAN, MANIFEST, files
 ```
 
 ### Validation Rules
 
 **Path Safety:**
 - No `../` traversal
-- No absolute paths (`/etc/passwd`, `C:\Windows`)
-- No sensitive files (`.env`, `.ssh/`, `.aws/`, `.git/`)
-- No hidden files (except `.gitignore`, `.SlopChopignore`)
-- No overwriting `ROADMAP.md` (protected)
+- No absolute paths
+- No sensitive directories (`.git`, `.env`, `.ssh`, `.aws`)
+- No hidden files (except `.gitignore`, `.slopchopignore`, `.github`)
+
+**Protected Files:**
+- `ROADMAP.md` — Use roadmap commands instead
+- `slopchop.toml`, `Cargo.lock`, `package-lock.json`
 
 **Content Safety:**
 - No truncation markers (`// ...`, `/* ... */`, `# ...`)
 - No lazy phrases ("rest of implementation", "remaining code")
 - No empty files
-- Files must match MANIFEST declaration
+- No markdown fences in non-markdown files
 
 ### Backup System
 
 Before any write:
 ```
-.SlopChop_apply_backup/
-└── 1699876543/           # Unix timestamp
+.slopchop_apply_backup/
+└── {timestamp}/
     └── src/
-        └── modified.rs   # Original content preserved
+        └── modified.rs
 ```
-
-**Recovery:** If apply fails mid-write, original files are in backup.
-
-### Verification
-
-After successful writes, SlopChop runs configured check commands:
-
-```toml
-[commands]
-check = [
-    "cargo clippy --all-targets -- -D warnings",
-    "cargo test"
-]
-```
-
-- **All pass:** Auto-commit and push
-- **Any fail:** Generate rejection message, copy to clipboard
 
 ### Git Integration
 
 On verification pass:
-```rust
-fn commit_and_push(message: &str) -> Result<()> {
-    git add -A
-    git commit -m "{prefix}{message}"
-    git push
-}
-```
+1. Stage all changes (`git add -A`)
+2. Commit with PLAN's GOAL as message
+3. Push to remote
 
-The commit message comes from the PLAN block's GOAL line.
+Failed verifications leave changes uncommitted with error copied to clipboard.
 
 ---
 
-## Pack & Context System
+## Context Generation
 
-### The Problem
+### Commands
 
-AI context windows are finite. You can't send your entire codebase for every request.
+| Command | Output |
+|---------|--------|
+| `slopchop signatures` | Type map of all exports (skeletonized) |
+| `slopchop pack <file>` | Full file content |
+| `slopchop pack --focus <file>` | Full file + dependency skeletons |
+| `slopchop trace <file>` | Full file + dependency graph visualization |
 
-**Current solution:** Focus mode
-```bash
-SlopChop pack --target src/apply/mod.rs
-```
-- Target file: full content
-- All other files: skeletonized (signatures only)
+### Smart Copy
+
+For context > 2000 tokens:
+1. Write to temp file
+2. Copy file handle to clipboard (not text)
+3. User can paste as file attachment
+
+This prevents clipboard overflow and enables larger context windows.
 
 ### Skeleton System
 
@@ -534,10 +449,10 @@ Converts implementation to signatures:
 
 **Before:**
 ```rust
-pub fn validate_user(input: &UserInput) -> Result<User, ValidationError> {
-    let email = input.email.trim();
+pub fn validate(input: &str) -> Result<User> {
+    let email = input.trim();
     if email.is_empty() {
-        return Err(ValidationError::EmptyEmail);
+        return Err(ValidationError::Empty);
     }
     // ... 40 more lines
 }
@@ -545,148 +460,106 @@ pub fn validate_user(input: &UserInput) -> Result<User, ValidationError> {
 
 **After:**
 ```rust
-pub fn validate_user(input: &UserInput) -> Result<User, ValidationError> { ... }
-```
-
-**Implementation:** Tree-sitter finds function bodies and replaces with `{ ... }` (Rust), `...` (Python), or `{ ... }` (JS/TS).
-
-### Prompt Generation
-
-Every `SlopChop pack` output includes:
-1. **Header:** System prompt with The Three Laws, current limits, Protocol instructions
-2. **Violations:** Any existing rule violations (priority fix required)
-3. **Files:** Codebase content in Protocol format
-4. **Footer:** Constraint reminder
-
-The AI receives not just code, but the rules it must follow.
-
----
-
-## Smart Context
-
-### Overview
-
-The `graph` module provides dependency-aware context generation:
-
-1. **Import Extraction** (`graph/imports.rs`)
-   - Rust: `use`, `mod` declarations
-   - Python: `import`, `from...import`
-   - TypeScript: `import` statements
-
-2. **Definition Extraction** (`graph/defs/`)
-   - Functions, structs, traits, types
-   - Exports and public interfaces
-
-3. **Graph Construction** (`graph/rank/graph.rs`)
-   - Nodes: Files
-   - Edges: Import relationships
-   - Bidirectional traversal
-
-4. **PageRank Scoring** (`graph/rank/pagerank.rs`)
-   - Identifies important "hub" files
-   - Weights context inclusion
-
-### Trace Command
-
-```bash
-SlopChop trace src/apply/mod.rs --depth 2 --budget 4000
-```
-
-**Output Structure:**
-- **Anchor**: Full content of target file
-- **Direct**: Skeletonized immediate dependencies
-- **Indirect**: Skeletonized transitive dependencies
-
-### Map Command
-
-```bash
-SlopChop map --deps
-```
-
-Generates a structural overview:
-```
-SlopChop CODEBASE MAP
-==================
-
-src/
-  analysis/     [4 files, 1.2k tokens]  → Code quality checks
-  apply/        [8 files, 2.8k tokens]  → AI response parsing
-  roadmap/      [9 files, 3.1k tokens]  → Task tracking
-  graph/        [6 files, 1.8k tokens]  → Dependency extraction
-```
-
-### Context Ordering
-
-**Why it matters:** AI comprehension improves when dependencies come before dependents.
-
-```
-# BAD: Random order
-src/apply/mod.rs        # Uses types.rs - but AI hasn't seen it yet
-src/types.rs            # Too late!
-
-# GOOD: Topological order  
-src/types.rs            # Leaf node, no deps
-src/apply/types.rs      # Uses types.rs (already seen)
-src/apply/mod.rs        # Uses both (already seen)
+pub fn validate(input: &str) -> Result<User> { ... }
 ```
 
 ---
 
-## Roadmap System
+## Dependency Graph
 
-### Purpose
+### PageRank Ranking
 
-The roadmap isn't just documentation—it's a **contract**:
-- Every `[x]` feature has a `<!-- test: path::function -->` anchor
-- `SlopChop roadmap audit` verifies anchors resolve to real tests
-- This enforces that "done" means "tested"
+The `graph/rank` module builds a dependency graph and ranks files by importance using PageRank:
 
-### Programmatic Updates
+1. **Extract definitions** — Functions, structs, types from each file
+2. **Extract references** — Imports and usages
+3. **Build edges** — File A imports from File B = edge A→B
+4. **Compute PageRank** — Iterate until convergence
 
-AI can update the roadmap via commands:
+Files with high fan-in (many dependents) rank higher.
+
+### Focus Mode
+
+`slopchop pack --focus file.rs`:
+1. Re-runs PageRank with anchor file as seed
+2. Includes full content of anchor
+3. Includes skeletonized content of neighbors
+4. Respects token budget
+
+---
+
+## Roadmap System (V2)
+
+### Storage Format
+
+Tasks are stored in `tasks.toml`:
+
+```toml
+[meta]
+title = "Project Roadmap"
+description = ""
+
+[[sections]]
+id = "v0.1.0"
+title = "v0.1.0"
+status = "complete"
+order = 0
+
+[[tasks]]
+id = "feature-x"
+text = "Implement feature X"
+status = "done"
+section = "v0.1.0"
+test = "tests/feature_x.rs::test_feature"
+```
+
+### Commands
+
+AI can update the roadmap via the `===ROADMAP===` block:
 
 ```
 ===ROADMAP===
-CHECK "task-slug"
-ADD "section-slug" "**New task**" AFTER "existing-task"
-UPDATE "task-slug" "**New text**"
-NOTE "task-slug" "Additional info"
-MOVE "task-slug" AFTER "other-task"
+CHECK
+id = feature-x
+
+ADD
+id = feature-y
+text = New feature
+section = v0.2.0
 ===ROADMAP===
 ```
 
-### Command Reference
-
-| Command | Syntax | Description |
-|---------|--------|-------------|
-| CHECK | `CHECK "path"` | Mark task complete |
-| UNCHECK | `UNCHECK "path"` | Mark task pending |
-| ADD | `ADD "parent" "text" [AFTER "slug"]` | Add new task |
-| UPDATE | `UPDATE "path" "new-text"` | Modify task text |
-| DELETE | `DELETE "path"` | Remove task |
-| NOTE | `NOTE "path" "text"` | Add note to task |
-| MOVE | `MOVE "path" AFTER\|BEFORE\|TO "target"` | Relocate task |
-| SECTION | `SECTION "heading"` | Add new section |
+| Command | Syntax |
+|---------|--------|
+| `CHECK` | Mark task done |
+| `UNCHECK` | Mark task pending |
+| `ADD` | Create new task |
+| `UPDATE` | Modify task fields |
+| `DELETE` | Remove task |
 
 ### Unified Apply
 
-When you run `SlopChop apply`, it handles BOTH:
-1. Code files (Protocol blocks)
-2. Roadmap updates (`===ROADMAP===` block)
+`slopchop apply` handles both code files and roadmap updates atomically.
 
-**One paste updates everything atomically.**
+---
 
-### Audit System
+## TUI Dashboard
 
-```bash
-SlopChop roadmap audit --strict
-```
+### Tabs
 
-Verifies:
-- All `[x]` tasks have test anchors
-- All referenced test files exist
-- All referenced test functions exist
-- `[no-test]` items are explicitly marked
+| Tab | Purpose |
+|-----|---------|
+| **Dashboard** | Live scan status, recent activity |
+| **Roadmap** | Task list with filtering |
+| **Config** | Interactive settings editor |
+| **Logs** | System log stream |
+
+### Watcher (In Progress)
+
+`src/tui/watcher.rs` polls clipboard for SlopChop payloads:
+- Detects `#__SLOPCHOP_FILE__#` markers
+- Sends `PayloadDetected` event to TUI
+- Enables future "watch mode" hotkey application
 
 ---
 
@@ -696,29 +569,17 @@ Verifies:
 
 **Attacker:** Malicious or confused AI generating dangerous file operations.
 
-**Attack surface:**
-- Path traversal (`../../../etc/passwd`)
-- Sensitive file overwrite (`.env`, SSH keys)
-- Code injection via truncation markers
-
 ### Defenses
 
 | Threat | Defense |
 |--------|---------|
-| Path traversal | Block any path containing `..` |
-| Absolute paths | Block paths starting with `/` or `C:\` |
-| Sensitive files | Blocklist: `.env`, `.ssh/`, `.aws/`, `.gnupg/`, `id_rsa`, `credentials` |
-| Hidden files | Block `.*` except `.gitignore`, `.SlopChopignore` |
-| Backup overwrite | Block `.SlopChop_apply_backup/` |
-| Truncation | Detect `// ...`, `/* ... */`, `# ...`, lazy phrases |
-| Empty files | Reject zero-content files |
-| Protected files | Block `ROADMAP.md` overwrites (use roadmap commands instead) |
-
-### Non-Goals
-
-- Sandboxing execution (trust the user's environment)
-- Network isolation (AI responses are text, not executable)
-- Encryption (files are plaintext on disk anyway)
+| Path traversal | Block `..` in any path component |
+| Absolute paths | Block `/` or `C:\` prefixes |
+| Sensitive files | Blocklist: `.env`, `.ssh/`, `.aws/`, `.gnupg/`, `credentials` |
+| Hidden files | Block `.*` except allowlist |
+| Backup overwrite | Block `.slopchop_apply_backup/` |
+| Truncation | Detect comment patterns and lazy phrases |
+| Protected files | Block config/lock file overwrites |
 
 ---
 
@@ -727,122 +588,67 @@ Verifies:
 ### Why Rust?
 
 - **Performance:** Parallel file analysis via rayon
-- **Reliability:** No runtime crashes from null/undefined
-- **Tree-sitter bindings:** First-class Rust support
-- **Single binary:** Easy distribution, no dependencies
-- **Dogfooding:** SlopChop enforces Rust best practices on itself
+- **Reliability:** No null pointer crashes
+- **Tree-sitter:** First-class Rust bindings
+- **Single binary:** Easy distribution
+- **Dogfooding:** SlopChop enforces its own rules on itself
 
 ### Why Tree-sitter Over LSP?
 
-- **No server overhead:** Parse on-demand, no background process
-- **Language-agnostic queries:** Same query syntax for all languages
-- **Incremental not needed:** We parse once per command, not on every keystroke
-- **Simpler deployment:** No language server installation required
+- **No server overhead:** Parse on-demand
+- **Language-agnostic queries:** Same patterns for all languages
+- **Simpler deployment:** No language server installation
 
-### Why CLI Over VS Code Extension?
+### Why CLI Over IDE Plugin?
 
-- **Editor-agnostic:** Works with Vim, Emacs, VS Code, anything
-- **Composable:** Pipes, scripts, CI integration
-- **Maintainable:** One codebase, not per-editor plugins
-- **AI-friendly:** Command-line is the universal interface
+- **Editor-agnostic:** Works everywhere
+- **Composable:** Pipes, scripts, CI
+- **Maintainable:** One codebase
 
 ### Why Custom Protocol Over Markdown?
 
 - **Unambiguous:** No fence-escape issues
-- **Distinctive:** `#__SlopChop_FILE__#` never appears in code
-- **Simple:** No language tags, just path and content
-- **Parseable:** Clean delimiters
+- **Distinctive:** Delimiters never appear in code
+- **Parseable:** Clean regex patterns
 
 ### Why Reject Instead of Fix?
 
-- **Teaching:** AI learns constraints through failure
+- **Teaching:** AI learns through failure
 - **Safety:** Auto-fix could mask deeper problems
-- **Simplicity:** Rejection logic is stateless
-- **Trust:** User sees exactly what AI generated
-
-### Why Git Integration?
-
-- **Atomicity:** Commit represents "AI task complete"
-- **Undo:** `git revert` is the recovery mechanism
-- **History:** Track AI contributions over time
-- **Workflow:** Push triggers CI, PR, deployment
+- **Simplicity:** Rejection is stateless
 
 ---
 
 ## Module Map
 
-### Core Libraries Used
+### Core Dependencies
 
 | Crate | Purpose |
 |-------|---------|
 | `tree-sitter` | AST parsing |
-| `tree-sitter-rust/python/typescript` | Language grammars |
-| `tiktoken-rs` | Token counting (OpenAI tokenizer) |
-| `clap` | CLI argument parsing |
+| `tree-sitter-{rust,python,typescript}` | Language grammars |
+| `tiktoken-rs` | Token counting |
+| `clap` | CLI parsing |
 | `serde` + `toml` | Configuration |
-| `walkdir` | File system traversal |
-| `rayon` | Parallel iteration |
+| `walkdir` | File traversal |
+| `rayon` | Parallelism |
 | `regex` | Pattern matching |
-| `colored` | Terminal output |
-| `ratatui` + `crossterm` | TUI dashboard |
+| `colored` | Terminal colors |
+| `ratatui` + `crossterm` | TUI |
 | `anyhow` + `thiserror` | Error handling |
-
-### Internal Module Dependencies
-
-```
-lib.rs (SlopChop_core)
-    ├── analysis ──► config, types, tokens
-    ├── apply ────► config, types, clipboard, roadmap
-    ├── pack ─────► config, discovery, analysis, skeleton, prompt, clipboard, graph
-    ├── trace ────► graph, skeleton, discovery
-    ├── graph ────► (self-contained)
-    ├── roadmap ──► clipboard
-    ├── discovery ► config
-    ├── tui ──────► analysis, types, config
-    └── wizard ───► project, config
-```
 
 ---
 
 ## Testing Philosophy
 
-### The Contract
-
-From ROADMAP.md Philosophy:
-> Every `[x]` feature MUST have a `<!-- test: path::function -->` reference
-
-This is enforced by `SlopChop roadmap audit --strict`.
-
-### Test Organization
-
-```
-tests/
-├── unit_*.rs           # Pure function tests, no I/O
-├── integration_*.rs    # Multi-module tests, temp directories
-├── cli_*.rs            # Full command invocation tests
-└── security_*.rs       # Attack vector validation
-```
-
-### Naming Convention
-
-Test functions should match feature slugs from ROADMAP.md:
-```rust
-// ROADMAP: - [x] **Block ../ traversal** <!-- test: tests/security_validation.rs::test_traversal_blocked -->
-
-#[test]
-fn test_traversal_blocked() {
-    // ...
-}
-```
-
 ### What We Test
 
 - **Happy paths:** Normal usage works
-- **Rejection paths:** Invalid input is caught with correct error
+- **Rejection paths:** Invalid input caught with correct error
 - **Security:** Every blocked path type has explicit test
-- **Edge cases:** Empty files, Unicode paths, deep nesting
+- **Edge cases:** Empty files, Unicode, deep nesting
 
-### What We Don't Test
+### What We Skip
 
 - Platform-specific clipboard (manual verification)
 - Git operations in CI (mocked or skipped)
@@ -850,64 +656,32 @@ fn test_traversal_blocked() {
 
 ---
 
-## Future Considerations
+## Future Work
 
-### Language Additions
+### Watch Mode
 
-Adding a new language requires:
+`slopchop watch` — Background clipboard monitoring with hotkey application.
+
+The watcher infrastructure exists (`src/tui/watcher.rs`). Remaining work:
+- Global hotkey registration
+- System notification integration
+- Diff preview modal
+
+### Additional Languages
+
+Adding a language requires:
 1. Add `tree-sitter-{lang}` dependency
-2. Write complexity query (branching constructs)
-3. Write naming query (function definitions)
-4. Write skeleton cleaner (body replacement)
-5. Write import extractor
-6. Add to language detection in `analysis/ast.rs`
-
-Estimated effort: 2-4 hours per language.
-
-### Performance
-
-Current: ~1-2 seconds for medium codebase (1000 files).
-
-If needed:
-- Incremental analysis (cache unchanged files)
-- Parallel tree-sitter parsing (currently sequential per file)
-- Memory-mapped file reading
-
-Not prioritized because current speed is acceptable.
+2. Add variant to `Lang` enum in `lang.rs`
+3. Implement query methods
+4. Add to language detection
 
 ### Distribution
 
-Planned for v1.0.0:
+Planned for v1.0:
 - crates.io publication
-- Homebrew formula (macOS)
-- Scoop/Winget (Windows)
-- AUR package (Arch Linux)
-- GitHub Releases with prebuilt binaries
-
-### What We're NOT Building
-
-| Feature | Reason |
-|---------|--------|
-| VS Code Extension | IDE lock-in, maintenance burden |
-| Watch mode | Complexity without clear benefit |
-| Markdown fallback | Enforce format discipline |
-| Auto-fix | SlopChop rejects, doesn't repair |
-| LSP server | Overkill for our use case |
-| Multi-repo | One project at a time |
-| Cloud service | Local-first philosophy |
+- Homebrew formula
+- GitHub Releases with binaries
 
 ---
 
-## Contributing
-
-See ROADMAP.md for current priorities. The `🔄 CURRENT` version marker indicates active development.
-
-Before submitting:
-1. Run `SlopChop` (must pass own rules)
-2. Run `cargo clippy --all-targets -- -D warnings -D clippy::pedantic`
-3. Run `cargo test`
-4. Ensure new features have `<!-- test: -->` anchors in ROADMAP.md
-
----
-
-*Last updated: 2025*
+*Last updated: 2025-06*
