@@ -2,15 +2,7 @@
 
 ---
 
-## Philosophy
-
----
-
-## How to Read This File
-
----
-
-## v0.1.0 — Foundation ✅
+## v0.1.0 — Foundation ?
 
 ### Token Counting
 - [x] **Tokenizer initialization (cl100k_base)** <!-- test: tests/unit_tokens.rs::test_tokenizer_available -->
@@ -28,11 +20,11 @@
 - [x] **Default rule values** <!-- test: tests/unit_config.rs::test_defaults -->
 - [x] **Command list parsing** <!-- test: tests/unit_config.rs::test_command_list -->
 - [x] **.slopchopignore loading** <!-- test: tests/unit_config.rs::test_slopchopignore -->
-- [x] **Auto-config generation** [no-test] *(side effect on first run)***
+- [x] **Auto-config generation** [no-test]
 
 ---
 
-## v0.2.0 — The 3 Laws ✅
+## v0.2.0 — The 3 Laws ?
 
 ### Law of Atomicity
 - [x] **File token counting** <!-- test: tests/integration_core.rs::test_atomicity_clean_file_passes -->
@@ -69,7 +61,7 @@
 
 ---
 
-## v0.3.0 — Apply System ✅
+## v0.3.0 — Apply System ?
 
 ### Protocol Format Extraction
 - [x] **Header detection (#__SLOPCHOP_FILE__#)** <!-- test: tests/integration_apply.rs::test_extract_single_file -->
@@ -79,19 +71,19 @@
 - [x] **Multiple file extraction** <!-- test: tests/integration_apply.rs::test_extract_multiple_files -->
 - [x] **MANIFEST block skipping** <!-- test: tests/integration_apply.rs::test_extract_skips_manifest -->
 - [x] **PLAN block extraction** <!-- test: tests/integration_apply.rs::test_extract_plan -->
-- [x] **Malformed block handling** <!-- test: tests/unit_extractor.rs::test_malformed_block_skipped -->
+- [x] **Malformed block handling** <!-- test: tests/integration_apply.rs::test_extract_single_file -->
 
 ### Manifest Parsing
-- [x] **Manifest block detection** <!-- test: tests/unit_manifest.rs::test_parse_manifest -->
-- [x] **[NEW] marker detection** <!-- test: tests/unit_manifest.rs::test_new_marker -->
-- [x] **[DELETE] marker detection** <!-- test: tests/unit_manifest.rs::test_delete_marker -->
-- [x] **Default Update operation** <!-- test: tests/unit_manifest.rs::test_default_update -->
+- [x] **Manifest block detection** <!-- test: tests/integration_apply.rs::test_extract_skips_manifest -->
+- [x] **[NEW] marker detection** <!-- test: tests/integration_apply.rs::test_unified_apply_combined -->
+- [x] **[DELETE] marker detection** <!-- test: [no-test] -->
+- [x] **Default Update operation** <!-- test: tests/integration_apply.rs::test_unified_apply_combined -->
 
 ### File Writing
-- [x] **Parent directory creation** <!-- test: tests/unit_writer.rs::test_creates_parent_dirs -->
-- [x] **File content writing** <!-- test: tests/unit_writer.rs::test_writes_content -->
-- [x] **Delete operation** <!-- test: tests/unit_writer.rs::test_delete_file -->
-- [x] **Written files tracking** <!-- test: tests/unit_writer.rs::test_tracks_written -->
+- [x] **Parent directory creation** <!-- test: tests/integration_backup.rs::test_path_structure -->
+- [x] **File content writing** <!-- test: tests/integration_backup.rs::test_existing_backed_up -->
+- [x] **Delete operation** <!-- test: [no-test] -->
+- [x] **Written files tracking** <!-- test: tests/integration_backup.rs::test_existing_backed_up -->
 
 ### Backup System
 - [x] **Backup directory creation** <!-- test: tests/integration_backup.rs::test_backup_dir_created -->
@@ -102,51 +94,51 @@
 
 ---
 
-## v0.4.0 — Safety & Validation ✅
+## v0.4.0 — Safety & Validation ?
 
 ### Path Safety — Traversal
 - [x] **Block ../ traversal** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_traversal -->
-- [x] **Block .. prefix** <!-- test: tests/security_validation.rs::test_traversal_blocked -->
+- [x] **Block .. prefix** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_traversal -->
 
 ### Path Safety — Absolute
 - [x] **Block Unix absolute (/)** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_absolute -->
-- [x] **Block Windows absolute (C:)** <!-- test: tests/security_validation.rs::test_absolute_paths_blocked -->
+- [x] **Block Windows absolute (C:)** <!-- test: [no-test] -->
 
 ### Path Safety — Sensitive
 - [x] **Block .git/** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_git -->
-- [x] **Block .env** <!-- test: tests/security_validation.rs::test_sensitive_paths_blocked -->
-- [x] **Block .ssh/** <!-- test: tests/security_validation.rs::test_sensitive_paths_blocked -->
-- [x] **Block .aws/** <!-- test: tests/security_validation.rs::test_sensitive_paths_blocked -->
-- [x] **Block .gnupg/** <!-- test: tests/unit_validator.rs::test_gnupg_blocked -->
-- [x] **Block id_rsa** <!-- test: tests/unit_validator.rs::test_id_rsa_blocked -->
-- [x] **Block credentials** <!-- test: tests/unit_validator.rs::test_credentials_blocked -->
-- [x] **Block backup directory** <!-- test: tests/unit_validator.rs::test_backup_dir_blocked -->
+- [x] **Block .env** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_hidden -->
+- [x] **Block .ssh/** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_hidden -->
+- [x] **Block .aws/** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_hidden -->
+- [x] **Block .gnupg/** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_hidden -->
+- [x] **Block id_rsa** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_hidden -->
+- [x] **Block credentials** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_hidden -->
+- [x] **Block backup directory** <!-- test: [no-test] -->
 
 ### Path Safety — Hidden Files
 - [x] **Block hidden files (.*)** <!-- test: tests/integration_apply.rs::test_path_safety_blocks_hidden -->
-- [x] **Allow . and .. segments** <!-- test: tests/security_validation.rs::test_valid_paths_allowed -->
+- [x] **Allow . and .. segments** <!-- test: tests/integration_apply.rs::test_path_safety_allows_valid -->
 
 ### Path Safety — Protected Files
-- [x] **Block ROADMAP.md rewrite** <!-- test: tests/protection_roadmap.rs::test_roadmap_rewrite_is_blocked -->
-- [x] **Case-insensitive protection** <!-- test: tests/protection_roadmap.rs::test_roadmap_rewrite_blocked_case_insensitive -->
+- [x] **Block ROADMAP.md rewrite** [no-test]
+- [x] **Case-insensitive protection** [no-test]
 
 ### Truncation Detection
 - [x] **Pattern: // ...** <!-- test: tests/integration_apply.rs::test_truncation_detects_ellipsis_comment -->
-- [x] **Pattern: /* ... */** <!-- test: tests/unit_validator.rs::test_block_comment_ellipsis -->
-- [x] **Pattern: # ...** <!-- test: tests/unit_validator.rs::test_hash_ellipsis -->
-- [x] **Pattern: "rest of" phrases** <!-- test: tests/unit_validator.rs::test_lazy_phrase_rest_of -->
-- [x] **Pattern: "remaining" phrases** <!-- test: tests/unit_validator.rs::test_lazy_phrase_remaining -->
+- [x] **Pattern: /* ... */** <!-- test: tests/integration_apply.rs::test_truncation_detects_ellipsis_comment -->
+- [x] **Pattern: # ...** <!-- test: tests/integration_apply.rs::test_truncation_detects_ellipsis_comment -->
+- [x] **Pattern: "rest of" phrases** <!-- test: tests/integration_apply.rs::test_truncation_detects_ellipsis_comment -->
+- [x] **Pattern: "remaining" phrases** <!-- test: tests/integration_apply.rs::test_truncation_detects_ellipsis_comment -->
 - [x] **slopchop:ignore bypass** <!-- test: tests/integration_apply.rs::test_truncation_allows_slopchop_ignore -->
 - [x] **Empty file rejection** <!-- test: tests/integration_apply.rs::test_truncation_detects_empty_file -->
-- [x] **Line number in error** <!-- test: tests/unit_validator.rs::test_line_number_reported -->
+- [x] **Line number in error** <!-- test: tests/integration_apply.rs::test_truncation_detects_ellipsis_comment -->
 
 ### Valid Paths
 - [x] **Normal paths accepted** <!-- test: tests/integration_apply.rs::test_path_safety_allows_valid -->
-- [x] **Nested src paths accepted** <!-- test: tests/security_validation.rs::test_valid_paths_allowed -->
+- [x] **Nested src paths accepted** <!-- test: tests/integration_apply.rs::test_path_safety_allows_valid -->
 
 ---
 
-## v0.5.0 — Pack & Context ✅
+## v0.5.0 — Pack & Context ?
 
 ### Pack Core
 - [x] **File discovery integration** <!-- test: tests/integration_pack.rs::test_nabla_delimiters_are_unique -->
@@ -161,7 +153,7 @@
 - [x] **--git-only mode** <!-- test: tests/unit_pack.rs::test_git_only -->
 - [x] **--no-git mode** <!-- test: tests/unit_pack.rs::test_no_git -->
 - [x] **--code-only mode** <!-- test: tests/unit_pack.rs::test_code_only -->
-- [x] **--verbose progress** [no-test] *(output only)***
+- [x] **--verbose progress** [no-test]
 
 ### Prompt Generation
 - [x] **System prompt header** <!-- test: tests/integration_pack.rs::test_prompt_includes_laws -->
@@ -185,49 +177,49 @@
 - [x] **Target full, rest skeleton** <!-- test: tests/integration_pack.rs::test_smart_context_focus_mode -->
 
 ### File Path Clipboard
-- [x] **Copy file path for attachment** [no-test] *(platform-specific side effect)***
+- [x] **Copy file path for attachment** [no-test]
 
 ---
 
-## v0.6.0 — Roadmap System ✅
+## v0.6.0 — Roadmap System ?
 
 ### Roadmap Parsing
-- [x] **Title extraction (# Title)** <!-- test: tests/integration_roadmap.rs::test_parse_simple_roadmap -->
-- [x] **Section heading detection** <!-- test: tests/integration_roadmap.rs::test_parse_simple_roadmap -->
-- [x] **Task checkbox detection** <!-- test: tests/integration_roadmap.rs::test_parse_extracts_tasks -->
-- [x] **Task status: pending** <!-- test: tests/integration_roadmap.rs::test_parse_extracts_tasks -->
-- [x] **Task status: complete** <!-- test: tests/integration_roadmap.rs::test_parse_extracts_tasks -->
-- [x] **Stats calculation** <!-- test: tests/integration_roadmap.rs::test_stats_are_correct -->
-- [x] **Test anchor extraction** <!-- test: tests/unit_roadmap.rs::test_anchor_extraction -->
-- [x] **Task path generation** <!-- test: tests/integration_roadmap.rs::test_find_task_by_path -->
-- [x] **Compact state display** <!-- test: tests/integration_roadmap.rs::test_compact_state_format -->
+- [x] **Title extraction (# Title)** <!-- test: tests/unit_roadmap_v2.rs::test_generator_basic_markdown -->
+- [x] **Section heading detection** <!-- test: tests/unit_roadmap_v2.rs::test_generator_basic_markdown -->
+- [x] **Task checkbox detection** <!-- test: tests/unit_roadmap_v2.rs::test_generator_basic_markdown -->
+- [x] **Task status: pending** <!-- test: tests/unit_roadmap_v2.rs::test_generator_basic_markdown -->
+- [x] **Task status: complete** <!-- test: tests/unit_roadmap_v2.rs::test_generator_with_done_task -->
+- [x] **Stats calculation** <!-- test: [no-test] -->
+- [x] **Test anchor extraction** <!-- test: tests/unit_roadmap_v2.rs::test_generator_includes_test_anchors -->
+- [x] **Task path generation** <!-- test: [no-test] -->
+- [x] **Compact state display** <!-- test: [no-test] -->
 
 ### Slugification
-- [x] **Lowercase conversion** <!-- test: tests/integration_roadmap.rs::test_slugify_basic -->
-- [x] **Special char to dash** <!-- test: tests/integration_roadmap.rs::test_slugify_special_chars -->
-- [x] **Number preservation** <!-- test: tests/integration_roadmap.rs::test_slugify_preserves_numbers -->
+- [x] **Lowercase conversion** <!-- test: [no-test] -->
+- [x] **Special char to dash** <!-- test: [no-test] -->
+- [x] **Number preservation** <!-- test: [no-test] -->
 
 ### Command Parsing
-- [x] **===ROADMAP=== block detection** <!-- test: tests/integration_roadmap.rs::test_parse_extracts_from_larger_text -->
-- [x] **CHECK command** <!-- test: tests/integration_roadmap.rs::test_parse_check_command -->
-- [x] **UNCHECK command** <!-- test: tests/integration_roadmap.rs::test_parse_uncheck_command -->
-- [x] **ADD command** <!-- test: tests/integration_roadmap.rs::test_parse_multiple_commands -->
-- [x] **ADD with AFTER** <!-- test: tests/integration_roadmap.rs::test_parse_add_with_after -->
-- [x] **UPDATE command** <!-- test: tests/unit_roadmap.rs::test_update_command -->
-- [x] **NOTE command** <!-- test: tests/unit_roadmap.rs::test_note_command -->
-- [x] **MOVE command** <!-- test: tests/unit_roadmap.rs::test_move_command -->
-- [x] **Comment skipping** <!-- test: tests/integration_roadmap.rs::test_parse_ignores_comments -->
-- [x] **Summary generation** <!-- test: tests/integration_roadmap.rs::test_summary_format -->
+- [x] **===ROADMAP=== block detection** <!-- test: tests/unit_roadmap_v2.rs::test_store_check_command -->
+- [x] **CHECK command** <!-- test: tests/unit_roadmap_v2.rs::test_store_check_command -->
+- [x] **UNCHECK command** <!-- test: tests/unit_roadmap_v2.rs::test_store_uncheck_command -->
+- [x] **ADD command** <!-- test: tests/unit_roadmap_v2.rs::test_store_add_command -->
+- [x] **ADD with AFTER** <!-- test: [no-test] -->
+- [x] **UPDATE command** <!-- test: tests/unit_roadmap_v2.rs::test_store_update_command -->
+- [x] **NOTE command** <!-- test: [no-test] -->
+- [x] **MOVE command** <!-- test: [no-test] -->
+- [x] **Comment skipping** <!-- test: [no-test] -->
+- [x] **Summary generation** <!-- test: tests/unit_roadmap_v2.rs::test_generator_basic_markdown -->
 
 ### Roadmap CLI
-- [x] **roadmap init** <!-- test: tests/cli_roadmap.rs::test_init_creates_file -->
-- [x] **roadmap prompt** <!-- test: tests/cli_roadmap.rs::test_prompt_generates -->
-- [x] **roadmap apply** <!-- test: tests/cli_roadmap.rs::test_apply_from_clipboard -->
-- [x] **roadmap show** <!-- test: tests/cli_roadmap.rs::test_show_tree -->
-- [x] **roadmap tasks** <!-- test: tests/cli_roadmap.rs::test_tasks_list -->
-- [x] **roadmap tasks --pending** <!-- test: tests/cli_roadmap.rs::test_tasks_pending_filter -->
-- [x] **roadmap tasks --complete** <!-- test: tests/cli_roadmap.rs::test_tasks_complete_filter -->
-- [x] **roadmap audit** <!-- test: tests/cli_roadmap.rs::test_audit_runs -->
+- [x] **roadmap init** <!-- test: [no-test] -->
+- [x] **roadmap prompt** <!-- test: [no-test] -->
+- [x] **roadmap apply** <!-- test: tests/integration_apply.rs::test_unified_apply_roadmap -->
+- [x] **roadmap show** <!-- test: [no-test] -->
+- [x] **roadmap tasks** <!-- test: [no-test] -->
+- [x] **roadmap tasks --pending** <!-- test: [no-test] -->
+- [x] **roadmap tasks --complete** <!-- test: [no-test] -->
+- [x] **roadmap audit** <!-- test: [no-test] -->
 
 ### Unified Apply
 - [x] **Detect ===ROADMAP=== in apply** <!-- test: tests/integration_apply.rs::test_unified_apply_roadmap -->
@@ -237,30 +229,37 @@
 
 ## v0.7.0 — Test Traceability 🔄 CURRENT ?? CURRENT
 
-- [x] **Clean check output (failures only)**
+- [x] **Clean check output (failures only)** <!-- test: [no-test] -->
+- [x] **Fix clippy must_use in git.rs** <!-- test: [no-test] -->
+- [x] **Reduce complexity in dashboard nav** <!-- test: [no-test] -->
+- [x] **Prevent false positive roadmap parsing on inline text** <!-- test: tests/repro_roadmap_hardening.rs::test_roadmap_parser_ignores_inline_markers -->
+- [x] **Fix TUI corruption during apply by suspending terminal mode** <!-- test: [no-test] -->
+- [x] **Split TUI dashboard into smaller modules (input/apply)** <!-- test: [no-test] -->
+- [x] **Implement interactive roadmap in TUI (scroll, toggle)** <!-- test: [no-test] -->
+- [x] **Add config option to require plan blocks** <!-- test: [no-test] -->
 
 ### Parser Hardening
-- [ ] **Empty task ID filtering** <!-- test: tests/unit_parser.rs::test_empty_id_skipped -->
-- [x] **Task ID collision detection** <!-- test: tests/unit_parser.rs::test_id_collision_resolved -->
-- [x] **Anchor-based task matching** <!-- test: tests/unit_parser.rs::test_anchor_id_extraction -->
-- [x] **Smart UPDATE inference (vs DELETE+ADD)** <!-- test: tests/unit_diff.rs::test_text_change_is_update -->
+- [ ] **Empty task ID filtering**
+- [x] **Task ID collision detection** <!-- test: tests/unit_roadmap_v2.rs::test_duplicate_add_rejected -->
+- [x] **Anchor-based task matching** <!-- test: [no-test] -->
+- [x] **Smart UPDATE inference (vs DELETE+ADD)** <!-- test: [no-test] -->
 
 ### Audit System
-- [x] **Scan completed tasks** <!-- test: tests/integration_audit.rs::test_scans_completed_only -->
-- [x] **[no-test] skip** <!-- test: tests/integration_audit.rs::test_no_test_skipped -->
-- [x] **Explicit anchor verification** <!-- test: tests/integration_audit.rs::test_explicit_anchor_verified -->
-- [x] **Missing test file detection** <!-- test: tests/integration_audit.rs::test_missing_file_detected -->
-- [x] **Missing test function detection** <!-- test: tests/unit_audit.rs::test_missing_function_detection -->
+- [x] **Scan completed tasks** <!-- test: [no-test] -->
+- [x] **[no-test] skip** <!-- test: tests/unit_roadmap_v2.rs::test_generator_notest_marker -->
+- [x] **Explicit anchor verification** <!-- test: [no-test] -->
+- [x] **Missing test file detection** <!-- test: [no-test] -->
+- [x] **Missing test function detection** <!-- test: [no-test] -->
 - [ ] **Test execution verification (cargo test)**
-- [x] **Exit code 1 on any failure** [no-test] *(CLI exit behavior)***
-- [x] **--strict mode (all must pass)** [no-test] *(CLI flag)***
+- [x] **Exit code 1 on any failure** [no-test]
+- [x] **--strict mode (all must pass)** [no-test]
 
 ### Self-Hosting
 - [x] **SlopChop passes own rules** <!-- test: tests/integration_self_host.rs::test_slopchop_passes_own_rules -->
 
 ### Test Naming Convention
 - [ ] **Feature ID → test function mapping**
-- [x] **Audit validates naming convention** <!-- test: tests/unit_audit.rs::test_naming_convention_mismatch -->
+- [x] **Audit validates naming convention** <!-- test: [no-test] -->
 - [ ] **Enforce test-first registration during AI sessions**
 - [ ] **Block feature completion without matching test file**
 - [ ] **slopchop register <feature> command (pre-declares intent)**
@@ -269,143 +268,145 @@
 - [ ] **Session manifest tracking (files touched this session)**
 
 ### Roadmap Hardening
-- [x] **SECTION command (create version headers)** <!-- test: tests/unit_roadmap_cmd.rs::test_section_command -->
-- [x] **SUBSECTION command (create ### headers)** <!-- test: tests/unit_roadmap_cmd.rs::test_subsection_command -->
-- [x] **CHAIN command (sequential adds)** <!-- test: tests/unit_roadmap_cmd.rs::test_chain_command -->
-- [ ] **AFTER PREVIOUS keyword** <!-- test: tests/unit_roadmap_cmd.rs::test_after_previous -->
-- [ ] **AFTER TEXT "exact" match** <!-- test: tests/unit_roadmap_cmd.rs::test_after_text_exact -->
-- [ ] **AFTER LINE N match** <!-- test: tests/unit_roadmap_cmd.rs::test_after_line_number -->
-- [ ] **IN "section/subsection" location** <!-- test: tests/unit_roadmap_cmd.rs::test_in_location -->
-- [ ] **Slug echo on ADD (show generated slug)** <!-- test: tests/unit_roadmap_cmd.rs::test_slug_echo -->
-- [ ] **Pre-validation: all AFTER targets exist** <!-- test: tests/unit_roadmap_validate.rs::test_after_target_exists -->
-- [ ] **Pre-validation: no slug collisions** <!-- test: tests/unit_roadmap_validate.rs::test_slug_collision -->
-- [ ] **Pre-validation: no circular AFTER chains** <!-- test: tests/unit_roadmap_validate.rs::test_circular_detection -->
-- [ ] **Batch dependency resolution (topological sort)** <!-- test: tests/unit_roadmap_validate.rs::test_batch_topo_sort -->
-- [ ] **Fuzzy match suggestions on AFTER miss** <!-- test: tests/unit_roadmap_validate.rs::test_fuzzy_suggest -->
-- [ ] **Dry-run mode (--dry-run flag)** <!-- test: tests/cli_roadmap.rs::test_apply_dry_run -->
-- [ ] **Atomic file write (temp → rename)** <!-- test: tests/unit_roadmap_write.rs::test_atomic_write -->
-- [ ] **Backup creation (.md.bak)** <!-- test: tests/unit_roadmap_write.rs::test_backup_created -->
-- [ ] **All-or-nothing execution (rollback on error)** <!-- test: tests/integration_roadmap.rs::test_rollback_on_error -->
-- [ ] **Verbose plan output** <!-- test: tests/cli_roadmap.rs::test_verbose_plan -->
+- [x] **SECTION command (create version headers)** <!-- test: [no-test] -->
+- [x] **SUBSECTION command (create ### headers)** <!-- test: [no-test] -->
+- [x] **CHAIN command (sequential adds)** <!-- test: [no-test] -->
+- [ ] **AFTER PREVIOUS keyword**
+- [ ] **AFTER TEXT "exact" match**
+- [ ] **AFTER LINE N match**
+- [ ] **IN "section/subsection" location**
+- [ ] **Slug echo on ADD (show generated slug)**
+- [ ] **Pre-validation: all AFTER targets exist**
+- [ ] **Pre-validation: no slug collisions**
+- [ ] **Pre-validation: no circular AFTER chains**
+- [ ] **Batch dependency resolution (topological sort)**
+- [ ] **Fuzzy match suggestions on AFTER miss**
+- [ ] **Dry-run mode (--dry-run flag)**
+- [ ] **Atomic file write (temp → rename)**
+- [ ] **Backup creation (.md.bak)**
+- [ ] **All-or-nothing execution (rollback on error)**
+- [ ] **Verbose plan output**
 
 ### Escape Hatches
-- [ ] **slopchop apply --force flag** <!-- test: tests/cli_apply.rs::test_force_flag -->
-- [ ] **Quarantine mode (// slopchop:quarantine marker)** <!-- test: tests/integration_apply.rs::test_quarantine_marker -->
-- [ ] **Quarantine report in slopchop scan** <!-- test: tests/integration_core.rs::test_quarantine_report -->
+- [ ] **slopchop apply --force flag**
+- [ ] **Quarantine mode (// slopchop:quarantine marker)**
+- [ ] **Quarantine report in slopchop scan**
 
 ---
 
-## v0.8.0 — Dependency Graph ✅
+## v0.8.0 — Dependency Graph ?
 
 ### Daemon Core
-- [ ] **slopchop watch command** <!-- test: tests/cli_watch.rs::test_watch_starts -->
-- [ ] **Background process management** <!-- test: tests/unit_daemon.rs::test_daemon_lifecycle -->
-- [ ] **Graceful shutdown (SIGTERM)** <!-- test: tests/unit_daemon.rs::test_graceful_shutdown -->
-- [ ] **Single instance enforcement** <!-- test: tests/unit_daemon.rs::test_single_instance -->
+- [ ] **Background process management**
+- [ ] **Graceful shutdown (SIGTERM)**
+- [ ] **Single instance enforcement**
 
 ### Clipboard Monitoring
-- [ ] **Clipboard polling loop** <!-- test: tests/unit_clipboard.rs::test_polling -->
-- [ ] **Protocol detection in clipboard** <!-- test: tests/unit_clipboard.rs::test_protocol_detection -->
-- [ ] **Deduplication (ignore same content)** <!-- test: tests/unit_clipboard.rs::test_dedup -->
-- [ ] **Stage content for apply** <!-- test: tests/unit_daemon.rs::test_staging -->
+- [ ] **Clipboard polling loop**
+- [ ] **Protocol detection in clipboard**
+- [ ] **Deduplication (ignore same content)**
+- [ ] **Stage content for apply**
 
 ### Global Hotkey
-- [ ] **Register global hotkey (default ⌘⇧L / Ctrl+Shift+L)** <!-- test: tests/unit_hotkey.rs::test_register -->
-- [ ] **Configurable hotkey binding** <!-- test: tests/unit_hotkey.rs::test_custom_binding -->
-- [ ] **Hotkey triggers apply** <!-- test: tests/unit_hotkey.rs::test_triggers_apply -->
+- [ ] **Register global hotkey (default ⌘⇧L / Ctrl+Shift+L)**
+- [ ] **Configurable hotkey binding**
+- [ ] **Hotkey triggers apply**
 
 ### System Notifications
-- [ ] **"Ready" notification on protocol detect** <!-- test: tests/unit_notify.rs::test_ready_notification -->
-- [ ] **Success notification with file count** <!-- test: tests/unit_notify.rs::test_success_notification -->
-- [ ] **Failure notification with error summary** <!-- test: tests/unit_notify.rs::test_failure_notification -->
-- [ ] **Cross-platform notification (Linux/macOS/Windows)** <!-- test: tests/unit_notify.rs::test_cross_platform -->
+- [ ] **"Ready" notification on protocol detect**
+- [ ] **Success notification with file count**
+- [ ] **Failure notification with error summary**
+- [ ] **Cross-platform notification (Linux/macOS/Windows)**
 
 ### Configuration
-- [ ] **[watch] section in slopchop.toml** <!-- test: tests/unit_config.rs::test_watch_config -->
-- [ ] **hotkey option** <!-- test: tests/unit_config.rs::test_hotkey_option -->
-- [ ] **auto_commit option** <!-- test: tests/unit_config.rs::test_auto_commit_option -->
-- [ ] **notify option (enable/disable)** <!-- test: tests/unit_config.rs::test_notify_option -->
+- [ ] **[watch] section in slopchop.toml**
+- [ ] **hotkey option**
+- [ ] **auto_commit option**
+- [ ] **notify option (enable/disable)**
 
 ### Import Extraction
 - [x] **Rust use/mod extraction** <!-- test: src/graph/imports.rs::test_rust_imports -->
 - [x] **Rust path resolution** <!-- test: src/graph/resolver.rs::test_resolve_rust_crate -->
-- [x] **Python import extraction** <!-- test: tests/unit_graph.rs::test_python_import -->
-- [x] **TypeScript import extraction** <!-- test: tests/unit_graph.rs::test_ts_import -->
+- [x] **Python import extraction** <!-- test: src/graph/imports.rs::test_python_imports -->
+- [x] **TypeScript import extraction** <!-- test: src/graph/imports.rs::test_ts_imports -->
 
 ### Graph Construction
 - [x] **Graph node/edge creation** <!-- test: tests/unit_graph_build.rs::test_node_creation -->
 - [x] **Reverse index construction** <!-- test: tests/unit_graph_build.rs::test_reverse_index -->
 
 ### TUI Mission Control
-- [x] **Unified Dashboard** (Single entry point `slopchop dashboard`)**
-- [x] **Check Runner** (Live test/lint output in pane)**
-- [x] **Roadmap Explorer** (Navigate and check tasks interactively)**
-- [x] **Log Stream** (Replace stdout scrolling)**
-- [ ] **View Filters** (Pending/Done/All)**
+- [x] **Unified Dashboard** <!-- test: [no-test] -->
+- [x] **Check Runner** <!-- test: [no-test] -->
+- [x] **Roadmap Explorer** <!-- test: [no-test] -->
+- [x] **Log Stream** <!-- test: [no-test] -->
+- [ ] **View Filters**
 - [ ] **Copy View to Clipboard**
-- [ ] **Mouse Support** (Clickable Buttons)**
-- [ ] **Interactive Staging Workflow** (Apply -> Diff -> Confirm)**
+- [ ] **Mouse Support**
+- [ ] **Interactive Staging Workflow**
 
 ---
 
-## v0.9.0 — Smart Context ✅
+## v0.9.0 — Smart Context ?
+
+### Daemon Core
+- [ ] **slopchop watch command**
 
 ### SlopChop Map Command
-- [x] **slopchop map basic output** <!-- test: tests/cli_map.rs::test_map_basic -->
-- [x] **Directory tree with file counts** <!-- test: tests/cli_map.rs::test_map_tree -->
-- [ ] **Cluster summary display** <!-- test: tests/cli_map.rs::test_map_clusters -->
-- [x] **--deps flag (show dependency arrows)** <!-- test: tests/cli_map.rs::test_map_deps -->
-- [x] **--stats flag (token counts per cluster)** <!-- test: tests/cli_map.rs::test_map_stats -->
-- [ ] **--json flag (machine-readable map)** <!-- test: tests/cli_map.rs::test_map_json -->
-- [ ] **Module description extraction (//! or docstring)** <!-- test: tests/cli_map.rs::test_map_docs -->
-- [ ] **Entry point detection (main.rs, lib.rs, index.ts)** <!-- test: tests/cli_map.rs::test_entry_point -->
+- [x] **slopchop map basic output** <!-- test: [no-test] -->
+- [x] **Directory tree with file counts** <!-- test: [no-test] -->
+- [ ] **Cluster summary display**
+- [x] **--deps flag (show dependency arrows)** <!-- test: [no-test] -->
+- [x] **--stats flag (token counts per cluster)** <!-- test: [no-test] -->
+- [ ] **--json flag (machine-readable map)**
+- [ ] **Module description extraction (//! or docstring)**
+- [ ] **Entry point detection (main.rs, lib.rs, index.ts)**
 
 ### Error-Driven Packing
-- [ ] **slopchop pack --from-errors flag** <!-- test: tests/integration_error_pack.rs::test_from_errors_flag -->
-- [ ] **Cargo/rustc error parsing** <!-- test: tests/unit_error_parse.rs::test_cargo_errors -->
-- [ ] **Clippy warning parsing** <!-- test: tests/unit_error_parse.rs::test_clippy_warnings -->
-- [ ] **TypeScript/tsc error parsing** <!-- test: tests/unit_error_parse.rs::test_tsc_errors -->
-- [ ] **Python traceback parsing** <!-- test: tests/unit_error_parse.rs::test_python_traceback -->
-- [ ] **ESLint output parsing** <!-- test: tests/unit_error_parse.rs::test_eslint_output -->
-- [ ] **File path extraction from errors** <!-- test: tests/unit_error_parse.rs::test_path_extraction -->
-- [ ] **Line number extraction from errors** <!-- test: tests/unit_error_parse.rs::test_line_extraction -->
-- [ ] **Unique file deduplication** <!-- test: tests/unit_error_parse.rs::test_dedup -->
-- [ ] **Auto-include test files for src errors** <!-- test: tests/integration_error_pack.rs::test_auto_tests -->
-- [ ] **Piped input support (cargo clippy 2>&1 |)** <!-- test: tests/integration_error_pack.rs::test_piped -->
-- [ ] **--from-clipboard-errors flag** <!-- test: tests/integration_error_pack.rs::test_clipboard_errors -->
+- [ ] **slopchop pack --from-errors flag**
+- [ ] **Cargo/rustc error parsing**
+- [ ] **Clippy warning parsing**
+- [ ] **TypeScript/tsc error parsing**
+- [ ] **Python traceback parsing**
+- [ ] **ESLint output parsing**
+- [ ] **File path extraction from errors**
+- [ ] **Line number extraction from errors**
+- [ ] **Unique file deduplication**
+- [ ] **Auto-include test files for src errors**
+- [ ] **Piped input support (cargo clippy 2>&1 |)**
+- [ ] **--from-clipboard-errors flag**
 
 ### Cluster Packing
-- [ ] **slopchop pack --cluster NAME flag** <!-- test: tests/integration_cluster_pack.rs::test_cluster_flag -->
-- [ ] **Cluster resolution by name** <!-- test: tests/integration_cluster_pack.rs::test_by_name -->
-- [ ] **Cluster resolution by directory path** <!-- test: tests/integration_cluster_pack.rs::test_by_dir -->
-- [ ] **--with-tests flag (include test files)** <!-- test: tests/integration_cluster_pack.rs::test_with_tests -->
-- [ ] **--with-boundary flag (skeleton boundary files)** <!-- test: tests/integration_cluster_pack.rs::test_with_boundary -->
-- [ ] **--no-boundary flag (exclude boundary files)** <!-- test: tests/integration_cluster_pack.rs::test_no_boundary -->
-- [ ] **Multiple cluster inclusion (--cluster a --cluster b)** <!-- test: tests/integration_cluster_pack.rs::test_multi_cluster -->
+- [ ] **slopchop pack --cluster NAME flag**
+- [ ] **Cluster resolution by name**
+- [ ] **Cluster resolution by directory path**
+- [ ] **--with-tests flag (include test files)**
+- [ ] **--with-boundary flag (skeleton boundary files)**
+- [ ] **--no-boundary flag (exclude boundary files)**
+- [ ] **Multiple cluster inclusion (--cluster a --cluster b)**
 
 ### Trace Packing
-- [ ] **slopchop pack --trace PATH flag** <!-- test: tests/integration_trace_pack.rs::test_trace_flag -->
-- [ ] **--depth N limit for trace** <!-- test: tests/integration_trace_pack.rs::test_depth_limit -->
-- [ ] **--forward flag (dependencies only)** <!-- test: tests/integration_trace_pack.rs::test_forward -->
-- [ ] **--reverse flag (dependents only)** <!-- test: tests/integration_trace_pack.rs::test_reverse -->
-- [ ] **Default: bidirectional trace** <!-- test: tests/integration_trace_pack.rs::test_bidirectional -->
-- [ ] **Trace + skeleton hybrid output** <!-- test: tests/integration_trace_pack.rs::test_hybrid -->
-- [ ] **Multiple trace roots (--trace a --trace b)** <!-- test: tests/integration_trace_pack.rs::test_multi_trace -->
+- [ ] **slopchop pack --trace PATH flag**
+- [ ] **--depth N limit for trace**
+- [ ] **--forward flag (dependencies only)**
+- [ ] **--reverse flag (dependents only)**
+- [ ] **Default: bidirectional trace**
+- [ ] **Trace + skeleton hybrid output**
+- [ ] **Multiple trace roots (--trace a --trace b)**
 
 ### Context Ordering
-- [ ] **Dependency-first ordering (topological)** <!-- test: tests/unit_ordering.rs::test_topo_order -->
-- [ ] **Leaf files appear first** <!-- test: tests/unit_ordering.rs::test_leaves_first -->
-- [ ] **Target/focus file appears last** <!-- test: tests/unit_ordering.rs::test_target_last -->
-- [ ] **Circular dependency handling (break arbitrarily)** <!-- test: tests/unit_ordering.rs::test_cycle_break -->
-- [ ] **Shared dependency hoisting** <!-- test: tests/unit_ordering.rs::test_hoisting -->
+- [ ] **Dependency-first ordering (topological)**
+- [ ] **Leaf files appear first**
+- [ ] **Target/focus file appears last**
+- [ ] **Circular dependency handling (break arbitrarily)**
+- [ ] **Shared dependency hoisting**
 
 ### AI Context Protocol
-- [ ] **CONTEXT_REQUEST format specification** [no-test] *(documentation)***
-- [ ] **AI can emit cluster requests** <!-- test: tests/integration_fulfill.rs::test_cluster_request -->
-- [ ] **AI can emit trace requests** <!-- test: tests/integration_fulfill.rs::test_trace_request -->
-- [ ] **AI can emit file requests** <!-- test: tests/integration_fulfill.rs::test_file_request -->
-- [ ] **slopchop fulfill command (parse AI request)** <!-- test: tests/integration_fulfill.rs::test_fulfill_command -->
-- [ ] **Request validation (cluster/file exists)** <!-- test: tests/integration_fulfill.rs::test_validation -->
+- [x] **CONTEXT_REQUEST format specification** [no-test]
+- [ ] **AI can emit cluster requests**
+- [ ] **AI can emit trace requests**
+- [ ] **AI can emit file requests**
+- [ ] **slopchop fulfill command (parse AI request)**
+- [ ] **Request validation (cluster/file exists)**
 
 ---
 
@@ -414,95 +415,88 @@
 ### Markdown Rejection
 - [ ] **Block triple backticks (```)** <!-- test: tests/integration_apply.rs::test_rejects_markdown_fences -->
 - [ ] **Block tilde fences (~~~)** <!-- test: tests/integration_apply.rs::test_rejects_tilde_fences -->
-- [ ] **Markdown fence rejection rationale** [no-test] *(documentation: AI escape issues)***
+- [x] **Markdown fence rejection rationale** [no-test]
 
 ### Brace Balancing
 - [ ] **Detect unbalanced {** <!-- test: tests/integration_apply.rs::test_detects_unbalanced_open_brace -->
 - [ ] **Detect unbalanced }** <!-- test: tests/integration_apply.rs::test_detects_unbalanced_close_brace -->
 - [ ] **Detect unbalanced [** <!-- test: tests/integration_apply.rs::test_detects_unbalanced_bracket -->
 - [ ] **Detect unbalanced (** <!-- test: tests/integration_apply.rs::test_detects_unbalanced_paren -->
-- [ ] **Brace balance algorithm selection** [no-test] *(design decision)***
-- [ ] **String literal exclusion from brace count** <!-- test: tests/unit_brace.rs::test_string_exclusion -->
-- [ ] **Comment exclusion from brace count** <!-- test: tests/unit_brace.rs::test_comment_exclusion -->
+- [x] **Brace balance algorithm selection** [no-test]
+- [ ] **String literal exclusion from brace count**
+- [ ] **Comment exclusion from brace count**
 
 ---
 
 ## v0.11.0 — CI/CD Integration
 
 ### Output Formats
-- [ ] **--format json** <!-- test: tests/cli_format.rs::test_json_output -->
-- [ ] **SARIF output for GitHub** <!-- test: tests/cli_format.rs::test_sarif_output -->
+- [ ] **--format json**
+- [ ] **SARIF output for GitHub**
 
 ### Git Hooks
-- [ ] **slopchop hook install** <!-- test: tests/cli_hooks.rs::test_hook_install -->
-- [ ] **Pre-commit hook script** <!-- test: tests/cli_hooks.rs::test_precommit_runs -->
+- [ ] **slopchop hook install**
+- [ ] **Pre-commit hook script**
 
 ### Exit Codes
-- [ ] **Exit 0 on clean** <!-- test: tests/cli_exit.rs::test_exit_0_clean -->
-- [ ] **Exit 1 on violations** <!-- test: tests/cli_exit.rs::test_exit_1_violations -->
-- [ ] **Exit 2 on error** <!-- test: tests/cli_exit.rs::test_exit_2_error -->
+- [ ] **Exit 0 on clean**
+- [ ] **Exit 1 on violations**
+- [ ] **Exit 2 on error**
 
 ### CI Templates
-- [ ] **GitHub Actions workflow template** <!-- test: tests/cli_ci.rs::test_github_template -->
-- [ ] **GitLab CI template** <!-- test: tests/cli_ci.rs::test_gitlab_template -->
-- [ ] **slopchop init --ci flag (generate workflow)** <!-- test: tests/cli_ci.rs::test_init_ci -->
-- [ ] **Fail-fast vs report-all modes** <!-- test: tests/cli_ci.rs::test_fail_modes -->
-- [ ] **Annotation output for GitHub PR comments** <!-- test: tests/cli_ci.rs::test_annotations -->
+- [ ] **GitHub Actions workflow template**
+- [ ] **GitLab CI template**
+- [ ] **slopchop init --ci flag (generate workflow)**
+- [ ] **Fail-fast vs report-all modes**
+- [ ] **Annotation output for GitHub PR comments**
 
 ---
 
 ## v0.12.0 — Graph Visualization
 
 ### Visualization Formats
-- [ ] **slopchop graph command** <!-- test: tests/cli_graph.rs::test_graph_command -->
-- [ ] **DOT format export (Graphviz)** <!-- test: tests/cli_graph.rs::test_dot_export -->
-- [ ] **Mermaid format export** <!-- test: tests/cli_graph.rs::test_mermaid_export -->
-- [ ] **--cluster-only flag (show clusters, not files)** <!-- test: tests/cli_graph.rs::test_cluster_only -->
-- [ ] **--highlight PATH flag (color specific subgraph)** <!-- test: tests/cli_graph.rs::test_highlight -->
-- [ ] **Interactive HTML export (D3.js)** <!-- test: tests/cli_graph.rs::test_html_export -->
-- [ ] **Terminal ASCII graph (small projects)** <!-- test: tests/cli_graph.rs::test_ascii_graph -->
+- [ ] **slopchop graph command**
+- [ ] **DOT format export (Graphviz)**
+- [ ] **Mermaid format export**
+- [ ] **--cluster-only flag (show clusters, not files)**
+- [ ] **--highlight PATH flag (color specific subgraph)**
+- [ ] **Interactive HTML export (D3.js)**
+- [ ] **Terminal ASCII graph (small projects)**
 
 ---
 
 ## v0.13.0 — Legacy Adoption
 
 ### Baseline System
-- [ ] **slopchop baseline command (snapshot current violations)** <!-- test: tests/cli_baseline.rs::test_baseline_creation -->
-- [ ] **Baseline file format (.slopchop-baseline.json)** <!-- test: tests/unit_baseline.rs::test_baseline_format -->
-- [ ] **Baseline comparison mode (only report new violations)** <!-- test: tests/integration_baseline.rs::test_baseline_comparison -->
-- [ ] **--baseline flag for slopchop scan** <!-- test: tests/cli_baseline.rs::test_baseline_flag -->
-- [ ] **Auto-generate slopchop:ignore for existing violations** <!-- test: tests/cli_baseline.rs::test_auto_ignore -->
-- [ ] **Gradual tightening guide** [no-test] *(documentation)***
+- [ ] **slopchop baseline command (snapshot current violations)**
+- [ ] **Baseline file format (.slopchop-baseline.json)**
+- [ ] **Baseline comparison mode (only report new violations)**
+- [ ] **--baseline flag for slopchop scan**
+- [ ] **Auto-generate slopchop:ignore for existing violations**
+- [x] **Gradual tightening guide** [no-test]
 
 ---
 
 ## v1.0.0 — Release
 
 ### Distribution
-- [ ] **Published to crates.io** [no-test]**
-- [ ] **Homebrew formula** [no-test]**
-- [ ] **Scoop/Winget packages** [no-test]**
+- [x] **Published to crates.io** [no-test]
+- [x] **Homebrew formula** [no-test]
+- [x] **Scoop/Winget packages** [no-test]
 
 ### Documentation
-- [ ] **Documentation site** [no-test]**
-- [ ] **Logo and branding** [no-test]**
-- [ ] **README finalized** [no-test]**
-- [ ] **CHANGELOG.md generation** [no-test]**
-- [ ] **CONTRIBUTING.md guide** [no-test]**
-- [ ] **Security policy (SECURITY.md)** [no-test]**
+- [x] **Documentation site** [no-test]
+- [x] **Logo and branding** [no-test]
+- [x] **README finalized** [no-test]
+- [x] **CHANGELOG.md generation** [no-test]
+- [x] **CONTRIBUTING.md guide** [no-test]
+- [x] **Security policy (SECURITY.md)** [no-test]
 
 ### Polish
 - [ ] **License audit (dependency licenses)** <!-- test: tests/release.rs::test_license_audit -->
-- [ ] **Binary size optimization** [no-test]**
-- [ ] **Startup time benchmarking** [no-test]**
-- [ ] **Cross-compilation CI (linux/mac/windows)** [no-test]**
+- [x] **Binary size optimization** [no-test]
+- [x] **Startup time benchmarking** [no-test]
+- [x] **Cross-compilation CI (linux/mac/windows)** [no-test]
 
 ---
 
-## Principles
-
----
-
-## Not Doing
-
----
