@@ -2721,7 +2721,7 @@ id = "harden-roadmap-parser"
 text = "Prevent false positive roadmap parsing on inline text"
 status = "done"
 section = "v0.7.0"
-test = "[no-test]"
+test = "tests/repro_roadmap_hardening.rs::test_roadmap_parser_ignores_inline_markers"
 order = 0
 
 [[tasks]]
