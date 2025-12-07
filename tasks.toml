@@ -91,8 +91,8 @@ id = "tokenizer-initialization-cl100k_base"
 text = "Tokenizer initialization (cl100k_base)"
 status = "done"
 section = "v0.1.0"
-group = "Token Counting"
 test = "tests/unit_tokens.rs::test_tokenizer_available"
+group = "Token Counting"
 order = 0
 
 [[tasks]]
@@ -100,8 +100,8 @@ id = "token-count-function"
 text = "Token count function"
 status = "done"
 section = "v0.1.0"
-group = "Token Counting"
 test = "tests/unit_tokens.rs::test_count_basic"
+group = "Token Counting"
 order = 1
 
 [[tasks]]
@@ -109,8 +109,8 @@ id = "token-limit-check"
 text = "Token limit check"
 status = "done"
 section = "v0.1.0"
-group = "Token Counting"
 test = "tests/unit_tokens.rs::test_exceeds_limit"
+group = "Token Counting"
 order = 2
 
 [[tasks]]
@@ -118,8 +118,8 @@ id = "rust-project-detection-cargo.toml"
 text = "Rust project detection (Cargo.toml)"
 status = "done"
 section = "v0.1.0"
-group = "Project Detection"
 test = "tests/unit_project.rs::test_detect_rust"
+group = "Project Detection"
 order = 3
 
 [[tasks]]
@@ -127,8 +127,8 @@ id = "node-project-detection-package.json"
 text = "Node project detection (package.json)"
 status = "done"
 section = "v0.1.0"
-group = "Project Detection"
 test = "tests/unit_project.rs::test_detect_node"
+group = "Project Detection"
 order = 4
 
 [[tasks]]
@@ -136,8 +136,8 @@ id = "python-project-detection"
 text = "Python project detection"
 status = "done"
 section = "v0.1.0"
-group = "Project Detection"
 test = "tests/unit_project.rs::test_detect_python"
+group = "Project Detection"
 order = 5
 
 [[tasks]]
@@ -145,8 +145,8 @@ id = "go-project-detection-go.mod"
 text = "Go project detection (go.mod)"
 status = "done"
 section = "v0.1.0"
-group = "Project Detection"
 test = "tests/unit_project.rs::test_detect_go"
+group = "Project Detection"
 order = 6
 
 [[tasks]]
@@ -154,8 +154,8 @@ id = "toml-config-loading"
 text = "TOML config loading"
 status = "done"
 section = "v0.1.0"
-group = "Configuration"
 test = "tests/unit_config.rs::test_load_toml"
+group = "Configuration"
 order = 7
 
 [[tasks]]
@@ -163,8 +163,8 @@ id = "default-rule-values"
 text = "Default rule values"
 status = "done"
 section = "v0.1.0"
-group = "Configuration"
 test = "tests/unit_config.rs::test_defaults"
+group = "Configuration"
 order = 8
 
 [[tasks]]
@@ -172,8 +172,8 @@ id = "command-list-parsing"
 text = "Command list parsing"
 status = "done"
 section = "v0.1.0"
-group = "Configuration"
 test = "tests/unit_config.rs::test_command_list"
+group = "Configuration"
 order = 9
 
 [[tasks]]
@@ -181,8 +181,8 @@ id = "slopchopignore-loading"
 text = ".slopchopignore loading"
 status = "done"
 section = "v0.1.0"
-group = "Configuration"
 test = "tests/unit_config.rs::test_slopchopignore"
+group = "Configuration"
 order = 10
 
 [[tasks]]
@@ -198,8 +198,8 @@ id = "file-token-counting"
 text = "File token counting"
 status = "done"
 section = "v0.2.0"
-group = "Law of Atomicity"
 test = "tests/integration_core.rs::test_atomicity_clean_file_passes"
+group = "Law of Atomicity"
 order = 0
 
 [[tasks]]
@@ -207,8 +207,8 @@ id = "token-limit-violation"
 text = "Token limit violation"
 status = "done"
 section = "v0.2.0"
-group = "Law of Atomicity"
 test = "tests/integration_core.rs::test_atomicity_large_file_fails"
+group = "Law of Atomicity"
 order = 1
 
 [[tasks]]
@@ -216,8 +216,8 @@ id = "token-exemption-patterns"
 text = "Token exemption patterns"
 status = "done"
 section = "v0.2.0"
-group = "Law of Atomicity"
 test = "tests/unit_config.rs::test_ignore_tokens_on"
+group = "Law of Atomicity"
 order = 2
 
 [[tasks]]
@@ -225,8 +225,8 @@ id = "rust-complexity-query-ifmatchforwhile"
 text = "Rust complexity query (if/match/for/while/&&/||)"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Cyclomatic"
 test = "tests/integration_core.rs::test_complexity_boundary_check"
+group = "Law of Complexity — Cyclomatic"
 order = 3
 
 [[tasks]]
@@ -234,8 +234,8 @@ id = "complexity-violation-detection"
 text = "Complexity violation detection"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Cyclomatic"
 test = "tests/integration_core.rs::test_complexity_construct_match"
+group = "Law of Complexity — Cyclomatic"
 order = 4
 
 [[tasks]]
@@ -243,8 +243,8 @@ id = "jsts-complexity-query"
 text = "JS/TS complexity query"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Cyclomatic"
 test = "tests/unit_analysis.rs::test_js_complexity"
+group = "Law of Complexity — Cyclomatic"
 order = 5
 
 [[tasks]]
@@ -252,8 +252,8 @@ id = "python-complexity-query"
 text = "Python complexity query"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Cyclomatic"
 test = "tests/unit_analysis.rs::test_python_complexity"
+group = "Law of Complexity — Cyclomatic"
 order = 6
 
 [[tasks]]
@@ -261,8 +261,8 @@ id = "depth-calculation-blockbody-traversal"
 text = "Depth calculation (block/body traversal)"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Nesting Depth"
 test = "tests/integration_core.rs::test_nesting_boundary"
+group = "Law of Complexity — Nesting Depth"
 order = 7
 
 [[tasks]]
@@ -270,8 +270,8 @@ id = "deep-nesting-violation"
 text = "Deep nesting violation"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Nesting Depth"
 test = "tests/integration_core.rs::test_nesting_boundary"
+group = "Law of Complexity — Nesting Depth"
 order = 8
 
 [[tasks]]
@@ -279,8 +279,8 @@ id = "parameter-counting"
 text = "Parameter counting"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Arity"
 test = "tests/integration_core.rs::test_arity_boundary"
+group = "Law of Complexity — Arity"
 order = 9
 
 [[tasks]]
@@ -288,8 +288,8 @@ id = "high-arity-violation"
 text = "High arity violation"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Arity"
 test = "tests/integration_core.rs::test_arity_boundary"
+group = "Law of Complexity — Arity"
 order = 10
 
 [[tasks]]
@@ -297,8 +297,8 @@ id = "snake_case-word-counting"
 text = "Snake_case word counting"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Naming"
 test = "tests/unit_analysis.rs::test_snake_case_words"
+group = "Law of Complexity — Naming"
 order = 11
 
 [[tasks]]
@@ -306,8 +306,8 @@ id = "camelcase-word-counting"
 text = "CamelCase word counting"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Naming"
 test = "tests/unit_analysis.rs::test_camel_case_words"
+group = "Law of Complexity — Naming"
 order = 12
 
 [[tasks]]
@@ -315,8 +315,8 @@ id = "naming-ignore-patterns"
 text = "Naming ignore patterns"
 status = "done"
 section = "v0.2.0"
-group = "Law of Complexity — Naming"
 test = "tests/unit_config.rs::test_ignore_naming_on"
+group = "Law of Complexity — Naming"
 order = 13
 
 [[tasks]]
@@ -324,8 +324,8 @@ id = "expect-detection"
 text = ".expect() detection"
 status = "done"
 section = "v0.2.0"
-group = "Law of Paranoia (Rust)"
 test = "tests/integration_core.rs::test_paranoia_expect_fails"
+group = "Law of Paranoia (Rust)"
 order = 14
 
 [[tasks]]
@@ -333,8 +333,8 @@ id = "safe-alternatives-allowed-unwrap_or"
 text = "Safe alternatives allowed (.unwrap_or)"
 status = "done"
 section = "v0.2.0"
-group = "Law of Paranoia (Rust)"
 test = "tests/integration_core.rs::test_paranoia_safe_alternatives_pass"
+group = "Law of Paranoia (Rust)"
 order = 15
 
 [[tasks]]
@@ -342,8 +342,8 @@ id = "slopchopignore-c-style"
 text = "slopchop:ignore (C-style //)"
 status = "done"
 section = "v0.2.0"
-group = "File Ignores"
 test = "tests/integration_core.rs::test_slopchop_ignore_skips_file"
+group = "File Ignores"
 order = 16
 
 [[tasks]]
@@ -351,8 +351,8 @@ id = "slopchopignore-hash-style"
 text = "slopchop:ignore (Hash-style #)"
 status = "done"
 section = "v0.2.0"
-group = "File Ignores"
 test = "tests/unit_analysis.rs::test_slopchop_ignore_hash"
+group = "File Ignores"
 order = 17
 
 [[tasks]]
@@ -360,8 +360,8 @@ id = "slopchopignore-html-style"
 text = "slopchop:ignore (HTML-style)"
 status = "done"
 section = "v0.2.0"
-group = "File Ignores"
 test = "tests/unit_analysis.rs::test_slopchop_ignore_html"
+group = "File Ignores"
 order = 18
 
 [[tasks]]
@@ -369,8 +369,8 @@ id = "header-detection-slopchop_file"
 text = "Header detection (#__SLOPCHOP_FILE__#)"
 status = "done"
 section = "v0.3.0"
-group = "Protocol Format Extraction"
 test = "tests/integration_apply.rs::test_extract_single_file"
+group = "Protocol Format Extraction"
 order = 0
 
 [[tasks]]
@@ -378,8 +378,8 @@ id = "footer-detection-slopchop_end"
 text = "Footer detection (#__SLOPCHOP_END__#)"
 status = "done"
 section = "v0.3.0"
-group = "Protocol Format Extraction"
 test = "tests/integration_apply.rs::test_extract_single_file"
+group = "Protocol Format Extraction"
 order = 1
 
 [[tasks]]
@@ -387,8 +387,8 @@ id = "path-extraction-from-header"
 text = "Path extraction from header"
 status = "done"
 section = "v0.3.0"
-group = "Protocol Format Extraction"
 test = "tests/integration_apply.rs::test_extract_single_file"
+group = "Protocol Format Extraction"
 order = 2
 
 [[tasks]]
@@ -396,8 +396,8 @@ id = "content-extraction"
 text = "Content extraction"
 status = "done"
 section = "v0.3.0"
-group = "Protocol Format Extraction"
 test = "tests/integration_apply.rs::test_extract_single_file"
+group = "Protocol Format Extraction"
 order = 3
 
 [[tasks]]
@@ -405,8 +405,8 @@ id = "multiple-file-extraction"
 text = "Multiple file extraction"
 status = "done"
 section = "v0.3.0"
-group = "Protocol Format Extraction"
 test = "tests/integration_apply.rs::test_extract_multiple_files"
+group = "Protocol Format Extraction"
 order = 4
 
 [[tasks]]
@@ -414,8 +414,8 @@ id = "manifest-block-skipping"
 text = "MANIFEST block skipping"
 status = "done"
 section = "v0.3.0"
-group = "Protocol Format Extraction"
 test = "tests/integration_apply.rs::test_extract_skips_manifest"
+group = "Protocol Format Extraction"
 order = 5
 
 [[tasks]]
@@ -423,8 +423,8 @@ id = "plan-block-extraction"
 text = "PLAN block extraction"
 status = "done"
 section = "v0.3.0"
-group = "Protocol Format Extraction"
 test = "tests/integration_apply.rs::test_extract_plan"
+group = "Protocol Format Extraction"
 order = 6
 
 [[tasks]]
@@ -432,8 +432,8 @@ id = "malformed-block-handling"
 text = "Malformed block handling"
 status = "done"
 section = "v0.3.0"
-group = "Protocol Format Extraction"
 test = "tests/integration_apply.rs::test_extract_single_file"
+group = "Protocol Format Extraction"
 order = 7
 
 [[tasks]]
@@ -441,8 +441,8 @@ id = "manifest-block-detection"
 text = "Manifest block detection"
 status = "done"
 section = "v0.3.0"
-group = "Manifest Parsing"
 test = "tests/integration_apply.rs::test_extract_skips_manifest"
+group = "Manifest Parsing"
 order = 8
 
 [[tasks]]
@@ -450,8 +450,8 @@ id = "new-marker-detection"
 text = "[NEW] marker detection"
 status = "done"
 section = "v0.3.0"
-group = "Manifest Parsing"
 test = "tests/integration_apply.rs::test_unified_apply_combined"
+group = "Manifest Parsing"
 order = 9
 
 [[tasks]]
@@ -459,8 +459,8 @@ id = "delete-marker-detection"
 text = "[DELETE] marker detection"
 status = "done"
 section = "v0.3.0"
-group = "Manifest Parsing"
 test = "[no-test]"
+group = "Manifest Parsing"
 order = 10
 
 [[tasks]]
@@ -468,8 +468,8 @@ id = "default-update-operation"
 text = "Default Update operation"
 status = "done"
 section = "v0.3.0"
-group = "Manifest Parsing"
 test = "tests/integration_apply.rs::test_unified_apply_combined"
+group = "Manifest Parsing"
 order = 11
 
 [[tasks]]
@@ -477,8 +477,8 @@ id = "parent-directory-creation"
 text = "Parent directory creation"
 status = "done"
 section = "v0.3.0"
-group = "File Writing"
 test = "tests/integration_backup.rs::test_path_structure"
+group = "File Writing"
 order = 12
 
 [[tasks]]
@@ -486,8 +486,8 @@ id = "file-content-writing"
 text = "File content writing"
 status = "done"
 section = "v0.3.0"
-group = "File Writing"
 test = "tests/integration_backup.rs::test_existing_backed_up"
+group = "File Writing"
 order = 13
 
 [[tasks]]
@@ -495,8 +495,8 @@ id = "delete-operation"
 text = "Delete operation"
 status = "done"
 section = "v0.3.0"
-group = "File Writing"
 test = "[no-test]"
+group = "File Writing"
 order = 14
 
 [[tasks]]
@@ -504,8 +504,8 @@ id = "written-files-tracking"
 text = "Written files tracking"
 status = "done"
 section = "v0.3.0"
-group = "File Writing"
 test = "tests/integration_backup.rs::test_existing_backed_up"
+group = "File Writing"
 order = 15
 
 [[tasks]]
@@ -513,8 +513,8 @@ id = "backup-directory-creation"
 text = "Backup directory creation"
 status = "done"
 section = "v0.3.0"
-group = "Backup System"
 test = "tests/integration_backup.rs::test_backup_dir_created"
+group = "Backup System"
 order = 16
 
 [[tasks]]
@@ -522,8 +522,8 @@ id = "timestamp-subfolder"
 text = "Timestamp subfolder"
 status = "done"
 section = "v0.3.0"
-group = "Backup System"
 test = "tests/integration_backup.rs::test_timestamp_folder"
+group = "Backup System"
 order = 17
 
 [[tasks]]
@@ -531,8 +531,8 @@ id = "existing-file-backup"
 text = "Existing file backup"
 status = "done"
 section = "v0.3.0"
-group = "Backup System"
 test = "tests/integration_backup.rs::test_existing_backed_up"
+group = "Backup System"
 order = 18
 
 [[tasks]]
@@ -540,8 +540,8 @@ id = "new-file-skip-no-backup-needed"
 text = "New file skip (no backup needed)"
 status = "done"
 section = "v0.3.0"
-group = "Backup System"
 test = "tests/integration_backup.rs::test_new_file_no_backup"
+group = "Backup System"
 order = 19
 
 [[tasks]]
@@ -549,8 +549,8 @@ id = "backup-path-structure-preserved"
 text = "Backup path structure preserved"
 status = "done"
 section = "v0.3.0"
-group = "Backup System"
 test = "tests/integration_backup.rs::test_path_structure"
+group = "Backup System"
 order = 20
 
 [[tasks]]
@@ -558,8 +558,8 @@ id = "block-traversal"
 text = "Block ../ traversal"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Traversal"
 test = "tests/integration_apply.rs::test_path_safety_blocks_traversal"
+group = "Path Safety — Traversal"
 order = 0
 
 [[tasks]]
@@ -567,8 +567,8 @@ id = "block-prefix"
 text = "Block .. prefix"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Traversal"
 test = "tests/integration_apply.rs::test_path_safety_blocks_traversal"
+group = "Path Safety — Traversal"
 order = 1
 
 [[tasks]]
@@ -576,8 +576,8 @@ id = "block-unix-absolute"
 text = "Block Unix absolute (/)"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Absolute"
 test = "tests/integration_apply.rs::test_path_safety_blocks_absolute"
+group = "Path Safety — Absolute"
 order = 2
 
 [[tasks]]
@@ -585,8 +585,8 @@ id = "block-windows-absolute-c"
 text = "Block Windows absolute (C:)"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Absolute"
 test = "[no-test]"
+group = "Path Safety — Absolute"
 order = 3
 
 [[tasks]]
@@ -594,8 +594,8 @@ id = "block-git"
 text = "Block .git/"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Sensitive"
 test = "tests/integration_apply.rs::test_path_safety_blocks_git"
+group = "Path Safety — Sensitive"
 order = 4
 
 [[tasks]]
@@ -603,8 +603,8 @@ id = "block-env"
 text = "Block .env"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Sensitive"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
+group = "Path Safety — Sensitive"
 order = 5
 
 [[tasks]]
@@ -612,8 +612,8 @@ id = "block-ssh"
 text = "Block .ssh/"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Sensitive"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
+group = "Path Safety — Sensitive"
 order = 6
 
 [[tasks]]
@@ -621,8 +621,8 @@ id = "block-aws"
 text = "Block .aws/"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Sensitive"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
+group = "Path Safety — Sensitive"
 order = 7
 
 [[tasks]]
@@ -630,8 +630,8 @@ id = "block-gnupg"
 text = "Block .gnupg/"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Sensitive"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
+group = "Path Safety — Sensitive"
 order = 8
 
 [[tasks]]
@@ -639,8 +639,8 @@ id = "block-id_rsa"
 text = "Block id_rsa"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Sensitive"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
+group = "Path Safety — Sensitive"
 order = 9
 
 [[tasks]]
@@ -648,8 +648,8 @@ id = "block-credentials"
 text = "Block credentials"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Sensitive"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
+group = "Path Safety — Sensitive"
 order = 10
 
 [[tasks]]
@@ -657,8 +657,8 @@ id = "block-backup-directory"
 text = "Block backup directory"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Sensitive"
 test = "[no-test]"
+group = "Path Safety — Sensitive"
 order = 11
 
 [[tasks]]
@@ -666,8 +666,8 @@ id = "block-hidden-files"
 text = "Block hidden files (.*)"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Hidden Files"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
+group = "Path Safety — Hidden Files"
 order = 12
 
 [[tasks]]
@@ -675,8 +675,8 @@ id = "allow-and-segments"
 text = "Allow . and .. segments"
 status = "done"
 section = "v0.4.0"
-group = "Path Safety — Hidden Files"
 test = "tests/integration_apply.rs::test_path_safety_allows_valid"
+group = "Path Safety — Hidden Files"
 order = 13
 
 [[tasks]]
@@ -700,8 +700,8 @@ id = "pattern-ellipsis"
 text = "Pattern: // ..."
 status = "done"
 section = "v0.4.0"
-group = "Truncation Detection"
 test = "tests/integration_apply.rs::test_truncation_detects_ellipsis_comment"
+group = "Truncation Detection"
 order = 16
 
 [[tasks]]
@@ -709,8 +709,8 @@ id = "pattern-block-comment-ellipsis"
 text = "Pattern: /* ... */"
 status = "done"
 section = "v0.4.0"
-group = "Truncation Detection"
 test = "tests/integration_apply.rs::test_truncation_detects_ellipsis_comment"
+group = "Truncation Detection"
 order = 17
 
 [[tasks]]
@@ -718,8 +718,8 @@ id = "pattern-hash-ellipsis"
 text = "Pattern: # ..."
 status = "done"
 section = "v0.4.0"
-group = "Truncation Detection"
 test = "tests/integration_apply.rs::test_truncation_detects_ellipsis_comment"
+group = "Truncation Detection"
 order = 18
 
 [[tasks]]
@@ -727,8 +727,8 @@ id = "pattern-rest-of-phrases"
 text = 'Pattern: "rest of" phrases'
 status = "done"
 section = "v0.4.0"
-group = "Truncation Detection"
 test = "tests/integration_apply.rs::test_truncation_detects_ellipsis_comment"
+group = "Truncation Detection"
 order = 19
 
 [[tasks]]
@@ -736,8 +736,8 @@ id = "pattern-remaining-phrases"
 text = 'Pattern: "remaining" phrases'
 status = "done"
 section = "v0.4.0"
-group = "Truncation Detection"
 test = "tests/integration_apply.rs::test_truncation_detects_ellipsis_comment"
+group = "Truncation Detection"
 order = 20
 
 [[tasks]]
@@ -745,8 +745,8 @@ id = "slopchopignore-bypass"
 text = "slopchop:ignore bypass"
 status = "done"
 section = "v0.4.0"
-group = "Truncation Detection"
 test = "tests/integration_apply.rs::test_truncation_allows_slopchop_ignore"
+group = "Truncation Detection"
 order = 21
 
 [[tasks]]
@@ -754,8 +754,8 @@ id = "empty-file-rejection"
 text = "Empty file rejection"
 status = "done"
 section = "v0.4.0"
-group = "Truncation Detection"
 test = "tests/integration_apply.rs::test_truncation_detects_empty_file"
+group = "Truncation Detection"
 order = 22
 
 [[tasks]]
@@ -763,8 +763,8 @@ id = "line-number-in-error"
 text = "Line number in error"
 status = "done"
 section = "v0.4.0"
-group = "Truncation Detection"
 test = "tests/integration_apply.rs::test_truncation_detects_ellipsis_comment"
+group = "Truncation Detection"
 order = 23
 
 [[tasks]]
@@ -772,8 +772,8 @@ id = "normal-paths-accepted"
 text = "Normal paths accepted"
 status = "done"
 section = "v0.4.0"
-group = "Valid Paths"
 test = "tests/integration_apply.rs::test_path_safety_allows_valid"
+group = "Valid Paths"
 order = 24
 
 [[tasks]]
@@ -781,8 +781,8 @@ id = "nested-src-paths-accepted"
 text = "Nested src paths accepted"
 status = "done"
 section = "v0.4.0"
-group = "Valid Paths"
 test = "tests/integration_apply.rs::test_path_safety_allows_valid"
+group = "Valid Paths"
 order = 25
 
 [[tasks]]
@@ -790,8 +790,8 @@ id = "file-discovery-integration"
 text = "File discovery integration"
 status = "done"
 section = "v0.5.0"
-group = "Pack Core"
 test = "tests/integration_pack.rs::test_nabla_delimiters_are_unique"
+group = "Pack Core"
 order = 0
 
 [[tasks]]
@@ -799,8 +799,8 @@ id = "protocol-format-output"
 text = "Protocol format output"
 status = "done"
 section = "v0.5.0"
-group = "Pack Core"
 test = "tests/integration_pack.rs::test_nabla_format_structure"
+group = "Pack Core"
 order = 1
 
 [[tasks]]
@@ -808,8 +808,8 @@ id = "token-count-display"
 text = "Token count display"
 status = "done"
 section = "v0.5.0"
-group = "Pack Core"
 test = "tests/unit_pack.rs::test_token_count_shown"
+group = "Pack Core"
 order = 2
 
 [[tasks]]
@@ -817,8 +817,8 @@ id = "file-write-to-contexttxt"
 text = "File write to context.txt"
 status = "done"
 section = "v0.5.0"
-group = "Pack Core"
 test = "tests/unit_pack.rs::test_writes_context_file"
+group = "Pack Core"
 order = 3
 
 [[tasks]]
@@ -826,8 +826,8 @@ id = "stdout-output"
 text = "--stdout output"
 status = "done"
 section = "v0.5.0"
-group = "Pack Options"
 test = "tests/unit_pack.rs::test_stdout_option"
+group = "Pack Options"
 order = 4
 
 [[tasks]]
@@ -835,8 +835,8 @@ id = "copy-to-clipboard"
 text = "--copy to clipboard"
 status = "done"
 section = "v0.5.0"
-group = "Pack Options"
 test = "tests/unit_pack.rs::test_copy_option"
+group = "Pack Options"
 order = 5
 
 [[tasks]]
@@ -844,8 +844,8 @@ id = "noprompt-excludes-header"
 text = "--noprompt excludes header"
 status = "done"
 section = "v0.5.0"
-group = "Pack Options"
 test = "tests/unit_pack.rs::test_noprompt"
+group = "Pack Options"
 order = 6
 
 [[tasks]]
@@ -853,8 +853,8 @@ id = "git-only-mode"
 text = "--git-only mode"
 status = "done"
 section = "v0.5.0"
-group = "Pack Options"
 test = "tests/unit_pack.rs::test_git_only"
+group = "Pack Options"
 order = 7
 
 [[tasks]]
@@ -862,8 +862,8 @@ id = "no-git-mode"
 text = "--no-git mode"
 status = "done"
 section = "v0.5.0"
-group = "Pack Options"
 test = "tests/unit_pack.rs::test_no_git"
+group = "Pack Options"
 order = 8
 
 [[tasks]]
@@ -871,8 +871,8 @@ id = "code-only-mode"
 text = "--code-only mode"
 status = "done"
 section = "v0.5.0"
-group = "Pack Options"
 test = "tests/unit_pack.rs::test_code_only"
+group = "Pack Options"
 order = 9
 
 [[tasks]]
@@ -888,8 +888,8 @@ id = "system-prompt-header"
 text = "System prompt header"
 status = "done"
 section = "v0.5.0"
-group = "Prompt Generation"
 test = "tests/integration_pack.rs::test_prompt_includes_laws"
+group = "Prompt Generation"
 order = 11
 
 [[tasks]]
@@ -897,8 +897,8 @@ id = "law-of-atomicity-in-prompt"
 text = "Law of Atomicity in prompt"
 status = "done"
 section = "v0.5.0"
-group = "Prompt Generation"
 test = "tests/integration_pack.rs::test_prompt_includes_limits"
+group = "Prompt Generation"
 order = 12
 
 [[tasks]]
@@ -906,8 +906,8 @@ id = "law-of-complexity-in-prompt"
 text = "Law of Complexity in prompt"
 status = "done"
 section = "v0.5.0"
-group = "Prompt Generation"
 test = "tests/integration_pack.rs::test_prompt_includes_limits"
+group = "Prompt Generation"
 order = 13
 
 [[tasks]]
@@ -915,8 +915,8 @@ id = "protocol-format-instructions"
 text = "Protocol format instructions"
 status = "done"
 section = "v0.5.0"
-group = "Prompt Generation"
 test = "tests/integration_pack.rs::test_prompt_includes_nabla_instructions"
+group = "Prompt Generation"
 order = 14
 
 [[tasks]]
@@ -924,8 +924,8 @@ id = "footer-reminder"
 text = "Footer reminder"
 status = "done"
 section = "v0.5.0"
-group = "Prompt Generation"
 test = "tests/integration_pack.rs::test_reminder_is_concise"
+group = "Prompt Generation"
 order = 15
 
 [[tasks]]
@@ -933,8 +933,8 @@ id = "violation-injection"
 text = "Violation injection"
 status = "done"
 section = "v0.5.0"
-group = "Prompt Generation"
 test = "tests/unit_pack_violations.rs::test_violations_injected"
+group = "Prompt Generation"
 order = 16
 
 [[tasks]]
@@ -942,8 +942,8 @@ id = "rust-body-shell"
 text = "Rust body → { ... }"
 status = "done"
 section = "v0.5.0"
-group = "Skeleton System"
 test = "tests/integration_skeleton.rs::test_clean_rust_basic"
+group = "Skeleton System"
 order = 17
 
 [[tasks]]
@@ -951,8 +951,8 @@ id = "rust-nested-functions"
 text = "Rust nested functions"
 status = "done"
 section = "v0.5.0"
-group = "Skeleton System"
 test = "tests/integration_skeleton.rs::test_clean_rust_nested"
+group = "Skeleton System"
 order = 18
 
 [[tasks]]
@@ -960,8 +960,8 @@ id = "python-body-shell"
 text = "Python body → ..."
 status = "done"
 section = "v0.5.0"
-group = "Skeleton System"
 test = "tests/integration_skeleton.rs::test_clean_python"
+group = "Skeleton System"
 order = 19
 
 [[tasks]]
@@ -969,8 +969,8 @@ id = "typescriptjs-body"
 text = "TypeScript/JS body"
 status = "done"
 section = "v0.5.0"
-group = "Skeleton System"
 test = "tests/integration_skeleton.rs::test_clean_typescript"
+group = "Skeleton System"
 order = 20
 
 [[tasks]]
@@ -978,8 +978,8 @@ id = "arrow-function-support"
 text = "Arrow function support"
 status = "done"
 section = "v0.5.0"
-group = "Skeleton System"
 test = "tests/integration_skeleton.rs::test_clean_typescript"
+group = "Skeleton System"
 order = 21
 
 [[tasks]]
@@ -987,8 +987,8 @@ id = "unsupported-passthrough"
 text = "Unsupported passthrough"
 status = "done"
 section = "v0.5.0"
-group = "Skeleton System"
 test = "tests/integration_skeleton.rs::test_clean_unsupported_extension"
+group = "Skeleton System"
 order = 22
 
 [[tasks]]
@@ -996,8 +996,8 @@ id = "skeleton-all-files"
 text = "--skeleton all files"
 status = "done"
 section = "v0.5.0"
-group = "Focus Mode"
 test = "tests/integration_pack.rs::test_pack_skeleton_integration"
+group = "Focus Mode"
 order = 23
 
 [[tasks]]
@@ -1005,8 +1005,8 @@ id = "target-focus-mode"
 text = "--target focus mode"
 status = "done"
 section = "v0.5.0"
-group = "Focus Mode"
 test = "tests/integration_pack.rs::test_smart_context_focus_mode"
+group = "Focus Mode"
 order = 24
 
 [[tasks]]
@@ -1014,8 +1014,8 @@ id = "target-full-rest-skeleton"
 text = "Target full, rest skeleton"
 status = "done"
 section = "v0.5.0"
-group = "Focus Mode"
 test = "tests/integration_pack.rs::test_smart_context_focus_mode"
+group = "Focus Mode"
 order = 25
 
 [[tasks]]
@@ -1031,8 +1031,8 @@ id = "title-extraction-title"
 text = "Title extraction (# Title)"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap Parsing"
 test = "tests/unit_roadmap_v2.rs::test_generator_basic_markdown"
+group = "Roadmap Parsing"
 order = 0
 
 [[tasks]]
@@ -1040,8 +1040,8 @@ id = "section-heading-detection"
 text = "Section heading detection"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap Parsing"
 test = "tests/unit_roadmap_v2.rs::test_generator_basic_markdown"
+group = "Roadmap Parsing"
 order = 1
 
 [[tasks]]
@@ -1049,8 +1049,8 @@ id = "task-checkbox-detection"
 text = "Task checkbox detection"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap Parsing"
 test = "tests/unit_roadmap_v2.rs::test_generator_basic_markdown"
+group = "Roadmap Parsing"
 order = 2
 
 [[tasks]]
@@ -1058,8 +1058,8 @@ id = "task-status-pending"
 text = "Task status: pending"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap Parsing"
 test = "tests/unit_roadmap_v2.rs::test_generator_basic_markdown"
+group = "Roadmap Parsing"
 order = 3
 
 [[tasks]]
@@ -1067,8 +1067,8 @@ id = "task-status-complete"
 text = "Task status: complete"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap Parsing"
 test = "tests/unit_roadmap_v2.rs::test_generator_with_done_task"
+group = "Roadmap Parsing"
 order = 4
 
 [[tasks]]
@@ -1076,8 +1076,8 @@ id = "stats-calculation"
 text = "Stats calculation"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap Parsing"
 test = "[no-test]"
+group = "Roadmap Parsing"
 order = 5
 
 [[tasks]]
@@ -1085,8 +1085,8 @@ id = "test-anchor-extraction"
 text = "Test anchor extraction"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap Parsing"
 test = "tests/unit_roadmap_v2.rs::test_generator_includes_test_anchors"
+group = "Roadmap Parsing"
 order = 6
 
 [[tasks]]
@@ -1094,8 +1094,8 @@ id = "task-path-generation"
 text = "Task path generation"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap Parsing"
 test = "[no-test]"
+group = "Roadmap Parsing"
 order = 7
 
 [[tasks]]
@@ -1103,8 +1103,8 @@ id = "compact-state-display"
 text = "Compact state display"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap Parsing"
 test = "[no-test]"
+group = "Roadmap Parsing"
 order = 8
 
 [[tasks]]
@@ -1112,8 +1112,8 @@ id = "lowercase-conversion"
 text = "Lowercase conversion"
 status = "done"
 section = "v0.6.0"
-group = "Slugification"
 test = "[no-test]"
+group = "Slugification"
 order = 9
 
 [[tasks]]
@@ -1121,8 +1121,8 @@ id = "special-char-to-dash"
 text = "Special char to dash"
 status = "done"
 section = "v0.6.0"
-group = "Slugification"
 test = "[no-test]"
+group = "Slugification"
 order = 10
 
 [[tasks]]
@@ -1130,8 +1130,8 @@ id = "number-preservation"
 text = "Number preservation"
 status = "done"
 section = "v0.6.0"
-group = "Slugification"
 test = "[no-test]"
+group = "Slugification"
 order = 11
 
 [[tasks]]
@@ -1139,8 +1139,8 @@ id = "roadmap-block-detection"
 text = "===ROADMAP=== block detection"
 status = "done"
 section = "v0.6.0"
-group = "Command Parsing"
 test = "tests/unit_roadmap_v2.rs::test_store_check_command"
+group = "Command Parsing"
 order = 12
 
 [[tasks]]
@@ -1148,8 +1148,8 @@ id = "check-command"
 text = "CHECK command"
 status = "done"
 section = "v0.6.0"
-group = "Command Parsing"
 test = "tests/unit_roadmap_v2.rs::test_store_check_command"
+group = "Command Parsing"
 order = 13
 
 [[tasks]]
@@ -1157,8 +1157,8 @@ id = "uncheck-command"
 text = "UNCHECK command"
 status = "done"
 section = "v0.6.0"
-group = "Command Parsing"
 test = "tests/unit_roadmap_v2.rs::test_store_uncheck_command"
+group = "Command Parsing"
 order = 14
 
 [[tasks]]
@@ -1166,8 +1166,8 @@ id = "add-command"
 text = "ADD command"
 status = "done"
 section = "v0.6.0"
-group = "Command Parsing"
 test = "tests/unit_roadmap_v2.rs::test_store_add_command"
+group = "Command Parsing"
 order = 15
 
 [[tasks]]
@@ -1175,8 +1175,8 @@ id = "add-with-after"
 text = "ADD with AFTER"
 status = "done"
 section = "v0.6.0"
-group = "Command Parsing"
 test = "[no-test]"
+group = "Command Parsing"
 order = 16
 
 [[tasks]]
@@ -1184,8 +1184,8 @@ id = "update-command"
 text = "UPDATE command"
 status = "done"
 section = "v0.6.0"
-group = "Command Parsing"
 test = "tests/unit_roadmap_v2.rs::test_store_update_command"
+group = "Command Parsing"
 order = 17
 
 [[tasks]]
@@ -1193,8 +1193,8 @@ id = "note-command"
 text = "NOTE command"
 status = "done"
 section = "v0.6.0"
-group = "Command Parsing"
 test = "[no-test]"
+group = "Command Parsing"
 order = 18
 
 [[tasks]]
@@ -1202,8 +1202,8 @@ id = "move-command"
 text = "MOVE command"
 status = "done"
 section = "v0.6.0"
-group = "Command Parsing"
 test = "[no-test]"
+group = "Command Parsing"
 order = 19
 
 [[tasks]]
@@ -1211,8 +1211,8 @@ id = "comment-skipping"
 text = "Comment skipping"
 status = "done"
 section = "v0.6.0"
-group = "Command Parsing"
 test = "[no-test]"
+group = "Command Parsing"
 order = 20
 
 [[tasks]]
@@ -1220,8 +1220,8 @@ id = "summary-generation"
 text = "Summary generation"
 status = "done"
 section = "v0.6.0"
-group = "Command Parsing"
 test = "tests/unit_roadmap_v2.rs::test_generator_basic_markdown"
+group = "Command Parsing"
 order = 21
 
 [[tasks]]
@@ -1229,8 +1229,8 @@ id = "roadmap-init"
 text = "roadmap init"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap CLI"
 test = "[no-test]"
+group = "Roadmap CLI"
 order = 22
 
 [[tasks]]
@@ -1238,8 +1238,8 @@ id = "roadmap-prompt"
 text = "roadmap prompt"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap CLI"
 test = "[no-test]"
+group = "Roadmap CLI"
 order = 23
 
 [[tasks]]
@@ -1247,8 +1247,8 @@ id = "roadmap-apply"
 text = "roadmap apply"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap CLI"
 test = "tests/integration_apply.rs::test_unified_apply_roadmap"
+group = "Roadmap CLI"
 order = 24
 
 [[tasks]]
@@ -1256,8 +1256,8 @@ id = "roadmap-show"
 text = "roadmap show"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap CLI"
 test = "[no-test]"
+group = "Roadmap CLI"
 order = 25
 
 [[tasks]]
@@ -1265,8 +1265,8 @@ id = "roadmap-tasks"
 text = "roadmap tasks"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap CLI"
 test = "[no-test]"
+group = "Roadmap CLI"
 order = 26
 
 [[tasks]]
@@ -1274,8 +1274,8 @@ id = "roadmap-tasks---pending"
 text = "roadmap tasks --pending"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap CLI"
 test = "[no-test]"
+group = "Roadmap CLI"
 order = 27
 
 [[tasks]]
@@ -1283,8 +1283,8 @@ id = "roadmap-tasks---complete"
 text = "roadmap tasks --complete"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap CLI"
 test = "[no-test]"
+group = "Roadmap CLI"
 order = 28
 
 [[tasks]]
@@ -1292,8 +1292,8 @@ id = "roadmap-audit"
 text = "roadmap audit"
 status = "done"
 section = "v0.6.0"
-group = "Roadmap CLI"
 test = "[no-test]"
+group = "Roadmap CLI"
 order = 29
 
 [[tasks]]
@@ -1301,8 +1301,8 @@ id = "unified-apply-roadmap"
 text = "Detect ===ROADMAP=== in apply"
 status = "done"
 section = "v0.6.0"
-group = "Unified Apply"
 test = "tests/integration_apply.rs::test_unified_apply_roadmap"
+group = "Unified Apply"
 order = 30
 
 [[tasks]]
@@ -1310,8 +1310,8 @@ id = "apply-roadmap-files-together"
 text = "Apply roadmap + files together"
 status = "done"
 section = "v0.6.0"
-group = "Unified Apply"
 test = "tests/integration_apply.rs::test_unified_apply_combined"
+group = "Unified Apply"
 order = 31
 
 [[tasks]]
@@ -1335,8 +1335,8 @@ id = "task-id-collision-detection"
 text = "Task ID collision detection"
 status = "done"
 section = "v0.7.0"
-group = "Parser Hardening"
 test = "tests/unit_roadmap_v2.rs::test_duplicate_add_rejected"
+group = "Parser Hardening"
 order = 2
 
 [[tasks]]
@@ -1344,8 +1344,8 @@ id = "anchor-based-task-matching"
 text = "Anchor-based task matching"
 status = "done"
 section = "v0.7.0"
-group = "Parser Hardening"
 test = "[no-test]"
+group = "Parser Hardening"
 order = 3
 
 [[tasks]]
@@ -1353,8 +1353,8 @@ id = "smart-update-inference-vs-deleteadd"
 text = "Smart UPDATE inference (vs DELETE+ADD)"
 status = "done"
 section = "v0.7.0"
-group = "Parser Hardening"
 test = "[no-test]"
+group = "Parser Hardening"
 order = 4
 
 [[tasks]]
@@ -1362,8 +1362,8 @@ id = "scan-completed-tasks"
 text = "Scan completed tasks"
 status = "done"
 section = "v0.7.0"
-group = "Audit System"
 test = "[no-test]"
+group = "Audit System"
 order = 5
 
 [[tasks]]
@@ -1371,8 +1371,8 @@ id = "no-test-skip"
 text = "[no-test] skip"
 status = "done"
 section = "v0.7.0"
-group = "Audit System"
 test = "tests/unit_roadmap_v2.rs::test_generator_notest_marker"
+group = "Audit System"
 order = 6
 
 [[tasks]]
@@ -1380,8 +1380,8 @@ id = "explicit-anchor-verification"
 text = "Explicit anchor verification"
 status = "done"
 section = "v0.7.0"
-group = "Audit System"
 test = "[no-test]"
+group = "Audit System"
 order = 7
 
 [[tasks]]
@@ -1389,8 +1389,8 @@ id = "missing-test-file-detection"
 text = "Missing test file detection"
 status = "done"
 section = "v0.7.0"
-group = "Audit System"
 test = "[no-test]"
+group = "Audit System"
 order = 8
 
 [[tasks]]
@@ -1398,8 +1398,8 @@ id = "missing-test-function-detection"
 text = "Missing test function detection"
 status = "done"
 section = "v0.7.0"
-group = "Audit System"
 test = "[no-test]"
+group = "Audit System"
 order = 9
 
 [[tasks]]
@@ -1431,8 +1431,8 @@ id = "slopchop-passes-own-rules"
 text = "SlopChop passes own rules"
 status = "done"
 section = "v0.7.0"
-group = "Self-Hosting"
 test = "tests/integration_self_host.rs::test_slopchop_passes_own_rules"
+group = "Self-Hosting"
 order = 13
 
 [[tasks]]
@@ -1448,8 +1448,8 @@ id = "audit-validates-naming-convention"
 text = "Audit validates naming convention"
 status = "done"
 section = "v0.7.0"
-group = "Test Naming Convention"
 test = "[no-test]"
+group = "Test Naming Convention"
 order = 15
 
 [[tasks]]
@@ -1505,8 +1505,8 @@ id = "section-command-create-version-headers"
 text = "SECTION command (create version headers)"
 status = "done"
 section = "v0.7.0"
-group = "Roadmap Hardening"
 test = "[no-test]"
+group = "Roadmap Hardening"
 order = 22
 
 [[tasks]]
@@ -1514,8 +1514,8 @@ id = "subsection-command-create-headers"
 text = "SUBSECTION command (create ### headers)"
 status = "done"
 section = "v0.7.0"
-group = "Roadmap Hardening"
 test = "[no-test]"
+group = "Roadmap Hardening"
 order = 23
 
 [[tasks]]
@@ -1523,8 +1523,8 @@ id = "chain-command-sequential-adds"
 text = "CHAIN command (sequential adds)"
 status = "done"
 section = "v0.7.0"
-group = "Roadmap Hardening"
 test = "[no-test]"
+group = "Roadmap Hardening"
 order = 24
 
 [[tasks]]
@@ -1828,8 +1828,8 @@ id = "rust-usemod-extraction"
 text = "Rust use/mod extraction"
 status = "done"
 section = "v0.8.0"
-group = "Import Extraction"
 test = "src/graph/imports.rs::test_rust_imports"
+group = "Import Extraction"
 order = 19
 
 [[tasks]]
@@ -1837,8 +1837,8 @@ id = "rust-path-resolution"
 text = "Rust path resolution"
 status = "done"
 section = "v0.8.0"
-group = "Import Extraction"
 test = "src/graph/resolver.rs::test_resolve_rust_crate"
+group = "Import Extraction"
 order = 20
 
 [[tasks]]
@@ -1846,8 +1846,8 @@ id = "python-import-extraction"
 text = "Python import extraction"
 status = "done"
 section = "v0.8.0"
-group = "Import Extraction"
 test = "src/graph/imports.rs::test_python_imports"
+group = "Import Extraction"
 order = 21
 
 [[tasks]]
@@ -1855,8 +1855,8 @@ id = "typescript-import-extraction"
 text = "TypeScript import extraction"
 status = "done"
 section = "v0.8.0"
-group = "Import Extraction"
 test = "src/graph/imports.rs::test_ts_imports"
+group = "Import Extraction"
 order = 22
 
 [[tasks]]
@@ -1864,8 +1864,8 @@ id = "graph-nodeedge-creation"
 text = "Graph node/edge creation"
 status = "done"
 section = "v0.8.0"
-group = "Graph Construction"
 test = "tests/unit_graph_build.rs::test_node_creation"
+group = "Graph Construction"
 order = 23
 
 [[tasks]]
@@ -1873,8 +1873,8 @@ id = "reverse-index-construction"
 text = "Reverse index construction"
 status = "done"
 section = "v0.8.0"
-group = "Graph Construction"
 test = "tests/unit_graph_build.rs::test_reverse_index"
+group = "Graph Construction"
 order = 24
 
 [[tasks]]
@@ -1882,8 +1882,8 @@ id = "unified-dashboard-single-entry-point-slopchop-dashboard"
 text = "Unified Dashboard"
 status = "done"
 section = "v0.8.0"
-group = "TUI Mission Control"
 test = "[no-test]"
+group = "TUI Mission Control"
 order = 25
 
 [[tasks]]
@@ -1891,8 +1891,8 @@ id = "check-runner-live-testlint-output-in-pane"
 text = "Check Runner"
 status = "done"
 section = "v0.8.0"
-group = "TUI Mission Control"
 test = "[no-test]"
+group = "TUI Mission Control"
 order = 26
 
 [[tasks]]
@@ -1900,8 +1900,8 @@ id = "roadmap-explorer-navigate-and-check-tasks-interactively"
 text = "Roadmap Explorer"
 status = "done"
 section = "v0.8.0"
-group = "TUI Mission Control"
 test = "[no-test]"
+group = "TUI Mission Control"
 order = 27
 
 [[tasks]]
@@ -1909,8 +1909,8 @@ id = "log-stream-replace-stdout-scrolling"
 text = "Log Stream"
 status = "done"
 section = "v0.8.0"
-group = "TUI Mission Control"
 test = "[no-test]"
+group = "TUI Mission Control"
 order = 28
 
 [[tasks]]
@@ -1950,8 +1950,8 @@ id = "slopchop-map-basic-output"
 text = "slopchop map basic output"
 status = "done"
 section = "v0.9.0"
-group = "SlopChop Map Command"
 test = "[no-test]"
+group = "SlopChop Map Command"
 order = 0
 
 [[tasks]]
@@ -1959,8 +1959,8 @@ id = "directory-tree-with-file-counts"
 text = "Directory tree with file counts"
 status = "done"
 section = "v0.9.0"
-group = "SlopChop Map Command"
 test = "[no-test]"
+group = "SlopChop Map Command"
 order = 1
 
 [[tasks]]
@@ -1976,8 +1976,8 @@ id = "--deps-flag-show-dependency-arrows"
 text = "--deps flag (show dependency arrows)"
 status = "done"
 section = "v0.9.0"
-group = "SlopChop Map Command"
 test = "[no-test]"
+group = "SlopChop Map Command"
 order = 3
 
 [[tasks]]
@@ -1985,8 +1985,8 @@ id = "--stats-flag-token-counts-per-cluster"
 text = "--stats flag (token counts per cluster)"
 status = "done"
 section = "v0.9.0"
-group = "SlopChop Map Command"
 test = "[no-test]"
+group = "SlopChop Map Command"
 order = 4
 
 [[tasks]]
@@ -2314,8 +2314,8 @@ id = "block-triple-backticks"
 text = "Block triple backticks (```)"
 status = "pending"
 section = "v0.10.0"
-group = "Markdown Rejection"
 test = "tests/integration_apply.rs::test_rejects_markdown_fences"
+group = "Markdown Rejection"
 order = 0
 
 [[tasks]]
@@ -2323,8 +2323,8 @@ id = "block-tilde-fences"
 text = "Block tilde fences (~~~)"
 status = "pending"
 section = "v0.10.0"
-group = "Markdown Rejection"
 test = "tests/integration_apply.rs::test_rejects_tilde_fences"
+group = "Markdown Rejection"
 order = 1
 
 [[tasks]]
@@ -2340,8 +2340,8 @@ id = "detect-unbalanced"
 text = "Detect unbalanced {"
 status = "pending"
 section = "v0.10.0"
-group = "Brace Balancing"
 test = "tests/integration_apply.rs::test_detects_unbalanced_open_brace"
+group = "Brace Balancing"
 order = 3
 
 [[tasks]]
@@ -2349,8 +2349,8 @@ id = "detect-unbalanced-1"
 text = "Detect unbalanced }"
 status = "pending"
 section = "v0.10.0"
-group = "Brace Balancing"
 test = "tests/integration_apply.rs::test_detects_unbalanced_close_brace"
+group = "Brace Balancing"
 order = 4
 
 [[tasks]]
@@ -2358,8 +2358,8 @@ id = "detect-unbalanced-2"
 text = "Detect unbalanced ["
 status = "pending"
 section = "v0.10.0"
-group = "Brace Balancing"
 test = "tests/integration_apply.rs::test_detects_unbalanced_bracket"
+group = "Brace Balancing"
 order = 5
 
 [[tasks]]
@@ -2367,8 +2367,8 @@ id = "detect-unbalanced-3"
 text = "Detect unbalanced ("
 status = "pending"
 section = "v0.10.0"
-group = "Brace Balancing"
 test = "tests/integration_apply.rs::test_detects_unbalanced_paren"
+group = "Brace Balancing"
 order = 6
 
 [[tasks]]
@@ -2672,8 +2672,8 @@ id = "license-audit-dependency-licenses"
 text = "License audit (dependency licenses)"
 status = "pending"
 section = "v1.0.0"
-group = "Polish"
 test = "tests/release.rs::test_license_audit"
+group = "Polish"
 order = 9
 
 [[tasks]]
