@@ -1,216 +1,159 @@
-# SlopChop
-
-**AI writes slop. You chop it clean.**
-
----
-
-## The Story
-
-I'm a product designer, not a developer. But I ship production code, entirely through conversation with LLMs.
-
-That only works if you're rigorous. Small files the AI can reason about fully. Low complexity so logic stays testable. No truncation, ever. Hard constraints, enforced at every commit.
-
-I built **SlopChop** to hold that line. It's the gatekeeper between AI output and my codebase: if the code doesn't meet the spec, it doesn't land.
-Every line of this tool was written by AI. It passes its own rules.
-
----
-
-## What Is This?
-
-SlopChop is the bridge between your AI chat and your codebase.
-
-You (and I) love coding with traditional chat interfaces. The conversation is where the thinking happens. But the last mile **sucks**:
-
-- Copy code, miss a bracket, **broken file**
-- AI gives you `// rest of implementation`, **deletes your code** <!-- slopchop:ignore -->
-- 300-line god function **you didn't ask for**
-- Context window forgets everything between sessions
-
-SlopChop **fixes all of this.**
-
----
-
-## The Workflow
-
-SlopChop teaches the AI to navigate your repo through a simple loop: **Map → Pack → Apply**.
-
-### The Loop
-```mermaid
-flowchart TD
-    subgraph Loop
-        M[🗺️ Map<br><i>you show codebase</i>]
-        P[📦 Pack<br><i>AI asks, you provide</i>]
-        A[⚡ Apply<br><i>you land or reject</i>]
-    end
-    
-    M --> P --> A
-    A -->|"✗ Rejected"| P
-    A -->|"✓ Committed"| E(( ))
 ```
-#### 1. Map — Show the AI your codebase
-
-```bash
-slopchop signatures
+╔═══════════════════════════════════════════════════════════════╗
+║                                                               ║
+║   ██████╗ ██╗████████╗   ████████╗██████╗ ███████╗██╗  ██╗    ║
+║  ██╔════╝ ██║╚══██╔══╝   ╚══██╔══╝██╔══██╗██╔════╝██║ ██╔╝    ║
+║  ██║  ███╗██║   ██║         ██║   ██████╔╝█████╗  █████╔╝     ║
+║  ██║   ██║██║   ██║         ██║   ██╔══██╗██╔══╝  ██╔═██╗     ║
+║  ╚██████╔╝██║   ██║         ██║   ██║  ██║███████╗██║  ██╗    ║
+║   ╚═════╝ ╚═╝   ╚═╝         ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝    ║
+║                                                               ║
+║              Visual Git Time Travel & File Recovery           ║
+║                                                               ║
+╚═══════════════════════════════════════════════════════════════╝
 ```
 
-Copies a high-level map of every type and function to your clipboard.
+> *"When did this file get fucked?"* — Every developer, eventually
 
-> **You:** "I'm getting error X. Here's my codebase."  
-> **AI:** "I see the issue. It's likely in `src/config.rs`. Can you pack that file?"
+**git-trek** is a visual file health monitor for git. See your entire codebase as a treemap, scrub through time with your mouse, and instantly spot when files got truncated, deleted, or corrupted. One click to restore.
 
-#### 2. Pack — Run the command it gives you, to give the AI what it wants
+## The Problem
 
-```bash
-slopchop pack --focus src/config.rs
-```
+You're coding. Something breaks. A file got truncated, filled with junk, or mysteriously emptied. Now you need to:
+1. Figure out *when* it broke
+2. Find what it looked like *before*
+3. Restore it
 
-Copies the full file + skeletons of its dependencies.
+The git CLI way: `git log --oneline -- file`, squint at hashes, `git show abc123:file`, copy-paste... painful.
 
-> **You:** *\*pastes\**  
-> **AI:** *\*responds with fixed code in SlopChop format\**
-
-#### 3. Apply — Land the changes (or reject the slop)
-
-Copy the AI's **entire** response, then:
-
-```bash
-slopchop apply
-```
-If clean: tests and lints run, changes commit.  
-If slop is detected:
-
-```
-✗ REJECTED
-- src/auth/login.rs: complexity 12 (max 8)
-- src/auth/login.rs: detected "// ..." truncation
-
-[error automatically copied to clipboard]
-```
-
-Paste the error back. AI fixes it. Repeat.
-
----
-
-**The AI learns your (configurable) standards through rejection + automatic corrections.**
-
----
-
-## The Killer Feature: Watch Mode (Coming Soon)
-
-```
-slopchop watch
-```
-
-Runs in background. Watches your clipboard.
-
-1. You copy from your AI of choice
-2. Notification: "3 files ready. ⌘⇧L to apply"
-3. Press hotkey
-4. Done. Never left the browser.
-
----
-
-## The Three Laws
-
-SlopChop enforces structural constraints. These are what keep AI code from becoming spaghetti.
-
-### Law of Atomicity
-Files must be small enough to review.
-```
-max_file_tokens = 2000  (~500 lines)
-```
-
-### Law of Complexity
-Functions must be simple enough to test.
-```
-max_cyclomatic_complexity = 8
-max_nesting_depth = 3
-max_function_args = 5
-```
-
-### Law of Paranoia (Rust)
-No hidden crash paths.
-```
-.unwrap()  → rejected
-.expect()  → rejected
-.unwrap_or() → allowed
-?          → allowed
-```
-
----
+**git-trek way**: Scroll wheel to scrub time. Red = maybe fucked. Click. Restore. Done.
 
 ## Installation
 
 ```bash
+# Clone and build
+git clone https://github.com/junovhs/git-trek.git
+cd git-trek
 cargo install --path .
+
+# Or just run it
+cargo run --release
 ```
 
-Then:
+Requires Rust toolchain: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+
+## Usage
 
 ```bash
-slopchop config  # interactive setup
+# In any git repo
+git-trek
+
+# Load more history
+git-trek --limit 500
 ```
 
-Or just run `slopchop` and it auto-generates config.
+## The Interface
+
+```
+┌─ GIT-TREK v3.0 ─────────────────────────────────────────────────┐
+│ [1] Treemap  [2] Heatmap  [3] Minimap  [4] River  [5] Focus     │
+├─ 42 / 100 │ fix: restore deleted function ──────────────────────┤
+│ ────────────────────────◉───────────────────────────────────────│
+├─ Files @ a1b2c3d4 ──────────────────────────────────────────────┤
+│┌──────────────────────┐┌────────┐┌────────┐┌──────┐┌───────────┐│
+││                      ││        ││   🔴   ││      ││           ││
+││    src/app.rs        ││main.rs ││lib.rs  ││cli.rs││ tests/    ││
+││      152 ln          ││ 89 ln  ││ 12 ln  ││45 ln ││           ││
+││                      ││        ││        ││      ││           ││
+│└──────────────────────┘└────────┘└────────┘└──────┘└───────────┘│
+├─────────────────────────────────────────────────────────────────┤
+│ [click] select | [scroll] time travel | [R] restore | [Q] quit  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Rectangle size** = file size (lines of code)
+**Color** = health status:
+- ⬛ Gray: Stable, no significant change
+- 🟢 Green: File grew
+- 🟡 Yellow: File shrank slightly  
+- 🔴 Red: **File shrank >30%** — probably fucked
+- 🔵 Blue: New file
+
+## Controls
+
+| Input | Action |
+|-------|--------|
+| **Scroll wheel** | Scrub through commits |
+| **← →** | Navigate timeline |
+| **Click file** | Select for restore |
+| **Hover** | Highlight file (magenta) |
+| **R** | Restore selected file from current commit |
+| **1-5** | Switch view modes |
+| **Tab** | Cycle views |
+| **Esc** | Deselect |
+| **Q** | Quit |
+
+## View Modes
+
+| Mode | Purpose | Status |
+|------|---------|--------|
+| **[1] Treemap** | WinDirStat-style overview | ✅ Working |
+| **[2] Heatmap** | Activity over time | 🚧 Coming |
+| **[3] Minimap** | Code shape comparison | 🚧 Coming |
+| **[4] River** | File size evolution | 🚧 Coming |
+| **[5] Focus** | Deep dive on one file | 🚧 Coming |
+
+## How It Works
+
+1. **Loads your git history** — walks commits, records file sizes at each point
+2. **Builds a treemap** — files sized proportionally to line count
+3. **Tracks health** — compares each commit to its parent, flags suspicious changes
+4. **Mouse-driven navigation** — scroll to time travel, click to select, R to restore
+
+No branches created. No working directory changes. Pure read-only inspection until you explicitly restore.
+
+## When To Use It
+
+- **"Something broke, when?"** — Scroll back, watch for red
+- **"What did this file look like before?"** — Navigate to commit, click file, R to restore
+- **"Overview of my codebase"** — Treemap shows relative file sizes instantly
+- **"Which files change together?"** — Scrub time, watch the colors shift
+
+## Options
+
+```bash
+git-trek --limit 200    # Load 200 commits (default: 100)
+git-trek --help         # Show help
+```
+
+## Requirements
+
+- Git repository
+- Terminal with mouse support (most modern terminals)
+- Rust toolchain (for building)
+
+## Development
+
+```bash
+cargo run              # Debug build
+cargo run --release    # Fast build  
+cargo test             # Run tests
+cargo clippy           # Lint
+```
+
+## Roadmap
+
+- [x] Treemap view with health coloring
+- [x] Mouse hover/click/scroll
+- [x] File restore from any commit
+- [ ] Heatmap view (activity over time)
+- [ ] Minimap view (code shape diff)
+- [ ] River view (size evolution)
+- [ ] Focus view (single file deep dive)
+- [ ] Sparklines per file
+- [ ] Filter by path/extension
+- [ ] Search commits
 
 ---
 
-## Commands
-
-### Core Workflow
-
-| Command | What it does |
-|---------|--------------|
-| `slopchop` | Scan codebase for violations |
-| `slopchop apply` | Apply AI response from clipboard |
-| `slopchop pack <file>` | Pack specific file (full source) |
-| `slopchop pack --focus <file>` | Pack file + skeleton of dependencies |
-
-### Context Tools
-
-| Command | What it does |
-|---------|--------------|
-| `slopchop signatures` | Generate Map (Header + Signatures + Footer) |
-| `slopchop map` | Show directory tree & sizes |
-| `slopchop map --deps` | Show dependency graph visual |
-| `slopchop trace <file>` | Trace dependencies deep |
-| `slopchop prompt` | Generate system prompt text |
-
-### Project Management
-
-| Command | What it does |
-|---------|--------------|
-| `slopchop roadmap show` | Display progress |
-| `slopchop roadmap apply` | Update roadmap from AI |
-| `slopchop roadmap audit` | Verify test coverage |
-
----
-
-## Configuration
-
-`slopchop.toml`:
-
-```toml
-[rules]
-max_file_tokens = 2000
-max_cyclomatic_complexity = 8
-max_nesting_depth = 3
-max_function_args = 5
-
-[commands]
-check = ["cargo test", "cargo clippy -- -D warnings"]
-fix = "cargo fmt"
-```
-
----
-
-## The Format
-
-AI outputs code in this format:
-
-```
-#__SLOPCHOP_FILE__# src/auth/login.rs
-pub fn login(creds: &Credentials) -> Result<Session, AuthError> {
-    // complete implementation
-    // no truncation
-}
+*Built for developers who think visually and hate typing `git log`.*
