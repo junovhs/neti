@@ -5,7 +5,7 @@ pub mod types;
 pub use self::types::{
     CommandEntry, Config, GitMode, Preferences, RuleConfig, SlopChopToml, Theme,
 };
-use crate::error::Result;
+use anyhow::Result;
 
 impl Config {
     #[must_use]

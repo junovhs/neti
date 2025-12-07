@@ -112,7 +112,7 @@ impl ConfigApp {
         }
     }
 
-    fn save(&mut self) {
+    pub fn save(&mut self) {
         if let Err(e) = save_to_file(&self.rules, &self.preferences, &self.commands) {
             self.saved_message = Some((format!("Error: {e}"), std::time::Instant::now()));
         } else {
@@ -123,4 +123,4 @@ impl ConfigApp {
             self.modified = false;
         }
     }
-}
+}

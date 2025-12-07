@@ -47,8 +47,8 @@ fn parse_legacy_roadmap(content: &str) -> TaskStore {
 struct ParseContext {
     current_section: Option<String>,
     current_group: Option<String>,
-    section_order: u32,
-    task_order: u32,
+    section_order: usize,
+    task_order: usize,
 }
 
 fn parse_line(trimmed: &str, store: &mut TaskStore, ctx: &mut ParseContext) {
@@ -154,7 +154,8 @@ fn extract_test_anchor(input: &str) -> (String, Option<String>) {
 }
 
 fn clean_task_text(input: &str) -> String {
-    input.trim()
+    input
+        .trim()
         .trim_start_matches("**")
         .trim_end_matches("**")
         .trim()
@@ -172,7 +173,8 @@ fn detect_section_status(heading: &str) -> SectionStatus {
 }
 
 fn slugify(input: &str) -> String {
-    input.chars()
+    input
+        .chars()
         .filter(|c| c.is_alphanumeric() || c.is_whitespace() || *c == '-' || *c == '.')
         .collect::<String>()
         .to_lowercase()

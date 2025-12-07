@@ -4,13 +4,14 @@ use crate::apply::types::{ExtractedFiles, Manifest};
 use crate::apply::ApplyOutcome;
 use std::path::{Component, Path};
 
+// V1 ROADMAP.md is dead. tasks.toml is handled by roadmap_v2 module.
 const PROTECTED_FILES: &[&str] = &[
-    "ROADMAP.md", // We protect the roadmap structure but allow specific updates via commands
     ".slopchopignore",
     "slopchop.toml",
     "Cargo.lock",
     "package-lock.json",
     "yarn.lock",
+    "pnpm-lock.yaml",
 ];
 
 const BLOCKED_DIRS: &[&str] = &[
@@ -65,7 +66,6 @@ pub fn validate(manifest: &Manifest, extracted: &ExtractedFiles) -> ApplyOutcome
 
 fn validate_path(path_str: &str) -> Result<(), String> {
     // 1. Manual check for Windows Absolute paths (Drive letter or UNC)
-    // We do this manually because Path::is_absolute depends on the running OS.
     let is_drive = path_str.len() >= 2
         && path_str.chars().nth(1) == Some(':')
         && path_str
@@ -106,10 +106,9 @@ fn validate_path(path_str: &str) -> Result<(), String> {
 }
 
 fn is_protected(path_str: &str) -> bool {
-    // Exceptions for specific workflows (like updating README if needed) can be handled here,
-    // but generally we protect config files.
-    // NOTE: 'ROADMAP.md' is protected because it should be updated via commands, not raw overwrites.
-    PROTECTED_FILES.iter().any(|&f| f.eq_ignore_ascii_case(path_str))
+    PROTECTED_FILES
+        .iter()
+        .any(|&f| f.eq_ignore_ascii_case(path_str))
 }
 
 fn validate_content(path: &str, content: &str) -> Result<(), String> {
@@ -118,13 +117,12 @@ fn validate_content(path: &str, content: &str) -> Result<(), String> {
     }
 
     // Allow markdown fences in markdown files
-    let is_markdown = Path::new(path).extension().is_some_and(|ext| {
-        ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown")
-    });
+    let is_markdown = Path::new(path)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown"));
 
     if !is_markdown {
         // Use escape sequences to prevent self-rejection
-        // \x60 = backtick, \x7E = tilde
         if content.contains("\x60\x60\x60") || content.contains("\x7E\x7E\x7E") {
             return Err(format!(
                 "Markdown fences detected in {path}. Content must be raw code."
@@ -141,25 +139,70 @@ fn validate_content(path: &str, content: &str) -> Result<(), String> {
 }
 
 fn detect_truncation(content: &str) -> Option<usize> {
-    // We add slopchop:ignore to these lines so the CURRENT version of the tool
-    // doesn't flag this NEW version of the source code as truncated.
     let truncation_patterns = [
-        "// ...",         // slopchop:ignore
-        "/* ... */",      // slopchop:ignore
-        "# ...",          // slopchop:ignore
-        "// rest of",     // slopchop:ignore
-        "// remaining",   // slopchop:ignore
-        "# rest of",      // slopchop:ignore
-        "# remaining",    // slopchop:ignore
-        "<!-- ... -->",   // slopchop:ignore
+        "// ...",             // slopchop:ignore
+        "/* ... */",          // slopchop:ignore
+        "# ...",              // slopchop:ignore
+        "// rest of",         // slopchop:ignore
+        "// remaining",       // slopchop:ignore
+        "// TODO: implement", // slopchop:ignore
+        "// implementation",  // slopchop:ignore
+        "pass  #",            // slopchop:ignore (Python placeholder)
     ];
-    for (i, line) in content.lines().enumerate() {
-        let trimmed = line.trim();
+
+    for (line_num, line) in content.lines().enumerate() {
+        // Skip lines with ignore marker
+        if line.contains("slopchop:ignore") {
+            continue;
+        }
+
+        let lower = line.to_lowercase();
         for pattern in &truncation_patterns {
-            if trimmed.contains(pattern) && !trimmed.contains("slopchop:ignore") {
-                return Some(i + 1);
+            if lower.contains(&pattern.to_lowercase()) {
+                return Some(line_num + 1);
             }
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_path_traversal_blocked() {
+        assert!(validate_path("../etc/passwd").is_err());
+        assert!(validate_path("foo/../bar").is_err());
+    }
+
+    #[test]
+    fn test_absolute_path_blocked() {
+        assert!(validate_path("/etc/passwd").is_err());
+        assert!(validate_path("C:\\Windows\\System32").is_err());
+    }
+
+    #[test]
+    fn test_sensitive_dirs_blocked() {
+        assert!(validate_path(".git/config").is_err());
+        assert!(validate_path(".ssh/id_rsa").is_err());
+        assert!(validate_path(".env").is_err());
+    }
+
+    #[test]
+    fn test_valid_paths_allowed() {
+        assert!(validate_path("src/main.rs").is_ok());
+        assert!(validate_path("tests/unit_test.rs").is_ok());
+        assert!(validate_path(".gitignore").is_ok());
+        assert!(validate_path(".github/workflows/ci.yml").is_ok());
+    }
+
+    #[test]
+    fn test_protected_files() {
+        assert!(is_protected("slopchop.toml"));
+        assert!(is_protected("Cargo.lock"));
+        assert!(!is_protected("src/main.rs"));
+        // ROADMAP.md is no longer protected (V1 is dead)
+        assert!(!is_protected("ROADMAP.md"));
+    }
 }

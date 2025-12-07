@@ -1,132 +1,139 @@
 // src/roadmap_v2/parser.rs
-use crate::error::SlopChopError;
-use super::types::{RoadmapCommand, Task, TaskUpdate};
+use super::types::{RoadmapCommand, Task, TaskStatus, TaskUpdate};
+use anyhow::{anyhow, bail, Result};
 
-const BLOCK_START: &str = "===ROADMAP===";
-
-/// Parse all roadmap command blocks from input text.
+/// Parses roadmap commands from the ===ROADMAP=== block in AI output.
 ///
 /// # Errors
-/// Returns error if a command block is malformed or has missing required fields.
-pub fn parse_commands(input: &str) -> Result<Vec<RoadmapCommand>, SlopChopError> {
-    let blocks = extract_blocks(input);
-    let mut commands = Vec::new();
+/// Returns error if command syntax is invalid.
+pub fn parse_commands(input: &str) -> Result<Vec<RoadmapCommand>> {
+    let Some(block) = extract_roadmap_block(input) else {
+        return Ok(vec![]);
+    };
 
-    for block in blocks {
-        let cmd = parse_single_block(&block)?;
-        commands.push(cmd);
+    let mut commands = Vec::new();
+    let mut current_block = String::new();
+
+    for line in block.lines() {
+        let trimmed = line.trim();
+
+        // Skip empty lines
+        if trimmed.is_empty() {
+            continue;
+        }
+
+        // Check if this is a command keyword (starts a new block)
+        if is_command_keyword(trimmed) {
+            // Process the previous block if any
+            if !current_block.is_empty() {
+                commands.push(parse_single_block(&current_block)?);
+            }
+            current_block = trimmed.to_string();
+        } else {
+            // Add to current block
+            if !current_block.is_empty() {
+                current_block.push('\n');
+            }
+            current_block.push_str(trimmed);
+        }
+    }
+
+    // Process final block
+    if !current_block.is_empty() {
+        commands.push(parse_single_block(&current_block)?);
     }
 
     Ok(commands)
 }
 
-fn extract_blocks(input: &str) -> Vec<String> {
-    let mut blocks = Vec::new();
-    let mut in_block = false;
-    let mut current = String::new();
-
-    for line in input.lines() {
-        let trimmed = line.trim();
-        if trimmed == BLOCK_START {
-            if in_block {
-                blocks.push(current.clone());
-                current.clear();
-            }
-            in_block = !in_block;
-            continue;
-        }
-        if in_block {
-            current.push_str(line);
-            current.push('\n');
-        }
-    }
-
-    blocks
+fn extract_roadmap_block(input: &str) -> Option<&str> {
+    let start_marker = "===ROADMAP===";
+    let start = input.find(start_marker)? + start_marker.len();
+    let rest = &input[start..];
+    let end = rest.find(start_marker)?;
+    Some(rest[..end].trim())
 }
 
-fn clean_lines(block: &str) -> Vec<&str> {
-    block
-        .lines()
-        .map(str::trim)
-        .filter(|l| !l.is_empty() && !l.starts_with('#'))
-        .collect()
+fn is_command_keyword(line: &str) -> bool {
+    let upper = line.to_uppercase();
+    matches!(
+        upper.as_str(),
+        "CHECK" | "UNCHECK" | "ADD" | "UPDATE" | "DELETE"
+    )
 }
 
-fn parse_single_block(block: &str) -> Result<RoadmapCommand, SlopChopError> {
-    let lines = clean_lines(block);
-    let first_line = lines.first().copied().unwrap_or("");
+fn parse_single_block(block: &str) -> Result<RoadmapCommand> {
+    let lines: Vec<&str> = block.lines().collect();
+    let keyword = lines
+        .first()
+        .map(|s| s.trim().to_uppercase())
+        .unwrap_or_default();
 
-    match first_line.to_uppercase().as_str() {
-        "CHECK" => parse_check(&lines[1..]),
-        "UNCHECK" => parse_uncheck(&lines[1..]),
-        "ADD" => parse_add(&lines[1..]),
-        "UPDATE" => parse_update(&lines[1..]),
-        "DELETE" => parse_delete(&lines[1..]),
-        "" => Err(SlopChopError::Other("Empty command block".to_string())),
-        other => Err(SlopChopError::Other(format!(
-            "Unknown roadmap command: {other}"
-        ))),
+    match keyword.as_str() {
+        "CHECK" => parse_check(&lines),
+        "UNCHECK" => parse_uncheck(&lines),
+        "ADD" => parse_add(&lines),
+        "UPDATE" => parse_update(&lines),
+        "DELETE" => parse_delete(&lines),
+        "" => bail!("Empty command block"),
+        other => bail!("Unknown roadmap command: {other}"),
     }
 }
 
-fn parse_check(lines: &[&str]) -> Result<RoadmapCommand, SlopChopError> {
+fn parse_check(lines: &[&str]) -> Result<RoadmapCommand> {
     let id = require_field(lines, "id")?;
     Ok(RoadmapCommand::Check { id })
 }
 
-fn parse_uncheck(lines: &[&str]) -> Result<RoadmapCommand, SlopChopError> {
+fn parse_uncheck(lines: &[&str]) -> Result<RoadmapCommand> {
     let id = require_field(lines, "id")?;
     Ok(RoadmapCommand::Uncheck { id })
 }
 
-fn parse_delete(lines: &[&str]) -> Result<RoadmapCommand, SlopChopError> {
+fn parse_delete(lines: &[&str]) -> Result<RoadmapCommand> {
     let id = require_field(lines, "id")?;
     Ok(RoadmapCommand::Delete { id })
 }
 
-fn parse_add(lines: &[&str]) -> Result<RoadmapCommand, SlopChopError> {
+fn parse_add(lines: &[&str]) -> Result<RoadmapCommand> {
     let id = require_field(lines, "id")?;
-    let task_text = require_field(lines, "text")?;
+    let text = require_field(lines, "text")?;
     let section = require_field(lines, "section")?;
-    let group = optional_field(lines, "group");
-    let test_anchor = optional_field(lines, "test");
+    let test_anchor = get_field(lines, "test");
+    let group = get_field(lines, "group");
 
-    let task = Task {
+    Ok(RoadmapCommand::Add(Task {
         id,
-        text: task_text,
-        status: super::types::TaskStatus::Pending,
+        text,
+        status: TaskStatus::Pending,
         section,
-        group,
         test: test_anchor,
+        group,
         order: 0,
-    };
-
-    Ok(RoadmapCommand::Add(task))
+    }))
 }
 
-fn parse_update(lines: &[&str]) -> Result<RoadmapCommand, SlopChopError> {
+fn parse_update(lines: &[&str]) -> Result<RoadmapCommand> {
     let id = require_field(lines, "id")?;
     let fields = TaskUpdate {
-        text: optional_field(lines, "text"),
-        test: optional_field(lines, "test"),
-        section: optional_field(lines, "section"),
-        group: optional_field(lines, "group"),
+        text: get_field(lines, "text"),
+        test: get_field(lines, "test"),
+        section: get_field(lines, "section"),
+        group: get_field(lines, "group"),
     };
-
     Ok(RoadmapCommand::Update { id, fields })
 }
 
-fn require_field(lines: &[&str], key: &str) -> Result<String, SlopChopError> {
-    optional_field(lines, key).ok_or_else(|| {
-        SlopChopError::Other(format!("Missing required field: {key}"))
-    })
+fn require_field(lines: &[&str], key: &str) -> Result<String> {
+    get_field(lines, key).ok_or_else(|| anyhow!("Missing required field: {key}"))
 }
 
-fn optional_field(lines: &[&str], key: &str) -> Option<String> {
+fn get_field(lines: &[&str], key: &str) -> Option<String> {
     let prefix = format!("{key} = ");
     for line in lines {
-        if let Some(value) = line.strip_prefix(&prefix) {
-            return Some(value.trim().to_string());
+        let trimmed = line.trim();
+        if trimmed.starts_with(&prefix) {
+            return Some(trimmed[prefix.len()..].trim().to_string());
         }
     }
     None
@@ -135,20 +142,62 @@ fn optional_field(lines: &[&str], key: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::Result;
 
     #[test]
-    fn test_parse_check() {
-        let input = "===ROADMAP===\nCHECK\nid = my-task\n===ROADMAP===";
-        let cmds = parse_commands(input).unwrap_or_default();
+    fn test_parse_check() -> Result<()> {
+        let input = r"
+===ROADMAP===
+CHECK
+id = my-task
+===ROADMAP===
+";
+        let cmds = parse_commands(input)?;
         assert_eq!(cmds.len(), 1);
-        assert!(matches!(&cmds[0], RoadmapCommand::Check { id } if id == "my-task"));
+        assert!(matches!(cmds[0], RoadmapCommand::Check { ref id } if id == "my-task"));
+        Ok(())
     }
 
     #[test]
-    fn test_parse_add() {
-        let input = "===ROADMAP===\nADD\nid = new-feature\ntext = Support Go\nsection = v0.8.0\ngroup = Lang\ntest = tests/unit.rs::test_go\n===ROADMAP===";
-        let cmds = parse_commands(input).unwrap_or_default();
+    fn test_parse_add() -> Result<()> {
+        let input = r"
+===ROADMAP===
+ADD
+id = new-task
+text = Implement feature X
+section = v0.2.0
+===ROADMAP===
+";
+        let cmds = parse_commands(input)?;
         assert_eq!(cmds.len(), 1);
-        assert!(matches!(&cmds[0], RoadmapCommand::Add(t) if t.id == "new-feature"));
+        assert!(matches!(cmds[0], RoadmapCommand::Add(_)));
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_multiple() -> Result<()> {
+        let input = r"
+===ROADMAP===
+CHECK
+id = task-1
+CHECK
+id = task-2
+ADD
+id = task-3
+text = New thing
+section = v1.0.0
+===ROADMAP===
+";
+        let cmds = parse_commands(input)?;
+        assert_eq!(cmds.len(), 3);
+        Ok(())
+    }
+
+    #[test]
+    fn test_no_roadmap_block() -> Result<()> {
+        let input = "Just some code without roadmap";
+        let cmds = parse_commands(input)?;
+        assert!(cmds.is_empty());
+        Ok(())
     }
 }

@@ -1,6 +1,6 @@
 // src/roadmap_v2/store.rs
-use crate::error::SlopChopError;
-use super::types::{TaskStore, Task, TaskStatus, RoadmapCommand, TaskUpdate};
+use super::types::{RoadmapCommand, Task, TaskStatus, TaskStore, TaskUpdate};
+use anyhow::Error;
 use std::path::Path;
 
 const DEFAULT_PATH: &str = "tasks.toml";
@@ -12,7 +12,7 @@ impl TaskStore {
     /// Returns error if file cannot be read or contains invalid TOML.
     pub fn load(path: Option<&Path>) -> Result<Self, SlopChopError> {
         let path = path.unwrap_or_else(|| Path::new(DEFAULT_PATH));
-        
+
         if !path.exists() {
             return Ok(Self::default());
         }
@@ -29,7 +29,7 @@ impl TaskStore {
     /// Returns error if serialization fails or file cannot be written.
     pub fn save(&self, path: Option<&Path>) -> Result<(), SlopChopError> {
         let path = path.unwrap_or_else(|| Path::new(DEFAULT_PATH));
-        
+
         let content = toml::to_string_pretty(self)
             .map_err(|e| SlopChopError::Other(format!("Failed to serialize: {e}")))?;
 
@@ -60,7 +60,8 @@ impl TaskStore {
     fn add_task(&mut self, task: Task) -> Result<(), SlopChopError> {
         if self.tasks.iter().any(|t| t.id == task.id) {
             return Err(SlopChopError::Other(format!(
-                "Task already exists: {}", task.id
+                "Task already exists: {}",
+                task.id
             )));
         }
         self.tasks.push(task);
@@ -69,7 +70,7 @@ impl TaskStore {
 
     fn update_task(&mut self, id: &str, fields: TaskUpdate) -> Result<(), SlopChopError> {
         let task = self.find_task_mut(id)?;
-        
+
         if let Some(txt) = fields.text {
             task.text = txt;
         }
@@ -82,20 +83,24 @@ impl TaskStore {
         if let Some(grp) = fields.group {
             task.group = Some(grp);
         }
-        
+
         Ok(())
     }
 
     fn delete_task(&mut self, id: &str) -> Result<(), SlopChopError> {
-        let idx = self.tasks.iter().position(|t| t.id == id)
+        let idx = self
+            .tasks
+            .iter()
+            .position(|t| t.id == id)
             .ok_or_else(|| SlopChopError::Other(format!("Task not found: {id}")))?;
         self.tasks.remove(idx);
         Ok(())
     }
 
     fn find_task_mut(&mut self, id: &str) -> Result<&mut Task, SlopChopError> {
-        self.tasks.iter_mut()
+        self.tasks
+            .iter_mut()
             .find(|t| t.id == id)
             .ok_or_else(|| SlopChopError::Other(format!("Task not found: {id}")))
     }
-}
+}

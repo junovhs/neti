@@ -7,33 +7,32 @@ pub mod view;
 pub mod watcher;
 
 use crate::config::Config;
-use crate::error::Result;
+use anyhow::Result;
 
-/// Runs the TUI application.
+/// Runs the TUI dashboard (the main entry point).
 ///
 /// # Errors
 /// Returns error if TUI execution fails or IO error occurs.
 pub fn run(config: &mut Config) -> Result<()> {
-    // Map anyhow::Result to crate::error::Result
-    dashboard::run(config).map_err(|e| crate::error::SlopChopError::from(std::io::Error::other(
-        e.to_string(),
-    )))
+    dashboard::run(config)
 }
 
-/// Runs the configuration TUI.
+/// Runs the standalone configuration TUI.
+///
+/// Note: Config editing is also available as Tab 3 in the dashboard.
 ///
 /// # Errors
 /// Returns error if TUI setup or execution fails.
 pub fn run_config() -> Result<()> {
-    runner::setup_terminal().map_err(|e| crate::error::SlopChopError::Other(e.to_string()))?;
-    
-    let mut terminal = ratatui::Terminal::new(ratatui::backend::CrosstermBackend::new(std::io::stdout()))
-        .map_err(|e| crate::error::SlopChopError::Other(e.to_string()))?;
-        
+    runner::setup_terminal()?;
+
+    let mut terminal =
+        ratatui::Terminal::new(ratatui::backend::CrosstermBackend::new(std::io::stdout()))?;
+
     let mut app = config::state::ConfigApp::new();
     let res = app.run(&mut terminal);
-    
-    runner::restore_terminal().map_err(|e| crate::error::SlopChopError::Other(e.to_string()))?;
-    
-    res.map_err(|e| crate::error::SlopChopError::Other(e.to_string()))
+
+    runner::restore_terminal()?;
+
+    res
 }

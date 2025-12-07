@@ -10,11 +10,20 @@ pub struct TaskStore {
     pub tasks: Vec<Task>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoadmapMeta {
     pub title: String,
     #[serde(default)]
     pub description: String,
+}
+
+impl Default for RoadmapMeta {
+    fn default() -> Self {
+        Self {
+            title: "Project Roadmap".to_string(),
+            description: String::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -24,10 +33,10 @@ pub struct Section {
     #[serde(default)]
     pub status: SectionStatus,
     #[serde(default)]
-    pub order: u32,
+    pub order: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum SectionStatus {
     #[default]
@@ -43,23 +52,25 @@ pub struct Task {
     #[serde(default)]
     pub status: TaskStatus,
     pub section: String,
-    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub test: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub group: Option<String>,
     #[serde(default)]
-    pub test: Option<String>,
-    #[serde(default)]
-    pub order: u32,
+    pub order: usize,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
-#[serde(rename_all = "kebab-case")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum TaskStatus {
     #[default]
     Pending,
     Done,
+    #[serde(rename = "no-test")]
     NoTest,
 }
 
+/// Commands that can modify the roadmap.
 #[derive(Debug, Clone)]
 pub enum RoadmapCommand {
     Check { id: String },
@@ -75,4 +86,4 @@ pub struct TaskUpdate {
     pub test: Option<String>,
     pub section: Option<String>,
     pub group: Option<String>,
-}
+}

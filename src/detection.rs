@@ -1,5 +1,5 @@
 // src/detection.rs
-use crate::error::Result;
+use anyhow::Result;
 use std::collections::HashSet;
 use std::fmt;
 use std::path::Path;

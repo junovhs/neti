@@ -3,16 +3,16 @@ use crate::analysis::RuleEngine;
 use crate::apply;
 use crate::apply::types::ApplyContext;
 use crate::config::Config;
-use crate::error::Result;
 use crate::pack::{self, OutputFormat, PackOptions};
 use crate::prompt::PromptGenerator;
 use crate::reporting;
 use crate::signatures::{self, SignatureOptions};
 use crate::trace::{self, TraceOptions};
+use anyhow::{anyhow, Result};
+use colored::Colorize;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use colored::Colorize;
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
@@ -75,12 +75,12 @@ pub fn handle_check() -> Result<()> {
 
 fn run_check_command(cmd: &str) -> Result<()> {
     print!("   > {cmd} ... ");
-    
+
     // Flush stdout to ensure the "..." appears before the command runs
     let _ = std::io::stdout().flush();
 
     let parts: Vec<&str> = cmd.split_whitespace().collect();
-    
+
     let Some((prog, args)) = parts.split_first() else {
         println!("{}", "skipped (empty)".yellow());
         return Ok(());
@@ -96,9 +96,7 @@ fn run_check_command(cmd: &str) -> Result<()> {
         println!("{}", "--- STDERR ---".red());
         println!("{}", String::from_utf8_lossy(&output.stderr));
         println!("{}", "--------------".red());
-        Err(crate::error::SlopChopError::Other(format!(
-            "Command failed: {cmd}"
-        )))
+        Err(anyhow!("Command failed: {cmd}"))
     }
 }
 
@@ -121,7 +119,7 @@ pub fn handle_fix() -> Result<()> {
         let Some((prog, args)) = parts.split_first() else {
             continue;
         };
-        
+
         let status = Command::new(prog).args(args).status()?;
         if !status.success() {
             eprintln!("Command failed: {cmd}");
@@ -149,10 +147,10 @@ pub fn handle_prompt(copy: bool) -> Result<()> {
     let mut config = Config::new();
     config.load_local_config();
     let gen = PromptGenerator::new(config.rules);
-    let prompt = gen.generate().map_err(|e| crate::error::SlopChopError::Other(e.to_string()))?;
-    
+    let prompt = gen.generate().map_err(|e| anyhow!(e.to_string()))?;
+
     if copy {
-        crate::clipboard::copy_to_clipboard(&prompt).map_err(|e| crate::error::SlopChopError::Other(e.to_string()))?;
+        crate::clipboard::copy_to_clipboard(&prompt).map_err(|e| anyhow!(e.to_string()))?;
         println!("System prompt copied to clipboard.");
     } else {
         println!("{prompt}");
@@ -213,7 +211,7 @@ pub fn handle_map(deps: bool) -> Result<()> {
 /// # Errors
 /// Returns error if extraction fails.
 pub fn handle_signatures(opts: SignatureOptions) -> Result<()> {
-    signatures::run(&opts).map_err(|e| crate::error::SlopChopError::Other(e.to_string()))?;
+    signatures::run(&opts).map_err(|e| anyhow!(e.to_string()))?;
     Ok(())
 }
 
@@ -225,7 +223,7 @@ pub fn handle_apply() -> Result<()> {
     let mut config = Config::new();
     config.load_local_config();
     let ctx = ApplyContext::new(&config);
-    
+
     let outcome = apply::run_apply(&ctx)?;
     apply::print_result(&outcome);
     Ok(())

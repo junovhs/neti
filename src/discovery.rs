@@ -3,7 +3,7 @@ use crate::config::{
     Config, GitMode, BIN_EXT_PATTERN, CODE_BARE_PATTERN, CODE_EXT_PATTERN, SECRET_PATTERN,
 };
 use crate::constants::should_prune;
-use crate::error::{Result, SlopChopError};
+use anyhow::{bail, Result};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
@@ -19,7 +19,7 @@ use walkdir::WalkDir;
 pub fn discover(config: &Config) -> Result<Vec<PathBuf>> {
     let raw_files = enumerate_files(config)?;
     let heuristic_files = filter_heuristics(raw_files);
-    let final_files = filter_config(heuristic_files, config)?;
+    let final_files = filter_config(heuristic_files, config);
     Ok(final_files)
 }
 
@@ -35,7 +35,7 @@ fn enumerate_files(config: &Config) -> Result<Vec<PathBuf>> {
 
 fn enumerate_git_required() -> Result<Vec<PathBuf>> {
     if !in_git_repo() {
-        return Err(SlopChopError::NotInGitRepo);
+        bail!("Not inside a Git repository. Use --no-git to scan without git.");
     }
     git_ls_files().map(filter_pruned)
 }
@@ -95,10 +95,7 @@ fn git_ls_files() -> Result<Vec<PathBuf>> {
         .output()?;
 
     if !out.status.success() {
-        return Err(SlopChopError::Other(format!(
-            "git ls-files failed: {}",
-            out.status
-        )));
+        bail!("git ls-files failed: {}", out.status);
     }
 
     let paths = out
@@ -114,137 +111,83 @@ fn git_ls_files() -> Result<Vec<PathBuf>> {
 fn filter_pruned(paths: Vec<PathBuf>) -> Vec<PathBuf> {
     paths
         .into_iter()
-        .filter(|p| !contains_pruned_component(p))
+        .filter(|p| {
+            !p.components()
+                .any(|c| should_prune(&c.as_os_str().to_string_lossy()))
+        })
         .collect()
-}
-
-fn contains_pruned_component(path: &Path) -> bool {
-    path.components()
-        .filter_map(|c| c.as_os_str().to_str())
-        .any(should_prune)
 }
 
 // --- Heuristics ---
 
-const MIN_TEXT_ENTROPY: f64 = 3.5;
-const MAX_TEXT_ENTROPY: f64 = 5.5;
-const BUILD_MARKERS: &[&str] = &[
-    "find_package",
-    "add_executable",
-    "target_link_libraries",
-    "cmake_minimum_required",
-    "project(",
-    "add-apt-repository",
-    "conanfile.py",
-    "dependency",
-    "require",
-    "include",
-    "import",
-];
+static BIN_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(BIN_EXT_PATTERN).unwrap_or_else(|_| panic!("Invalid Regex")));
+static SECRET_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(SECRET_PATTERN).unwrap_or_else(|_| panic!("Invalid Regex")));
+static CODE_EXT_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(CODE_EXT_PATTERN).unwrap_or_else(|_| panic!("Invalid Regex")));
+static CODE_BARE_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(CODE_BARE_PATTERN).unwrap_or_else(|_| panic!("Invalid Regex")));
 
-static CODE_EXT_RE: LazyLock<Option<Regex>> = LazyLock::new(|| Regex::new(CODE_EXT_PATTERN).ok());
-static CODE_BARE_RE: LazyLock<Option<Regex>> = LazyLock::new(|| Regex::new(CODE_BARE_PATTERN).ok());
-
-fn filter_heuristics(files: Vec<PathBuf>) -> Vec<PathBuf> {
-    files.into_iter().filter(|p| keep_heuristic(p)).collect()
+fn filter_heuristics(paths: Vec<PathBuf>) -> Vec<PathBuf> {
+    paths.into_iter().filter(is_code_like).collect()
 }
 
-fn keep_heuristic(path: &Path) -> bool {
-    let s = path.to_string_lossy();
-    if is_known_code(&s) {
+fn is_code_like(path: &PathBuf) -> bool {
+    let filename = path.file_name().map_or("", |f| f.to_str().unwrap_or(""));
+
+    if BIN_RE.is_match(filename) {
+        return false;
+    }
+    if SECRET_RE.is_match(filename) {
+        return false;
+    }
+    if CODE_EXT_RE.is_match(filename) {
+        return true;
+    }
+    if CODE_BARE_RE.is_match(filename) {
         return true;
     }
 
-    let Ok(entropy) = calculate_entropy(path) else {
-        return false;
-    };
-    if (MIN_TEXT_ENTROPY..=MAX_TEXT_ENTROPY).contains(&entropy) {
-        return true;
-    }
-    has_build_markers(path)
-}
-
-fn is_known_code(path_str: &str) -> bool {
-    let ext = CODE_EXT_RE.as_ref().is_some_and(|r| r.is_match(path_str));
-    let bare = CODE_BARE_RE.as_ref().is_some_and(|r| r.is_match(path_str));
-    ext || bare
-}
-
-fn has_build_markers(path: &Path) -> bool {
-    let Ok(content) = fs::read_to_string(path) else {
-        return false;
-    };
-    let lower = content.to_lowercase();
-    BUILD_MARKERS.iter().any(|m| lower.contains(m))
-}
-
-#[allow(clippy::cast_precision_loss)]
-fn calculate_entropy(path: &Path) -> std::io::Result<f64> {
-    let bytes = fs::read(path)?;
-    if bytes.is_empty() {
-        return Ok(0.0);
-    }
-    let mut freq = HashMap::new();
-    for &b in &bytes {
-        *freq.entry(b).or_insert(0) += 1;
-    }
-    let len = bytes.len() as f64;
-    Ok(freq.values().fold(0.0, |acc, &n| {
-        acc - (f64::from(n) / len) * (f64::from(n) / len).log2()
-    }))
-}
-
-// --- Config Filter ---
-
-struct FilterContext<'a> {
-    config: &'a Config,
-    bin_re: Regex,
-    secret_re: Regex,
-    code_re: Option<Regex>,
-    bare_re: Option<Regex>,
-}
-
-fn filter_config(files: Vec<PathBuf>, config: &Config) -> Result<Vec<PathBuf>> {
-    let ctx = FilterContext {
-        config,
-        bin_re: Regex::new(BIN_EXT_PATTERN)?,
-        secret_re: Regex::new(SECRET_PATTERN)?,
-        code_re: if config.code_only {
-            Some(Regex::new(CODE_EXT_PATTERN)?)
-        } else {
-            None
-        },
-        bare_re: if config.code_only {
-            Some(Regex::new(CODE_BARE_PATTERN)?)
-        } else {
-            None
-        },
-    };
-
-    Ok(files
-        .into_iter()
-        .filter(|p| should_keep_config(p, &ctx))
-        .collect())
-}
-
-fn should_keep_config(path: &Path, ctx: &FilterContext) -> bool {
-    let s = path.to_string_lossy().replace('\\', "/");
-
-    if ctx.secret_re.is_match(&s)
-        || ctx.bin_re.is_match(&s)
-        || ctx.config.exclude_patterns.iter().any(|p| p.is_match(&s))
-    {
-        return false;
-    }
-
-    if ctx.config.code_only {
-        let is_code = ctx.code_re.as_ref().is_some_and(|r| r.is_match(&s))
-            || ctx.bare_re.as_ref().is_some_and(|r| r.is_match(&s));
-        if !is_code {
-            return false;
+    // Fall back to checking file content for shebang
+    if let Ok(content) = fs::read_to_string(path) {
+        if content.starts_with("#!") {
+            return true;
         }
     }
 
-    ctx.config.include_patterns.is_empty()
-        || ctx.config.include_patterns.iter().any(|p| p.is_match(&s))
+    false
+}
+
+// --- Config Filtering ---
+
+fn filter_config(mut paths: Vec<PathBuf>, config: &Config) -> Vec<PathBuf> {
+    if !config.include_patterns.is_empty() {
+        paths.retain(|p| {
+            let s = p.to_string_lossy();
+            config.include_patterns.iter().any(|re| re.is_match(&s))
+        });
+    }
+
+    if !config.exclude_patterns.is_empty() {
+        paths.retain(|p| {
+            let s = p.to_string_lossy();
+            !config.exclude_patterns.iter().any(|re| re.is_match(&s))
+        });
+    }
+
+    paths
+}
+
+/// Groups files by their parent directory.
+#[must_use]
+pub fn group_by_directory(files: &[PathBuf]) -> HashMap<PathBuf, Vec<PathBuf>> {
+    let mut groups: HashMap<PathBuf, Vec<PathBuf>> = HashMap::new();
+
+    for file in files {
+        let dir = file.parent().unwrap_or(Path::new(".")).to_path_buf();
+        groups.entry(dir).or_default().push(file.clone());
+    }
+
+    groups
 }

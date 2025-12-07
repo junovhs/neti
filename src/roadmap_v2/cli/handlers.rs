@@ -64,7 +64,7 @@ pub fn run_tasks(file: &Path, pending: bool, complete: bool) -> Result<()> {
     let store = load_store(file)?;
 
     for task in &store.tasks {
-        if should_show_task(&task.status, pending, complete) {
+        if should_show_task(task.status, pending, complete) {
             let mark = match task.status {
                 TaskStatus::Done | TaskStatus::NoTest => "[x]",
                 TaskStatus::Pending => "[ ]",
@@ -75,10 +75,10 @@ pub fn run_tasks(file: &Path, pending: bool, complete: bool) -> Result<()> {
     Ok(())
 }
 
-fn should_show_task(status: &TaskStatus, pending: bool, complete: bool) -> bool {
+fn should_show_task(status: TaskStatus, pending: bool, complete: bool) -> bool {
     match (pending, complete) {
-        (true, false) => *status == TaskStatus::Pending,
-        (false, true) => *status == TaskStatus::Done || *status == TaskStatus::NoTest,
+        (true, false) => status == TaskStatus::Pending,
+        (false, true) => status == TaskStatus::Done || status == TaskStatus::NoTest,
         _ => true,
     }
 }

@@ -1,7 +1,7 @@
 // src/config/io.rs
 use super::types::{CommandEntry, Config, Preferences, RuleConfig, SlopChopToml};
-use crate::error::Result;
 use crate::project::{self, ProjectType};
+use anyhow::{anyhow, Result};
 use regex::Regex;
 use std::collections::HashMap;
 use std::fs;
@@ -80,9 +80,8 @@ pub fn save_to_file(
         commands: cmd_entries,
     };
 
-    let content = toml::to_string_pretty(&toml_struct).map_err(|e| {
-        crate::error::SlopChopError::Other(format!("Failed to serialize config: {e}"))
-    })?;
+    let content = toml::to_string_pretty(&toml_struct)
+        .map_err(|e| anyhow!("Failed to serialize config: {e}"))?;
 
     fs::write("slopchop.toml", content)?;
     Ok(())

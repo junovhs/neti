@@ -1,3 +1,4 @@
+// src/apply/mod.rs
 pub mod extractor;
 pub mod git;
 pub mod manifest;
@@ -9,7 +10,7 @@ pub mod writer;
 
 use crate::clipboard;
 use crate::roadmap_v2;
-use anyhow::{Context, Result};
+use anyhow::{bail, Context, Result};
 use colored::Colorize;
 use std::io::{self, Write};
 use std::path::Path;
@@ -20,10 +21,46 @@ const INTENT_FILE: &str = ".slopchop_intent";
 /// Runs the apply command logic.
 ///
 /// # Errors
-/// Returns error if clipboard access fails.
+/// Returns error if clipboard access fails or git state is invalid.
 pub fn run_apply(ctx: &ApplyContext) -> Result<ApplyOutcome> {
+    // Check for dirty git state before doing anything
+    check_git_state(ctx)?;
+
     let content = clipboard::read_clipboard().context("Failed to read clipboard")?;
     process_input(&content, ctx)
+}
+
+fn check_git_state(ctx: &ApplyContext) -> Result<()> {
+    if ctx.dry_run || ctx.force {
+        return Ok(());
+    }
+
+    if !git::in_repo() {
+        // Not in a git repo, skip the check
+        return Ok(());
+    }
+
+    if ctx.config.preferences.allow_dirty_git {
+        return Ok(());
+    }
+
+    if git::is_dirty()? {
+        println!(
+            "{}",
+            "⚠️  Git working tree has uncommitted changes.".yellow()
+        );
+        println!(
+            "{}",
+            "   Commit or stash them first, or set allow_dirty_git = true in slopchop.toml"
+                .dimmed()
+        );
+
+        if !confirm("Apply anyway?")? {
+            bail!("Aborted due to dirty git state");
+        }
+    }
+
+    Ok(())
 }
 
 pub fn print_result(outcome: &ApplyOutcome) {
