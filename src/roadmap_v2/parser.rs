@@ -170,15 +170,15 @@ mod tests {
     use super::*;
     use anyhow::Result;
 
+    // Helper to obscure markers from the main tool's parser
+    fn make_block(content: &str) -> String {
+        format!("\n{}\n{}\n{}\n", "===ROADMAP===", content, "===ROADMAP===")
+    }
+
     #[test]
     fn test_parse_check() -> Result<()> {
-        let input = r"
-===ROADMAP===
-CHECK
-id = my-task
-===ROADMAP===
-";
-        let cmds = parse_commands(input)?;
+        let input = make_block("CHECK\nid = my-task");
+        let cmds = parse_commands(&input)?;
         assert_eq!(cmds.len(), 1);
         assert!(matches!(cmds[0], RoadmapCommand::Check { ref id } if id == "my-task"));
         Ok(())
@@ -186,15 +186,8 @@ id = my-task
 
     #[test]
     fn test_parse_add() -> Result<()> {
-        let input = r"
-===ROADMAP===
-ADD
-id = new-task
-text = Implement feature X
-section = v0.2.0
-===ROADMAP===
-";
-        let cmds = parse_commands(input)?;
+        let input = make_block("ADD\nid = new-task\ntext = Implement feature X\nsection = v0.2.0");
+        let cmds = parse_commands(&input)?;
         assert_eq!(cmds.len(), 1);
         assert!(matches!(cmds[0], RoadmapCommand::Add(_)));
         Ok(())
@@ -202,33 +195,19 @@ section = v0.2.0
 
     #[test]
     fn test_parse_multiple_same_block() -> Result<()> {
-        let input = r"
-===ROADMAP===
-CHECK
-id = task-1
-CHECK
-id = task-2
-===ROADMAP===
-";
-        let cmds = parse_commands(input)?;
+        let input = make_block("CHECK\nid = task-1\nCHECK\nid = task-2");
+        let cmds = parse_commands(&input)?;
         assert_eq!(cmds.len(), 2);
         Ok(())
     }
 
     #[test]
     fn test_parse_multiple_blocks() -> Result<()> {
-        let input = r"
-===ROADMAP===
-CHECK
-id = task-1
-===ROADMAP===
-Some other text...
-===ROADMAP===
-CHECK
-id = task-2
-===ROADMAP===
-";
-        let cmds = parse_commands(input)?;
+        let b1 = make_block("CHECK\nid = task-1");
+        let b2 = make_block("CHECK\nid = task-2");
+        let input = format!("{b1}\nSome text...\n{b2}");
+
+        let cmds = parse_commands(&input)?;
         assert_eq!(cmds.len(), 2);
         if let RoadmapCommand::Check { id } = &cmds[0] {
             assert_eq!(id, "task-1");
@@ -241,15 +220,10 @@ id = task-2
 
     #[test]
     fn test_with_comments_and_spacing() -> Result<()> {
-        let input = r"
-===ROADMAP===
-CHECK # First one
-id=task-1 # id comment
-CHECK
-id = task-2
-===ROADMAP===
-";
-        let cmds = parse_commands(input)?;
+        let input = make_block(
+            "CHECK # First one\nid=task-1 # id comment\nCHECK\nid = task-2",
+        );
+        let cmds = parse_commands(&input)?;
         assert_eq!(cmds.len(), 2);
         Ok(())
     }
