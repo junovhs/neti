@@ -24,26 +24,44 @@ pub fn parse_commands(input: &str) -> Result<Vec<RoadmapCommand>> {
 }
 
 /// Extracts all content blocks delimited by ===ROADMAP===.
+/// strictness: The marker must be the ONLY thing on the line (ignoring whitespace).
 fn extract_roadmap_blocks(input: &str) -> Vec<String> {
-    let marker = "===ROADMAP===";
     let mut blocks = Vec::new();
-    let mut current_pos = 0;
+    let mut state = BlockState::default();
 
-    while let Some(start_offset) = input[current_pos..].find(marker) {
-        let content_start = current_pos + start_offset + marker.len();
-
-        if let Some(end_offset) = input[content_start..].find(marker) {
-            let content_end = content_start + end_offset;
-            let block = input[content_start..content_end].trim();
-            if !block.is_empty() {
-                blocks.push(block.to_string());
-            }
-            current_pos = content_end + marker.len();
-        } else {
-            break;
-        }
+    for line in input.lines() {
+        process_line_for_blocks(line, &mut state, &mut blocks);
     }
+
     blocks
+}
+
+#[derive(Default)]
+struct BlockState {
+    capturing: bool,
+    current_block: String,
+}
+
+fn process_line_for_blocks(line: &str, state: &mut BlockState, blocks: &mut Vec<String>) {
+    let marker = "===ROADMAP===";
+    let trimmed = line.trim();
+
+    if trimmed == marker {
+        if state.capturing {
+            // Closing marker found
+            if !state.current_block.trim().is_empty() {
+                blocks.push(state.current_block.clone());
+            }
+            state.current_block.clear();
+            state.capturing = false;
+        } else {
+            // Opening marker found
+            state.capturing = true;
+        }
+    } else if state.capturing {
+        state.current_block.push_str(line);
+        state.current_block.push('\n');
+    }
 }
 
 fn parse_block_content(block: &str) -> Result<Vec<RoadmapCommand>> {
@@ -225,6 +243,15 @@ mod tests {
         );
         let cmds = parse_commands(&input)?;
         assert_eq!(cmds.len(), 2);
+        Ok(())
+    }
+
+    #[test]
+    fn test_ignores_inline_markers() -> Result<()> {
+        // This should NOT be parsed because the marker is not on its own line
+        let input = "I will fix the ===ROADMAP=== issue soon.";
+        let cmds = parse_commands(input)?;
+        assert!(cmds.is_empty());
         Ok(())
     }
 }
