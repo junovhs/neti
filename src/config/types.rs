@@ -32,6 +32,8 @@ pub struct Preferences {
     pub backup_retention: usize,
     #[serde(default = "default_progress_bars")]
     pub progress_bars: bool,
+    #[serde(default)]
+    pub require_plan: bool,
 }
 
 impl Default for Preferences {
@@ -46,6 +48,7 @@ impl Default for Preferences {
             system_bell: false,
             backup_retention: default_backup_retention(),
             progress_bars: true,
+            require_plan: false,
         }
     }
 }

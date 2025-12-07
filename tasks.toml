@@ -2741,3 +2741,10 @@ text = "Implement interactive roadmap in TUI (scroll, toggle)"
 status = "done"
 section = "v0.7.0"
 order = 0
+
+[[tasks]]
+id = "require-plan-option"
+text = "Add config option to require plan blocks"
+status = "done"
+section = "v0.7.0"
+order = 0

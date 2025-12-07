@@ -11,7 +11,7 @@ pub struct ConfigApp {
     pub rules: RuleConfig,
     pub preferences: Preferences,
     pub commands: HashMap<String, Vec<String>>,
-    // 0=Preset, 1-5=Rules, 6-9=Workflow, 10=Theme, 11=Progress
+    // 0=Preset, 1-5=Rules, 6-9=Workflow, 10=Theme, 11=Progress, 12=RequirePlan
     pub selected_field: usize,
     pub running: bool,
     pub modified: bool,
@@ -94,8 +94,8 @@ impl ConfigApp {
     fn move_cursor(&mut self, delta: i32) {
         let new_pos = (self.selected_field as i32) + delta;
         if new_pos < 0 {
-            self.selected_field = 11;
-        } else if new_pos > 11 {
+            self.selected_field = 12;
+        } else if new_pos > 12 {
             self.selected_field = 0;
         } else {
             self.selected_field = new_pos as usize;
@@ -107,7 +107,7 @@ impl ConfigApp {
         match self.selected_field {
             0 => helpers::cycle_preset(self, increase),
             1..=5 => helpers::adjust_rule(self, increase),
-            6..=11 => helpers::adjust_pref(self, increase),
+            6..=12 => helpers::adjust_pref(self, increase),
             _ => {}
         }
     }

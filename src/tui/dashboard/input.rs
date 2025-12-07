@@ -117,18 +117,22 @@ fn handle_actions(
 }
 
 fn handle_config_input(code: KeyCode, app: &mut DashboardApp) {
-    match code {
-        KeyCode::Left | KeyCode::Char('h') => {
-            crate::tui::config::helpers::adjust_rule(&mut app.config_editor, false);
+    app.config_editor.handle_input(code);
+
+    // We must extract the message to a string to drop the immutable borrow on `app`
+    // before we can borrow `app` mutably to log it.
+    let log_msg = if let Some((msg, _)) = &app.config_editor.saved_message {
+        if matches!(code, KeyCode::Char('s') | KeyCode::Enter) {
+            Some(msg.clone())
+        } else {
+            None
         }
-        KeyCode::Right | KeyCode::Char('l') => {
-            crate::tui::config::helpers::adjust_rule(&mut app.config_editor, true);
-        }
-        KeyCode::Char('s') | KeyCode::Enter => {
-            app.config_editor.save();
-            app.log("Config saved");
-        }
-        _ => {}
+    } else {
+        None
+    };
+
+    if let Some(msg) = log_msg {
+        app.log(&msg);
     }
 }
 
@@ -158,11 +162,6 @@ fn handle_scrolling(code: KeyCode, app: &mut DashboardApp) {
 }
 
 fn refresh_app(app: &mut DashboardApp) {
-    // We can't import run_scan/load_roadmap from mod.rs easily without circular deps
-    // so we reimplement the logic here or call helpers.
-    // Ideally these should be on DashboardApp or a service module.
-    // For now, let's keep it simple:
-
     // 1. Scan
     let files = match discovery::discover(app.config) {
         Ok(f) => f,

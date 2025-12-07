@@ -2,10 +2,10 @@
 use super::helpers;
 use super::state::ConfigApp;
 use super::view::Palette;
-use ratatui::layout::{Alignment, Constraint, Direction, Layout, Rect};
+use ratatui::layout::{Alignment, Constraint, Rect};
 use ratatui::style::{Color, Modifier, Style};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Cell, Gauge, Paragraph, Row, Table};
+use ratatui::widgets::{Block, Borders, Cell, Paragraph, Row, Table};
 use ratatui::Frame;
 
 pub fn draw_header(f: &mut Frame, app: &ConfigApp, area: Rect, pal: &Palette) {
@@ -67,6 +67,40 @@ pub fn draw_settings_table(f: &mut Frame, app: &ConfigApp, area: Rect, pal: &Pal
 }
 
 fn build_table_rows(app: &ConfigApp, pal: &Palette) -> Vec<Row<'static>> {
+    let active_col = Color::Green;
+    let mut items = Vec::new();
+
+    items.extend(build_preset_rows(app, pal));
+    items.extend(build_rule_rows(app, pal));
+    items.extend(build_workflow_rows(app, pal));
+
+    items
+        .into_iter()
+        .enumerate()
+        .map(|(i, (label, value, color, status))| {
+            let is_selected = i == app.selected_field;
+            let style = if is_selected {
+                Style::default()
+                    .bg(pal.highlight)
+                    .fg(Color::Black)
+                    .add_modifier(Modifier::BOLD)
+            } else {
+                Style::default().fg(color)
+            };
+
+            Row::new(vec![
+                Cell::from(format!("[#] {label}")),
+                Cell::from(value),
+                Cell::from(status).style(Style::default().fg(active_col)),
+            ])
+            .style(style)
+        })
+        .collect()
+}
+
+type ConfigRow = (&'static str, String, Color, &'static str);
+
+fn build_preset_rows(app: &ConfigApp, pal: &Palette) -> Vec<ConfigRow> {
     let preset = helpers::detect_preset(app);
     let preset_color = match preset {
         "STRICT" => Color::Green,
@@ -74,11 +108,11 @@ fn build_table_rows(app: &ConfigApp, pal: &Palette) -> Vec<Row<'static>> {
         "RELAXED" => Color::Red,
         _ => pal.text,
     };
+    vec![("Global Preset", preset.to_string(), preset_color, "ACTIVE")]
+}
 
-    let active_col = Color::Green;
-
-    let items = vec![
-        ("Global Preset", preset.to_string(), preset_color, "ACTIVE"),
+fn build_rule_rows(app: &ConfigApp, pal: &Palette) -> Vec<ConfigRow> {
+    vec![
         (
             "Max File Tokens",
             app.rules.max_file_tokens.to_string(),
@@ -109,6 +143,11 @@ fn build_table_rows(app: &ConfigApp, pal: &Palette) -> Vec<Row<'static>> {
             pal.text,
             "ACTIVE",
         ),
+    ]
+}
+
+fn build_workflow_rows(app: &ConfigApp, pal: &Palette) -> Vec<ConfigRow> {
+    vec![
         (
             "Auto-Copy Ctx",
             bool_str(app.preferences.auto_copy),
@@ -145,30 +184,13 @@ fn build_table_rows(app: &ConfigApp, pal: &Palette) -> Vec<Row<'static>> {
             pal.text,
             "OKAY",
         ),
-    ];
-
-    items
-        .into_iter()
-        .enumerate()
-        .map(|(i, (label, value, color, status))| {
-            let is_selected = i == app.selected_field;
-            let style = if is_selected {
-                Style::default()
-                    .bg(pal.highlight)
-                    .fg(Color::Black)
-                    .add_modifier(Modifier::BOLD)
-            } else {
-                Style::default().fg(color)
-            };
-
-            Row::new(vec![
-                Cell::from(format!("[#] {label}")),
-                Cell::from(value),
-                Cell::from(status).style(Style::default().fg(active_col)),
-            ])
-            .style(style)
-        })
-        .collect()
+        (
+            "Require Plan",
+            bool_str(app.preferences.require_plan),
+            bool_col(app.preferences.require_plan),
+            "SECURE",
+        ),
+    ]
 }
 
 fn bool_str(b: bool) -> String {
@@ -186,93 +208,6 @@ fn bool_col(b: bool) -> Color {
     }
 }
 
-#[allow(clippy::cast_precision_loss)]
-pub fn draw_context_panel(f: &mut Frame, app: &ConfigApp, area: Rect, pal: &Palette) {
-    let block = Block::default()
-        .borders(Borders::ALL)
-        .title(" [ INTEL DISPLAY ] ")
-        .border_style(Style::default().fg(pal.primary));
-    let inner = block.inner(area);
-    f.render_widget(block, area);
-
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(2),
-            Constraint::Length(8),
-            Constraint::Min(8),
-        ])
-        .split(inner);
-
-    f.render_widget(
-        Paragraph::new(format!(
-            "> {}",
-            helpers::get_active_label(app.selected_field)
-        ))
-        .style(
-            Style::default()
-                .fg(pal.primary)
-                .add_modifier(Modifier::BOLD),
-        ),
-        chunks[0],
-    );
-
-    f.render_widget(
-        Paragraph::new(helpers::get_active_description(app.selected_field))
-            .wrap(ratatui::widgets::Wrap { trim: true })
-            .style(Style::default().fg(pal.text)),
-        chunks[1],
-    );
-
-    let ratio = helpers::get_integrity_score(app);
-    let (color, label) = if ratio > 0.8 {
-        (Color::Green, "OPTIMAL")
-    } else if ratio > 0.5 {
-        (Color::Yellow, "MODERATE")
-    } else {
-        (Color::Red, "CRITICAL")
-    };
-
-    let inner_chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(2),
-            Constraint::Length(3),
-            Constraint::Min(1),
-        ])
-        .split(chunks[2]);
-
-    f.render_widget(
-        Paragraph::new("THREAT LEVEL ANALYTICS\nSTATUS: ACTIVE / SCANNING: ON")
-            .alignment(Alignment::Center)
-            .style(Style::default().fg(pal.secondary)),
-        inner_chunks[0],
-    );
-
-    let gauge = Gauge::default()
-        .block(
-            Block::default()
-                .borders(Borders::ALL)
-                .border_style(Style::default().fg(pal.secondary)),
-        )
-        .gauge_style(Style::default().fg(color))
-        .use_unicode(true)
-        .ratio(ratio)
-        .label(Span::styled(
-            format!("INTEGRITY: {:.1}% [{label}]", ratio * 100.0),
-            Style::default()
-                .fg(Color::Black)
-                .add_modifier(Modifier::BOLD),
-        ));
-
-    f.render_widget(gauge, inner_chunks[1]);
-
-    let decoration = Paragraph::new(
-        "\n[LOG] 2025.11.24 ORBITAL_ADJUSTMENT_COMPLETE\n[LOG] SECURITY_PATCH: LVL 5 ACTIVE\n[LOG] SLOPCHOP PROTOCOL ENGAGED"
-    ).style(Style::default().fg(Color::DarkGray));
-    f.render_widget(decoration, inner_chunks[2]);
-}
-
 pub fn draw_footer(f: &mut Frame, area: Rect, pal: &Palette) {
     let text = " [↑/↓] NAVIGATE | [←/→] ADJUST VALUE | [ENTER] SAVE CONFIG | [Q] DISENGAGE ";
     f.render_widget(
@@ -282,4 +217,3 @@ pub fn draw_footer(f: &mut Frame, area: Rect, pal: &Palette) {
         area,
     );
 }
-

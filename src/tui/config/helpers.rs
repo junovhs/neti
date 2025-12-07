@@ -14,13 +14,28 @@ pub fn adjust_rule(app: &mut ConfigApp, increase: bool) {
 }
 
 pub fn adjust_pref(app: &mut ConfigApp, increase: bool) {
+    if matches!(app.selected_field, 6 | 7 | 8 | 11 | 12) {
+        toggle_pref(app);
+    } else {
+        cycle_pref(app, increase);
+    }
+}
+
+fn toggle_pref(app: &mut ConfigApp) {
     match app.selected_field {
         6 => app.preferences.auto_copy = !app.preferences.auto_copy,
         7 => app.preferences.auto_format = !app.preferences.auto_format,
         8 => app.preferences.auto_commit = !app.preferences.auto_commit,
+        11 => app.preferences.progress_bars = !app.preferences.progress_bars,
+        12 => app.preferences.require_plan = !app.preferences.require_plan,
+        _ => {}
+    }
+}
+
+fn cycle_pref(app: &mut ConfigApp, increase: bool) {
+    match app.selected_field {
         9 => cycle_prefix(app),
         10 => cycle_theme(app, increase),
-        11 => app.preferences.progress_bars = !app.preferences.progress_bars,
         _ => {}
     }
 }
@@ -93,7 +108,7 @@ pub fn get_active_label(field: usize) -> &'static str {
         1 => "LAW OF ATOMICITY",
         2..=4 => "LAW OF COMPLEXITY",
         5 => "LAW OF BLUNTNESS",
-        6..=9 => "WORKFLOW AUTOMATION",
+        6..=9 | 12 => "WORKFLOW AUTOMATION",
         10..=11 => "VISUALS & FEEDBACK",
         _ => "UNKNOWN",
     }
@@ -112,6 +127,7 @@ const DESCRIPTIONS: &[&str] = &[
     "Prefix for auto-generated commits to distinguish them in git history.\n\nGoal: Traceability.",
     "Color scheme for the TUI.\nNASA: High Contrast.\nCyberpunk: Neon.\nCorporate: Subtle.\n\nGoal: Eye Candy.",
     "Show animated progress bars during scans and operations.\n\nGoal: Feedback.",
+    "Force AI output to contain a valid PLAN block. Auto-rejects inputs without one.\n\nGoal: Ensure intent is declared before code.",
 ];
 
 #[must_use]

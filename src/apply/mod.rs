@@ -96,6 +96,14 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
 
 fn ensure_consent(plan: Option<&str>, ctx: &ApplyContext) -> Result<bool> {
     let Some(p) = plan else {
+        if ctx.config.preferences.require_plan {
+            println!(
+                "{}",
+                "❌ REJECTED: Input missing PLAN block (required by config)".red()
+            );
+            return Ok(false);
+        }
+
         if ctx.force || ctx.dry_run {
             return Ok(true);
         }

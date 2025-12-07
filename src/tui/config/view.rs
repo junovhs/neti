@@ -1,6 +1,7 @@
 // src/tui/config/view.rs
 use super::components;
 use super::state::ConfigApp;
+use super::status_panel;
 use crate::config::Theme;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Style};
@@ -76,5 +77,5 @@ fn draw_main(f: &mut Frame, app: &ConfigApp, area: Rect, pal: &Palette) {
         .split(area);
 
     components::draw_settings_table(f, app, layout[0], pal);
-    components::draw_context_panel(f, app, layout[1], pal);
-}
+    status_panel::draw(f, app, layout[1], pal);
+}
