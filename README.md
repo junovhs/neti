@@ -6,9 +6,9 @@
 
 ## The Story
 
-SlopChop came from one idea: stop trying to make AI perfect, just refuse its bad output.
+SlopChop came from one idea: stop requiring AI to write perfect code - just refuse its bad output, use whats good, lock it in, move forward.
 
-Most of the thinking around “AI for code” is top-down: predict every failure mode, design heuristics for all of them. SlopChop is a bottom-up, antifragile bet instead. Treat AI as a noisy generator, then put a hard filter in front of your repo.
+Most of the thinking around “AI for code” is top-down: predict every failure, design heuristics for all of them. **SlopChop is a bottom-up, antifragile bet** instead. Treat AI as a noisy code generator, and put a hard filter in front of your repo.
 
 I learned this as a production artist with early AI image gen: generate hundreds, throw away almost everything, keep the few frames that are gold, and manually composite one verified, high-quality design. SlopChop is that same filter for code.
 
