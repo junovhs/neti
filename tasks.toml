@@ -2811,3 +2811,51 @@ status = "done"
 section = "v0.7.0"
 test = "[no-test]"
 order = 0
+
+[[tasks]]
+id = "fix-audit-violations-v070"
+text = "Fix existing violations in src/audit"
+status = "done"
+section = "v0.7.0"
+group = "God Tier Audit"
+order = 0
+
+[[tasks]]
+id = "struct-diff-engine"
+text = "Implement Structural Diff Engine (diff.rs)"
+status = "pending"
+section = "v0.7.0"
+group = "God Tier Audit"
+order = 0
+
+[[tasks]]
+id = "param-inference"
+text = "Implement Parameterization Inference (parameterize.rs)"
+status = "pending"
+section = "v0.7.0"
+group = "God Tier Audit"
+order = 0
+
+[[tasks]]
+id = "codegen-engine"
+text = "Implement Code Generation (codegen.rs)"
+status = "pending"
+section = "v0.7.0"
+group = "God Tier Audit"
+order = 0
+
+[[tasks]]
+id = "callsite-analysis"
+text = "Implement Call Site Analysis (callsites.rs)"
+status = "pending"
+section = "v0.7.0"
+group = "God Tier Audit"
+order = 0
+
+[[tasks]]
+id = "diagnostic-display"
+text = "Implement Diagnostic Display (rustc-style)"
+status = "pending"
+section = "v0.7.0"
+group = "God Tier Audit"
+order = 0

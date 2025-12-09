@@ -6,8 +6,12 @@
 //! - **Dead Code**: Unreachable code via call graph analysis
 //! - **Patterns**: Repeated idioms that could be extracted
 
+pub mod callsites;
+pub mod codegen;
 pub mod dead_code;
 pub mod diff;
+pub mod display;
+pub mod parameterize;
 pub mod fingerprint;
 pub mod patterns;
 pub mod report;

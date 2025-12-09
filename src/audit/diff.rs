@@ -17,7 +17,7 @@ pub enum DiffKind {
 /// A hole in the AST that needs parameterization.
 #[derive(Debug, Clone)]
 pub struct Hole {
-    /// The specific AST node kind (e.g., "identifier", "integer_literal").
+    /// The specific AST node kind (e.g., "identifier", "`integer_literal`").
     pub kind: String,
     /// The values observed at this hole across the variations.
     pub variants: Vec<String>,
@@ -32,7 +32,13 @@ pub struct DiffModel {
     // TODO: Store skeleton (common structure) for codegen
 }
 
-/// Recursively compares two ASTs and builds a DiffModel.
+struct DiffContext<'a> {
+    source_a: &'a [u8],
+    source_b: &'a [u8],
+}
+
+/// Recursively compares two ASTs and builds a `DiffModel`.
+#[must_use]
 pub fn diff_trees(
     node_a: Node,
     source_a: &[u8],
@@ -40,7 +46,9 @@ pub fn diff_trees(
     source_b: &[u8],
 ) -> Option<DiffModel> {
     let mut model = DiffModel::default();
-    if diff_recursive(node_a, source_a, node_b, source_b, "root", &mut model) {
+    let ctx = DiffContext { source_a, source_b };
+    
+    if diff_recursive(&ctx, node_a, node_b, "root", &mut model) {
         Some(model)
     } else {
         None // Structurally incompatible
@@ -48,14 +56,13 @@ pub fn diff_trees(
 }
 
 fn diff_recursive(
+    ctx: &DiffContext,
     a: Node,
-    src_a: &[u8],
     b: Node,
-    src_b: &[u8],
     path: &str,
     model: &mut DiffModel,
 ) -> bool {
-    let kind = compare_nodes(a, src_a, b, src_b);
+    let kind = compare_nodes(ctx, a, b);
 
     match kind {
         DiffKind::StructuralMismatch => false,
@@ -68,46 +75,54 @@ fn diff_recursive(
             });
             true
         }
-        DiffKind::Invariant => {
-            // Structure/Content matches locally. Check children.
-            let count_a = a.child_count();
-            let count_b = b.child_count();
-
-            if count_a != count_b {
-                return false; // Structural mismatch (different number of children)
-            }
-
-            let mut cursor_a = a.walk();
-            let mut cursor_b = b.walk();
-
-            let children_a = a.children(&mut cursor_a);
-            let children_b = b.children(&mut cursor_b);
-
-            for (i, (child_a, child_b)) in children_a.zip(children_b).enumerate() {
-                let sub_path = format!("{path}/{}_{}", child_a.kind(), i);
-                if !diff_recursive(child_a, src_a, child_b, src_b, &sub_path, model) {
-                    return false;
-                }
-            }
-
-            true
-        }
+        DiffKind::Invariant => handle_invariant(ctx, a, b, path, model),
     }
 }
 
+fn handle_invariant(
+    ctx: &DiffContext,
+    a: Node,
+    b: Node,
+    path: &str,
+    model: &mut DiffModel,
+) -> bool {
+    // Structure/Content matches locally. Check children.
+    let count_a = a.child_count();
+    let count_b = b.child_count();
+
+    if count_a != count_b {
+        return false; // Structural mismatch (different number of children)
+    }
+
+    let mut cursor_a = a.walk();
+    let mut cursor_b = b.walk();
+
+    let children_a = a.children(&mut cursor_a);
+    let children_b = b.children(&mut cursor_b);
+
+    for (i, (child_a, child_b)) in children_a.zip(children_b).enumerate() {
+        let sub_path = format!("{path}/{}_{}", child_a.kind(), i);
+        if !diff_recursive(ctx, child_a, child_b, &sub_path, model) {
+            return false;
+        }
+    }
+
+    true
+}
+
 /// Compares two AST nodes and classifies their difference.
-pub fn compare_nodes(
+#[must_use]
+fn compare_nodes(
+    ctx: &DiffContext,
     node_a: Node,
-    source_a: &[u8],
     node_b: Node,
-    source_b: &[u8],
 ) -> DiffKind {
     if node_a.kind() != node_b.kind() {
         return DiffKind::StructuralMismatch;
     }
 
-    let a_text = node_a.utf8_text(source_a).unwrap_or("");
-    let b_text = node_b.utf8_text(source_b).unwrap_or("");
+    let a_text = node_a.utf8_text(ctx.source_a).unwrap_or("");
+    let b_text = node_b.utf8_text(ctx.source_b).unwrap_or("");
 
     if a_text == b_text {
         return DiffKind::Invariant;
