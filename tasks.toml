@@ -2896,3 +2896,19 @@ section = "v0.9.0"
 test = "tests/unit_god_tier.rs::test_enhance_plan_generation"
 group = "God Tier Audit"
 order = 0
+
+[[tasks]]
+id = "god-tier-audit-callsites"
+text = "God Tier Audit: Call Site Rewriting (callsites.rs integration)"
+status = "done"
+section = "v0.9.0"
+group = "God Tier Audit"
+order = 0
+
+[[tasks]]
+id = "god-tier-audit-visual-diffs"
+text = "God Tier Audit: Visual Diffs (display.rs upgrade)"
+status = "done"
+section = "v0.9.0"
+group = "God Tier Audit"
+order = 0
