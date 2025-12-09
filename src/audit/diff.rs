@@ -148,6 +148,7 @@ fn is_leaf_value(kind: &str) -> bool {
         kind,
         "identifier"
             | "string_literal"
+            | "raw_string_literal"
             | "integer_literal"
             | "float_literal"
             | "boolean_literal"

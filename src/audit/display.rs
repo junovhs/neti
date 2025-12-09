@@ -3,6 +3,7 @@ use colored::Colorize;
 use std::fmt::Write;
 
 /// Formats the diff analysis in a compiler-grade visual format.
+#[must_use]
 pub fn format_diff(model: &DiffModel, _src_a: &str, _src_b: &str) -> String {
     let mut out = String::new();
 

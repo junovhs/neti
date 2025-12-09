@@ -30,7 +30,7 @@ pub fn infer_strategies(model: &DiffModel) -> Vec<RefactorStrategy> {
 
 fn analyze_hole(hole: &Hole) -> RefactorStrategy {
     match hole.kind.as_str() {
-        "string_literal" => infer_enum_or_arg(hole, "str"),
+        "string_literal" | "raw_string_literal" => infer_enum_or_arg(hole, "str"),
         "integer_literal" => infer_enum_or_arg(hole, "int"),
         "boolean_literal" => RefactorStrategy::FunctionArgument {
             name: "flag".to_string(),
