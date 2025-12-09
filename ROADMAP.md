@@ -428,6 +428,10 @@
 - [x] **God Tier Audit: Parameterization Inference (parameterize.rs)** <!-- test: tests/unit_god_tier.rs::test_parameterize_strategy_enum -->
 - [x] **God Tier Audit: Refactor CodeGen (codegen.rs)** <!-- test: tests/unit_god_tier.rs::test_codegen_enum -->
 - [x] **God Tier Audit: Opportunity Enhancement (enhance.rs)** <!-- test: tests/unit_god_tier.rs::test_enhance_plan_generation -->
+- [ ] **God Tier Audit: Call Site Rewriting (integrate callsites.rs, show before/after)**
+- [ ] **God Tier Audit: Full Function Bodies (thread hole values to codegen)**
+
+- [ ] **God Tier Audit: Source Markers (^ pointing to differences)**
 
 ---
 
@@ -520,4 +524,3 @@
 - [x] **Cross-compilation CI (linux/mac/windows)** [no-test]
 
 ---
-

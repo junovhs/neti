@@ -2899,16 +2899,23 @@ order = 0
 
 [[tasks]]
 id = "god-tier-audit-callsites"
-text = "God Tier Audit: Call Site Rewriting (callsites.rs integration)"
-status = "done"
+text = "God Tier Audit: Call Site Rewriting (integrate callsites.rs, show before/after)"
+status = "pending"
 section = "v0.9.0"
 group = "God Tier Audit"
 order = 0
 
 [[tasks]]
 id = "god-tier-audit-visual-diffs"
-text = "God Tier Audit: Visual Diffs (display.rs upgrade)"
-status = "done"
+text = "God Tier Audit: Full Function Bodies (thread hole values to codegen)"
+status = "pending"
 section = "v0.9.0"
 group = "God Tier Audit"
+order = 0
+
+[[tasks]]
+id = "god-tier-audit-source-markers"
+text = "God Tier Audit: Source Markers (^ pointing to differences)"
+status = "pending"
+section = "v0.9.0"
 order = 0
