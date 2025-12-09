@@ -2817,6 +2817,7 @@ id = "fix-audit-violations-v070"
 text = "Fix existing violations in src/audit"
 status = "done"
 section = "v0.7.0"
+test = "tests/unit_god_tier.rs::test_enhance_plan_generation"
 group = "God Tier Audit"
 order = 0
 
