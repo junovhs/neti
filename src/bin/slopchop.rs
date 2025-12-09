@@ -48,6 +48,30 @@ enum Commands {
     Dashboard,
     #[command(subcommand)]
     Roadmap(RoadmapV2Command),
+    /// Analyze codebase for consolidation opportunities
+    Audit {
+        /// Output format: terminal, json, or ai
+        #[arg(long, default_value = "terminal")]
+        format: String,
+        /// Disable dead code detection
+        #[arg(long)]
+        no_dead: bool,
+        /// Disable duplicate detection
+        #[arg(long)]
+        no_dups: bool,
+        /// Disable pattern detection
+        #[arg(long)]
+        no_patterns: bool,
+        /// Minimum lines for a code unit to be analyzed
+        #[arg(long, default_value = "5")]
+        min_lines: usize,
+        /// Maximum number of opportunities to report
+        #[arg(long, default_value = "50")]
+        max: usize,
+        /// Show verbose output
+        #[arg(long, short)]
+        verbose: bool,
+    },
     Pack {
         #[arg(long, short)]
         stdout: bool,
@@ -125,7 +149,8 @@ fn dispatch_command(cmd: &Commands) -> Result<()> {
         Commands::Pack { .. }
         | Commands::Trace { .. }
         | Commands::Map { .. }
-        | Commands::Signatures { .. } => dispatch_analysis(cmd),
+        | Commands::Signatures { .. }
+        | Commands::Audit { .. } => dispatch_analysis(cmd),
 
         Commands::Check
         | Commands::Fix
@@ -201,6 +226,26 @@ fn dispatch_analysis(cmd: &Commands) -> Result<()> {
                 copy: *copy,
                 stdout: *stdout,
             })?;
+            Ok(())
+        }
+        Commands::Audit {
+            format,
+            no_dead,
+            no_dups,
+            no_patterns,
+            min_lines,
+            max,
+            verbose,
+        } => {
+            cli::handle_audit(
+                format,
+                *no_dead,
+                *no_dups,
+                *no_patterns,
+                *min_lines,
+                *max,
+                *verbose,
+            )?;
             Ok(())
         }
         _ => unreachable!(),

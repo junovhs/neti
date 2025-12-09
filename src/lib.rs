@@ -1,6 +1,7 @@
 // src/lib.rs
 pub mod analysis;
 pub mod apply;
+pub mod audit;
 pub mod clean;
 pub mod cli;
 pub mod clipboard;
@@ -24,3 +25,4 @@ pub mod trace;
 pub mod tui;
 pub mod types;
 pub mod wizard;
+
