@@ -1,3 +1,7 @@
+===PLAN===
+Update tasks.toml with God Tier Audit tasks.
+===PLAN===
+
 ===ROADMAP===
 ADD
 id = god-tier-audit-diff
