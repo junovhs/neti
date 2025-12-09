@@ -2,17 +2,7 @@
 //! Pattern detection for repeated code idioms.
 //!
 //! This module identifies common patterns that appear multiple times across
-//! the codebase, such as:
-//! - Process spawning patterns (spawn → pipe → wait)
-//! - Error handling patterns
-//! - Builder patterns
-//! - Similar struct/enum definitions
-//!
-//! The algorithm:
-//! 1. Define pattern templates as tree-sitter queries
-//! 2. Match patterns against all files
-//! 3. Group similar matches
-//! 4. Report patterns with 3+ occurrences
+//! the codebase.
 
 use super::types::{PatternLocation, RepeatedPattern};
 use std::collections::HashMap;
@@ -21,15 +11,10 @@ use tree_sitter::{Query, QueryCursor};
 
 /// A pattern template to search for.
 pub struct PatternTemplate {
-    /// Human-readable name.
     pub name: &'static str,
-    /// Description of what this pattern represents.
     pub description: &'static str,
-    /// Tree-sitter query pattern (Rust).
     pub rust_query: &'static str,
-    /// Tree-sitter query pattern (Python), if applicable.
     pub python_query: Option<&'static str>,
-    /// Minimum occurrences to report.
     pub min_occurrences: usize,
 }
 
@@ -150,6 +135,7 @@ pub struct PatternMatch {
 }
 
 /// Detects patterns in a file.
+#[must_use]
 pub fn detect_in_file(
     source: &str,
     file: &Path,
@@ -162,17 +148,14 @@ pub fn detect_in_file(
     for template in PATTERNS {
         let query_str = template.rust_query;
 
-        // Compile query (skip if invalid)
-        let query = match Query::new(lang, query_str) {
-            Ok(q) => q,
-            Err(_) => continue,
+        let Ok(query) = Query::new(lang, query_str) else {
+            continue;
         };
 
         let mut cursor = QueryCursor::new();
         let query_matches = cursor.matches(&query, tree.root_node(), source_bytes);
 
         for qm in query_matches {
-            // Get the main capture (usually the last one)
             if let Some(capture) = qm.captures.last() {
                 let node = capture.node;
                 let start_line = node.start_position().row + 1;
@@ -200,15 +183,14 @@ pub fn detect_in_file(
 }
 
 /// Aggregates pattern matches across files into repeated patterns.
+#[must_use]
 pub fn aggregate(matches: Vec<PatternMatch>) -> Vec<RepeatedPattern> {
-    // Group by pattern name
     let mut groups: HashMap<String, Vec<PatternMatch>> = HashMap::new();
 
     for m in matches {
         groups.entry(m.pattern_name.clone()).or_default().push(m);
     }
 
-    // Convert to RepeatedPattern, filtering by minimum occurrences
     let mut patterns = Vec::new();
 
     for (name, group_matches) in groups {
@@ -230,8 +212,6 @@ pub fn aggregate(matches: Vec<PatternMatch>) -> Vec<RepeatedPattern> {
             })
             .collect();
 
-        // Calculate potential savings (rough estimate)
-        // If we could extract a helper, we'd save ~(n-1) * avg_size
         let avg_size: usize = group_matches
             .iter()
             .map(|m| m.end_line - m.start_line + 1)
@@ -240,7 +220,6 @@ pub fn aggregate(matches: Vec<PatternMatch>) -> Vec<RepeatedPattern> {
 
         let potential_savings = avg_size * (group_matches.len() - 1);
 
-        // Build signature from first match
         let signature = group_matches
             .first()
             .map_or_else(String::new, |m| m.matched_text.clone());
@@ -253,7 +232,6 @@ pub fn aggregate(matches: Vec<PatternMatch>) -> Vec<RepeatedPattern> {
         });
     }
 
-    // Sort by occurrences (more = higher priority)
     patterns.sort_by(|a, b| b.locations.len().cmp(&a.locations.len()));
 
     patterns
@@ -295,6 +273,7 @@ impl CustomPattern {
 }
 
 /// Detects a custom pattern in a file.
+#[must_use]
 pub fn detect_custom(
     pattern: &CustomPattern,
     source: &str,
@@ -302,9 +281,8 @@ pub fn detect_custom(
     tree: &tree_sitter::Tree,
     lang: tree_sitter::Language,
 ) -> Vec<PatternMatch> {
-    let query = match Query::new(lang, &pattern.query) {
-        Ok(q) => q,
-        Err(_) => return Vec::new(),
+    let Ok(query) = Query::new(lang, &pattern.query) else {
+        return Vec::new();
     };
 
     let mut matches = Vec::new();
@@ -344,14 +322,12 @@ pub fn recommend_extraction(pattern: &RepeatedPattern) -> String {
 
     if files.len() == 1 {
         format!(
-            "Extract a helper function in {} to consolidate {} occurrences",
+            "Extract a helper function in {} to consolidate {count} occurrences",
             files.iter().next().unwrap_or(&String::new()),
-            count
         )
     } else {
         format!(
-            "Consider creating a shared utility module for {} occurrences across {} files",
-            count,
+            "Consider creating a shared utility module for {count} occurrences across {} files",
             files.len()
         )
     }

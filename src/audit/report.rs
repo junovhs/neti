@@ -1,8 +1,5 @@
 // src/audit/report.rs
 //! Output formatting for consolidation audit reports.
-//!
-//! This module provides both human-readable and machine-readable output
-//! formats for audit results.
 
 use super::types::{AuditReport, AuditStats, Opportunity, OpportunityKind};
 use colored::Colorize;
@@ -13,89 +10,77 @@ use std::fmt::Write;
 pub fn format_terminal(report: &AuditReport) -> String {
     let mut out = String::new();
 
-    // Header
-    writeln!(out, "{}", "─".repeat(70).dimmed()).ok();
-    writeln!(out, "{}", " 🔍 CONSOLIDATION AUDIT REPORT ".cyan().bold()).ok();
-    writeln!(out, "{}", "─".repeat(70).dimmed()).ok();
-    writeln!(out).ok();
+    let _ = writeln!(out, "{}", "─".repeat(70).dimmed());
+    let _ = writeln!(out, "{}", " 🔍 CONSOLIDATION AUDIT REPORT ".cyan().bold());
+    let _ = writeln!(out, "{}", "─".repeat(70).dimmed());
+    let _ = writeln!(out);
 
-    // Summary stats
     write_stats(&mut out, &report.stats);
 
-    // Opportunities by category
     if report.opportunities.is_empty() {
-        writeln!(
+        let _ = writeln!(
             out,
             "{}",
             "✨ No consolidation opportunities found! Your code is clean.".green()
-        )
-        .ok();
+        );
     } else {
         write_opportunities(&mut out, &report.opportunities);
     }
 
-    // Footer
-    writeln!(out).ok();
-    writeln!(out, "{}", "─".repeat(70).dimmed()).ok();
+    let _ = writeln!(out);
+    let _ = writeln!(out, "{}", "─".repeat(70).dimmed());
 
     out
 }
 
 fn write_stats(out: &mut String, stats: &AuditStats) {
-    writeln!(out, "{}", "📊 SUMMARY".cyan().bold()).ok();
-    writeln!(out).ok();
+    let _ = writeln!(out, "{}", "📊 SUMMARY".cyan().bold());
+    let _ = writeln!(out);
 
-    writeln!(
+    let _ = writeln!(
         out,
         "   Files analyzed:    {}",
         stats.files_analyzed.to_string().white()
-    )
-    .ok();
-    writeln!(
+    );
+    let _ = writeln!(
         out,
         "   Code units found:  {}",
         stats.units_extracted.to_string().white()
-    )
-    .ok();
-    writeln!(
+    );
+    let _ = writeln!(
         out,
         "   Analysis time:     {}ms",
         stats.duration_ms.to_string().white()
-    )
-    .ok();
-    writeln!(out).ok();
+    );
+    let _ = writeln!(out);
 
-    writeln!(
+    let _ = writeln!(
         out,
         "   Similarity clusters: {}",
         format_count(stats.similarity_clusters)
-    )
-    .ok();
-    writeln!(
+    );
+    let _ = writeln!(
         out,
         "   Dead code units:     {}",
         format_count(stats.dead_code_units)
-    )
-    .ok();
-    writeln!(
+    );
+    let _ = writeln!(
         out,
         "   Repeated patterns:   {}",
         format_count(stats.pattern_instances)
-    )
-    .ok();
-    writeln!(out).ok();
+    );
+    let _ = writeln!(out);
 
     if stats.total_potential_savings > 0 {
-        writeln!(
+        let _ = writeln!(
             out,
             "   {} {} lines could potentially be removed/consolidated",
             "💡".yellow(),
             stats.total_potential_savings.to_string().green().bold()
-        )
-        .ok();
+        );
     }
 
-    writeln!(out).ok();
+    let _ = writeln!(out);
 }
 
 fn format_count(n: usize) -> String {
@@ -107,13 +92,12 @@ fn format_count(n: usize) -> String {
 }
 
 fn write_opportunities(out: &mut String, opportunities: &[Opportunity]) {
-    writeln!(
+    let _ = writeln!(
         out,
         "{}",
         "🎯 OPPORTUNITIES (sorted by impact)".cyan().bold()
-    )
-    .ok();
-    writeln!(out).ok();
+    );
+    let _ = writeln!(out);
 
     for (i, opp) in opportunities.iter().enumerate() {
         write_opportunity(out, i + 1, opp);
@@ -122,24 +106,21 @@ fn write_opportunities(out: &mut String, opportunities: &[Opportunity]) {
 
 fn write_opportunity(out: &mut String, index: usize, opp: &Opportunity) {
     let severity_color = match opp.kind {
-        OpportunityKind::Duplication => "HIGH".red(),
-        OpportunityKind::ModuleConsolidation => "HIGH".red(),
+        OpportunityKind::Duplication | OpportunityKind::ModuleConsolidation => "HIGH".red(),
         OpportunityKind::Pattern => "MEDIUM".yellow(),
         OpportunityKind::DeadCode => "LOW".green(),
     };
 
-    writeln!(
+    let _ = writeln!(
         out,
         "{}. [{}] {}",
         index,
         severity_color,
         opp.title.white().bold()
-    )
-    .ok();
+    );
 
-    // Impact metrics
     let score = opp.impact.score();
-    writeln!(
+    let _ = writeln!(
         out,
         "   {} ~{} lines | difficulty: {}/5 | confidence: {:.0}% | score: {:.1}",
         "📈".dimmed(),
@@ -147,10 +128,8 @@ fn write_opportunity(out: &mut String, index: usize, opp: &Opportunity) {
         opp.impact.difficulty,
         opp.impact.confidence * 100.0,
         score
-    )
-    .ok();
+    );
 
-    // Files affected
     let file_count = opp.affected_files.len();
     if file_count <= 3 {
         let files: Vec<_> = opp
@@ -158,15 +137,14 @@ fn write_opportunity(out: &mut String, index: usize, opp: &Opportunity) {
             .iter()
             .map(|f| f.display().to_string())
             .collect();
-        writeln!(out, "   {} {}", "📁".dimmed(), files.join(", ").dimmed()).ok();
+        let _ = writeln!(out, "   {} {}", "📁".dimmed(), files.join(", ").dimmed());
     } else {
-        writeln!(out, "   {} {} files affected", "📁".dimmed(), file_count).ok();
+        let _ = writeln!(out, "   {} {file_count} files affected", "📁".dimmed());
     }
 
-    // Recommendation
-    writeln!(out, "   {} {}", "💡".dimmed(), opp.recommendation.dimmed()).ok();
+    let _ = writeln!(out, "   {} {}", "💡".dimmed(), opp.recommendation.dimmed());
 
-    writeln!(out).ok();
+    let _ = writeln!(out);
 }
 
 /// Formats the audit report as JSON for machine consumption.
@@ -193,7 +171,7 @@ pub fn format_json(report: &AuditReport) -> String {
 }
 
 fn write_stats_json(out: &mut String, stats: &AuditStats) {
-    write!(
+    let _ = write!(
         out,
         r#"{{
     "files_analyzed": {},
@@ -211,8 +189,7 @@ fn write_stats_json(out: &mut String, stats: &AuditStats) {
         stats.pattern_instances,
         stats.total_potential_savings,
         stats.duration_ms
-    )
-    .ok();
+    );
 }
 
 fn write_opportunity_json(out: &mut String, opp: &Opportunity) {
@@ -229,7 +206,7 @@ fn write_opportunity_json(out: &mut String, opp: &Opportunity) {
         .map(|f| f.display().to_string())
         .collect();
 
-    write!(
+    let _ = write!(
         out,
         r#"    {{
       "id": "{}",
@@ -259,8 +236,7 @@ fn write_opportunity_json(out: &mut String, opp: &Opportunity) {
             .collect::<Vec<_>>()
             .join(", "),
         escape_json(&opp.recommendation)
-    )
-    .ok();
+    );
 }
 
 fn escape_json(s: &str) -> String {
@@ -276,19 +252,18 @@ fn escape_json(s: &str) -> String {
 pub fn format_ai_prompt(report: &AuditReport) -> String {
     let mut out = String::new();
 
-    writeln!(out, "# Consolidation Audit Results").ok();
-    writeln!(out).ok();
-    writeln!(
+    let _ = writeln!(out, "# Consolidation Audit Results");
+    let _ = writeln!(out);
+    let _ = writeln!(
         out,
         "**Potential savings: ~{} lines**",
         report.stats.total_potential_savings
-    )
-    .ok();
-    writeln!(out).ok();
-    writeln!(out, "## Opportunities (sorted by impact)").ok();
-    writeln!(out).ok();
+    );
+    let _ = writeln!(out);
+    let _ = writeln!(out, "## Opportunities (sorted by impact)");
+    let _ = writeln!(out);
 
-    for (i, opp) in report.opportunities.iter().take(10).enumerate() {
+    for (i, opp) in report.opportunities.iter().enumerate() {
         let kind_label = match opp.kind {
             OpportunityKind::Duplication => "DUPLICATION",
             OpportunityKind::DeadCode => "DEAD CODE",
@@ -296,20 +271,11 @@ pub fn format_ai_prompt(report: &AuditReport) -> String {
             OpportunityKind::ModuleConsolidation => "MODULE",
         };
 
-        writeln!(out, "{}. **[{}]** {}", i + 1, kind_label, opp.title).ok();
-        writeln!(out, "   - Est. savings: {} lines", opp.impact.lines_saved).ok();
-        writeln!(out, "   - Files: {}", opp.affected_files.len()).ok();
-        writeln!(out, "   - Action: {}", opp.recommendation).ok();
-        writeln!(out).ok();
-    }
-
-    if report.opportunities.len() > 10 {
-        writeln!(
-            out,
-            "*...and {} more opportunities*",
-            report.opportunities.len() - 10
-        )
-        .ok();
+        let _ = writeln!(out, "{}. **[{kind_label}]** {}", i + 1, opp.title);
+        let _ = writeln!(out, "   - Est. savings: {} lines", opp.impact.lines_saved);
+        let _ = writeln!(out, "   - Files: {}", opp.affected_files.len());
+        let _ = writeln!(out, "   - Action: {}", opp.recommendation);
+        let _ = writeln!(out);
     }
 
     out
@@ -320,31 +286,31 @@ pub fn format_ai_prompt(report: &AuditReport) -> String {
 pub fn format_opportunity_detail(opp: &Opportunity) -> String {
     let mut out = String::new();
 
-    writeln!(out, "{}", "═".repeat(70)).ok();
-    writeln!(out, "{}", opp.title.bold()).ok();
-    writeln!(out, "{}", "═".repeat(70)).ok();
-    writeln!(out).ok();
+    let _ = writeln!(out, "{}", "═".repeat(70));
+    let _ = writeln!(out, "{}", opp.title.bold());
+    let _ = writeln!(out, "{}", "═".repeat(70));
+    let _ = writeln!(out);
 
-    writeln!(out, "{}", "DESCRIPTION:".cyan()).ok();
-    writeln!(out, "{}", opp.description).ok();
-    writeln!(out).ok();
+    let _ = writeln!(out, "{}", "DESCRIPTION:".cyan());
+    let _ = writeln!(out, "{}", opp.description);
+    let _ = writeln!(out);
 
-    writeln!(out, "{}", "IMPACT:".cyan()).ok();
-    writeln!(out, "  Lines saved:  ~{}", opp.impact.lines_saved).ok();
-    writeln!(out, "  Tokens saved: ~{}", opp.impact.tokens_saved).ok();
-    writeln!(out, "  Difficulty:   {}/5", opp.impact.difficulty).ok();
-    writeln!(out, "  Confidence:   {:.0}%", opp.impact.confidence * 100.0).ok();
-    writeln!(out, "  Score:        {:.2}", opp.impact.score()).ok();
-    writeln!(out).ok();
+    let _ = writeln!(out, "{}", "IMPACT:".cyan());
+    let _ = writeln!(out, "  Lines saved:  ~{}", opp.impact.lines_saved);
+    let _ = writeln!(out, "  Tokens saved: ~{}", opp.impact.tokens_saved);
+    let _ = writeln!(out, "  Difficulty:   {}/5", opp.impact.difficulty);
+    let _ = writeln!(out, "  Confidence:   {:.0}%", opp.impact.confidence * 100.0);
+    let _ = writeln!(out, "  Score:        {:.2}", opp.impact.score());
+    let _ = writeln!(out);
 
-    writeln!(out, "{}", "AFFECTED FILES:".cyan()).ok();
+    let _ = writeln!(out, "{}", "AFFECTED FILES:".cyan());
     for file in &opp.affected_files {
-        writeln!(out, "  - {}", file.display()).ok();
+        let _ = writeln!(out, "  - {}", file.display());
     }
-    writeln!(out).ok();
+    let _ = writeln!(out);
 
-    writeln!(out, "{}", "RECOMMENDATION:".cyan()).ok();
-    writeln!(out, "{}", opp.recommendation).ok();
+    let _ = writeln!(out, "{}", "RECOMMENDATION:".cyan());
+    let _ = writeln!(out, "{}", opp.recommendation);
 
     out
 }

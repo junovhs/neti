@@ -1,24 +1,12 @@
 // src/audit/scoring.rs
 //! Impact scoring and prioritization for consolidation opportunities.
-//!
-//! This module converts raw detections (duplicates, dead code, patterns)
-//! into scored and prioritized opportunities.
-//!
-//! The scoring formula:
-//! ```text
-//! score = lines_saved × confidence × (1 / difficulty)
-//! ```
-//!
-//! Where:
-//! - `lines_saved`: Estimated lines that could be removed
-//! - `confidence`: How confident we are this is actually an issue (0-1)
-//! - `difficulty`: How hard the refactor would be (1-5)
 
 use super::types::{
     DeadCode, DeadCodeReason, Impact, Opportunity, OpportunityKind, RepeatedPattern,
     SimilarityCluster,
 };
 use std::collections::HashSet;
+use std::fmt::Write;
 
 /// Converts a similarity cluster into an opportunity.
 #[must_use]
@@ -27,10 +15,6 @@ pub fn score_duplication(cluster: &SimilarityCluster, id_prefix: &str) -> Opport
     let affected_files: HashSet<_> = cluster.units.iter().map(|u| u.file.clone()).collect();
     let lines_saved = cluster.potential_savings;
 
-    // Difficulty depends on:
-    // - Same file = easier (1-2)
-    // - Different files = harder (2-3)
-    // - Different modules = hardest (3-4)
     let difficulty = if affected_files.len() == 1 {
         1
     } else if are_same_module(&affected_files) {
@@ -39,7 +23,6 @@ pub fn score_duplication(cluster: &SimilarityCluster, id_prefix: &str) -> Opport
         3
     };
 
-    // Confidence based on similarity
     let confidence = cluster.similarity;
 
     let tokens_saved: usize = cluster.units.iter().skip(1).map(|u| u.tokens).sum();
@@ -47,7 +30,7 @@ pub fn score_duplication(cluster: &SimilarityCluster, id_prefix: &str) -> Opport
     let kind = cluster.units.first().map_or("unit", |u| u.kind.label());
     let names: Vec<_> = cluster.units.iter().map(|u| u.name.as_str()).collect();
 
-    let title = format!("{} similar {}s: {}", count, kind, names.join(", "));
+    let title = format!("{count} similar {kind}s: {}", names.join(", "));
 
     let description = build_duplication_description(cluster);
     let recommendation = build_duplication_recommendation(cluster);
@@ -74,18 +57,15 @@ pub fn score_dead_code(dead: &DeadCode, id_prefix: &str) -> Opportunity {
     let lines_saved = dead.unit.line_count();
     let tokens_saved = dead.unit.tokens;
 
-    // Dead code removal is usually easy
     let difficulty = match dead.reason {
-        DeadCodeReason::Unused => 1,          // Just delete it
-        DeadCodeReason::Unreachable => 1,     // Just delete it
-        DeadCodeReason::OnlyDeadCallers => 2, // Need to remove callers too
+        DeadCodeReason::Unused | DeadCodeReason::Unreachable => 1,
+        DeadCodeReason::OnlyDeadCallers => 2,
     };
 
-    // Confidence varies by detection method
     let confidence = match dead.reason {
-        DeadCodeReason::Unused => 0.9,          // High confidence
-        DeadCodeReason::Unreachable => 0.8,     // Good confidence
-        DeadCodeReason::OnlyDeadCallers => 0.7, // Moderate confidence
+        DeadCodeReason::Unused => 0.9,
+        DeadCodeReason::Unreachable => 0.8,
+        DeadCodeReason::OnlyDeadCallers => 0.7,
     };
 
     let title = format!(
@@ -160,22 +140,18 @@ pub fn score_pattern(pattern: &RepeatedPattern, id_prefix: &str) -> Opportunity 
     let affected_files: HashSet<_> = pattern.locations.iter().map(|l| l.file.clone()).collect();
     let lines_saved = pattern.potential_savings;
 
-    // Pattern extraction difficulty depends on complexity
     let difficulty = if count <= 3 {
         2
     } else if count <= 7 {
         3
     } else {
-        4 // Many occurrences means more testing needed
+        4
     };
 
-    // Lower confidence since patterns may be intentional
     let confidence = 0.6;
+    let tokens_saved = lines_saved * 8;
 
-    // Rough token estimate
-    let tokens_saved = lines_saved * 8; // ~8 tokens per line average
-
-    let title = format!("Pattern: {} ({} occurrences)", pattern.description, count);
+    let title = format!("Pattern: {} ({count} occurrences)", pattern.description);
 
     let file_list: Vec<_> = affected_files
         .iter()
@@ -184,8 +160,7 @@ pub fn score_pattern(pattern: &RepeatedPattern, id_prefix: &str) -> Opportunity 
         .collect();
 
     let description = format!(
-        "Found {} occurrences of: {}\n\nFiles:\n{}{}",
-        count,
+        "Found {count} occurrences of: {}\n\nFiles:\n{}{}",
         pattern.description,
         file_list.join("\n"),
         if affected_files.len() > 5 {
@@ -214,8 +189,8 @@ pub fn score_pattern(pattern: &RepeatedPattern, id_prefix: &str) -> Opportunity 
 }
 
 /// Scores and ranks all opportunities.
+#[must_use]
 pub fn rank_opportunities(mut opportunities: Vec<Opportunity>) -> Vec<Opportunity> {
-    // Sort by score (descending)
     opportunities.sort_by(|a, b| {
         let score_a = a.impact.score();
         let score_b = b.impact.score();
@@ -227,32 +202,33 @@ pub fn rank_opportunities(mut opportunities: Vec<Opportunity>) -> Vec<Opportunit
     opportunities
 }
 
-// === Helper Functions ===
-
 fn build_duplication_description(cluster: &SimilarityCluster) -> String {
     let mut desc = String::new();
-    desc.push_str(&format!(
+    let _ = write!(
+        desc,
         "Found {} structurally similar {}s:\n\n",
         cluster.units.len(),
         cluster.units.first().map_or("unit", |u| u.kind.label())
-    ));
+    );
 
     for unit in &cluster.units {
-        desc.push_str(&format!(
-            "- {} in {} (lines {}-{})\n",
+        let _ = writeln!(
+            desc,
+            "- {} in {} (lines {}-{})",
             unit.name,
             unit.file.display(),
             unit.start_line,
             unit.end_line
-        ));
+        );
     }
 
-    desc.push_str(&format!(
+    let _ = write!(
+        desc,
         "\nSimilarity: {:.0}%\n\
          Potential savings: ~{} lines",
         cluster.similarity * 100.0,
         cluster.potential_savings
-    ));
+    );
 
     desc
 }
@@ -263,8 +239,7 @@ fn build_duplication_recommendation(cluster: &SimilarityCluster) -> String {
 
     if files.len() == 1 {
         format!(
-            "Consolidate these {} {}s into a single parameterized implementation \
-             in {}",
+            "Consolidate these {} {}s into a single parameterized implementation in {}",
             cluster.units.len(),
             kind,
             files.iter().next().map_or("", |f| f.to_str().unwrap_or(""))
@@ -282,7 +257,7 @@ fn are_same_module(files: &HashSet<std::path::PathBuf>) -> bool {
     let parents: HashSet<_> = files
         .iter()
         .filter_map(|f| f.parent())
-        .map(|p| p.to_path_buf())
+        .map(std::path::Path::to_path_buf)
         .collect();
 
     parents.len() == 1
@@ -307,4 +282,3 @@ fn hash_string(s: &str) -> u64 {
     s.hash(&mut hasher);
     hasher.finish() % 10000
 }
-

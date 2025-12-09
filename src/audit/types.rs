@@ -183,10 +183,9 @@ impl OpportunityKind {
     #[must_use]
     pub fn severity(&self) -> &'static str {
         match self {
-            Self::DeadCode => "LOW",
+            Self::Duplication | Self::ModuleConsolidation => "HIGH",
             Self::Pattern => "MEDIUM",
-            Self::Duplication => "HIGH",
-            Self::ModuleConsolidation => "HIGH",
+            Self::DeadCode => "LOW",
         }
     }
 }
@@ -208,9 +207,10 @@ impl Impact {
     /// Computes a composite score for sorting.
     /// Higher is better (more impact, easier to do).
     #[must_use]
+    #[allow(clippy::cast_precision_loss)]
     pub fn score(&self) -> f64 {
         let base = self.lines_saved as f64;
-        let difficulty_factor = 1.0 / (self.difficulty as f64).max(1.0);
+        let difficulty_factor = 1.0 / f64::from(self.difficulty).max(1.0);
         base * difficulty_factor * self.confidence
     }
 }
@@ -242,4 +242,3 @@ pub struct AuditStats {
     /// Analysis duration in milliseconds.
     pub duration_ms: u128,
 }
-

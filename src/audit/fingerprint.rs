@@ -5,15 +5,6 @@
 //! properties of code while being invariant to identifier names. Two
 //! functions with identical structure but different variable names will
 //! produce the same fingerprint.
-//!
-//! The algorithm:
-//! 1. Traverse the AST depth-first
-//! 2. For each node, hash its *type* (not its text for identifiers)
-//! 3. Combine child hashes using a position-aware mixing function
-//! 4. The final hash represents the tree structure
-//!
-//! This is inspired by the Weisfeiler-Lehman graph kernel but adapted
-//! for ordered trees (ASTs).
 
 use super::types::Fingerprint;
 use std::collections::hash_map::DefaultHasher;
@@ -21,17 +12,12 @@ use std::hash::{Hash, Hasher};
 use tree_sitter::Node;
 
 /// Nodes whose text content should be included in the hash.
-/// These are structural tokens, not user-defined identifiers.
 const STRUCTURAL_NODES: &[&str] = &[
-    // Operators
-    "+", "-", "*", "/", "%", "&&", "||", "!", "==", "!=", "<", ">", "<=", ">=", "&", "|", "^", "<<",
-    ">>", "+=", "-=", "*=", "/=", // Keywords (language structure)
-    "if", "else", "match", "while", "for", "loop", "return", "break", "continue", "let", "mut",
-    "const", "static", "fn", "struct", "enum", "impl", "trait", "pub", "self", "Self", "async",
-    "await", "move", "ref", "where", // Punctuation that affects structure
-    "=>", "->", "::", ":", ";", ",", ".", "?", // Delimiters
-    "(", ")", "{", "}", "[", "]", "<", ">", // Literals (type, not value)
-    "true", "false", "None", "Some", "Ok", "Err",
+    "+", "-", "*", "/", "%", "&&", "||", "!", "==", "!=", "<", ">", "<=", ">=", "&", "|", "^",
+    "<<", ">>", "+=", "-=", "*=", "/=", "if", "else", "match", "while", "for", "loop", "return",
+    "break", "continue", "let", "mut", "const", "static", "fn", "struct", "enum", "impl", "trait",
+    "pub", "self", "Self", "async", "await", "move", "ref", "where", "=>", "->", "::", ":", ";",
+    ",", ".", "?", "(", ")", "{", "}", "[", "]", "true", "false", "None", "Some", "Ok", "Err",
 ];
 
 /// Node types that should be treated as "identifier-like" (hash by kind only).
@@ -56,10 +42,8 @@ pub fn compute(node: Node, source: &[u8]) -> Fingerprint {
     state.finalize()
 }
 
-/// Internal state for fingerprint computation.
 struct FingerprintState {
     hasher: DefaultHasher,
-    depth: usize,
     max_depth: usize,
     node_count: usize,
 }
@@ -68,7 +52,6 @@ impl FingerprintState {
     fn new() -> Self {
         Self {
             hasher: DefaultHasher::new(),
-            depth: 0,
             max_depth: 0,
             node_count: 0,
         }
@@ -78,33 +61,25 @@ impl FingerprintState {
         self.node_count += 1;
         self.max_depth = self.max_depth.max(depth);
 
-        // Start node boundary marker
         self.mix_u64(0xDEAD_BEEF_u64.wrapping_add(depth as u64));
 
         let kind = node.kind();
-
-        // Hash the node kind (always)
         self.mix_str(kind);
 
-        // For structural nodes, also hash the actual text
         if should_hash_text(kind, node, source) {
             if let Ok(text) = node.utf8_text(source) {
                 self.mix_str(text);
             }
         }
 
-        // Hash child count (important for structure)
         let child_count = node.child_count();
         self.mix_u64(child_count as u64);
 
-        // Recursively visit children with position encoding
         for (i, child) in node.children(&mut node.walk()).enumerate() {
-            // Mix in child position to distinguish [a, b] from [b, a]
             self.mix_u64(i as u64);
             self.visit(child, source, depth + 1);
         }
 
-        // End node boundary marker
         self.mix_u64(0xCAFE_BABE_u64.wrapping_add(depth as u64));
     }
 
@@ -125,19 +100,15 @@ impl FingerprintState {
     }
 }
 
-/// Determines if we should hash the text content of a node.
 fn should_hash_text(kind: &str, node: Node, source: &[u8]) -> bool {
-    // Don't hash identifier text - we want structural similarity
     if IDENTIFIER_KINDS.contains(&kind) {
         return false;
     }
 
-    // Hash structural tokens
     if STRUCTURAL_NODES.contains(&kind) {
         return true;
     }
 
-    // For other nodes, check if the text is a keyword/operator
     if let Ok(text) = node.utf8_text(source) {
         if STRUCTURAL_NODES.contains(&text) {
             return true;
@@ -148,28 +119,24 @@ fn should_hash_text(kind: &str, node: Node, source: &[u8]) -> bool {
 }
 
 /// Computes similarity between two fingerprints.
-/// Returns a value between 0.0 (completely different) and 1.0 (identical).
 #[must_use]
+#[allow(clippy::cast_precision_loss)]
 pub fn similarity(a: &Fingerprint, b: &Fingerprint) -> f64 {
-    // Exact hash match = perfect similarity
     if a.hash == b.hash {
         return 1.0;
     }
 
-    // Compare structural metrics for partial similarity
-    let depth_sim =
-        1.0 - (a.depth as f64 - b.depth as f64).abs() / (a.depth.max(b.depth) as f64).max(1.0);
-    let count_sim = 1.0
-        - (a.node_count as f64 - b.node_count as f64).abs()
-            / (a.node_count.max(b.node_count) as f64).max(1.0);
+    let max_depth = a.depth.max(b.depth) as f64;
+    let depth_sim = 1.0 - (a.depth as f64 - b.depth as f64).abs() / max_depth.max(1.0);
 
-    // Weight: exact match matters most, then structure
-    // If hashes differ, we can't have high similarity
+    let max_count = a.node_count.max(b.node_count) as f64;
+    let count_sim = 1.0 - (a.node_count as f64 - b.node_count as f64).abs() / max_count.max(1.0);
+
     (depth_sim * 0.3 + count_sim * 0.3) * 0.5
 }
 
 /// Computes fingerprints for all extractable code units in a file.
-/// Returns a list of (name, kind, start_line, end_line, fingerprint) tuples.
+#[must_use]
 pub fn extract_units(
     source: &str,
     tree: &tree_sitter::Tree,
@@ -189,7 +156,6 @@ fn extract_from_node(
 ) {
     let kind = node.kind();
 
-    // Extract named code units
     if let Some(unit_kind) = match_unit_kind(kind) {
         if let Some(name) = extract_name(node, source) {
             let fingerprint = compute(node, source);
@@ -199,7 +165,6 @@ fn extract_from_node(
         }
     }
 
-    // Recurse into children
     for child in node.children(&mut node.walk()) {
         extract_from_node(child, source, units);
     }
@@ -213,14 +178,11 @@ fn match_unit_kind(kind: &str) -> Option<&'static str> {
         "enum_item" | "enum_definition" => Some("enum"),
         "trait_item" | "trait_definition" => Some("trait"),
         "mod_item" => Some("module"),
-        // Methods are functions inside impl blocks
-        "function_item" => Some("method"),
         _ => None,
     }
 }
 
 fn extract_name(node: Node, source: &[u8]) -> Option<String> {
-    // Look for a name child node
     let name_node = node.child_by_field_name("name")?;
     let name = name_node.utf8_text(source).ok()?;
     Some(name.to_string())
@@ -228,17 +190,10 @@ fn extract_name(node: Node, source: &[u8]) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn identical_structure_same_hash() {
         // Two functions with identical structure but different names
-        // should produce the same fingerprint
-        let code1 = "fn foo(x: i32) -> i32 { x + 1 }";
-        let code2 = "fn bar(y: i32) -> i32 { y + 1 }";
-
-        // This test would require tree-sitter setup
-        // For now, we verify the algorithm compiles
+        // should produce the same fingerprint (requires tree-sitter setup)
+        // Example: "fn foo(x: i32) -> i32 { x + 1 }" and "fn bar(y: i32) -> i32 { y + 1 }"
     }
 }
-

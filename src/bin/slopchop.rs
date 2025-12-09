@@ -342,3 +342,4 @@ fn ensure_config_exists() {
         eprintln!("{}", "✓ Created slopchop.toml".dimmed());
     }
 }
+
