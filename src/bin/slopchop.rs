@@ -1,123 +1,23 @@
 // src/bin/slopchop.rs
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process;
 
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+use clap::Parser;
 use colored::Colorize;
 
 use slopchop_core::analysis::RuleEngine;
-use slopchop_core::cli::{self, PackArgs};
+use slopchop_core::cli::{self, Cli, Commands, PackArgs};
 use slopchop_core::config::Config;
 use slopchop_core::discovery;
-use slopchop_core::pack::OutputFormat;
 use slopchop_core::project;
 use slopchop_core::reporting;
-use slopchop_core::roadmap_v2::{handle_command, RoadmapV2Command};
+use slopchop_core::roadmap_v2::handle_command;
 use slopchop_core::signatures::SignatureOptions;
 use slopchop_core::tui::state::App;
 use slopchop_core::wizard;
-
-#[derive(Parser)]
-#[command(name = "slopchop", version, about = "Code quality guardian")]
-struct Cli {
-    #[command(subcommand)]
-    command: Option<Commands>,
-    #[arg(long)]
-    ui: bool,
-    #[arg(long)]
-    init: bool,
-}
-
-#[derive(Subcommand)]
-enum Commands {
-    Prompt {
-        #[arg(long, short)]
-        copy: bool,
-    },
-    Check,
-    Fix,
-    Apply,
-    Clean {
-        #[arg(long, short)]
-        commit: bool,
-    },
-    Config,
-    Dashboard,
-    #[command(subcommand)]
-    Roadmap(RoadmapV2Command),
-    /// Analyze codebase for consolidation opportunities
-    Audit {
-        /// Output format: terminal, json, or ai
-        #[arg(long, default_value = "terminal")]
-        format: String,
-        /// Disable dead code detection
-        #[arg(long)]
-        no_dead: bool,
-        /// Disable duplicate detection
-        #[arg(long)]
-        no_dups: bool,
-        /// Disable pattern detection
-        #[arg(long)]
-        no_patterns: bool,
-        /// Minimum lines for a code unit to be analyzed
-        #[arg(long, default_value = "5")]
-        min_lines: usize,
-        /// Maximum number of opportunities to report
-        #[arg(long, default_value = "50")]
-        max: usize,
-        /// Show verbose output
-        #[arg(long, short)]
-        verbose: bool,
-    },
-    Pack {
-        #[arg(long, short)]
-        stdout: bool,
-        #[arg(long, short)]
-        copy: bool,
-        #[arg(long)]
-        noprompt: bool,
-        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
-        format: OutputFormat,
-        #[arg(long)]
-        skeleton: bool,
-        #[arg(long)]
-        git_only: bool,
-        #[arg(long)]
-        no_git: bool,
-        #[arg(long)]
-        code_only: bool,
-        #[arg(long, short)]
-        verbose: bool,
-        #[arg(long, value_name = "FILE")]
-        target: Option<PathBuf>,
-        #[arg(long, short, value_name = "FILE")]
-        focus: Vec<PathBuf>,
-        #[arg(long, default_value = "1")]
-        depth: usize,
-    },
-    Trace {
-        #[arg(value_name = "FILE")]
-        file: PathBuf,
-        #[arg(long, short, default_value = "2")]
-        depth: usize,
-        #[arg(long, short, default_value = "4000")]
-        budget: usize,
-    },
-    Map {
-        #[arg(long, short)]
-        deps: bool,
-    },
-    /// Generate a compact type signature map of the codebase
-    Signatures {
-        #[arg(long, short)]
-        copy: bool,
-        #[arg(long, short)]
-        stdout: bool,
-    },
-}
 
 fn main() {
     if let Err(e) = run() {
@@ -237,15 +137,15 @@ fn dispatch_analysis(cmd: &Commands) -> Result<()> {
             max,
             verbose,
         } => {
-            cli::handle_audit(
+            cli::handle_audit(&cli::audit::AuditCliOptions {
                 format,
-                *no_dead,
-                *no_dups,
-                *no_patterns,
-                *min_lines,
-                *max,
-                *verbose,
-            )?;
+                no_dead: *no_dead,
+                no_dups: *no_dups,
+                no_patterns: *no_patterns,
+                min_lines: *min_lines,
+                max: *max,
+                verbose: *verbose,
+            })?;
             Ok(())
         }
         _ => unreachable!(),

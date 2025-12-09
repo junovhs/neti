@@ -7,6 +7,7 @@
 //! - **Patterns**: Repeated idioms that could be extracted
 
 pub mod dead_code;
+pub mod diff;
 pub mod fingerprint;
 pub mod patterns;
 pub mod report;

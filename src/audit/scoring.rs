@@ -24,7 +24,6 @@ pub fn score_duplication(cluster: &SimilarityCluster, id_prefix: &str) -> Opport
     };
 
     let confidence = cluster.similarity;
-
     let tokens_saved: usize = cluster.units.iter().skip(1).map(|u| u.tokens).sum();
 
     let kind = cluster.units.first().map_or("unit", |u| u.kind.label());
@@ -75,41 +74,8 @@ pub fn score_dead_code(dead: &DeadCode, id_prefix: &str) -> Opportunity {
         dead.reason.explanation()
     );
 
-    let description = format!(
-        "The {} `{}` in {} appears to be dead code.\n\
-         Reason: {}\n\
-         Lines: {}-{}",
-        dead.unit.kind.label(),
-        dead.unit.name,
-        dead.unit.file.display(),
-        dead.reason.explanation(),
-        dead.unit.start_line,
-        dead.unit.end_line
-    );
-
-    let recommendation = match dead.reason {
-        DeadCodeReason::Unused => {
-            format!(
-                "Remove `{}` from {} - it is defined but never used",
-                dead.unit.name,
-                dead.unit.file.display()
-            )
-        }
-        DeadCodeReason::Unreachable => {
-            format!(
-                "Remove `{}` from {} - it cannot be reached from any entry point",
-                dead.unit.name,
-                dead.unit.file.display()
-            )
-        }
-        DeadCodeReason::OnlyDeadCallers => {
-            format!(
-                "Remove `{}` along with its dead callers from {}",
-                dead.unit.name,
-                dead.unit.file.display()
-            )
-        }
-    };
+    let description = build_dead_description(dead);
+    let recommendation = build_dead_recommendation(dead);
 
     let mut affected_files = HashSet::new();
     affected_files.insert(dead.unit.file.clone());
@@ -133,6 +99,46 @@ pub fn score_dead_code(dead: &DeadCode, id_prefix: &str) -> Opportunity {
     }
 }
 
+fn build_dead_description(dead: &DeadCode) -> String {
+    format!(
+        "The {} `{}` in {} appears to be dead code.\n\
+         Reason: {}\n\
+         Lines: {}-{}",
+        dead.unit.kind.label(),
+        dead.unit.name,
+        dead.unit.file.display(),
+        dead.reason.explanation(),
+        dead.unit.start_line,
+        dead.unit.end_line
+    )
+}
+
+fn build_dead_recommendation(dead: &DeadCode) -> String {
+    match dead.reason {
+        DeadCodeReason::Unused => {
+            format!(
+                "Remove `{}` from {} - it is defined but never used",
+                dead.unit.name,
+                dead.unit.file.display()
+            )
+        }
+        DeadCodeReason::Unreachable => {
+            format!(
+                "Remove `{}` from {} - it cannot be reached from any entry point",
+                dead.unit.name,
+                dead.unit.file.display()
+            )
+        }
+        DeadCodeReason::OnlyDeadCallers => {
+            format!(
+                "Remove `{}` along with its dead callers from {}",
+                dead.unit.name,
+                dead.unit.file.display()
+            )
+        }
+    }
+}
+
 /// Converts a repeated pattern into an opportunity.
 #[must_use]
 pub fn score_pattern(pattern: &RepeatedPattern, id_prefix: &str) -> Opportunity {
@@ -152,24 +158,7 @@ pub fn score_pattern(pattern: &RepeatedPattern, id_prefix: &str) -> Opportunity 
     let tokens_saved = lines_saved * 8;
 
     let title = format!("Pattern: {} ({count} occurrences)", pattern.description);
-
-    let file_list: Vec<_> = affected_files
-        .iter()
-        .take(5)
-        .map(|f| f.display().to_string())
-        .collect();
-
-    let description = format!(
-        "Found {count} occurrences of: {}\n\nFiles:\n{}{}",
-        pattern.description,
-        file_list.join("\n"),
-        if affected_files.len() > 5 {
-            format!("\n... and {} more", affected_files.len() - 5)
-        } else {
-            String::new()
-        }
-    );
-
+    let description = build_pattern_description(pattern);
     let recommendation = super::patterns::recommend_extraction(pattern);
 
     Opportunity {
@@ -186,6 +175,28 @@ pub fn score_pattern(pattern: &RepeatedPattern, id_prefix: &str) -> Opportunity 
         affected_files,
         recommendation,
     }
+}
+
+fn build_pattern_description(pattern: &RepeatedPattern) -> String {
+    let count = pattern.locations.len();
+    let affected_files: HashSet<_> = pattern.locations.iter().map(|l| l.file.clone()).collect();
+
+    let file_list: Vec<_> = affected_files
+        .iter()
+        .take(5)
+        .map(|f| f.display().to_string())
+        .collect();
+
+    format!(
+        "Found {count} occurrences of: {}\n\nFiles:\n{}{}",
+        pattern.description,
+        file_list.join("\n"),
+        if affected_files.len() > 5 {
+            format!("\n... and {} more", affected_files.len() - 5)
+        } else {
+            String::new()
+        }
+    )
 }
 
 /// Scores and ranks all opportunities.

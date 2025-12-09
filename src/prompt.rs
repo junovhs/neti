@@ -12,14 +12,26 @@ impl PromptGenerator {
         Self { config }
     }
 
+    /// Generates the full system prompt.
+    ///
+    /// # Errors
+    /// Returns error if prompt generation fails (currently infallible).
     pub fn generate(&self) -> Result<String> {
         Ok(self.build_system_prompt())
     }
 
+    /// Generates the concise reminder prompt.
+    ///
+    /// # Errors
+    /// Returns error if reminder generation fails (currently infallible).
     pub fn generate_reminder(&self) -> Result<String> {
         Ok(self.build_reminder())
     }
 
+    /// Wraps the prompt with header/footer.
+    ///
+    /// # Errors
+    /// Returns error if generation fails.
     pub fn wrap_header(&self) -> Result<String> {
         self.generate()
     }
