@@ -1,35 +1,19 @@
 # SlopChop
 
-**AI writes slop. You chop it clean.**
+**AI writes slop. You chop it down til its clean.**
 
 ---
 
 ## The Story
 
-SlopChop started with a simple thought: almost all tools trying to “fix” AI code are **top-down**. They try to anticipate every failure mode, invent rules and heuristics for all of them, and then bolt that onto your workflow.
+SlopChop came from one idea: stop trying to make AI perfect, just refuse its bad output.
 
-My bet is the opposite: go **bottom-up** and make the system **antifragile**.
+Most of the thinking around “AI for code” is top-down: predict every failure mode, design heuristics for all of them. SlopChop is a bottom-up, antifragile bet instead. Treat AI as a noisy generator, then put a hard filter in front of your repo.
 
-AI can write really good code. It can also write garbage and casually destroy things you care about. Instead of trying to make it perfect, SlopChop treats AI like a noisy generator and makes one promise:
+I learned this as a production artist with early AI image gen: generate hundreds, throw away almost everything, keep the few frames that are gold, and manually composite one verified, high-quality design. SlopChop is that same filter for code.
 
-> The bad stuff simply doesn’t land.
+It doesn’t try to foresee every way AI can mess up. It enforces a few hard rules at the boundary. If code is too complex, too big, truncated, or unsafe, it simply doesn’t land.
 
-I’m a product designer, not a developer. Before code, I went through this same cycle with AI image generators. Even when 99% of the outputs were unusable, some of them were **gold**—a great composition, a color palette that sang, an interesting character design.
-
-So I built a workflow around that:
-
-- Generate **thousands** of variants  
-- Narrow down to the **20 most promising**  
-- Cannibalize the best parts: crop, cut, mask, composite  
-- End up with **one** verified, high-quality design
-
-I wasn’t asking the model to be a perfect artist. I was acting as a **filter**: take the good, ruthlessly reject the bad, and do the glue work in between.
-
-SlopChop is that philosophy applied to code.
-
-It doesn’t try to predict every way AI can fail. It just enforces a small set of hard constraints at the boundary of your repo. If the code is too complex, too big, truncated, or unsafe, it gets rejected. The good changes get through. The bad ones become feedback.
-
-Every line of this tool started life as AI output. SlopChop enforces its own rules on this repo too—when it finds new slop, that’s a bug, and it blocks the change.
 
 ---
 
@@ -307,3 +291,6 @@ pub fn login(creds: &Credentials) -> Result<Session, AuthError> {
 ```
 
 You copy the whole response, run `slopchop apply`, and let the tool decide if it lands or gets chopped.
+
+```
+
