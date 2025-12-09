@@ -1,6 +1,6 @@
 use slopchop_core::audit::{diff, parameterize, codegen};
-use tree_sitter::{Parser, Node};
-use slopchop_core::audit::diff::{DiffKind, Hole};
+use tree_sitter::Parser;
+use slopchop_core::audit::diff::Hole;
 use slopchop_core::audit::parameterize::RefactorStrategy;
 use std::fs;
 use tempfile::TempDir;
@@ -34,7 +34,7 @@ fn test_diff_simple_variant() {
     
     // Debug output if fails
     for hole in &model.holes {
-        println!("Found hole: {:?}", hole);
+        println!("Found hole: {hole:?}");
     }
 
     let hole = model.holes.iter().find(|h| h.kind == "integer_literal").unwrap();
@@ -112,7 +112,7 @@ fn test_enhance_plan_generation() {
         kind: OpportunityKind::Duplication,
         impact: Impact { lines_saved: 0, tokens_saved: 0, difficulty: 0, confidence: 1.0 },
         affected_files: HashSet::new(),
-        recommendation: "".to_string(),
+        recommendation: String::new(),
         refactoring_plan: None,
         units: vec![unit_a, unit_b],
     };
