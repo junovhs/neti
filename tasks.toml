@@ -2971,21 +2971,21 @@ order = 0
 [[tasks]]
 id = "holographic-signatures-graph-integration"
 text = "Integrate RepoGraph into signatures command (switch from alphabetical to graph-based)"
-status = "pending"
+status = "done"
 section = "v0.7.0"
 order = 0
 
 [[tasks]]
 id = "holographic-signatures-topo-sort"
 text = "Implement Topological Sort for signature output (base dependencies first)"
-status = "pending"
+status = "done"
 section = "v0.7.0"
 order = 0
 
 [[tasks]]
 id = "holographic-signatures-pagerank"
 text = "Add PageRank importance tags (e.g., [CORE ARCHITECTURE]) to signatures"
-status = "pending"
+status = "done"
 section = "v0.7.0"
 order = 0
 
