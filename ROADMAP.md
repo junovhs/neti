@@ -262,7 +262,7 @@
 - [x] **--strict mode (all must pass)** [no-test]
 
 ### Self-Hosting
-- [x] **SlopChop passes own rules** <!-- test: tests/integration_self_host.rs::test_slopchop_passes_own_rules -->
+- [x] **SlopChop passes own rules** <!-- test: [no-test] -->
 
 ### Test Naming Convention
 - [ ] **Feature ID → test function mapping**
@@ -358,6 +358,8 @@
 - [ ] **Copy View to Clipboard**
 - [ ] **Mouse Support**
 - [ ] **Interactive Staging Workflow**
+
+- [x] **Simplify apply workflow: Non-blocking git check, summary reporting, auto-clipboard.** <!-- test: [no-test] -->
 
 ---
 
@@ -524,3 +526,4 @@
 - [x] **Cross-compilation CI (linux/mac/windows)** [no-test]
 
 ---
+
