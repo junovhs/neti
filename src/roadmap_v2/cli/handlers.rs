@@ -8,20 +8,18 @@ use std::io::{self, Read};
 use std::path::Path;
 
 use super::display;
+use super::verify::{self, VerifyResult};
 
 pub fn run_init(output: &Path, name: Option<String>) -> Result<()> {
     if output.exists() {
-        return Err(anyhow!(
-            "{} already exists. Use --output.",
-            output.display()
-        ));
+        return Err(anyhow!("{} already exists.", output.display()));
     }
 
     let title = name.unwrap_or_else(|| "Project".to_string());
     let store = create_template_store(&title);
 
     store.save(Some(output)).map_err(|e| anyhow!("{e}"))?;
-    println!("{} Created {}", "✓".green(), output.display());
+    println!("{} Created {}", "�".green(), output.display());
     Ok(())
 }
 
@@ -103,11 +101,11 @@ pub fn run_apply(file: &Path, dry_run: bool, stdin: bool, verbose: bool) -> Resu
 
     if success_count > 0 {
         store.save(Some(file)).map_err(|e| anyhow!("{e}"))?;
-        println!("{} Applied {success_count} command(s)", "✓".green());
+        println!("{} Applied {success_count} command(s)", "�".green());
     }
 
     for err in &errors {
-        eprintln!("{} {err}", "✗".red());
+        eprintln!("{} {err}", "?".red());
     }
 
     Ok(())
@@ -139,32 +137,36 @@ pub fn run_generate(source: &Path, output: &Path) -> Result<()> {
     let markdown = store.to_markdown();
 
     std::fs::write(output, markdown)?;
-    println!("{} Generated {}", "✓".green(), output.display());
+    println!("{} Generated {}", "�".green(), output.display());
     Ok(())
 }
 
-pub fn run_audit(file: &Path, strict: bool) -> Result<()> {
+pub fn run_audit(file: &Path, strict: bool, exec: bool) -> Result<()> {
     let store = load_store(file)?;
     let root = std::env::current_dir()?;
 
     display::print_audit_header();
 
-    let failures = count_audit_failures(&store, &root);
+    if exec {
+        println!("  {} Running tests...\n", "?".yellow());
+    }
+
+    let failures = count_audit_failures(&store, &root, exec);
 
     display::print_audit_result(failures, strict)
 }
 
-fn count_audit_failures(store: &TaskStore, root: &Path) -> usize {
+fn count_audit_failures(store: &TaskStore, root: &Path, exec: bool) -> usize {
     let mut failures = 0;
 
     for task in &store.tasks {
-        // Only audit completed tasks - skip pending and no-test
         if task.status != TaskStatus::Done {
             continue;
         }
 
-        if let Some(fail) = check_task_test(task, root) {
-            display::print_audit_failure(&task.text, &task.id, fail);
+        let result = verify::check_test(&task.id, task.test.as_deref(), root, exec);
+        if let Some(reason) = result_to_reason(result) {
+            display::print_audit_failure(&task.text, &task.id, reason);
             failures += 1;
         }
     }
@@ -172,32 +174,13 @@ fn count_audit_failures(store: &TaskStore, root: &Path) -> usize {
     failures
 }
 
-fn check_task_test(task: &crate::roadmap_v2::Task, root: &Path) -> Option<&'static str> {
-    match &task.test {
-        Some(t) if t == "[no-test]" => None,
-        Some(test_path) if !verify_test_exists(root, test_path) => Some("test not found"),
-        None => Some("no test anchor"),
-        Some(_) => None,
+fn result_to_reason(result: VerifyResult) -> Option<&'static str> {
+    match result {
+        VerifyResult::Pass | VerifyResult::Skipped => None,
+        VerifyResult::NotFound => Some("test not found"),
+        VerifyResult::NoAnchor => Some("no test anchor"),
+        VerifyResult::ExecFailed => Some("test failed"),
     }
-}
-
-fn verify_test_exists(root: &Path, test_path: &str) -> bool {
-    let parts: Vec<&str> = test_path.split("::").collect();
-    let file_path = root.join(parts.first().unwrap_or(&""));
-
-    if !file_path.exists() {
-        return false;
-    }
-
-    if parts.len() > 1 {
-        // Use the last part as the function name to handle modules (e.g. file::mod::test)
-        let fn_name = parts.last().unwrap_or(&"");
-        if let Ok(content) = std::fs::read_to_string(&file_path) {
-            return content.contains(&format!("fn {fn_name}"));
-        }
-    }
-
-    true
 }
 
 pub fn load_store(path: &Path) -> Result<TaskStore> {
@@ -212,4 +195,4 @@ fn get_input(stdin: bool) -> Result<String> {
     } else {
         clipboard::read_clipboard().context("Clipboard read failed")
     }
-}
+}

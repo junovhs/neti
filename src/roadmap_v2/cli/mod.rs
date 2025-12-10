@@ -2,6 +2,7 @@
 mod display;
 mod handlers;
 mod migrate;
+mod verify;
 
 use anyhow::Result;
 use clap::Subcommand;
@@ -10,7 +11,7 @@ use std::path::PathBuf;
 const DEFAULT_TASKS: &str = "tasks.toml";
 const DEFAULT_ROADMAP: &str = "ROADMAP.md";
 
-#[derive(Subcommand, Debug, Clone)]
+#[derive(Debug, Clone, Subcommand)]
 pub enum RoadmapV2Command {
     /// Initialize a new tasks.toml
     Init {
@@ -59,6 +60,9 @@ pub enum RoadmapV2Command {
         file: PathBuf,
         #[arg(long)]
         strict: bool,
+        /// Actually execute tests (not just check they exist)
+        #[arg(long)]
+        exec: bool,
     },
     /// Migrate legacy ROADMAP.md to tasks.toml
     Migrate {
@@ -69,22 +73,27 @@ pub enum RoadmapV2Command {
     },
 }
 
-/// Entry point for roadmap v2 commands
+/// Dispatches roadmap subcommands to their handlers.
 ///
 /// # Errors
-/// Returns error if IO fails or clipboard access fails
+/// Returns error if the subcommand fails (file not found, parse error, etc).
 pub fn handle_command(cmd: RoadmapV2Command) -> Result<()> {
     match cmd {
         RoadmapV2Command::Init { output, name } => handlers::run_init(&output, name),
         RoadmapV2Command::Show { file, format } => handlers::run_show(&file, &format),
-        RoadmapV2Command::Tasks { file, pending, complete } => {
-            handlers::run_tasks(&file, pending, complete)
-        }
-        RoadmapV2Command::Apply { file, dry_run, stdin, verbose } => {
-            handlers::run_apply(&file, dry_run, stdin, verbose)
-        }
+        RoadmapV2Command::Tasks {
+            file,
+            pending,
+            complete,
+        } => handlers::run_tasks(&file, pending, complete),
+        RoadmapV2Command::Apply {
+            file,
+            dry_run,
+            stdin,
+            verbose,
+        } => handlers::run_apply(&file, dry_run, stdin, verbose),
         RoadmapV2Command::Generate { source, output } => handlers::run_generate(&source, &output),
-        RoadmapV2Command::Audit { file, strict } => handlers::run_audit(&file, strict),
+        RoadmapV2Command::Audit { file, strict, exec } => handlers::run_audit(&file, strict, exec),
         RoadmapV2Command::Migrate { input, output } => migrate::run_migrate(&input, &output),
     }
-}
+}

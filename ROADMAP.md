@@ -250,7 +250,7 @@
 - [x] **Extract and display first-line docstrings in signature output**
 
 ### Parser Hardening
-- [ ] **Empty task ID filtering**
+- [x] **Empty task ID filtering**
 - [x] **Task ID collision detection** <!-- test: tests/unit_roadmap_v2.rs::test_duplicate_add_rejected -->
 - [x] **Anchor-based task matching** <!-- test: [no-test] -->
 - [x] **Smart UPDATE inference (vs DELETE+ADD)** <!-- test: [no-test] -->
