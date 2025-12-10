@@ -3000,3 +3000,10 @@ status = "done"
 section = "v0.7.0"
 test = "tests/signatures_test.rs::test_holographic_signatures_docstrings"
 order = 0
+
+[[tasks]]
+id = "task-3"
+text = "Enhance Biome/ESLint detection logic"
+status = "pending"
+section = "v0.7.0"
+order = 0
