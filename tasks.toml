@@ -1327,6 +1327,7 @@ id = "empty-task-id-filtering"
 text = "Empty task ID filtering"
 status = "done"
 section = "v0.7.0"
+test = "tests/signatures_test.rs::test_empty_task_id_filtering"
 group = "Parser Hardening"
 order = 1
 
@@ -2973,6 +2974,7 @@ id = "holographic-signatures-graph-integration"
 text = "Integrate RepoGraph into signatures command (switch from alphabetical to graph-based)"
 status = "done"
 section = "v0.7.0"
+test = "tests/signatures_test.rs::test_holographic_signatures_graph"
 order = 0
 
 [[tasks]]
@@ -2980,6 +2982,7 @@ id = "holographic-signatures-topo-sort"
 text = "Implement Topological Sort for signature output (base dependencies first)"
 status = "done"
 section = "v0.7.0"
+test = "tests/signatures_test.rs::test_holographic_signatures_topo_sort"
 order = 0
 
 [[tasks]]
@@ -2987,6 +2990,7 @@ id = "holographic-signatures-pagerank"
 text = "Add PageRank importance tags (e.g., [CORE ARCHITECTURE]) to signatures"
 status = "done"
 section = "v0.7.0"
+test = "tests/signatures_test.rs::test_holographic_signatures_pagerank"
 order = 0
 
 [[tasks]]
@@ -2994,4 +2998,5 @@ id = "holographic-signatures-docstrings"
 text = "Extract and display first-line docstrings in signature output"
 status = "done"
 section = "v0.7.0"
+test = "tests/signatures_test.rs::test_holographic_signatures_docstrings"
 order = 0
