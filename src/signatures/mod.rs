@@ -2,6 +2,7 @@
 //! Holographic signature map generator.
 //! Uses dependency graph for topological ordering and `PageRank` for importance.
 
+mod docs;
 mod ordering;
 
 use crate::config::Config;
@@ -16,6 +17,7 @@ use colored::Colorize;
 use std::collections::HashMap;
 use std::fmt::Write;
 use std::fs;
+use std::ops::Range;
 use std::path::{Path, PathBuf};
 use tree_sitter::{Parser, Query, QueryCursor};
 
@@ -138,7 +140,7 @@ fn extract_exports(lang: Lang, content: &str) -> Option<String> {
     let mut cursor = QueryCursor::new();
     let matches = cursor.matches(&query, tree.root_node(), content.as_bytes());
 
-    let mut ranges = Vec::new();
+    let mut ranges: Vec<Range<usize>> = Vec::new();
     for m in matches {
         for capture in m.captures {
             ranges.push(capture.node.byte_range());
@@ -149,10 +151,11 @@ fn extract_exports(lang: Lang, content: &str) -> Option<String> {
         return None;
     }
 
+    let ranges = docs::expand_ranges_for_docs(content, ranges);
     Some(merge_and_extract(content, ranges))
 }
 
-fn merge_and_extract(source: &str, mut ranges: Vec<std::ops::Range<usize>>) -> String {
+fn merge_and_extract(source: &str, mut ranges: Vec<Range<usize>>) -> String {
     if ranges.is_empty() {
         return String::new();
     }
@@ -186,18 +189,11 @@ fn format_output(signatures: &[String], rules: &crate::config::RuleConfig) -> Re
     let gen = PromptGenerator::new(rules.clone());
 
     writeln!(out, "{}", gen.wrap_header()?)?;
-
     writeln!(out, "\n// >>> CONTEXT: TYPE MAP (ARCHITECT MODE) <<<")?;
     writeln!(out, "// Files ordered: Base Dependencies  Top-Level Consumers")?;
     writeln!(out, "// Tier Key: [CORE] = high PageRank, [LOW] = leaf node")?;
-    writeln!(
-        out,
-        "// Request implementation: slopchop pack --focus src/foo.rs"
-    )?;
-    writeln!(
-        out,
-        "// ��������������������������������������������������\n"
-    )?;
+    writeln!(out, "// Request implementation: slopchop pack --focus src/foo.rs")?;
+    writeln!(out, "// ��������������������������������������������������\n")?;
 
     for sig in signatures {
         out.push_str(sig);
@@ -205,7 +201,6 @@ fn format_output(signatures: &[String], rules: &crate::config::RuleConfig) -> Re
     }
 
     writeln!(out, "\n{}", gen.generate_reminder()?)?;
-
     Ok(out)
 }
 
