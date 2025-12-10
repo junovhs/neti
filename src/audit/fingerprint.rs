@@ -132,7 +132,9 @@ pub fn similarity(a: &Fingerprint, b: &Fingerprint) -> f64 {
     let max_count = a.node_count.max(b.node_count) as f64;
     let count_sim = 1.0 - (a.node_count as f64 - b.node_count as f64).abs() / max_count.max(1.0);
 
-    (depth_sim * 0.3 + count_sim * 0.3) * 0.5
+    // FIXED: Was capped at 0.3 for non-exact matches ((x*0.3 + y*0.3) * 0.5).
+    // Now returns proper 0.0-1.0 range for near-duplicates.
+    depth_sim * 0.5 + count_sim * 0.5
 }
 
 /// Computes fingerprints for all extractable code units in a file.
@@ -190,10 +192,31 @@ fn extract_name(node: Node, source: &[u8]) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn identical_structure_same_hash() {
-        // Two functions with identical structure but different names
-        // should produce the same fingerprint (requires tree-sitter setup)
-        // Example: "fn foo(x: i32) -> i32 { x + 1 }" and "fn bar(y: i32) -> i32 { y + 1 }"
+    fn test_similarity_math() {
+        let fp1 = Fingerprint {
+            hash: 1,
+            depth: 10,
+            node_count: 50,
+        };
+        // Identical metrics, different hash -> should be 1.0 struct sim
+        let fp2 = Fingerprint {
+            hash: 2,
+            depth: 10,
+            node_count: 50,
+        };
+        assert!((similarity(&fp1, &fp2) - 1.0).abs() < f64::EPSILON);
+
+        // Half depth -> 0.5 depth_sim * 0.5 weight = 0.25
+        // Same count -> 1.0 count_sim * 0.5 weight = 0.5
+        // Total = 0.75
+        let fp3 = Fingerprint {
+            hash: 3,
+            depth: 5,
+            node_count: 50,
+        };
+        assert!((similarity(&fp1, &fp3) - 0.75).abs() < f64::EPSILON);
     }
-}
+}

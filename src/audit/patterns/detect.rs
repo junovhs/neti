@@ -1,4 +1,5 @@
 use super::{CustomPattern, PatternMatch};
+use crate::lang::Lang;
 use std::path::Path;
 use tree_sitter::{Query, QueryCursor};
 
@@ -13,10 +14,23 @@ pub fn detect_in_file(
     let mut matches = Vec::new();
     let source_bytes = source.as_bytes();
 
-    for template in super::registry::PATTERNS {
-        let query_str = template.rust_query;
+    // Determine language from file extension to pick correct queries
+    let ext = file.extension().and_then(|s| s.to_str()).unwrap_or("");
+    let detected_lang = Lang::from_ext(ext);
 
-        let Ok(query) = Query::new(lang, query_str) else {
+    for template in super::registry::PATTERNS {
+        // Select query based on language
+        let query_str = match detected_lang {
+            Some(Lang::Python) => template.python_query,
+            // Default to Rust/Generic for others, or skip if None
+            _ => Some(template.rust_query),
+        };
+
+        let Some(q_str) = query_str else {
+            continue;
+        };
+
+        let Ok(query) = Query::new(lang, q_str) else {
             continue;
         };
 
@@ -86,4 +100,4 @@ pub fn detect_custom(
     }
 
     matches
-}
+}

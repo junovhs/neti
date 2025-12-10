@@ -73,17 +73,20 @@ pub fn generate_consolidated_plan(
 /// Returns error if code generation fails.
 pub fn generate_refactor(
     strategy: &RefactorStrategy,
-    _original_path: &str,
+    original_path: &str,
 ) -> Result<String, std::fmt::Error> {
     let mut buffer = String::new();
 
+    writeln!(buffer, "#__SLOPCHOP_FILE__# {original_path}")?;
+
     match strategy {
         RefactorStrategy::ExtractEnum { name, variants } => {
-            writeln!(
-                buffer,
-                "// Extract enum {name} with {} variants",
-                variants.len()
-            )?;
+            writeln!(buffer, "#[derive(Debug, Clone, Copy, PartialEq, Eq)]")?;
+            writeln!(buffer, "pub enum {name} {{")?;
+            for variant in variants {
+                writeln!(buffer, "    {variant},")?;
+            }
+            writeln!(buffer, "}}")?;
         }
         RefactorStrategy::GenericParameter { name } => {
             writeln!(buffer, "// Parameterize: {name}")?;
@@ -95,6 +98,8 @@ pub fn generate_refactor(
             writeln!(buffer, "// Manual attention needed")?;
         }
     }
+
+    writeln!(buffer, "#__SLOPCHOP_END__#")?;
 
     Ok(buffer)
 }

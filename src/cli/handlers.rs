@@ -1,16 +1,13 @@
 // src/cli/handlers.rs
-use crate::analysis::RuleEngine;
 use crate::apply;
 use crate::apply::types::ApplyContext;
 use crate::config::Config;
 use crate::pack::{self, OutputFormat, PackOptions};
 use crate::prompt::PromptGenerator;
-use crate::reporting;
 use crate::signatures::{self, SignatureOptions};
 use crate::trace::{self, TraceOptions};
 use anyhow::{anyhow, Result};
 use colored::Colorize;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -46,57 +43,18 @@ pub fn handle_init(path: Option<PathBuf>) -> Result<()> {
 /// Handles the check command.
 ///
 /// # Errors
-/// Returns error if discovery, analysis, or external commands fail.
+/// Returns error if verification pipeline fails.
 pub fn handle_check() -> Result<()> {
     let mut config = Config::new();
     config.load_local_config();
+    let ctx = ApplyContext::new(&config);
 
-    // 1. Run external check commands (cargo test, clippy, etc.)
-    println!("> Running 'check' pipeline...");
-    if let Some(check_cmds) = config.commands.get("check") {
-        for cmd in check_cmds {
-            run_check_command(cmd)?;
-        }
-    }
-
-    // 2. Run internal structural scan
-    println!("> Running structural scan...");
-    let engine = RuleEngine::new(config.clone());
-    let files = crate::discovery::discover(&config)?;
-    let report = engine.scan(files);
-
-    reporting::print_report(&report)?;
-
-    if report.has_errors() {
-        std::process::exit(1);
-    }
-    Ok(())
-}
-
-fn run_check_command(cmd: &str) -> Result<()> {
-    print!("   > {cmd} ... ");
-
-    // Flush stdout to ensure the "..." appears before the command runs
-    let _ = std::io::stdout().flush();
-
-    let parts: Vec<&str> = cmd.split_whitespace().collect();
-
-    let Some((prog, args)) = parts.split_first() else {
-        println!("{}", "skipped (empty)".yellow());
-        return Ok(());
-    };
-
-    let output = Command::new(prog).args(args).output()?;
-
-    if output.status.success() {
-        println!("{}", "ok".green());
+    // Reuse the unified pipeline from apply module
+    if apply::verification::run_verification_pipeline(&ctx)? {
+        println!("{}", "[OK] All checks passed.".green().bold());
         Ok(())
     } else {
-        println!("{}", "err".red());
-        println!("{}", "--- STDERR ---".red());
-        println!("{}", String::from_utf8_lossy(&output.stderr));
-        println!("{}", "--------------".red());
-        Err(anyhow!("Command failed: {cmd}"))
+        std::process::exit(1);
     }
 }
 
@@ -196,7 +154,7 @@ pub fn handle_trace(file: &Path, depth: usize, budget: usize) -> Result<()> {
     Ok(())
 }
 
-/// Handles the map command.
+/// Handles the map command.[[8](https://www.google.com/url?sa=E&q=https%3A%2F%2Fvertexaisearch.cloud.google.com%2Fgrounding-api-redirect%2FAUZIYQFhb4b_vdi8WpkVLTJa-lRcR1QD0GuuwHaZ--BAjL64_j3se_lCRBTw7aJT63l81tjI8dGaiKd0EtRvlFOcfsDkqcH-zdGzf1PETw1sycaA1q6Y1i9yiuZEjmPxTWJ8ISVr3Hmh-u9mutdWcEL63LmZDo87wVcpbsqF7z69ZNM2y2HsSTQmewf0)]
 ///
 /// # Errors
 /// Returns error if mapping fails.
@@ -227,4 +185,4 @@ pub fn handle_apply() -> Result<()> {
     let outcome = apply::run_apply(&ctx)?;
     apply::print_result(&outcome);
     Ok(())
-}
+}

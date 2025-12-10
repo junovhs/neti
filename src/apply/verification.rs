@@ -1,73 +1,119 @@
 // src/apply/verification.rs
 use crate::apply::types::ApplyContext;
+use crate::clipboard;
 use crate::spinner::Spinner;
 use anyhow::Result;
 use colored::Colorize;
-use std::fmt::Write as FmtWrite;
 use std::process::Command;
 
-/// Runs configured checks and `SlopChop` scan to verify application.
-/// Returns `(success, log_output)`.
+/// Runs the full verification pipeline: Check -> Test -> Scan.
+/// Stops at the first failure, summarizes output, and copies to clipboard.
 ///
 /// # Errors
 /// Returns error if command execution fails.
-pub fn verify_application(ctx: &ApplyContext) -> Result<(bool, String)> {
+pub fn run_verification_pipeline(ctx: &ApplyContext) -> Result<bool> {
     println!("{}", "\n> Verifying changes...".blue().bold());
-    let mut log_buffer = String::new();
 
+    // 1. Run external checks (e.g. clippy, eslint)
     if let Some(commands) = ctx.config.commands.get("check") {
         for cmd in commands {
-            let (success, output) = run_check_command(cmd)?;
-            let _ = writeln!(log_buffer, "> {cmd}\n{output}");
-
-            if !success {
-                return Ok((false, log_buffer));
+            if !run_stage(cmd, cmd)? {
+                return Ok(false);
             }
         }
     }
 
-    println!("Running structural scan...");
-    let (success, output) = run_slopchop_check()?;
-    let _ = writeln!(log_buffer, "> slopchop scan\n{output}");
+    // 2. Run SlopChop scan (Structural check)
+    if !run_stage("slopchop scan", "slopchop")? {
+        return Ok(false);
+    }
 
-    Ok((success, log_buffer))
+    Ok(true)
 }
 
-fn run_check_command(cmd: &str) -> Result<(bool, String)> {
-    let sp = Spinner::start(cmd);
-    let parts: Vec<&str> = cmd.split_whitespace().collect();
+fn run_stage(label: &str, cmd_str: &str) -> Result<bool> {
+    let sp = Spinner::start(label);
+    
+    let parts: Vec<&str> = cmd_str.split_whitespace().collect();
     let Some((prog, args)) = parts.split_first() else {
         sp.stop(true);
-        return Ok((true, String::new()));
+        return Ok(true);
     };
 
     let output = Command::new(prog).args(args).output()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let combined = format!("{stdout}\n{stderr}");
-
     let success = output.status.success();
     sp.stop(success);
 
     if !success {
-        print!("{stdout}");
-        eprint!("{stderr}");
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let combined = format!("{stdout}\n{stderr}");
+        
+        let summary = summarize_output(&combined, cmd_str);
+        
+        handle_failure(label, &summary);
     }
 
-    Ok((success, combined))
+    Ok(success)
 }
 
-fn run_slopchop_check() -> Result<(bool, String)> {
-    // slopchop check is fast, but we can spin on it too for consistency if needed.
-    // However, it outputs its own colorized report.
-    // For now, let's keep it simple as it was.
-    let output = Command::new("slopchop").output()?;
-    let stdout = String::from_utf8_lossy(&output.stdout);
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    let combined = format!("{stdout}\n{stderr}");
+fn handle_failure(stage: &str, summary: &str) {
+    println!("{}", "-".repeat(60).red());
+    println!("{} Failed: {}", "[!]".red(), stage.bold());
+    println!("{}", summary.trim());
+    println!("{}", "-".repeat(60).red());
 
-    print!("{stdout}");
-    eprint!("{stderr}");
+    match clipboard::smart_copy(summary) {
+        Ok(msg) => println!("{} {}", "[+]".yellow(), msg),
+        Err(e) => println!("{} Failed to copy to clipboard: {}", "[!]".yellow(), e),
+    }
+}
 
-    Ok((output.status.success(), combined))
+fn summarize_output(output: &str, cmd: &str) -> String {
+    let is_test = cmd.contains("test");
+    let is_cargo = cmd.contains("cargo");
+
+    output
+        .lines()
+        .filter(|line| keep_line(line, is_cargo, is_test))
+        .take(50) // Limit length for token efficiency
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn keep_line(line: &str, is_cargo: bool, is_test: bool) -> bool {
+    let trimmed = line.trim();
+    if trimmed.is_empty() {
+        return false;
+    }
+
+    if is_common_noise(trimmed) {
+        return false;
+    }
+
+    if is_test && is_test_noise(trimmed) {
+        return false;
+    }
+
+    if is_cargo && is_cargo_noise(trimmed) {
+        return false;
+    }
+
+    true
+}
+
+fn is_common_noise(line: &str) -> bool {
+    line.starts_with("Finished") 
+        || line.starts_with("Compiling") 
+        || line.starts_with("Running") 
+        || line.starts_with("Doc-tests") 
+        || line.starts_with("Checking")
+}
+
+fn is_test_noise(line: &str) -> bool {
+    line.starts_with("test result:") || line.starts_with("test ")
+}
+
+fn is_cargo_noise(line: &str) -> bool {
+    line.contains("warnings emitted") || line.contains("generated")
 }

@@ -2919,3 +2919,38 @@ text = "God Tier Audit: Source Markers (^ pointing to differences)"
 status = "pending"
 section = "v0.9.0"
 order = 0
+
+[[tasks]]
+id = "fix-similarity-math"
+text = "Fix fingerprint math capping near-duplicate scores at 0.3"
+status = "done"
+section = "v0.7.1"
+order = 0
+
+[[tasks]]
+id = "fix-polyglot-patterns"
+text = "Wire up language detection for pattern queries"
+status = "done"
+section = "v0.7.1"
+order = 0
+
+[[tasks]]
+id = "remove-dead-code-stub"
+text = "Delete src/audit/mod_append.rs"
+status = "done"
+section = "v0.7.1"
+order = 0
+
+[[tasks]]
+id = "refactor-enhance-complexity"
+text = "Extract node matching logic in enhance.rs to reduce complexity"
+status = "done"
+section = "v0.7.1"
+order = 0
+
+[[tasks]]
+id = "refactor-workflow"
+text = "Simplify apply workflow: Non-blocking git check, summary reporting, auto-clipboard."
+status = "done"
+section = "v0.8.0"
+order = 0

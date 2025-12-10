@@ -10,7 +10,7 @@ pub mod writer;
 
 use crate::clipboard;
 use crate::roadmap_v2;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result};
 use colored::Colorize;
 use std::io::{self, Write};
 use std::path::Path;
@@ -23,43 +23,19 @@ const INTENT_FILE: &str = ".slopchop_intent";
 /// # Errors
 /// Returns error if clipboard access fails or git state is invalid.
 pub fn run_apply(ctx: &ApplyContext) -> Result<ApplyOutcome> {
-    // Check for dirty git state before doing anything
     check_git_state(ctx)?;
-
     let content = clipboard::read_clipboard().context("Failed to read clipboard")?;
     process_input(&content, ctx)
 }
 
 fn check_git_state(ctx: &ApplyContext) -> Result<()> {
-    if ctx.dry_run || ctx.force {
-        return Ok(());
-    }
-
-    if !git::in_repo() {
-        // Not in a git repo, skip the check
-        return Ok(());
-    }
-
-    if ctx.config.preferences.allow_dirty_git {
+    if ctx.dry_run || ctx.force || !git::in_repo() || ctx.config.preferences.allow_dirty_git {
         return Ok(());
     }
 
     if git::is_dirty()? {
-        println!(
-            "{}",
-            "⚠️  Git working tree has uncommitted changes.".yellow()
-        );
-        println!(
-            "{}",
-            "   Commit or stash them first, or set allow_dirty_git = true in slopchop.toml"
-                .dimmed()
-        );
-
-        if !confirm("Apply anyway?")? {
-            bail!("Aborted due to dirty git state");
-        }
+        println!("{}", "[WARN] Git working tree has uncommitted changes.".yellow());
     }
-
     Ok(())
 }
 
@@ -80,9 +56,9 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
 
     let plan_opt = extractor::extract_plan(content);
 
-    if !ensure_consent(plan_opt.as_deref(), ctx)? {
+    if !check_plan_requirement(plan_opt.as_deref(), ctx)? {
         return Ok(ApplyOutcome::ParseError(
-            "Operation cancelled by user.".to_string(),
+            "Operation cancelled: Plan missing or rejected.".to_string(),
         ));
     }
 
@@ -94,37 +70,29 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
     apply_and_verify(content, ctx, plan_opt.as_deref())
 }
 
-fn ensure_consent(plan: Option<&str>, ctx: &ApplyContext) -> Result<bool> {
-    let Some(p) = plan else {
-        if ctx.config.preferences.require_plan {
-            println!(
-                "{}",
-                "❌ REJECTED: Input missing PLAN block (required by config)".red()
-            );
-            return Ok(false);
+fn check_plan_requirement(plan: Option<&str>, ctx: &ApplyContext) -> Result<bool> {
+    if let Some(p) = plan {
+        println!("{}", "[PLAN]:".cyan().bold());
+        println!("{}", "-".repeat(50).dimmed());
+        println!("{}", p.trim());
+        println!("{}", "-".repeat(50).dimmed());
+        
+        if !ctx.force && !ctx.dry_run {
+            return confirm("Apply these changes?");
         }
-
-        if ctx.force || ctx.dry_run {
-            return Ok(true);
-        }
-        println!(
-            "{}",
-            "⚠️  No PLAN block found. Please ALWAYS include a plan block.".yellow()
-        );
-        return confirm("Apply these changes without a plan?");
-    };
-
-    println!("{}", "📋 PROPOSED PLAN:".cyan().bold());
-    println!("{}", "─".repeat(50).dimmed());
-    println!("{}", p.trim());
-    println!("{}", "─".repeat(50).dimmed());
-
-    if ctx.force || ctx.dry_run {
         return Ok(true);
     }
 
-    validate_plan_structure(p);
-    confirm("Apply these changes?")
+    if ctx.config.preferences.require_plan {
+        println!("{}", "[X] REJECTED: Input missing PLAN block.".red());
+        Ok(false)
+    } else {
+        println!("{}", "[WARN] No PLAN block found.".yellow());
+        if !ctx.force && !ctx.dry_run {
+            return confirm("Apply without a plan?");
+        }
+        Ok(true)
+    }
 }
 
 fn validate_payload(content: &str) -> ApplyOutcome {
@@ -155,8 +123,6 @@ fn apply_and_verify(content: &str, ctx: &ApplyContext, plan: Option<&str>) -> Re
     }
 
     let mut outcome = writer::write_files(&manifest, &extracted, None)?;
-
-    // Use tasks.toml for Roadmap V2
     let roadmap_path = Path::new("tasks.toml");
     let mut roadmap_results = Vec::new();
 
@@ -164,7 +130,7 @@ fn apply_and_verify(content: &str, ctx: &ApplyContext, plan: Option<&str>) -> Re
         Ok(results) => roadmap_results = results,
         Err(e) => {
             if content.contains("===ROADMAP===") {
-                eprintln!("{} Roadmap update failed: {e}", "⚠️".yellow());
+                eprintln!("{} Roadmap update failed: {e}", "[WARN]".yellow());
             }
         }
     }
@@ -182,22 +148,28 @@ fn apply_and_verify(content: &str, ctx: &ApplyContext, plan: Option<&str>) -> Re
 }
 
 fn verify_and_commit(outcome: &ApplyOutcome, ctx: &ApplyContext, plan: Option<&str>) -> Result<()> {
-    if !matches!(outcome, ApplyOutcome::Success { .. }) {
+    if !matches!(outcome, ApplyOutcome::Success { .. }) || !has_changes(outcome) {
+        if !has_changes(outcome) {
+            println!("{}", "No changes detected.".yellow());
+        }
         return Ok(());
     }
 
-    if !has_changes(outcome) {
-        println!("{}", "No changes detected.".yellow());
-        return Ok(());
-    }
-
-    let (success, log) = verification::verify_application(ctx)?;
+    // New unified pipeline: Lint -> Test -> Scan
+    let success = verification::run_verification_pipeline(ctx)?;
 
     if success {
         handle_success(plan);
     } else {
-        let msg = messages::format_verification_failure(&log);
-        handle_failure(plan, &msg);
+        println!(
+            "{}",
+            "\n[X] Verification Failed. Changes applied but NOT committed."
+                .red()
+                .bold()
+        );
+        if let Some(p) = plan {
+            save_intent(p);
+        }
     }
     Ok(())
 }
@@ -219,30 +191,15 @@ fn has_changes(outcome: &ApplyOutcome) -> bool {
 fn handle_success(plan: Option<&str>) {
     println!(
         "{}",
-        "\n✨ Verification Passed. Committing & Pushing..."
+        "\n[OK] Verification Passed. Committing & Pushing..."
             .green()
             .bold()
     );
     let message = construct_commit_message(plan);
     if let Err(e) = git::commit_and_push(&message) {
-        eprintln!("{} Git operation failed: {e}", "⚠️".yellow());
+        eprintln!("{} Git operation failed: {e}", "[WARN]".yellow());
     } else {
         clear_intent();
-    }
-}
-
-fn handle_failure(plan: Option<&str>, failure_log: &str) {
-    println!(
-        "{}",
-        "\n❌ Verification Failed. Changes applied but NOT committed."
-            .red()
-            .bold()
-    );
-    println!("Fix the issues manually and then commit.");
-    messages::print_ai_feedback(failure_log);
-
-    if let Some(p) = plan {
-        save_intent(p);
     }
 }
 
@@ -273,15 +230,6 @@ fn construct_commit_message(current_plan: Option<&str>) -> String {
     current
 }
 
-fn validate_plan_structure(plan: &str) {
-    if !plan.contains("GOAL:") || !plan.contains("CHANGES:") {
-        println!(
-            "{}",
-            "⚠️  Plan is unstructured (missing GOAL/CHANGES).".yellow()
-        );
-    }
-}
-
 fn confirm(prompt: &str) -> Result<bool> {
     print!("{prompt} [y/N] ");
     io::stdout().flush()?;
@@ -300,4 +248,4 @@ fn parse_manifest_step(content: &str) -> Result<Manifest, String> {
 
 fn extract_files_step(content: &str) -> Result<ExtractedFiles, String> {
     extractor::extract_files(content).map_err(|e| format!("Extraction Error: {e}"))
-}
+}
