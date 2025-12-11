@@ -1571,7 +1571,7 @@ order = 29
 [[tasks]]
 id = "pre-validation-all-after-targets-exist"
 text = "Pre-validation: all AFTER targets exist"
-status = "pending"
+status = "done"
 section = "v0.7.0"
 group = "Roadmap Hardening"
 order = 30
