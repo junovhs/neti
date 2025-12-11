@@ -62,7 +62,7 @@ pub fn run(opts: &SignatureOptions) -> Result<()> {
         println!("{output}");
     } else {
         let msg = crate::clipboard::smart_copy(&output)?;
-        println!("{}", "� Copied to clipboard".green());
+        println!("{}", "? Copied to clipboard".green());
         println!("  ({msg})");
     }
 
@@ -100,7 +100,7 @@ fn process_file(path: &Path, rank: Option<&f64>) -> Option<String> {
     let tier = rank_tier(rank);
 
     Some(format!(
-        "// ��������������������������������������������������\n// {rel_path}{tier}\n// ��������������������������������������������������\n{clean}\n"
+        "// ======================================================\n// {rel_path}{tier}\n// ======================================================\n{clean}\n"
     ))
 }
 
@@ -190,10 +190,10 @@ fn format_output(signatures: &[String], rules: &crate::config::RuleConfig) -> Re
 
     writeln!(out, "{}", gen.wrap_header()?)?;
     writeln!(out, "\n// >>> CONTEXT: TYPE MAP (ARCHITECT MODE) <<<")?;
-    writeln!(out, "// Files ordered: Base Dependencies  Top-Level Consumers")?;
+    writeln!(out, "// Files ordered: Base Dependencies  Top-Level Consumers")?;
     writeln!(out, "// Tier Key: [CORE] = high PageRank, [LOW] = leaf node")?;
     writeln!(out, "// Request implementation: slopchop pack --focus src/foo.rs")?;
-    writeln!(out, "// ��������������������������������������������������\n")?;
+    writeln!(out, "// ======================================================\n")?;
 
     for sig in signatures {
         out.push_str(sig);

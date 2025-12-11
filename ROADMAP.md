@@ -244,13 +244,14 @@
 - [x] **Implement impact scoring and prioritization system** <!-- test: [no-test] -->
 - [x] **Add slopchop audit command with format options** <!-- test: [no-test] -->
 - [x] **Implement terminal, JSON, and AI output formatters** <!-- test: [no-test] -->
-- [x] **Integrate RepoGraph into signatures command (switch from alphabetical to graph-based)**
-- [x] **Implement Topological Sort for signature output (base dependencies first)**
-- [x] **Add PageRank importance tags (e.g., [CORE ARCHITECTURE]) to signatures**
-- [x] **Extract and display first-line docstrings in signature output**
+- [x] **Integrate RepoGraph into signatures command (switch from alphabetical to graph-based)** <!-- test: tests/signatures_test.rs::test_holographic_signatures_graph -->
+- [x] **Implement Topological Sort for signature output (base dependencies first)** <!-- test: tests/signatures_test.rs::test_holographic_signatures_topo_sort -->
+- [x] **Add PageRank importance tags (e.g., [CORE ARCHITECTURE]) to signatures** <!-- test: tests/signatures_test.rs::test_holographic_signatures_pagerank -->
+- [x] **Extract and display first-line docstrings in signature output** <!-- test: tests/signatures_test.rs::test_holographic_signatures_docstrings -->
+- [ ] **Enhance Biome/ESLint detection logic**
 
 ### Parser Hardening
-- [x] **Empty task ID filtering**
+- [x] **Empty task ID filtering** <!-- test: tests/signatures_test.rs::test_empty_task_id_filtering -->
 - [x] **Task ID collision detection** <!-- test: tests/unit_roadmap_v2.rs::test_duplicate_add_rejected -->
 - [x] **Anchor-based task matching** <!-- test: [no-test] -->
 - [x] **Smart UPDATE inference (vs DELETE+ADD)** <!-- test: [no-test] -->
