@@ -1,7 +1,6 @@
 // tests/roadmap_v2.rs
-use slopchop_core::roadmap_v2::{
-    parse_commands, RoadmapCommand, Task, TaskStatus, TaskStore,
-};
+use slopchop_core::roadmap_v2::types::{AddCommand, AfterTarget};
+use slopchop_core::roadmap_v2::{parse_commands, RoadmapCommand, Task, TaskStatus, TaskStore};
 use tempfile::TempDir;
 
 #[test]
@@ -73,8 +72,13 @@ fn test_store_apply_add() {
         order: 10,
     };
 
+    let add_cmd = AddCommand {
+        task: new_task,
+        after: AfterTarget::End,
+    };
+
     store
-        .apply(RoadmapCommand::Add(new_task))
+        .apply(RoadmapCommand::Add(add_cmd))
         .expect("Add failed");
 
     assert_eq!(store.tasks.len(), 2);
@@ -155,12 +159,12 @@ test = tests/unit.rs::test_go
 
     assert_eq!(cmds.len(), 1);
     match &cmds[0] {
-        RoadmapCommand::Add(task) => {
-            assert_eq!(task.id, "new-feature");
-            assert_eq!(task.text, "Support Go Language");
-            assert_eq!(task.section, "v0.8.0");
-            assert_eq!(task.group, Some("Lang Support".to_string()));
-            assert_eq!(task.test, Some("tests/unit.rs::test_go".to_string()));
+        RoadmapCommand::Add(add_cmd) => {
+            assert_eq!(add_cmd.task.id, "new-feature");
+            assert_eq!(add_cmd.task.text, "Support Go Language");
+            assert_eq!(add_cmd.task.section, "v0.8.0");
+            assert_eq!(add_cmd.task.group, Some("Lang Support".to_string()));
+            assert_eq!(add_cmd.task.test, Some("tests/unit.rs::test_go".to_string()));
         }
         _ => panic!("Expected Add command"),
     }
@@ -238,4 +242,4 @@ fn create_test_store() -> TaskStore {
             order: 0,
         }],
     }
-}
+}

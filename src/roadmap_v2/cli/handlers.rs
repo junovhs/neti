@@ -2,6 +2,7 @@
 use crate::clipboard;
 use crate::roadmap_v2::parser::parse_commands;
 use crate::roadmap_v2::types::{RoadmapMeta, Section, SectionStatus, TaskStatus, TaskStore};
+use crate::roadmap_v2::validation;
 use anyhow::{anyhow, Context, Result};
 use colored::Colorize;
 use std::io::{self, Read};
@@ -92,44 +93,43 @@ pub fn run_apply(file: &Path, dry_run: bool, stdin: bool, verbose: bool) -> Resu
 
     println!("Found {} command(s)", commands.len());
 
+    // Pre-validation
+    let report = validation::validate_batch(&store, &commands);
+    print_validation_report(&report, verbose);
+
+    if !report.is_ok() {
+        return Err(anyhow!("Validation failed. Fix errors before applying."));
+    }
+
     if dry_run {
         display::print_dry_run(&commands);
         return Ok(());
     }
 
-    let (success_count, errors) = apply_all_commands(&mut store, commands, verbose);
+    let result = store.apply_batch(commands)?;
 
-    if success_count > 0 {
-        store.save(Some(file)).map_err(|e| anyhow!("{e}"))?;
-        println!("{} Applied {success_count} command(s)", "�".green());
+    if result.applied > 0 {
+        store.save_with_backup(Some(file)).map_err(|e| anyhow!("{e}"))?;
+        println!("{} Applied {} command(s)", "�".green(), result.applied);
     }
 
-    for err in &errors {
+    for err in &result.errors {
         eprintln!("{} {err}", "?".red());
     }
 
     Ok(())
 }
 
-fn apply_all_commands(
-    store: &mut TaskStore,
-    commands: Vec<crate::roadmap_v2::RoadmapCommand>,
-    verbose: bool,
-) -> (usize, Vec<String>) {
-    let mut success_count = 0;
-    let mut errors: Vec<String> = Vec::new();
-
-    for cmd in commands {
-        if verbose {
-            println!("  Applying: {cmd:?}");
-        }
-        match store.apply(cmd) {
-            Ok(()) => success_count += 1,
-            Err(e) => errors.push(format!("{e}")),
-        }
+fn print_validation_report(report: &validation::ValidationReport, verbose: bool) {
+    for err in &report.errors {
+        eprintln!("{} {err}", "?".red());
     }
 
-    (success_count, errors)
+    if verbose {
+        for warn in &report.warnings {
+            eprintln!("{} {warn}", "?".yellow());
+        }
+    }
 }
 
 pub fn run_generate(source: &Path, output: &Path) -> Result<()> {

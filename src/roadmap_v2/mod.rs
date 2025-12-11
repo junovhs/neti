@@ -8,9 +8,11 @@ pub mod generator;
 pub mod parser;
 pub mod storage;
 pub mod types;
+pub mod validation;
 
 pub use cli::{handle_command, RoadmapV2Command};
 pub use parser::parse_commands;
+pub use storage::BatchResult;
 pub use types::{RoadmapCommand, Task, TaskStatus, TaskStore};
 
 use anyhow::Result;
@@ -28,27 +30,22 @@ pub fn handle_input(roadmap_path: &Path, content: &str) -> Result<Vec<String>> {
     }
 
     let mut store = TaskStore::load(Some(roadmap_path))?;
-    let mut results = Vec::new();
+    let result = store.apply_batch(commands)?;
 
-    for cmd in commands {
-        let description = describe_command(&cmd);
-        match store.apply(cmd) {
-            Ok(()) => results.push(format!("✓ {description}")),
-            Err(e) => results.push(format!("✗ {description}: {e}")),
-        }
+    let mut messages = Vec::new();
+
+    for warning in &result.warnings {
+        messages.push(format!("? {warning}"));
     }
 
-    store.save(Some(roadmap_path))?;
-
-    Ok(results)
-}
-
-fn describe_command(cmd: &RoadmapCommand) -> String {
-    match cmd {
-        RoadmapCommand::Check { id } => format!("Checked: {id}"),
-        RoadmapCommand::Uncheck { id } => format!("Unchecked: {id}"),
-        RoadmapCommand::Add(task) => format!("Added: {} ({})", task.id, task.section),
-        RoadmapCommand::Update { id, .. } => format!("Updated: {id}"),
-        RoadmapCommand::Delete { id } => format!("Deleted: {id}"),
+    if result.applied > 0 {
+        store.save_with_backup(Some(roadmap_path))?;
+        messages.push(format!("� Applied {} command(s)", result.applied));
     }
-}
+
+    for err in &result.errors {
+        messages.push(format!("? {err}"));
+    }
+
+    Ok(messages)
+}

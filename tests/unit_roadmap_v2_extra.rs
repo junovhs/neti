@@ -1,8 +1,6 @@
 // tests/unit_roadmap_v2_extra.rs
-use slopchop_core::roadmap_v2::{
-    parse_commands, RoadmapCommand, Task, TaskStatus, TaskStore,
-};
 use slopchop_core::roadmap_v2::types::{RoadmapMeta, Section, SectionStatus};
+use slopchop_core::roadmap_v2::{parse_commands, RoadmapCommand, Task, TaskStatus, TaskStore};
 
 fn create_test_store() -> TaskStore {
     TaskStore {
@@ -51,7 +49,11 @@ fn test_task_status_complete() {
 fn test_stats_calculation() {
     let store = create_test_store();
     let total = store.tasks.len();
-    let done = store.tasks.iter().filter(|t| t.status == TaskStatus::Done).count();
+    let done = store
+        .tasks
+        .iter()
+        .filter(|t| t.status == TaskStatus::Done)
+        .count();
     assert_eq!(total, 2);
     assert_eq!(done, 0);
 }
@@ -115,8 +117,8 @@ after = task-one
     let cmds = parse_commands(input).unwrap_or_default();
     assert_eq!(cmds.len(), 1);
     match &cmds[0] {
-        RoadmapCommand::Add(task) => {
-            assert_eq!(task.id, "new-task");
+        RoadmapCommand::Add(add_cmd) => {
+            assert_eq!(add_cmd.task.id, "new-task");
         }
         _ => panic!("Expected Add command"),
     }
@@ -169,4 +171,4 @@ tasks = First task, Second task, Third task
 ";
     let cmds = parse_commands(input).unwrap_or_default();
     let _ = cmds.len();
-}
+}

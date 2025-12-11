@@ -1,5 +1,5 @@
 // tests/unit_roadmap_v2.rs
-use slopchop_core::roadmap_v2::types::{RoadmapMeta, Section, SectionStatus};
+use slopchop_core::roadmap_v2::types::{AddCommand, AfterTarget, RoadmapMeta, Section, SectionStatus};
 use slopchop_core::roadmap_v2::{parse_commands, RoadmapCommand, Task, TaskStatus, TaskStore};
 
 #[test]
@@ -142,14 +142,17 @@ fn test_generator_notest_marker() {
 fn test_duplicate_add_rejected() {
     let mut store = create_test_store();
 
-    let cmd = RoadmapCommand::Add(Task {
-        id: "task-one".to_string(),
-        text: "Duplicate".to_string(),
-        status: TaskStatus::Pending,
-        section: "v0.1.0".to_string(),
-        group: None,
-        test: None,
-        order: 0,
+    let cmd = RoadmapCommand::Add(AddCommand {
+        task: Task {
+            id: "task-one".to_string(),
+            text: "Duplicate".to_string(),
+            status: TaskStatus::Pending,
+            section: "v0.1.0".to_string(),
+            group: None,
+            test: None,
+            order: 0,
+        },
+        after: AfterTarget::End,
     });
 
     let result = store.apply(cmd);
@@ -203,6 +206,7 @@ fn create_test_store() -> TaskStore {
         ],
     }
 }
+
 #[test]
 fn test_generator_with_done_task() {
     let mut store = create_test_store();
@@ -211,4 +215,4 @@ fn test_generator_with_done_task() {
     let md = store.to_markdown();
 
     assert!(md.contains("- [x]"), "Done task should render with [x]");
-}
+}

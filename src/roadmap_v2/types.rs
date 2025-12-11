@@ -75,9 +75,31 @@ pub enum TaskStatus {
 pub enum RoadmapCommand {
     Check { id: String },
     Uncheck { id: String },
-    Add(Task),
+    Add(AddCommand),
     Update { id: String, fields: TaskUpdate },
     Delete { id: String },
+}
+
+/// Specifies where to insert a new task.
+#[derive(Debug, Clone, Default)]
+pub enum AfterTarget {
+    #[default]
+    End,
+    /// After the previous ADD command in this batch
+    Previous,
+    /// After the task with this exact ID
+    Id(String),
+    /// After the first task containing this text
+    Text(String),
+    /// At a specific order index
+    Line(usize),
+}
+
+/// Extended ADD command with positioning.
+#[derive(Debug, Clone)]
+pub struct AddCommand {
+    pub task: Task,
+    pub after: AfterTarget,
 }
 
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -86,4 +108,4 @@ pub struct TaskUpdate {
     pub test: Option<String>,
     pub section: Option<String>,
     pub group: Option<String>,
-}
+}

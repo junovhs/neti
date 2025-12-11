@@ -1531,7 +1531,7 @@ order = 24
 [[tasks]]
 id = "after-previous-keyword"
 text = "AFTER PREVIOUS keyword"
-status = "pending"
+status = "done"
 section = "v0.7.0"
 group = "Roadmap Hardening"
 order = 25
@@ -1539,7 +1539,7 @@ order = 25
 [[tasks]]
 id = "after-text-exact-match"
 text = 'AFTER TEXT "exact" match'
-status = "pending"
+status = "done"
 section = "v0.7.0"
 group = "Roadmap Hardening"
 order = 26
@@ -1547,7 +1547,7 @@ order = 26
 [[tasks]]
 id = "after-line-n-match"
 text = "AFTER LINE N match"
-status = "pending"
+status = "done"
 section = "v0.7.0"
 group = "Roadmap Hardening"
 order = 27
@@ -1579,7 +1579,7 @@ order = 30
 [[tasks]]
 id = "pre-validation-no-slug-collisions"
 text = "Pre-validation: no slug collisions"
-status = "pending"
+status = "done"
 section = "v0.7.0"
 group = "Roadmap Hardening"
 order = 31
@@ -1587,7 +1587,7 @@ order = 31
 [[tasks]]
 id = "pre-validation-no-circular-after-chains"
 text = "Pre-validation: no circular AFTER chains"
-status = "pending"
+status = "done"
 section = "v0.7.0"
 group = "Roadmap Hardening"
 order = 32
@@ -1603,7 +1603,7 @@ order = 33
 [[tasks]]
 id = "fuzzy-match-suggestions-on-after-miss"
 text = "Fuzzy match suggestions on AFTER miss"
-status = "pending"
+status = "done"
 section = "v0.7.0"
 group = "Roadmap Hardening"
 order = 34
@@ -1619,7 +1619,7 @@ order = 35
 [[tasks]]
 id = "atomic-file-write-temp-rename"
 text = "Atomic file write (temp → rename)"
-status = "pending"
+status = "done"
 section = "v0.7.0"
 group = "Roadmap Hardening"
 order = 36

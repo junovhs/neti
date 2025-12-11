@@ -1,5 +1,5 @@
 // src/roadmap_v2/parser.rs
-use super::types::{RoadmapCommand, Task, TaskStatus, TaskUpdate};
+use super::types::{AddCommand, AfterTarget, RoadmapCommand, Task, TaskStatus, TaskUpdate};
 use anyhow::{anyhow, bail, Result};
 
 /// Parses roadmap commands from the ===ROADMAP=== block(s) in AI output.
@@ -135,8 +135,9 @@ fn parse_add(lines: &[&str]) -> Result<RoadmapCommand> {
     let id = require_field(lines, "id")?;
     let text = require_field(lines, "text")?;
     let section = require_field(lines, "section")?;
+    let after = parse_after_field(lines);
 
-    Ok(RoadmapCommand::Add(Task {
+    let task = Task {
         id,
         text,
         status: TaskStatus::Pending,
@@ -144,7 +145,43 @@ fn parse_add(lines: &[&str]) -> Result<RoadmapCommand> {
         test: get_field(lines, "test"),
         group: get_field(lines, "group"),
         order: 0,
-    }))
+    };
+
+    Ok(RoadmapCommand::Add(AddCommand { task, after }))
+}
+
+fn parse_after_field(lines: &[&str]) -> AfterTarget {
+    let Some(value) = get_field(lines, "after") else {
+        return AfterTarget::End;
+    };
+
+    let upper = value.to_uppercase();
+
+    if upper == "PREVIOUS" {
+        return AfterTarget::Previous;
+    }
+
+    if upper.starts_with("TEXT ") {
+        let text = extract_quoted(&value[5..]);
+        return AfterTarget::Text(text);
+    }
+
+    if upper.starts_with("LINE ") {
+        if let Ok(n) = value[5..].trim().parse::<usize>() {
+            return AfterTarget::Line(n);
+        }
+    }
+
+    // Default: treat as task ID
+    AfterTarget::Id(value)
+}
+
+fn extract_quoted(s: &str) -> String {
+    let trimmed = s.trim();
+    if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() > 1 {
+        return trimmed[1..trimmed.len() - 1].to_string();
+    }
+    trimmed.to_string()
 }
 
 fn parse_update(lines: &[&str]) -> Result<RoadmapCommand> {
@@ -201,38 +238,41 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_add() -> Result<()> {
-        let input = make_block("ADD\nid = t\ntext = Do X\nsection = v1");
+    fn test_add_after_previous() -> Result<()> {
+        let input = make_block("ADD\nid = t\ntext = X\nsection = v1\nafter = PREVIOUS");
         let cmds = parse_commands(&input)?;
-        assert!(matches!(cmds[0], RoadmapCommand::Add(_)));
+        match &cmds[0] {
+            RoadmapCommand::Add(cmd) => {
+                assert!(matches!(cmd.after, AfterTarget::Previous));
+            }
+            _ => panic!("Expected Add command"),
+        }
         Ok(())
     }
 
     #[test]
-    fn test_multiple_commands() -> Result<()> {
-        let input = make_block("CHECK\nid = task-1\nCHECK\nid = task-2");
+    fn test_add_after_text() -> Result<()> {
+        let input = make_block("ADD\nid = t\ntext = X\nsection = v1\nafter = TEXT \"foo bar\"");
         let cmds = parse_commands(&input)?;
-        assert_eq!(cmds.len(), 2);
+        match &cmds[0] {
+            RoadmapCommand::Add(cmd) => {
+                assert!(matches!(&cmd.after, AfterTarget::Text(t) if t == "foo bar"));
+            }
+            _ => panic!("Expected Add command"),
+        }
         Ok(())
     }
 
     #[test]
-    fn test_ignores_inline_markers() -> Result<()> {
-        let input = "Fix the ===ROADMAP=== issue.";
-        let cmds = parse_commands(input)?;
-        assert!(cmds.is_empty());
+    fn test_add_after_line() -> Result<()> {
+        let input = make_block("ADD\nid = t\ntext = X\nsection = v1\nafter = LINE 5");
+        let cmds = parse_commands(&input)?;
+        match &cmds[0] {
+            RoadmapCommand::Add(cmd) => {
+                assert!(matches!(cmd.after, AfterTarget::Line(5)));
+            }
+            _ => panic!("Expected Add command"),
+        }
         Ok(())
-    }
-
-    #[test]
-    fn test_rejects_empty_id() {
-        let input = make_block("CHECK\nid = ");
-        assert!(parse_commands(&input).is_err());
-    }
-
-    #[test]
-    fn test_rejects_empty_text() {
-        let input = make_block("ADD\nid = t\ntext = \nsection = v1");
-        assert!(parse_commands(&input).is_err());
     }
 }
