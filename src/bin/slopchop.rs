@@ -9,6 +9,7 @@ use clap::Parser;
 use colored::Colorize;
 
 use slopchop_core::analysis::RuleEngine;
+use slopchop_core::cli::args::ApplyArgs;
 use slopchop_core::cli::{self, Cli, Commands, PackArgs};
 use slopchop_core::config::Config;
 use slopchop_core::discovery;
@@ -58,7 +59,9 @@ fn dispatch_command(cmd: &Commands) -> Result<()> {
         | Commands::Config
         | Commands::Dashboard => dispatch_maintenance(cmd),
 
-        Commands::Apply | Commands::Prompt { .. } | Commands::Roadmap(_) => dispatch_tools(cmd),
+        Commands::Apply { .. } | Commands::Prompt { .. } | Commands::Roadmap(_) => {
+            dispatch_tools(cmd)
+        }
     }
 }
 
@@ -90,8 +93,23 @@ fn dispatch_maintenance(cmd: &Commands) -> Result<()> {
 
 fn dispatch_tools(cmd: &Commands) -> Result<()> {
     match cmd {
-        Commands::Apply => {
-            cli::handle_apply()?;
+        Commands::Apply {
+            force,
+            dry_run,
+            stdin,
+            file,
+            no_commit,
+            no_push,
+        } => {
+            let args = ApplyArgs {
+                force: *force,
+                dry_run: *dry_run,
+                stdin: *stdin,
+                file: file.clone(),
+                no_commit: *no_commit,
+                no_push: *no_push,
+            };
+            cli::handle_apply(&args)?;
             Ok(())
         }
         Commands::Prompt { copy } => {
@@ -239,7 +257,6 @@ fn ensure_config_exists() {
     let proj = project::ProjectType::detect();
     let content = project::generate_toml(proj, project::Strictness::Standard);
     if fs::write("slopchop.toml", &content).is_ok() {
-        eprintln!("{}", "✓ Created slopchop.toml".dimmed());
+        eprintln!("{}", "� Created slopchop.toml".dimmed());
     }
-}
-
+}

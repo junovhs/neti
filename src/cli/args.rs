@@ -22,7 +22,27 @@ pub enum Commands {
     },
     Check,
     Fix,
-    Apply,
+    /// Apply AI-generated code changes from clipboard, stdin, or file
+    Apply {
+        /// Skip interactive confirmation
+        #[arg(long, short)]
+        force: bool,
+        /// Validate without writing files
+        #[arg(long)]
+        dry_run: bool,
+        /// Read input from stdin instead of clipboard
+        #[arg(long)]
+        stdin: bool,
+        /// Read input from file instead of clipboard
+        #[arg(long, value_name = "FILE")]
+        file: Option<PathBuf>,
+        /// Skip git commit even if `auto_commit` is enabled
+        #[arg(long)]
+        no_commit: bool,
+        /// Skip git push even if `auto_push` is enabled
+        #[arg(long)]
+        no_push: bool,
+    },
     Clean {
         #[arg(long, short)]
         commit: bool,
@@ -31,27 +51,19 @@ pub enum Commands {
     Dashboard,
     #[command(subcommand)]
     Roadmap(RoadmapV2Command),
-    /// Analyze codebase for consolidation opportunities
     Audit {
-        /// Output format: terminal, json, or ai
         #[arg(long, default_value = "terminal")]
         format: String,
-        /// Disable dead code detection
         #[arg(long)]
         no_dead: bool,
-        /// Disable duplicate detection
         #[arg(long)]
         no_dups: bool,
-        /// Disable pattern detection
         #[arg(long)]
         no_patterns: bool,
-        /// Minimum lines for a code unit to be analyzed
         #[arg(long, default_value = "5")]
         min_lines: usize,
-        /// Maximum number of opportunities to report
         #[arg(long, default_value = "50")]
         max: usize,
-        /// Show verbose output
         #[arg(long, short)]
         verbose: bool,
     },
@@ -93,7 +105,6 @@ pub enum Commands {
         #[arg(long, short)]
         deps: bool,
     },
-    /// Generate a compact type signature map of the codebase
     Signatures {
         #[arg(long, short)]
         copy: bool,
@@ -101,3 +112,15 @@ pub enum Commands {
         stdout: bool,
     },
 }
+
+/// Arguments for the Apply command (used by handlers)
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Debug, Clone, Default)]
+pub struct ApplyArgs {
+    pub force: bool,
+    pub dry_run: bool,
+    pub stdin: bool,
+    pub file: Option<PathBuf>,
+    pub no_commit: bool,
+    pub no_push: bool,
+}

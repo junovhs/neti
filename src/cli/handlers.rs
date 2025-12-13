@@ -1,6 +1,7 @@
 // src/cli/handlers.rs
 use crate::apply;
-use crate::apply::types::ApplyContext;
+use crate::apply::types::{ApplyContext, ApplyInput};
+use crate::cli::args::ApplyArgs;
 use crate::config::Config;
 use crate::pack::{self, OutputFormat, PackOptions};
 use crate::prompt::PromptGenerator;
@@ -49,7 +50,6 @@ pub fn handle_check() -> Result<()> {
     config.load_local_config();
     let ctx = ApplyContext::new(&config);
 
-    // Reuse the unified pipeline from apply module
     if apply::verification::run_verification_pipeline(&ctx)? {
         println!("{}", "[OK] All checks passed.".green().bold());
         Ok(())
@@ -154,7 +154,7 @@ pub fn handle_trace(file: &Path, depth: usize, budget: usize) -> Result<()> {
     Ok(())
 }
 
-/// Handles the map command.[[8](https://www.google.com/url?sa=E&q=https%3A%2F%2Fvertexaisearch.cloud.google.com%2Fgrounding-api-redirect%2FAUZIYQFhb4b_vdi8WpkVLTJa-lRcR1QD0GuuwHaZ--BAjL64_j3se_lCRBTw7aJT63l81tjI8dGaiKd0EtRvlFOcfsDkqcH-zdGzf1PETw1sycaA1q6Y1i9yiuZEjmPxTWJ8ISVr3Hmh-u9mutdWcEL63LmZDo87wVcpbsqF7z69ZNM2y2HsSTQmewf0)]
+/// Handles the map command.
 ///
 /// # Errors
 /// Returns error if mapping fails.
@@ -173,16 +173,36 @@ pub fn handle_signatures(opts: SignatureOptions) -> Result<()> {
     Ok(())
 }
 
-/// Handles the apply command.
+/// Handles the apply command with CLI arguments.
 ///
 /// # Errors
 /// Returns error if application fails.
-pub fn handle_apply() -> Result<()> {
+pub fn handle_apply(args: &ApplyArgs) -> Result<()> {
     let mut config = Config::new();
     config.load_local_config();
-    let ctx = ApplyContext::new(&config);
+
+    let input = determine_input(args);
+
+    let ctx = ApplyContext {
+        config: &config,
+        force: args.force,
+        dry_run: args.dry_run,
+        no_commit: args.no_commit,
+        no_push: args.no_push,
+        input,
+    };
 
     let outcome = apply::run_apply(&ctx)?;
     apply::print_result(&outcome);
     Ok(())
+}
+
+fn determine_input(args: &ApplyArgs) -> ApplyInput {
+    if args.stdin {
+        ApplyInput::Stdin
+    } else if let Some(ref path) = args.file {
+        ApplyInput::File(path.clone())
+    } else {
+        ApplyInput::Clipboard
+    }
 }

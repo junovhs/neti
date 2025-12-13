@@ -22,6 +22,8 @@ pub struct Preferences {
     pub auto_format: bool,
     #[serde(default)]
     pub auto_commit: bool,
+    #[serde(default)]
+    pub auto_push: bool,
     #[serde(default = "default_commit_prefix")]
     pub commit_prefix: String,
     #[serde(default)]
@@ -43,6 +45,7 @@ impl Default for Preferences {
             auto_copy: true,
             auto_format: false,
             auto_commit: false,
+            auto_push: false,
             commit_prefix: default_commit_prefix(),
             allow_dirty_git: false,
             system_bell: false,
@@ -117,7 +120,6 @@ fn default_ignore_tokens() -> Vec<String> {
     vec!["README.md".to_string(), "lock".to_string()]
 }
 
-/// Helper enum to deserialize commands as either a single string or a list of strings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(untagged)]
 pub enum CommandEntry {
@@ -177,4 +179,4 @@ impl Default for Config {
             commands: HashMap::new(),
         }
     }
-}
+}
