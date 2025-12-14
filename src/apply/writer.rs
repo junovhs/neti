@@ -30,19 +30,22 @@ pub fn write_files(
 
     let mut written = Vec::new();
     let mut deleted = Vec::new();
+    let mut created_fresh = Vec::new(); // Track strictly new files for rollback
 
     for entry in manifest {
-        match entry.operation {
-            Operation::Delete => {
-                delete_file(&entry.path, root, &canonical_root)?;
-                deleted.push(entry.path.clone());
+        if let Err(e) = apply_entry(
+            entry,
+            files,
+            root,
+            &canonical_root,
+            &mut written,
+            &mut deleted,
+            &mut created_fresh,
+        ) {
+            if let Some(backup) = &backup_path {
+                perform_rollback(root, backup, &created_fresh);
             }
-            Operation::Update | Operation::New => {
-                if let Some(file_data) = files.get(&entry.path) {
-                    write_single_file(&entry.path, &file_data.content, root, &canonical_root)?;
-                    written.push(entry.path.clone());
-                }
-            }
+            return Err(e);
         }
     }
 
@@ -52,6 +55,83 @@ pub fn write_files(
         roadmap_results: Vec::new(),
         backed_up: backup_path.is_some(),
     })
+}
+
+fn apply_entry(
+    entry: &crate::apply::types::ManifestEntry,
+    files: &ExtractedFiles,
+    root: Option<&Path>,
+    canonical_root: &Path,
+    written: &mut Vec<String>,
+    deleted: &mut Vec<String>,
+    created_fresh: &mut Vec<String>,
+) -> Result<()> {
+    match entry.operation {
+        Operation::Delete => {
+            delete_file(&entry.path, root, canonical_root)?;
+            deleted.push(entry.path.clone());
+        }
+        Operation::Update | Operation::New => {
+            if let Some(file_data) = files.get(&entry.path) {
+                let path = resolve_path(&entry.path, root);
+                if !path.exists() {
+                    created_fresh.push(entry.path.clone());
+                }
+                write_single_file(&entry.path, &file_data.content, root, canonical_root)?;
+                written.push(entry.path.clone());
+            }
+        }
+    }
+    Ok(())
+}
+
+fn perform_rollback(root: Option<&Path>, backup_folder: &Path, created_fresh: &[String]) {
+    eprintln!("Error during apply. Rolling back...");
+    let root_path = root.map_or_else(|| PathBuf::from("."), Path::to_path_buf);
+
+    // 1. Restore backed up files (Reverts Updates and Deletes)
+    if backup_folder.exists() {
+        restore_dir_recursive(backup_folder, &root_path);
+    }
+
+    // 2. Delete newly created files (Reverts News)
+    for path_str in created_fresh {
+        let path = root_path.join(path_str);
+        if path.exists() {
+            let _ = fs::remove_file(path);
+        }
+    }
+    eprintln!("Rollback complete.");
+}
+
+fn restore_dir_recursive(src: &Path, target_root: &Path) {
+    if !src.is_dir() {
+        return;
+    }
+    let Ok(entries) = fs::read_dir(src) else {
+        return;
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let Some(name) = path.file_name() else {
+            continue;
+        };
+        let dest = target_root.join(name);
+
+        if path.is_dir() {
+            restore_dir_recursive(&path, &dest);
+        } else {
+            restore_file(&path, &dest);
+        }
+    }
+}
+
+fn restore_file(src: &Path, dest: &Path) {
+    if let Some(parent) = dest.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let _ = fs::copy(src, dest);
 }
 
 fn cleanup_old_backups(root: Option<&Path>, retention: usize) {
@@ -114,7 +194,11 @@ fn write_single_file(
 
     fs::rename(&temp_path, &path).map_err(|e| {
         let _ = fs::remove_file(&temp_path);
-        anyhow!("Atomic rename failed {} to {}: {e}", temp_path.display(), path.display())
+        anyhow!(
+            "Atomic rename failed {} to {}: {e}",
+            temp_path.display(),
+            path.display()
+        )
     })?;
 
     Ok(())

@@ -1,6 +1,6 @@
 // src/apply/validator.rs
 use crate::apply::messages::format_ai_rejection;
-use crate::apply::types::{ExtractedFiles, Manifest};
+use crate::apply::types::{ExtractedFiles, Manifest, ManifestEntry, Operation};
 use crate::apply::ApplyOutcome;
 use std::path::{Component, Path};
 
@@ -36,6 +36,7 @@ pub fn validate(manifest: &Manifest, extracted: &ExtractedFiles) -> ApplyOutcome
         if is_protected(&entry.path) {
             errors.push(format!("Cannot overwrite protected file: {}", entry.path));
         }
+        check_manifest_consistency(entry, extracted, &mut errors);
     }
 
     for (path, content) in extracted {
@@ -60,6 +61,36 @@ pub fn validate(manifest: &Manifest, extracted: &ExtractedFiles) -> ApplyOutcome
             errors,
             missing: vec![],
             ai_message,
+        }
+    }
+}
+
+fn check_manifest_consistency(
+    entry: &ManifestEntry,
+    extracted: &ExtractedFiles,
+    errors: &mut Vec<String>,
+) {
+    match entry.operation {
+        Operation::New | Operation::Update => {
+            if !extracted.contains_key(&entry.path) {
+                errors.push(format!(
+                    "Manifest says {} '{}', but no file block found.",
+                    if entry.operation == Operation::New {
+                        "create"
+                    } else {
+                        "update"
+                    },
+                    entry.path
+                ));
+            }
+        }
+        Operation::Delete => {
+            if extracted.contains_key(&entry.path) {
+                errors.push(format!(
+                    "Manifest says delete '{}', but file block provided.",
+                    entry.path
+                ));
+            }
         }
     }
 }
@@ -202,7 +233,6 @@ mod tests {
         assert!(is_protected("slopchop.toml"));
         assert!(is_protected("Cargo.lock"));
         assert!(!is_protected("src/main.rs"));
-        // ROADMAP.md is no longer protected (V1 is dead)
         assert!(!is_protected("ROADMAP.md"));
     }
-}
+}

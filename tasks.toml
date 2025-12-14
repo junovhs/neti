@@ -1688,7 +1688,7 @@ order = 2
 [[tasks]]
 id = "manifest-integrity-check"
 text = "Manifest integrity: Enforce all NEW/UPDATE files exist in extracted"
-status = "pending"
+status = "done"
 section = "v0.7.2"
 group = "Manifest"
 order = 0
@@ -1696,7 +1696,7 @@ order = 0
 [[tasks]]
 id = "manifest-delete-check"
 text = "Manifest integrity: Enforce DELETE entries have no extracted content"
-status = "pending"
+status = "done"
 section = "v0.7.2"
 group = "Manifest"
 order = 1
@@ -1713,7 +1713,7 @@ order = 2
 [[tasks]]
 id = "apply-level-rollback"
 text = "Apply-level rollback (restore from backup on failure)"
-status = "pending"
+status = "done"
 section = "v0.7.2"
 group = "Transactionality"
 order = 3
@@ -1721,7 +1721,7 @@ order = 3
 [[tasks]]
 id = "backup-retention-cleanup"
 text = "Backup retention cleanup (bounded growth)"
-status = "pending"
+status = "done"
 section = "v0.7.2"
 group = "Transactionality"
 order = 4
@@ -1729,7 +1729,7 @@ order = 4
 [[tasks]]
 id = "dry-run-mode-complete"
 text = "Dry-run mode (show plan + diff summary)"
-status = "pending"
+status = "done"
 section = "v0.7.2"
 group = "Transactionality"
 order = 5
@@ -1761,7 +1761,7 @@ order = 1
 [[tasks]]
 id = "git-config-controls"
 text = "Honor preferences.auto_commit and auto_push"
-status = "pending"
+status = "done"
 section = "v0.7.3"
 group = "Git Automation"
 order = 2
