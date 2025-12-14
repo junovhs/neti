@@ -1,6 +1,6 @@
 [meta]
 title = "SlopChop Protocol Roadmap"
-description = ""
+description = "The path to a hardened v1.0.0 trust boundary."
 
 [[sections]]
 id = "v0.1.0"
@@ -40,51 +40,51 @@ order = 5
 
 [[sections]]
 id = "v0.7.0"
-title = "v0.7.0 — Test Traceability 🔄 CURRENT"
-status = "current"
+title = "v0.7.0 — Legacy Baseline"
+status = "complete"
 order = 6
 
 [[sections]]
-id = "v0.8.0"
-title = "v0.8.0 — Dependency Graph"
-status = "complete"
+id = "v0.7.1"
+title = "v0.7.1 — Truth & Hardening 🔄 CURRENT"
+status = "current"
 order = 7
 
 [[sections]]
-id = "v0.9.0"
-title = "v0.9.0 — Smart Context"
-status = "complete"
+id = "v0.7.2"
+title = "v0.7.2 — Apply Transactionality"
+status = "pending"
 order = 8
 
 [[sections]]
-id = "v0.10.0"
-title = "v0.10.0 — Validation Hardening"
+id = "v0.7.3"
+title = "v0.7.3 — CLI & Git Controls"
 status = "pending"
 order = 9
 
 [[sections]]
-id = "v0.11.0"
-title = "v0.11.0 — CI/CD Integration"
+id = "v0.7.4"
+title = "v0.7.4 — Self-Hosting Lock"
 status = "pending"
 order = 10
 
 [[sections]]
-id = "v0.12.0"
-title = "v0.12.0 — Graph Visualization"
+id = "v0.8.0"
+title = "v0.8.0 — Release Candidate"
 status = "pending"
 order = 11
-
-[[sections]]
-id = "v0.13.0"
-title = "v0.13.0 — Legacy Adoption"
-status = "pending"
-order = 12
 
 [[sections]]
 id = "v1.0.0"
 title = "v1.0.0 — Release"
 status = "pending"
-order = 13
+order = 12
+
+[[sections]]
+id = "v2.0.0"
+title = "v2.0.0 — Productivity Suite (Daemon, Viz, Audit)"
+status = "pending"
+order = 99
 
 [[tasks]]
 id = "tokenizer-initialization-cl100k_base"
@@ -226,7 +226,7 @@ text = "Rust complexity query (if/match/for/while/&&/||)"
 status = "done"
 section = "v0.2.0"
 test = "tests/integration_core.rs::test_complexity_boundary_check"
-group = "Law of Complexity — Cyclomatic"
+group = "Law of Complexity"
 order = 3
 
 [[tasks]]
@@ -235,7 +235,7 @@ text = "Complexity violation detection"
 status = "done"
 section = "v0.2.0"
 test = "tests/integration_core.rs::test_complexity_construct_match"
-group = "Law of Complexity — Cyclomatic"
+group = "Law of Complexity"
 order = 4
 
 [[tasks]]
@@ -244,7 +244,7 @@ text = "JS/TS complexity query"
 status = "done"
 section = "v0.2.0"
 test = "tests/unit_analysis.rs::test_js_complexity"
-group = "Law of Complexity — Cyclomatic"
+group = "Law of Complexity"
 order = 5
 
 [[tasks]]
@@ -253,7 +253,7 @@ text = "Python complexity query"
 status = "done"
 section = "v0.2.0"
 test = "tests/unit_analysis.rs::test_python_complexity"
-group = "Law of Complexity — Cyclomatic"
+group = "Law of Complexity"
 order = 6
 
 [[tasks]]
@@ -262,7 +262,7 @@ text = "Depth calculation (block/body traversal)"
 status = "done"
 section = "v0.2.0"
 test = "tests/integration_core.rs::test_nesting_boundary"
-group = "Law of Complexity — Nesting Depth"
+group = "Law of Complexity"
 order = 7
 
 [[tasks]]
@@ -271,7 +271,7 @@ text = "Deep nesting violation"
 status = "done"
 section = "v0.2.0"
 test = "tests/integration_core.rs::test_nesting_boundary"
-group = "Law of Complexity — Nesting Depth"
+group = "Law of Complexity"
 order = 8
 
 [[tasks]]
@@ -280,7 +280,7 @@ text = "Parameter counting"
 status = "done"
 section = "v0.2.0"
 test = "tests/integration_core.rs::test_arity_boundary"
-group = "Law of Complexity — Arity"
+group = "Law of Complexity"
 order = 9
 
 [[tasks]]
@@ -289,7 +289,7 @@ text = "High arity violation"
 status = "done"
 section = "v0.2.0"
 test = "tests/integration_core.rs::test_arity_boundary"
-group = "Law of Complexity — Arity"
+group = "Law of Complexity"
 order = 10
 
 [[tasks]]
@@ -298,7 +298,7 @@ text = "Snake_case word counting"
 status = "done"
 section = "v0.2.0"
 test = "tests/unit_analysis.rs::test_snake_case_words"
-group = "Law of Complexity — Naming"
+group = "Law of Complexity"
 order = 11
 
 [[tasks]]
@@ -307,7 +307,7 @@ text = "CamelCase word counting"
 status = "done"
 section = "v0.2.0"
 test = "tests/unit_analysis.rs::test_camel_case_words"
-group = "Law of Complexity — Naming"
+group = "Law of Complexity"
 order = 12
 
 [[tasks]]
@@ -316,7 +316,7 @@ text = "Naming ignore patterns"
 status = "done"
 section = "v0.2.0"
 test = "tests/unit_config.rs::test_ignore_naming_on"
-group = "Law of Complexity — Naming"
+group = "Law of Complexity"
 order = 13
 
 [[tasks]]
@@ -325,7 +325,7 @@ text = ".expect() detection"
 status = "done"
 section = "v0.2.0"
 test = "tests/integration_core.rs::test_paranoia_expect_fails"
-group = "Law of Paranoia (Rust)"
+group = "Law of Paranoia"
 order = 14
 
 [[tasks]]
@@ -334,7 +334,7 @@ text = "Safe alternatives allowed (.unwrap_or)"
 status = "done"
 section = "v0.2.0"
 test = "tests/integration_core.rs::test_paranoia_safe_alternatives_pass"
-group = "Law of Paranoia (Rust)"
+group = "Law of Paranoia"
 order = 15
 
 [[tasks]]
@@ -370,7 +370,7 @@ text = "Header detection (#__SLOPCHOP_FILE__#)"
 status = "done"
 section = "v0.3.0"
 test = "tests/integration_apply.rs::test_extract_single_file"
-group = "Protocol Format Extraction"
+group = "Protocol Format"
 order = 0
 
 [[tasks]]
@@ -379,7 +379,7 @@ text = "Footer detection (#__SLOPCHOP_END__#)"
 status = "done"
 section = "v0.3.0"
 test = "tests/integration_apply.rs::test_extract_single_file"
-group = "Protocol Format Extraction"
+group = "Protocol Format"
 order = 1
 
 [[tasks]]
@@ -388,7 +388,7 @@ text = "Path extraction from header"
 status = "done"
 section = "v0.3.0"
 test = "tests/integration_apply.rs::test_extract_single_file"
-group = "Protocol Format Extraction"
+group = "Protocol Format"
 order = 2
 
 [[tasks]]
@@ -397,7 +397,7 @@ text = "Content extraction"
 status = "done"
 section = "v0.3.0"
 test = "tests/integration_apply.rs::test_extract_single_file"
-group = "Protocol Format Extraction"
+group = "Protocol Format"
 order = 3
 
 [[tasks]]
@@ -406,7 +406,7 @@ text = "Multiple file extraction"
 status = "done"
 section = "v0.3.0"
 test = "tests/integration_apply.rs::test_extract_multiple_files"
-group = "Protocol Format Extraction"
+group = "Protocol Format"
 order = 4
 
 [[tasks]]
@@ -415,7 +415,7 @@ text = "MANIFEST block skipping"
 status = "done"
 section = "v0.3.0"
 test = "tests/integration_apply.rs::test_extract_skips_manifest"
-group = "Protocol Format Extraction"
+group = "Protocol Format"
 order = 5
 
 [[tasks]]
@@ -424,7 +424,7 @@ text = "PLAN block extraction"
 status = "done"
 section = "v0.3.0"
 test = "tests/integration_apply.rs::test_extract_plan"
-group = "Protocol Format Extraction"
+group = "Protocol Format"
 order = 6
 
 [[tasks]]
@@ -433,7 +433,7 @@ text = "Malformed block handling"
 status = "done"
 section = "v0.3.0"
 test = "tests/integration_apply.rs::test_extract_single_file"
-group = "Protocol Format Extraction"
+group = "Protocol Format"
 order = 7
 
 [[tasks]]
@@ -459,7 +459,7 @@ id = "delete-marker-detection"
 text = "[DELETE] marker detection"
 status = "done"
 section = "v0.3.0"
-test = "[no-test]"
+test = "tests/integration_apply.rs::test_delete_marker_detection"
 group = "Manifest Parsing"
 order = 10
 
@@ -495,7 +495,7 @@ id = "delete-operation"
 text = "Delete operation"
 status = "done"
 section = "v0.3.0"
-test = "[no-test]"
+test = "tests/integration_apply.rs::test_delete_operation"
 group = "File Writing"
 order = 14
 
@@ -559,7 +559,7 @@ text = "Block ../ traversal"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_traversal"
-group = "Path Safety — Traversal"
+group = "Path Safety"
 order = 0
 
 [[tasks]]
@@ -568,7 +568,7 @@ text = "Block .. prefix"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_traversal"
-group = "Path Safety — Traversal"
+group = "Path Safety"
 order = 1
 
 [[tasks]]
@@ -577,7 +577,7 @@ text = "Block Unix absolute (/)"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_absolute"
-group = "Path Safety — Absolute"
+group = "Path Safety"
 order = 2
 
 [[tasks]]
@@ -585,8 +585,8 @@ id = "block-windows-absolute-c"
 text = "Block Windows absolute (C:)"
 status = "done"
 section = "v0.4.0"
-test = "[no-test]"
-group = "Path Safety — Absolute"
+test = "tests/integration_apply.rs::test_block_windows_absolute"
+group = "Path Safety"
 order = 3
 
 [[tasks]]
@@ -595,7 +595,7 @@ text = "Block .git/"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_git"
-group = "Path Safety — Sensitive"
+group = "Path Safety"
 order = 4
 
 [[tasks]]
@@ -604,7 +604,7 @@ text = "Block .env"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
-group = "Path Safety — Sensitive"
+group = "Path Safety"
 order = 5
 
 [[tasks]]
@@ -613,7 +613,7 @@ text = "Block .ssh/"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
-group = "Path Safety — Sensitive"
+group = "Path Safety"
 order = 6
 
 [[tasks]]
@@ -622,7 +622,7 @@ text = "Block .aws/"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
-group = "Path Safety — Sensitive"
+group = "Path Safety"
 order = 7
 
 [[tasks]]
@@ -631,7 +631,7 @@ text = "Block .gnupg/"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
-group = "Path Safety — Sensitive"
+group = "Path Safety"
 order = 8
 
 [[tasks]]
@@ -640,7 +640,7 @@ text = "Block id_rsa"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
-group = "Path Safety — Sensitive"
+group = "Path Safety"
 order = 9
 
 [[tasks]]
@@ -649,7 +649,7 @@ text = "Block credentials"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
-group = "Path Safety — Sensitive"
+group = "Path Safety"
 order = 10
 
 [[tasks]]
@@ -657,8 +657,8 @@ id = "block-backup-directory"
 text = "Block backup directory"
 status = "done"
 section = "v0.4.0"
-test = "[no-test]"
-group = "Path Safety — Sensitive"
+test = "tests/integration_apply.rs::test_block_backup_directory"
+group = "Path Safety"
 order = 11
 
 [[tasks]]
@@ -667,7 +667,7 @@ text = "Block hidden files (.*)"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_blocks_hidden"
-group = "Path Safety — Hidden Files"
+group = "Path Safety"
 order = 12
 
 [[tasks]]
@@ -676,24 +676,8 @@ text = "Allow . and .. segments"
 status = "done"
 section = "v0.4.0"
 test = "tests/integration_apply.rs::test_path_safety_allows_valid"
-group = "Path Safety — Hidden Files"
+group = "Path Safety"
 order = 13
-
-[[tasks]]
-id = "block-roadmapmd-rewrite"
-text = "Block ROADMAP.md rewrite"
-status = "no-test"
-section = "v0.4.0"
-group = "Path Safety — Protected Files"
-order = 14
-
-[[tasks]]
-id = "case-insensitive-protection"
-text = "Case-insensitive protection"
-status = "no-test"
-section = "v0.4.0"
-group = "Path Safety — Protected Files"
-order = 15
 
 [[tasks]]
 id = "pattern-ellipsis"
@@ -876,14 +860,6 @@ group = "Pack Options"
 order = 9
 
 [[tasks]]
-id = "verbose-progress-no-test-output-only"
-text = "--verbose progress"
-status = "no-test"
-section = "v0.5.0"
-group = "Pack Options"
-order = 10
-
-[[tasks]]
 id = "system-prompt-header"
 text = "System prompt header"
 status = "done"
@@ -1019,14 +995,6 @@ group = "Focus Mode"
 order = 25
 
 [[tasks]]
-id = "copy-file-path-for-attachment-no-test-platform-specific-side-effect"
-text = "Copy file path for attachment"
-status = "no-test"
-section = "v0.5.0"
-group = "File Path Clipboard"
-order = 26
-
-[[tasks]]
 id = "title-extraction-title"
 text = "Title extraction (# Title)"
 status = "done"
@@ -1076,7 +1044,7 @@ id = "stats-calculation"
 text = "Stats calculation"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_roadmap_v2_extra.rs::test_stats_calculation"
 group = "Roadmap Parsing"
 order = 5
 
@@ -1094,7 +1062,7 @@ id = "task-path-generation"
 text = "Task path generation"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_roadmap_v2_extra.rs::test_task_path_generation"
 group = "Roadmap Parsing"
 order = 7
 
@@ -1103,7 +1071,7 @@ id = "compact-state-display"
 text = "Compact state display"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_roadmap_v2_extra.rs::test_compact_state_display"
 group = "Roadmap Parsing"
 order = 8
 
@@ -1112,7 +1080,7 @@ id = "lowercase-conversion"
 text = "Lowercase conversion"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_roadmap_v2_extra.rs::test_lowercase_conversion"
 group = "Slugification"
 order = 9
 
@@ -1121,7 +1089,7 @@ id = "special-char-to-dash"
 text = "Special char to dash"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_roadmap_v2_extra.rs::test_special_char_to_dash"
 group = "Slugification"
 order = 10
 
@@ -1130,7 +1098,7 @@ id = "number-preservation"
 text = "Number preservation"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_roadmap_v2_extra.rs::test_number_preservation"
 group = "Slugification"
 order = 11
 
@@ -1175,7 +1143,7 @@ id = "add-with-after"
 text = "ADD with AFTER"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_roadmap_v2_extra.rs::test_add_with_after"
 group = "Command Parsing"
 order = 16
 
@@ -1193,7 +1161,7 @@ id = "note-command"
 text = "NOTE command"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_roadmap_v2_extra.rs::test_note_command"
 group = "Command Parsing"
 order = 18
 
@@ -1202,7 +1170,7 @@ id = "move-command"
 text = "MOVE command"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_roadmap_v2_extra.rs::test_move_command"
 group = "Command Parsing"
 order = 19
 
@@ -1211,7 +1179,7 @@ id = "comment-skipping"
 text = "Comment skipping"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_roadmap_v2_extra.rs::test_comment_skipping"
 group = "Command Parsing"
 order = 20
 
@@ -1229,7 +1197,7 @@ id = "roadmap-init"
 text = "roadmap init"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_cli_roadmap.rs::test_roadmap_init"
 group = "Roadmap CLI"
 order = 22
 
@@ -1238,7 +1206,7 @@ id = "roadmap-prompt"
 text = "roadmap prompt"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_cli_roadmap.rs::test_roadmap_prompt"
 group = "Roadmap CLI"
 order = 23
 
@@ -1256,7 +1224,7 @@ id = "roadmap-show"
 text = "roadmap show"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_cli_roadmap.rs::test_roadmap_show"
 group = "Roadmap CLI"
 order = 25
 
@@ -1265,7 +1233,7 @@ id = "roadmap-tasks"
 text = "roadmap tasks"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_cli_roadmap.rs::test_roadmap_tasks"
 group = "Roadmap CLI"
 order = 26
 
@@ -1274,7 +1242,7 @@ id = "roadmap-tasks---pending"
 text = "roadmap tasks --pending"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_cli_roadmap.rs::test_roadmap_tasks_pending"
 group = "Roadmap CLI"
 order = 27
 
@@ -1283,7 +1251,7 @@ id = "roadmap-tasks---complete"
 text = "roadmap tasks --complete"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_cli_roadmap.rs::test_roadmap_tasks_complete"
 group = "Roadmap CLI"
 order = 28
 
@@ -1292,7 +1260,7 @@ id = "roadmap-audit"
 text = "roadmap audit"
 status = "done"
 section = "v0.6.0"
-test = "[no-test]"
+test = "tests/unit_cli_roadmap.rs::test_roadmap_audit"
 group = "Roadmap CLI"
 order = 29
 
@@ -1315,1393 +1283,6 @@ group = "Unified Apply"
 order = 31
 
 [[tasks]]
-id = "clean-check-output-failures-only"
-text = "Clean check output (failures only)"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-order = 0
-
-[[tasks]]
-id = "empty-task-id-filtering"
-text = "Empty task ID filtering"
-status = "done"
-section = "v0.7.0"
-test = "tests/signatures_test.rs::test_empty_task_id_filtering"
-group = "Parser Hardening"
-order = 1
-
-[[tasks]]
-id = "task-id-collision-detection"
-text = "Task ID collision detection"
-status = "done"
-section = "v0.7.0"
-test = "tests/unit_roadmap_v2.rs::test_duplicate_add_rejected"
-group = "Parser Hardening"
-order = 2
-
-[[tasks]]
-id = "anchor-based-task-matching"
-text = "Anchor-based task matching"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Parser Hardening"
-order = 3
-
-[[tasks]]
-id = "smart-update-inference-vs-deleteadd"
-text = "Smart UPDATE inference (vs DELETE+ADD)"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Parser Hardening"
-order = 4
-
-[[tasks]]
-id = "scan-completed-tasks"
-text = "Scan completed tasks"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Audit System"
-order = 5
-
-[[tasks]]
-id = "no-test-skip"
-text = "[no-test] skip"
-status = "done"
-section = "v0.7.0"
-test = "tests/unit_roadmap_v2.rs::test_generator_notest_marker"
-group = "Audit System"
-order = 6
-
-[[tasks]]
-id = "explicit-anchor-verification"
-text = "Explicit anchor verification"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Audit System"
-order = 7
-
-[[tasks]]
-id = "missing-test-file-detection"
-text = "Missing test file detection"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Audit System"
-order = 8
-
-[[tasks]]
-id = "missing-test-function-detection"
-text = "Missing test function detection"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Audit System"
-order = 9
-
-[[tasks]]
-id = "test-execution-verification-cargo-test"
-text = "Test execution verification (cargo test)"
-status = "pending"
-section = "v0.7.0"
-group = "Audit System"
-order = 10
-
-[[tasks]]
-id = "exit-code-1-on-any-failure-no-test-cli-exit-behavior"
-text = "Exit code 1 on any failure"
-status = "no-test"
-section = "v0.7.0"
-group = "Audit System"
-order = 11
-
-[[tasks]]
-id = "--strict-mode-all-must-pass-no-test-cli-flag"
-text = "--strict mode (all must pass)"
-status = "no-test"
-section = "v0.7.0"
-group = "Audit System"
-order = 12
-
-[[tasks]]
-id = "slopchop-passes-own-rules"
-text = "SlopChop passes own rules"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Self-Hosting"
-order = 13
-
-[[tasks]]
-id = "feature-id-test-function-mapping"
-text = "Feature ID → test function mapping"
-status = "pending"
-section = "v0.7.0"
-group = "Test Naming Convention"
-order = 14
-
-[[tasks]]
-id = "audit-validates-naming-convention"
-text = "Audit validates naming convention"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Test Naming Convention"
-order = 15
-
-[[tasks]]
-id = "enforce-test-first-registration-during-ai-sessions"
-text = "Enforce test-first registration during AI sessions"
-status = "pending"
-section = "v0.7.0"
-group = "Test Naming Convention"
-order = 16
-
-[[tasks]]
-id = "block-feature-completion-without-matching-test-file"
-text = "Block feature completion without matching test file"
-status = "pending"
-section = "v0.7.0"
-group = "Test Naming Convention"
-order = 17
-
-[[tasks]]
-id = "slopchop-register-feature-command-pre-declares-intent"
-text = "slopchop register <feature> command (pre-declares intent)"
-status = "pending"
-section = "v0.7.0"
-group = "Test Naming Convention"
-order = 18
-
-[[tasks]]
-id = "slopchop-verify-session-command-audit-current-work"
-text = "slopchop verify-session command (audit current work)"
-status = "pending"
-section = "v0.7.0"
-group = "Test Naming Convention"
-order = 19
-
-[[tasks]]
-id = "incremental-roadmap-sync-update-after-each-file"
-text = "Incremental roadmap sync (update after each file)"
-status = "pending"
-section = "v0.7.0"
-group = "Test Naming Convention"
-order = 20
-
-[[tasks]]
-id = "session-manifest-tracking-files-touched-this-session"
-text = "Session manifest tracking (files touched this session)"
-status = "pending"
-section = "v0.7.0"
-group = "Test Naming Convention"
-order = 21
-
-[[tasks]]
-id = "section-command-create-version-headers"
-text = "SECTION command (create version headers)"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Roadmap Hardening"
-order = 22
-
-[[tasks]]
-id = "subsection-command-create-headers"
-text = "SUBSECTION command (create ### headers)"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Roadmap Hardening"
-order = 23
-
-[[tasks]]
-id = "chain-command-sequential-adds"
-text = "CHAIN command (sequential adds)"
-status = "done"
-section = "v0.7.0"
-test = "[no-test]"
-group = "Roadmap Hardening"
-order = 24
-
-[[tasks]]
-id = "after-previous-keyword"
-text = "AFTER PREVIOUS keyword"
-status = "done"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 25
-
-[[tasks]]
-id = "after-text-exact-match"
-text = 'AFTER TEXT "exact" match'
-status = "done"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 26
-
-[[tasks]]
-id = "after-line-n-match"
-text = "AFTER LINE N match"
-status = "done"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 27
-
-[[tasks]]
-id = "in-sectionsubsection-location"
-text = 'IN "section/subsection" location'
-status = "pending"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 28
-
-[[tasks]]
-id = "slug-echo-on-add-show-generated-slug"
-text = "Slug echo on ADD (show generated slug)"
-status = "pending"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 29
-
-[[tasks]]
-id = "pre-validation-all-after-targets-exist"
-text = "Pre-validation: all AFTER targets exist"
-status = "done"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 30
-
-[[tasks]]
-id = "pre-validation-no-slug-collisions"
-text = "Pre-validation: no slug collisions"
-status = "done"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 31
-
-[[tasks]]
-id = "pre-validation-no-circular-after-chains"
-text = "Pre-validation: no circular AFTER chains"
-status = "done"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 32
-
-[[tasks]]
-id = "batch-dependency-resolution-topological-sort"
-text = "Batch dependency resolution (topological sort)"
-status = "pending"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 33
-
-[[tasks]]
-id = "fuzzy-match-suggestions-on-after-miss"
-text = "Fuzzy match suggestions on AFTER miss"
-status = "done"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 34
-
-[[tasks]]
-id = "dry-run-mode---dry-run-flag"
-text = "Dry-run mode (--dry-run flag)"
-status = "pending"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 35
-
-[[tasks]]
-id = "atomic-file-write-temp-rename"
-text = "Atomic file write (temp → rename)"
-status = "done"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 36
-
-[[tasks]]
-id = "backup-creation-mdbak"
-text = "Backup creation (.md.bak)"
-status = "pending"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 37
-
-[[tasks]]
-id = "all-or-nothing-execution-rollback-on-error"
-text = "All-or-nothing execution (rollback on error)"
-status = "pending"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 38
-
-[[tasks]]
-id = "verbose-plan-output"
-text = "Verbose plan output"
-status = "pending"
-section = "v0.7.0"
-group = "Roadmap Hardening"
-order = 39
-
-[[tasks]]
-id = "slopchop-apply---force-flag"
-text = "slopchop apply --force flag"
-status = "pending"
-section = "v0.7.0"
-group = "Escape Hatches"
-order = 40
-
-[[tasks]]
-id = "quarantine-mode-slopchopquarantine-marker"
-text = "Quarantine mode (// slopchop:quarantine marker)"
-status = "pending"
-section = "v0.7.0"
-group = "Escape Hatches"
-order = 41
-
-[[tasks]]
-id = "quarantine-report-in-slopchop-scan"
-text = "Quarantine report in slopchop scan"
-status = "pending"
-section = "v0.7.0"
-group = "Escape Hatches"
-order = 42
-
-[[tasks]]
-id = "slopchop-watch-command"
-text = "slopchop watch command"
-status = "pending"
-section = "v0.9.0"
-group = "Daemon Core"
-order = 0
-
-[[tasks]]
-id = "background-process-management"
-text = "Background process management"
-status = "pending"
-section = "v0.8.0"
-group = "Daemon Core"
-order = 1
-
-[[tasks]]
-id = "graceful-shutdown-sigterm"
-text = "Graceful shutdown (SIGTERM)"
-status = "pending"
-section = "v0.8.0"
-group = "Daemon Core"
-order = 2
-
-[[tasks]]
-id = "single-instance-enforcement"
-text = "Single instance enforcement"
-status = "pending"
-section = "v0.8.0"
-group = "Daemon Core"
-order = 3
-
-[[tasks]]
-id = "clipboard-polling-loop"
-text = "Clipboard polling loop"
-status = "pending"
-section = "v0.8.0"
-group = "Clipboard Monitoring"
-order = 4
-
-[[tasks]]
-id = "protocol-detection-in-clipboard"
-text = "Protocol detection in clipboard"
-status = "pending"
-section = "v0.8.0"
-group = "Clipboard Monitoring"
-order = 5
-
-[[tasks]]
-id = "deduplication-ignore-same-content"
-text = "Deduplication (ignore same content)"
-status = "pending"
-section = "v0.8.0"
-group = "Clipboard Monitoring"
-order = 6
-
-[[tasks]]
-id = "stage-content-for-apply"
-text = "Stage content for apply"
-status = "pending"
-section = "v0.8.0"
-group = "Clipboard Monitoring"
-order = 7
-
-[[tasks]]
-id = "register-global-hotkey-default-l-ctrlshiftl"
-text = "Register global hotkey (default ⌘⇧L / Ctrl+Shift+L)"
-status = "pending"
-section = "v0.8.0"
-group = "Global Hotkey"
-order = 8
-
-[[tasks]]
-id = "configurable-hotkey-binding"
-text = "Configurable hotkey binding"
-status = "pending"
-section = "v0.8.0"
-group = "Global Hotkey"
-order = 9
-
-[[tasks]]
-id = "hotkey-triggers-apply"
-text = "Hotkey triggers apply"
-status = "pending"
-section = "v0.8.0"
-group = "Global Hotkey"
-order = 10
-
-[[tasks]]
-id = "ready-notification-on-protocol-detect"
-text = '"Ready" notification on protocol detect'
-status = "pending"
-section = "v0.8.0"
-group = "System Notifications"
-order = 11
-
-[[tasks]]
-id = "success-notification-with-file-count"
-text = "Success notification with file count"
-status = "pending"
-section = "v0.8.0"
-group = "System Notifications"
-order = 12
-
-[[tasks]]
-id = "failure-notification-with-error-summary"
-text = "Failure notification with error summary"
-status = "pending"
-section = "v0.8.0"
-group = "System Notifications"
-order = 13
-
-[[tasks]]
-id = "cross-platform-notification-linuxmacwindows"
-text = "Cross-platform notification (Linux/macOS/Windows)"
-status = "pending"
-section = "v0.8.0"
-group = "System Notifications"
-order = 14
-
-[[tasks]]
-id = "watch-section-in-slopchop.toml"
-text = "[watch] section in slopchop.toml"
-status = "pending"
-section = "v0.8.0"
-group = "Configuration"
-order = 15
-
-[[tasks]]
-id = "hotkey-option"
-text = "hotkey option"
-status = "pending"
-section = "v0.8.0"
-group = "Configuration"
-order = 16
-
-[[tasks]]
-id = "auto_commit-option"
-text = "auto_commit option"
-status = "pending"
-section = "v0.8.0"
-group = "Configuration"
-order = 17
-
-[[tasks]]
-id = "notify-option-enabledisable"
-text = "notify option (enable/disable)"
-status = "pending"
-section = "v0.8.0"
-group = "Configuration"
-order = 18
-
-[[tasks]]
-id = "rust-usemod-extraction"
-text = "Rust use/mod extraction"
-status = "done"
-section = "v0.8.0"
-test = "src/graph/imports.rs::test_rust_imports"
-group = "Import Extraction"
-order = 19
-
-[[tasks]]
-id = "rust-path-resolution"
-text = "Rust path resolution"
-status = "done"
-section = "v0.8.0"
-test = "src/graph/resolver.rs::test_resolve_rust_crate"
-group = "Import Extraction"
-order = 20
-
-[[tasks]]
-id = "python-import-extraction"
-text = "Python import extraction"
-status = "done"
-section = "v0.8.0"
-test = "src/graph/imports.rs::test_python_imports"
-group = "Import Extraction"
-order = 21
-
-[[tasks]]
-id = "typescript-import-extraction"
-text = "TypeScript import extraction"
-status = "done"
-section = "v0.8.0"
-test = "src/graph/imports.rs::test_ts_imports"
-group = "Import Extraction"
-order = 22
-
-[[tasks]]
-id = "graph-nodeedge-creation"
-text = "Graph node/edge creation"
-status = "done"
-section = "v0.8.0"
-test = "tests/unit_graph_build.rs::test_node_creation"
-group = "Graph Construction"
-order = 23
-
-[[tasks]]
-id = "reverse-index-construction"
-text = "Reverse index construction"
-status = "done"
-section = "v0.8.0"
-test = "tests/unit_graph_build.rs::test_reverse_index"
-group = "Graph Construction"
-order = 24
-
-[[tasks]]
-id = "unified-dashboard-single-entry-point-slopchop-dashboard"
-text = "Unified Dashboard"
-status = "done"
-section = "v0.8.0"
-test = "[no-test]"
-group = "TUI Mission Control"
-order = 25
-
-[[tasks]]
-id = "check-runner-live-testlint-output-in-pane"
-text = "Check Runner"
-status = "done"
-section = "v0.8.0"
-test = "[no-test]"
-group = "TUI Mission Control"
-order = 26
-
-[[tasks]]
-id = "roadmap-explorer-navigate-and-check-tasks-interactively"
-text = "Roadmap Explorer"
-status = "done"
-section = "v0.8.0"
-test = "[no-test]"
-group = "TUI Mission Control"
-order = 27
-
-[[tasks]]
-id = "log-stream-replace-stdout-scrolling"
-text = "Log Stream"
-status = "done"
-section = "v0.8.0"
-test = "[no-test]"
-group = "TUI Mission Control"
-order = 28
-
-[[tasks]]
-id = "view-filters-pendingdoneall"
-text = "View Filters"
-status = "pending"
-section = "v0.8.0"
-group = "TUI Mission Control"
-order = 29
-
-[[tasks]]
-id = "copy-view-to-clipboard"
-text = "Copy View to Clipboard"
-status = "pending"
-section = "v0.8.0"
-group = "TUI Mission Control"
-order = 30
-
-[[tasks]]
-id = "mouse-support-clickable-buttons"
-text = "Mouse Support"
-status = "pending"
-section = "v0.8.0"
-group = "TUI Mission Control"
-order = 31
-
-[[tasks]]
-id = "interactive-staging-workflow-apply-diff-confirm"
-text = "Interactive Staging Workflow"
-status = "pending"
-section = "v0.8.0"
-group = "TUI Mission Control"
-order = 32
-
-[[tasks]]
-id = "slopchop-map-basic-output"
-text = "slopchop map basic output"
-status = "done"
-section = "v0.9.0"
-test = "[no-test]"
-group = "SlopChop Map Command"
-order = 0
-
-[[tasks]]
-id = "directory-tree-with-file-counts"
-text = "Directory tree with file counts"
-status = "done"
-section = "v0.9.0"
-test = "[no-test]"
-group = "SlopChop Map Command"
-order = 1
-
-[[tasks]]
-id = "cluster-summary-display"
-text = "Cluster summary display"
-status = "pending"
-section = "v0.9.0"
-group = "SlopChop Map Command"
-order = 2
-
-[[tasks]]
-id = "--deps-flag-show-dependency-arrows"
-text = "--deps flag (show dependency arrows)"
-status = "done"
-section = "v0.9.0"
-test = "[no-test]"
-group = "SlopChop Map Command"
-order = 3
-
-[[tasks]]
-id = "--stats-flag-token-counts-per-cluster"
-text = "--stats flag (token counts per cluster)"
-status = "done"
-section = "v0.9.0"
-test = "[no-test]"
-group = "SlopChop Map Command"
-order = 4
-
-[[tasks]]
-id = "--json-flag-machine-readable-map"
-text = "--json flag (machine-readable map)"
-status = "pending"
-section = "v0.9.0"
-group = "SlopChop Map Command"
-order = 5
-
-[[tasks]]
-id = "module-description-extraction-or-docstring"
-text = "Module description extraction (//! or docstring)"
-status = "pending"
-section = "v0.9.0"
-group = "SlopChop Map Command"
-order = 6
-
-[[tasks]]
-id = "entry-point-detection-main.rs-lib.rs-index.ts"
-text = "Entry point detection (main.rs, lib.rs, index.ts)"
-status = "pending"
-section = "v0.9.0"
-group = "SlopChop Map Command"
-order = 7
-
-[[tasks]]
-id = "slopchop-pack---from-errors-flag"
-text = "slopchop pack --from-errors flag"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 8
-
-[[tasks]]
-id = "cargorustc-error-parsing"
-text = "Cargo/rustc error parsing"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 9
-
-[[tasks]]
-id = "clippy-warning-parsing"
-text = "Clippy warning parsing"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 10
-
-[[tasks]]
-id = "typescripttsc-error-parsing"
-text = "TypeScript/tsc error parsing"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 11
-
-[[tasks]]
-id = "python-traceback-parsing"
-text = "Python traceback parsing"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 12
-
-[[tasks]]
-id = "eslint-output-parsing"
-text = "ESLint output parsing"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 13
-
-[[tasks]]
-id = "file-path-extraction-from-errors"
-text = "File path extraction from errors"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 14
-
-[[tasks]]
-id = "line-number-extraction-from-errors"
-text = "Line number extraction from errors"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 15
-
-[[tasks]]
-id = "unique-file-deduplication"
-text = "Unique file deduplication"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 16
-
-[[tasks]]
-id = "auto-include-test-files-for-src-errors"
-text = "Auto-include test files for src errors"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 17
-
-[[tasks]]
-id = "piped-input-support-cargo-clippy-21"
-text = "Piped input support (cargo clippy 2>&1 |)"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 18
-
-[[tasks]]
-id = "--from-clipboard-errors-flag"
-text = "--from-clipboard-errors flag"
-status = "pending"
-section = "v0.9.0"
-group = "Error-Driven Packing"
-order = 19
-
-[[tasks]]
-id = "slopchop-pack---cluster-name-flag"
-text = "slopchop pack --cluster NAME flag"
-status = "pending"
-section = "v0.9.0"
-group = "Cluster Packing"
-order = 20
-
-[[tasks]]
-id = "cluster-resolution-by-name"
-text = "Cluster resolution by name"
-status = "pending"
-section = "v0.9.0"
-group = "Cluster Packing"
-order = 21
-
-[[tasks]]
-id = "cluster-resolution-by-directory-path"
-text = "Cluster resolution by directory path"
-status = "pending"
-section = "v0.9.0"
-group = "Cluster Packing"
-order = 22
-
-[[tasks]]
-id = "--with-tests-flag-include-test-files"
-text = "--with-tests flag (include test files)"
-status = "pending"
-section = "v0.9.0"
-group = "Cluster Packing"
-order = 23
-
-[[tasks]]
-id = "--with-boundary-flag-skeleton-boundary-files"
-text = "--with-boundary flag (skeleton boundary files)"
-status = "pending"
-section = "v0.9.0"
-group = "Cluster Packing"
-order = 24
-
-[[tasks]]
-id = "--no-boundary-flag-exclude-boundary-files"
-text = "--no-boundary flag (exclude boundary files)"
-status = "pending"
-section = "v0.9.0"
-group = "Cluster Packing"
-order = 25
-
-[[tasks]]
-id = "multiple-cluster-inclusion---cluster-a---cluster-b"
-text = "Multiple cluster inclusion (--cluster a --cluster b)"
-status = "pending"
-section = "v0.9.0"
-group = "Cluster Packing"
-order = 26
-
-[[tasks]]
-id = "slopchop-pack---trace-path-flag"
-text = "slopchop pack --trace PATH flag"
-status = "pending"
-section = "v0.9.0"
-group = "Trace Packing"
-order = 27
-
-[[tasks]]
-id = "--depth-n-limit-for-trace"
-text = "--depth N limit for trace"
-status = "pending"
-section = "v0.9.0"
-group = "Trace Packing"
-order = 28
-
-[[tasks]]
-id = "--forward-flag-dependencies-only"
-text = "--forward flag (dependencies only)"
-status = "pending"
-section = "v0.9.0"
-group = "Trace Packing"
-order = 29
-
-[[tasks]]
-id = "--reverse-flag-dependents-only"
-text = "--reverse flag (dependents only)"
-status = "pending"
-section = "v0.9.0"
-group = "Trace Packing"
-order = 30
-
-[[tasks]]
-id = "default-bidirectional-trace"
-text = "Default: bidirectional trace"
-status = "pending"
-section = "v0.9.0"
-group = "Trace Packing"
-order = 31
-
-[[tasks]]
-id = "trace-skeleton-hybrid-output"
-text = "Trace + skeleton hybrid output"
-status = "pending"
-section = "v0.9.0"
-group = "Trace Packing"
-order = 32
-
-[[tasks]]
-id = "multiple-trace-roots---trace-a---trace-b"
-text = "Multiple trace roots (--trace a --trace b)"
-status = "pending"
-section = "v0.9.0"
-group = "Trace Packing"
-order = 33
-
-[[tasks]]
-id = "dependency-first-ordering-topological"
-text = "Dependency-first ordering (topological)"
-status = "pending"
-section = "v0.9.0"
-group = "Context Ordering"
-order = 34
-
-[[tasks]]
-id = "leaf-files-appear-first"
-text = "Leaf files appear first"
-status = "pending"
-section = "v0.9.0"
-group = "Context Ordering"
-order = 35
-
-[[tasks]]
-id = "targetfocus-file-appears-last"
-text = "Target/focus file appears last"
-status = "pending"
-section = "v0.9.0"
-group = "Context Ordering"
-order = 36
-
-[[tasks]]
-id = "circular-dependency-handling-break-arbitrarily"
-text = "Circular dependency handling (break arbitrarily)"
-status = "pending"
-section = "v0.9.0"
-group = "Context Ordering"
-order = 37
-
-[[tasks]]
-id = "shared-dependency-hoisting"
-text = "Shared dependency hoisting"
-status = "pending"
-section = "v0.9.0"
-group = "Context Ordering"
-order = 38
-
-[[tasks]]
-id = "context_request-format-specification-no-test-documentation"
-text = "CONTEXT_REQUEST format specification"
-status = "no-test"
-section = "v0.9.0"
-group = "AI Context Protocol"
-order = 39
-
-[[tasks]]
-id = "ai-can-emit-cluster-requests"
-text = "AI can emit cluster requests"
-status = "pending"
-section = "v0.9.0"
-group = "AI Context Protocol"
-order = 40
-
-[[tasks]]
-id = "ai-can-emit-trace-requests"
-text = "AI can emit trace requests"
-status = "pending"
-section = "v0.9.0"
-group = "AI Context Protocol"
-order = 41
-
-[[tasks]]
-id = "ai-can-emit-file-requests"
-text = "AI can emit file requests"
-status = "pending"
-section = "v0.9.0"
-group = "AI Context Protocol"
-order = 42
-
-[[tasks]]
-id = "slopchop-fulfill-command-parse-ai-request"
-text = "slopchop fulfill command (parse AI request)"
-status = "pending"
-section = "v0.9.0"
-group = "AI Context Protocol"
-order = 43
-
-[[tasks]]
-id = "request-validation-clusterfile-exists"
-text = "Request validation (cluster/file exists)"
-status = "pending"
-section = "v0.9.0"
-group = "AI Context Protocol"
-order = 44
-
-[[tasks]]
-id = "block-triple-backticks"
-text = "Block triple backticks (```)"
-status = "pending"
-section = "v0.10.0"
-test = "tests/integration_apply.rs::test_rejects_markdown_fences"
-group = "Markdown Rejection"
-order = 0
-
-[[tasks]]
-id = "block-tilde-fences"
-text = "Block tilde fences (~~~)"
-status = "pending"
-section = "v0.10.0"
-test = "tests/integration_apply.rs::test_rejects_tilde_fences"
-group = "Markdown Rejection"
-order = 1
-
-[[tasks]]
-id = "markdown-fence-rejection-rationale-no-test-documentation-ai-escape-issues"
-text = "Markdown fence rejection rationale"
-status = "no-test"
-section = "v0.10.0"
-group = "Markdown Rejection"
-order = 2
-
-[[tasks]]
-id = "detect-unbalanced"
-text = "Detect unbalanced {"
-status = "pending"
-section = "v0.10.0"
-test = "tests/integration_apply.rs::test_detects_unbalanced_open_brace"
-group = "Brace Balancing"
-order = 3
-
-[[tasks]]
-id = "detect-unbalanced-1"
-text = "Detect unbalanced }"
-status = "pending"
-section = "v0.10.0"
-test = "tests/integration_apply.rs::test_detects_unbalanced_close_brace"
-group = "Brace Balancing"
-order = 4
-
-[[tasks]]
-id = "detect-unbalanced-2"
-text = "Detect unbalanced ["
-status = "pending"
-section = "v0.10.0"
-test = "tests/integration_apply.rs::test_detects_unbalanced_bracket"
-group = "Brace Balancing"
-order = 5
-
-[[tasks]]
-id = "detect-unbalanced-3"
-text = "Detect unbalanced ("
-status = "pending"
-section = "v0.10.0"
-test = "tests/integration_apply.rs::test_detects_unbalanced_paren"
-group = "Brace Balancing"
-order = 6
-
-[[tasks]]
-id = "brace-balance-algorithm-selection-no-test-design-decision"
-text = "Brace balance algorithm selection"
-status = "no-test"
-section = "v0.10.0"
-group = "Brace Balancing"
-order = 7
-
-[[tasks]]
-id = "string-literal-exclusion-from-brace-count"
-text = "String literal exclusion from brace count"
-status = "pending"
-section = "v0.10.0"
-group = "Brace Balancing"
-order = 8
-
-[[tasks]]
-id = "comment-exclusion-from-brace-count"
-text = "Comment exclusion from brace count"
-status = "pending"
-section = "v0.10.0"
-group = "Brace Balancing"
-order = 9
-
-[[tasks]]
-id = "--format-json"
-text = "--format json"
-status = "pending"
-section = "v0.11.0"
-group = "Output Formats"
-order = 0
-
-[[tasks]]
-id = "sarif-output-for-github"
-text = "SARIF output for GitHub"
-status = "pending"
-section = "v0.11.0"
-group = "Output Formats"
-order = 1
-
-[[tasks]]
-id = "slopchop-hook-install"
-text = "slopchop hook install"
-status = "pending"
-section = "v0.11.0"
-group = "Git Hooks"
-order = 2
-
-[[tasks]]
-id = "pre-commit-hook-script"
-text = "Pre-commit hook script"
-status = "pending"
-section = "v0.11.0"
-group = "Git Hooks"
-order = 3
-
-[[tasks]]
-id = "exit-0-on-clean"
-text = "Exit 0 on clean"
-status = "pending"
-section = "v0.11.0"
-group = "Exit Codes"
-order = 4
-
-[[tasks]]
-id = "exit-1-on-violations"
-text = "Exit 1 on violations"
-status = "pending"
-section = "v0.11.0"
-group = "Exit Codes"
-order = 5
-
-[[tasks]]
-id = "exit-2-on-error"
-text = "Exit 2 on error"
-status = "pending"
-section = "v0.11.0"
-group = "Exit Codes"
-order = 6
-
-[[tasks]]
-id = "github-actions-workflow-template"
-text = "GitHub Actions workflow template"
-status = "pending"
-section = "v0.11.0"
-group = "CI Templates"
-order = 7
-
-[[tasks]]
-id = "gitlab-ci-template"
-text = "GitLab CI template"
-status = "pending"
-section = "v0.11.0"
-group = "CI Templates"
-order = 8
-
-[[tasks]]
-id = "slopchop-init---ci-flag-generate-workflow"
-text = "slopchop init --ci flag (generate workflow)"
-status = "pending"
-section = "v0.11.0"
-group = "CI Templates"
-order = 9
-
-[[tasks]]
-id = "fail-fast-vs-report-all-modes"
-text = "Fail-fast vs report-all modes"
-status = "pending"
-section = "v0.11.0"
-group = "CI Templates"
-order = 10
-
-[[tasks]]
-id = "annotation-output-for-github-pr-comments"
-text = "Annotation output for GitHub PR comments"
-status = "pending"
-section = "v0.11.0"
-group = "CI Templates"
-order = 11
-
-[[tasks]]
-id = "slopchop-graph-command"
-text = "slopchop graph command"
-status = "pending"
-section = "v0.12.0"
-group = "Visualization Formats"
-order = 0
-
-[[tasks]]
-id = "dot-format-export-graphviz"
-text = "DOT format export (Graphviz)"
-status = "pending"
-section = "v0.12.0"
-group = "Visualization Formats"
-order = 1
-
-[[tasks]]
-id = "mermaid-format-export"
-text = "Mermaid format export"
-status = "pending"
-section = "v0.12.0"
-group = "Visualization Formats"
-order = 2
-
-[[tasks]]
-id = "--cluster-only-flag-show-clusters-not-files"
-text = "--cluster-only flag (show clusters, not files)"
-status = "pending"
-section = "v0.12.0"
-group = "Visualization Formats"
-order = 3
-
-[[tasks]]
-id = "--highlight-path-flag-color-specific-subgraph"
-text = "--highlight PATH flag (color specific subgraph)"
-status = "pending"
-section = "v0.12.0"
-group = "Visualization Formats"
-order = 4
-
-[[tasks]]
-id = "interactive-html-export-d3js"
-text = "Interactive HTML export (D3.js)"
-status = "pending"
-section = "v0.12.0"
-group = "Visualization Formats"
-order = 5
-
-[[tasks]]
-id = "terminal-ascii-graph-small-projects"
-text = "Terminal ASCII graph (small projects)"
-status = "pending"
-section = "v0.12.0"
-group = "Visualization Formats"
-order = 6
-
-[[tasks]]
-id = "slopchop-baseline-command-snapshot-current-violations"
-text = "slopchop baseline command (snapshot current violations)"
-status = "pending"
-section = "v0.13.0"
-group = "Baseline System"
-order = 0
-
-[[tasks]]
-id = "baseline-file-format-slopchop-baselinejson"
-text = "Baseline file format (.slopchop-baseline.json)"
-status = "pending"
-section = "v0.13.0"
-group = "Baseline System"
-order = 1
-
-[[tasks]]
-id = "baseline-comparison-mode-only-report-new-violations"
-text = "Baseline comparison mode (only report new violations)"
-status = "pending"
-section = "v0.13.0"
-group = "Baseline System"
-order = 2
-
-[[tasks]]
-id = "--baseline-flag-for-slopchop-scan"
-text = "--baseline flag for slopchop scan"
-status = "pending"
-section = "v0.13.0"
-group = "Baseline System"
-order = 3
-
-[[tasks]]
-id = "auto-generate-slopchopignore-for-existing-violations"
-text = "Auto-generate slopchop:ignore for existing violations"
-status = "pending"
-section = "v0.13.0"
-group = "Baseline System"
-order = 4
-
-[[tasks]]
-id = "gradual-tightening-guide-no-test-documentation"
-text = "Gradual tightening guide"
-status = "no-test"
-section = "v0.13.0"
-group = "Baseline System"
-order = 5
-
-[[tasks]]
-id = "published-to-cratesio-no-test"
-text = "Published to crates.io"
-status = "no-test"
-section = "v1.0.0"
-group = "Distribution"
-order = 0
-
-[[tasks]]
-id = "homebrew-formula-no-test"
-text = "Homebrew formula"
-status = "no-test"
-section = "v1.0.0"
-group = "Distribution"
-order = 1
-
-[[tasks]]
-id = "scoopwinget-packages-no-test"
-text = "Scoop/Winget packages"
-status = "no-test"
-section = "v1.0.0"
-group = "Distribution"
-order = 2
-
-[[tasks]]
-id = "documentation-site-no-test"
-text = "Documentation site"
-status = "no-test"
-section = "v1.0.0"
-group = "Documentation"
-order = 3
-
-[[tasks]]
-id = "logo-and-branding-no-test"
-text = "Logo and branding"
-status = "no-test"
-section = "v1.0.0"
-group = "Documentation"
-order = 4
-
-[[tasks]]
-id = "readme-finalized-no-test"
-text = "README finalized"
-status = "no-test"
-section = "v1.0.0"
-group = "Documentation"
-order = 5
-
-[[tasks]]
-id = "changelogmd-generation-no-test"
-text = "CHANGELOG.md generation"
-status = "no-test"
-section = "v1.0.0"
-group = "Documentation"
-order = 6
-
-[[tasks]]
-id = "contributingmd-guide-no-test"
-text = "CONTRIBUTING.md guide"
-status = "no-test"
-section = "v1.0.0"
-group = "Documentation"
-order = 7
-
-[[tasks]]
-id = "security-policy-securitymd-no-test"
-text = "Security policy (SECURITY.md)"
-status = "no-test"
-section = "v1.0.0"
-group = "Documentation"
-order = 8
-
-[[tasks]]
-id = "license-audit-dependency-licenses"
-text = "License audit (dependency licenses)"
-status = "pending"
-section = "v1.0.0"
-test = "tests/release.rs::test_license_audit"
-group = "Polish"
-order = 9
-
-[[tasks]]
-id = "binary-size-optimization-no-test"
-text = "Binary size optimization"
-status = "no-test"
-section = "v1.0.0"
-group = "Polish"
-order = 10
-
-[[tasks]]
-id = "startup-time-benchmarking-no-test"
-text = "Startup time benchmarking"
-status = "no-test"
-section = "v1.0.0"
-group = "Polish"
-order = 11
-
-[[tasks]]
-id = "cross-compilation-ci-linuxmacwindows-no-test"
-text = "Cross-compilation CI (linux/mac/windows)"
-status = "no-test"
-section = "v1.0.0"
-group = "Polish"
-order = 12
-
-[[tasks]]
 id = "fix-clippy-git"
 text = "Fix clippy must_use in git.rs"
 status = "done"
@@ -2715,7 +1296,7 @@ text = "Reduce complexity in dashboard nav"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 1
 
 [[tasks]]
 id = "harden-roadmap-parser"
@@ -2723,7 +1304,7 @@ text = "Prevent false positive roadmap parsing on inline text"
 status = "done"
 section = "v0.7.0"
 test = "tests/repro_roadmap_hardening.rs::test_roadmap_parser_ignores_inline_markers"
-order = 0
+order = 2
 
 [[tasks]]
 id = "fix-tui-apply-corruption"
@@ -2731,7 +1312,7 @@ text = "Fix TUI corruption during apply by suspending terminal mode"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 3
 
 [[tasks]]
 id = "refactor-tui-dashboard"
@@ -2739,7 +1320,7 @@ text = "Split TUI dashboard into smaller modules (input/apply)"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 4
 
 [[tasks]]
 id = "interactive-roadmap"
@@ -2747,7 +1328,7 @@ text = "Implement interactive roadmap in TUI (scroll, toggle)"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 5
 
 [[tasks]]
 id = "require-plan-option"
@@ -2755,15 +1336,15 @@ text = "Add config option to require plan blocks"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 6
 
 [[tasks]]
 id = "audit-fingerprint"
-text = "Implement Weisfeiler-Lehman AST fingerprinting for structural similarity"
+text = "Implement Weisfeiler-Lehman AST fingerprinting"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 7
 
 [[tasks]]
 id = "audit-similarity"
@@ -2771,15 +1352,15 @@ text = "Implement Union-Find clustering for duplicate detection"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 8
 
 [[tasks]]
 id = "audit-dead-code"
-text = "Implement call graph reachability for dead code detection"
+text = "Implement call graph reachability for dead code"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 9
 
 [[tasks]]
 id = "audit-patterns"
@@ -2787,7 +1368,7 @@ text = "Implement tree-sitter pattern matching for idiom detection"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 10
 
 [[tasks]]
 id = "audit-scoring"
@@ -2795,7 +1376,7 @@ text = "Implement impact scoring and prioritization system"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 11
 
 [[tasks]]
 id = "audit-cli"
@@ -2803,7 +1384,7 @@ text = "Add slopchop audit command with format options"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 12
 
 [[tasks]]
 id = "audit-report"
@@ -2811,7 +1392,7 @@ text = "Implement terminal, JSON, and AI output formatters"
 status = "done"
 section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 13
 
 [[tasks]]
 id = "fix-audit-violations-v070"
@@ -2819,215 +1400,566 @@ text = "Fix existing violations in src/audit"
 status = "done"
 section = "v0.7.0"
 test = "tests/unit_god_tier.rs::test_enhance_plan_generation"
-group = "God Tier Audit"
-order = 0
-
-[[tasks]]
-id = "struct-diff-engine"
-text = "Implement Structural Diff Engine (diff.rs)"
-status = "pending"
-section = "v0.7.0"
-group = "God Tier Audit"
-order = 0
-
-[[tasks]]
-id = "param-inference"
-text = "Implement Parameterization Inference (parameterize.rs)"
-status = "pending"
-section = "v0.7.0"
-group = "God Tier Audit"
-order = 0
-
-[[tasks]]
-id = "codegen-engine"
-text = "Implement Code Generation (codegen.rs)"
-status = "pending"
-section = "v0.7.0"
-group = "God Tier Audit"
-order = 0
-
-[[tasks]]
-id = "callsite-analysis"
-text = "Implement Call Site Analysis (callsites.rs)"
-status = "pending"
-section = "v0.7.0"
-group = "God Tier Audit"
-order = 0
-
-[[tasks]]
-id = "diagnostic-display"
-text = "Implement Diagnostic Display (rustc-style)"
-status = "pending"
-section = "v0.7.0"
-group = "God Tier Audit"
-order = 0
+order = 14
 
 [[tasks]]
 id = "god-tier-audit-diff"
 text = "God Tier Audit: AST Diffing (diff.rs)"
 status = "done"
-section = "v0.9.0"
+section = "v0.7.0"
 test = "tests/unit_god_tier.rs::test_diff_simple_variant"
-group = "God Tier Audit"
-order = 0
+order = 15
 
 [[tasks]]
 id = "god-tier-audit-parameterize"
-text = "God Tier Audit: Parameterization Inference (parameterize.rs)"
+text = "God Tier Audit: Parameterization Inference"
 status = "done"
-section = "v0.9.0"
+section = "v0.7.0"
 test = "tests/unit_god_tier.rs::test_parameterize_strategy_enum"
-group = "God Tier Audit"
-order = 0
+order = 16
 
 [[tasks]]
 id = "god-tier-audit-codegen"
-text = "God Tier Audit: Refactor CodeGen (codegen.rs)"
+text = "God Tier Audit: Refactor CodeGen"
 status = "done"
-section = "v0.9.0"
+section = "v0.7.0"
 test = "tests/unit_god_tier.rs::test_codegen_enum"
-group = "God Tier Audit"
-order = 0
+order = 17
 
 [[tasks]]
 id = "god-tier-audit-enhance"
-text = "God Tier Audit: Opportunity Enhancement (enhance.rs)"
+text = "God Tier Audit: Opportunity Enhancement"
 status = "done"
-section = "v0.9.0"
+section = "v0.7.0"
 test = "tests/unit_god_tier.rs::test_enhance_plan_generation"
-group = "God Tier Audit"
-order = 0
+order = 18
 
 [[tasks]]
-id = "god-tier-audit-callsites"
-text = "God Tier Audit: Call Site Rewriting (integrate callsites.rs, show before/after)"
-status = "pending"
-section = "v0.9.0"
-group = "God Tier Audit"
-order = 0
+id = "holographic-signatures-graph-integration"
+text = "Integrate RepoGraph into signatures command"
+status = "done"
+section = "v0.7.0"
+test = "tests/signatures_test.rs::test_holographic_signatures_graph"
+order = 19
 
 [[tasks]]
-id = "god-tier-audit-visual-diffs"
-text = "God Tier Audit: Full Function Bodies (thread hole values to codegen)"
-status = "pending"
-section = "v0.9.0"
-group = "God Tier Audit"
-order = 0
+id = "holographic-signatures-topo-sort"
+text = "Implement Topological Sort for signature output"
+status = "done"
+section = "v0.7.0"
+test = "tests/signatures_test.rs::test_holographic_signatures_topo_sort"
+order = 20
 
 [[tasks]]
-id = "god-tier-audit-source-markers"
-text = "God Tier Audit: Source Markers (^ pointing to differences)"
-status = "pending"
-section = "v0.9.0"
-order = 0
+id = "holographic-signatures-pagerank"
+text = "Add PageRank importance tags to signatures"
+status = "done"
+section = "v0.7.0"
+test = "tests/signatures_test.rs::test_holographic_signatures_pagerank"
+order = 21
+
+[[tasks]]
+id = "holographic-signatures-docstrings"
+text = "Extract and display first-line docstrings in signatures"
+status = "done"
+section = "v0.7.0"
+test = "tests/signatures_test.rs::test_holographic_signatures_docstrings"
+order = 22
+
+[[tasks]]
+id = "empty-task-id-filtering"
+text = "Empty task ID filtering"
+status = "done"
+section = "v0.7.0"
+test = "tests/signatures_test.rs::test_empty_task_id_filtering"
+order = 23
+
+[[tasks]]
+id = "task-id-collision-detection"
+text = "Task ID collision detection"
+status = "done"
+section = "v0.7.0"
+test = "tests/unit_roadmap_v2.rs::test_duplicate_add_rejected"
+order = 24
+
+[[tasks]]
+id = "clean-check-output-failures-only"
+text = "Clean check output (failures only)"
+status = "done"
+section = "v0.7.0"
+test = "tests/unit_cli_roadmap.rs::test_clean_check_output"
+order = 25
+
+[[tasks]]
+id = "no-test-skip"
+text = "[no-test] skip"
+status = "done"
+section = "v0.7.0"
+test = "tests/unit_roadmap_v2.rs::test_generator_notest_marker"
+order = 26
+
+[[tasks]]
+id = "explicit-anchor-verification"
+text = "Explicit anchor verification"
+status = "done"
+section = "v0.7.0"
+test = "tests/unit_cli_roadmap.rs::test_explicit_anchor_verification"
+order = 27
+
+[[tasks]]
+id = "missing-test-file-detection"
+text = "Missing test file detection"
+status = "done"
+section = "v0.7.0"
+test = "tests/unit_cli_roadmap.rs::test_missing_test_file_detection"
+order = 28
+
+[[tasks]]
+id = "missing-test-function-detection"
+text = "Missing test function detection"
+status = "done"
+section = "v0.7.0"
+test = "tests/unit_cli_roadmap.rs::test_missing_test_function_detection"
+order = 29
+
+[[tasks]]
+id = "audit-validates-naming-convention"
+text = "Audit validates naming convention"
+status = "done"
+section = "v0.7.0"
+test = "tests/unit_cli_roadmap.rs::test_audit_validates_naming"
+order = 30
+
+[[tasks]]
+id = "section-command-create-version-headers"
+text = "SECTION command (create version headers)"
+status = "done"
+section = "v0.7.0"
+test = "tests/unit_roadmap_v2_extra.rs::test_section_command"
+order = 31
+
+[[tasks]]
+id = "subsection-command-create-headers"
+text = "SUBSECTION command (create ### headers)"
+status = "done"
+section = "v0.7.0"
+test = "tests/unit_roadmap_v2_extra.rs::test_subsection_command"
+order = 32
+
+[[tasks]]
+id = "chain-command-sequential-adds"
+text = "CHAIN command (sequential adds)"
+status = "done"
+section = "v0.7.0"
+test = "tests/unit_roadmap_v2_extra.rs::test_chain_command"
+order = 33
+
+[[tasks]]
+id = "after-previous-keyword"
+text = "AFTER PREVIOUS keyword"
+status = "done"
+section = "v0.7.0"
+test = "src/roadmap_v2/parser.rs::tests::test_add_after_previous"
+order = 34
+
+[[tasks]]
+id = "after-text-exact-match"
+text = 'AFTER TEXT "exact" match'
+status = "done"
+section = "v0.7.0"
+test = "src/roadmap_v2/parser.rs::tests::test_add_after_text"
+order = 35
+
+[[tasks]]
+id = "after-line-n-match"
+text = "AFTER LINE N match"
+status = "done"
+section = "v0.7.0"
+test = "src/roadmap_v2/parser.rs::tests::test_add_after_line"
+order = 36
+
+[[tasks]]
+id = "pre-validation-all-after-targets-exist"
+text = "Pre-validation: all AFTER targets exist"
+status = "done"
+section = "v0.7.0"
+test = "[no-test]"
+order = 37
+
+[[tasks]]
+id = "pre-validation-no-slug-collisions"
+text = "Pre-validation: no slug collisions"
+status = "done"
+section = "v0.7.0"
+test = "[no-test]"
+order = 38
+
+[[tasks]]
+id = "pre-validation-no-circular-after-chains"
+text = "Pre-validation: no circular AFTER chains"
+status = "done"
+section = "v0.7.0"
+test = "[no-test]"
+order = 39
+
+[[tasks]]
+id = "fuzzy-match-suggestions-on-after-miss"
+text = "Fuzzy match suggestions on AFTER miss"
+status = "done"
+section = "v0.7.0"
+test = "[no-test]"
+order = 40
+
+[[tasks]]
+id = "atomic-file-write-temp-rename"
+text = "Atomic file write (temp → rename)"
+status = "done"
+section = "v0.7.0"
+test = "tests/integration_backup.rs::test_backup_dir_created"
+order = 41
 
 [[tasks]]
 id = "fix-similarity-math"
-text = "Fix fingerprint math capping near-duplicate scores at 0.3"
+text = "Fix fingerprint math"
 status = "done"
-section = "v0.7.1"
+section = "v0.7.0"
 test = "src/audit/fingerprint.rs::test_similarity_math"
-order = 0
+order = 42
 
 [[tasks]]
 id = "fix-polyglot-patterns"
 text = "Wire up language detection for pattern queries"
 status = "done"
-section = "v0.7.1"
+section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 43
 
 [[tasks]]
 id = "remove-dead-code-stub"
 text = "Delete src/audit/mod_append.rs"
 status = "done"
-section = "v0.7.1"
+section = "v0.7.0"
 test = "[no-test]"
-order = 0
+order = 44
 
 [[tasks]]
 id = "refactor-enhance-complexity"
-text = "Extract node matching logic in enhance.rs to reduce complexity"
+text = "Extract node matching logic in enhance.rs"
 status = "done"
-section = "v0.7.1"
+section = "v0.7.0"
 test = "[no-test]"
-order = 0
-
-[[tasks]]
-id = "refactor-workflow"
-text = "Simplify apply workflow: Non-blocking git check, summary reporting, auto-clipboard."
-status = "done"
-section = "v0.8.0"
-test = "[no-test]"
-order = 0
-
-[[tasks]]
-id = "god-tier-audit-cleanup"
-text = "Final polish of God Tier Audit (clippy fixes, test fixes)"
-status = "done"
-section = "v0.7.1"
-test = "[no-test]"
-order = 0
-
-[[tasks]]
-id = "holographic-signatures-graph-integration"
-text = "Integrate RepoGraph into signatures command (switch from alphabetical to graph-based)"
-status = "done"
-section = "v0.7.0"
-test = "tests/signatures_test.rs::test_holographic_signatures_graph"
-order = 0
-
-[[tasks]]
-id = "holographic-signatures-topo-sort"
-text = "Implement Topological Sort for signature output (base dependencies first)"
-status = "done"
-section = "v0.7.0"
-test = "tests/signatures_test.rs::test_holographic_signatures_topo_sort"
-order = 0
-
-[[tasks]]
-id = "holographic-signatures-pagerank"
-text = "Add PageRank importance tags (e.g., [CORE ARCHITECTURE]) to signatures"
-status = "done"
-section = "v0.7.0"
-test = "tests/signatures_test.rs::test_holographic_signatures_pagerank"
-order = 0
-
-[[tasks]]
-id = "holographic-signatures-docstrings"
-text = "Extract and display first-line docstrings in signature output"
-status = "done"
-section = "v0.7.0"
-test = "tests/signatures_test.rs::test_holographic_signatures_docstrings"
-order = 0
-
-[[tasks]]
-id = "task-3"
-text = "Enhance Biome/ESLint detection logic"
-status = "pending"
-section = "v0.7.0"
-order = 0
-
-[[tasks]]
-id = "fix-paranoia-violations"
-text = "Fix 'Law of Paranoia' violations in tests by replacing unwrap/expect with Result/?"
-status = "done"
-section = "v0.9.0"
-test = "tests/integration_pack.rs::test_nabla_delimiters_are_unique"
 order = 45
 
 [[tasks]]
-id = "new-task-123"
-text = "Description of the new task"
-status = "pending"
-section = "v0.9.0"
-test = "tests/some_test.rs::test_name"
+id = "god-tier-audit-cleanup"
+text = "Final polish of God Tier Audit"
+status = "done"
+section = "v0.7.0"
+test = "[no-test]"
 order = 46
 
 [[tasks]]
-id = "fix-paranoia-violation-god-tier"
-text = "Fix lingering .unwrap() in unit_god_tier.rs test"
+id = "rebaseline-roadmap"
+text = "Re-baseline roadmap (tasks.toml overhaul)"
 status = "done"
-section = "v0.9.0"
-test = "tests/unit_god_tier.rs"
-order = 47
+section = "v0.7.1"
+test = "[no-test]"
+group = "Truth"
+order = 0
+
+[[tasks]]
+id = "reject-markdown-fences"
+text = "Reject markdown fences in non-markdown files"
+status = "done"
+section = "v0.7.1"
+test = "tests/integration_apply.rs::test_rejects_markdown_fences"
+group = "Validation"
+order = 1
+
+[[tasks]]
+id = "roadmap-audit-exec"
+text = "Roadmap audit execution (--exec)"
+status = "done"
+section = "v0.7.1"
+test = "tests/unit_cli_roadmap.rs::test_roadmap_audit"
+group = "Validation"
+order = 2
+
+[[tasks]]
+id = "manifest-integrity-check"
+text = "Manifest integrity: Enforce all NEW/UPDATE files exist in extracted"
+status = "pending"
+section = "v0.7.2"
+group = "Manifest"
+order = 0
+
+[[tasks]]
+id = "manifest-delete-check"
+text = "Manifest integrity: Enforce DELETE entries have no extracted content"
+status = "pending"
+section = "v0.7.2"
+group = "Manifest"
+order = 1
+
+[[tasks]]
+id = "symlink-escape-protection"
+text = "Symlink escape protection"
+status = "done"
+section = "v0.7.2"
+test = "tests/integration_apply.rs::test_block_windows_absolute"
+group = "Filesystem"
+order = 2
+
+[[tasks]]
+id = "apply-level-rollback"
+text = "Apply-level rollback (restore from backup on failure)"
+status = "pending"
+section = "v0.7.2"
+group = "Transactionality"
+order = 3
+
+[[tasks]]
+id = "backup-retention-cleanup"
+text = "Backup retention cleanup (bounded growth)"
+status = "pending"
+section = "v0.7.2"
+group = "Transactionality"
+order = 4
+
+[[tasks]]
+id = "dry-run-mode-complete"
+text = "Dry-run mode (show plan + diff summary)"
+status = "pending"
+section = "v0.7.2"
+group = "Transactionality"
+order = 5
+
+[[tasks]]
+id = "remove-core-panics"
+text = "Remove panics from AST analysis queries"
+status = "pending"
+section = "v0.7.2"
+group = "Stability"
+order = 6
+
+[[tasks]]
+id = "verification-quoting-support"
+text = "Verification pipeline supports quoted args"
+status = "pending"
+section = "v0.7.3"
+group = "Verification"
+order = 0
+
+[[tasks]]
+id = "clear-stage-reporting"
+text = "Clear stage reporting (which check failed, why)"
+status = "pending"
+section = "v0.7.3"
+group = "Verification"
+order = 1
+
+[[tasks]]
+id = "git-config-controls"
+text = "Honor preferences.auto_commit and auto_push"
+status = "pending"
+section = "v0.7.3"
+group = "Git Automation"
+order = 2
+
+[[tasks]]
+id = "cli-git-overrides"
+text = "CLI overrides (--no-commit, --no-push)"
+status = "pending"
+section = "v0.7.3"
+group = "Git Automation"
+order = 3
+
+[[tasks]]
+id = "standardize-exit-codes"
+text = "Standardize exit codes (0/1/2)"
+status = "pending"
+section = "v0.7.3"
+group = "CLI Polish"
+order = 4
+
+[[tasks]]
+id = "remove-unwrap-from-tests"
+text = "Remove .unwrap()/.expect() from tests"
+status = "done"
+section = "v0.7.4"
+test = "tests/unit_god_tier.rs::test_enhance_plan_generation"
+group = "Self-Hosting"
+order = 0
+
+[[tasks]]
+id = "ensure-token-constraints"
+text = "Ensure codebase meets token/complexity constraints"
+status = "pending"
+section = "v0.7.4"
+group = "Self-Hosting"
+order = 1
+
+[[tasks]]
+id = "ci-baseline-github-actions"
+text = "CI baseline (GitHub Actions workflow)"
+status = "pending"
+section = "v0.7.4"
+group = "CI/CD"
+order = 2
+
+[[tasks]]
+id = "lock-cli-help-text"
+text = "Lock CLI help text + examples"
+status = "pending"
+section = "v0.8.0"
+group = "Polish"
+order = 0
+
+[[tasks]]
+id = "harden-error-messages"
+text = "Harden error messages (apply rejection UX)"
+status = "pending"
+section = "v0.8.0"
+group = "Polish"
+order = 1
+
+[[tasks]]
+id = "final-doc-pass"
+text = "Final doc pass (README/DESIGN/CHANGELOG)"
+status = "pending"
+section = "v0.8.0"
+group = "Documentation"
+order = 2
+
+[[tasks]]
+id = "publish-crates-io"
+text = "Publish to crates.io"
+status = "pending"
+section = "v1.0.0"
+group = "Distribution"
+order = 0
+
+[[tasks]]
+id = "homebrew-formula"
+text = "Homebrew formula"
+status = "pending"
+section = "v1.0.0"
+group = "Distribution"
+order = 1
+
+[[tasks]]
+id = "windows-install-path"
+text = "Windows install path (Scoop/Winget)"
+status = "pending"
+section = "v1.0.0"
+group = "Distribution"
+order = 2
+
+[[tasks]]
+id = "github-releases-binaries"
+text = "GitHub Releases binaries"
+status = "pending"
+section = "v1.0.0"
+group = "Distribution"
+order = 3
+
+[[tasks]]
+id = "license-audit"
+text = "License + dependency license audit"
+status = "pending"
+section = "v1.0.0"
+group = "Hygiene"
+order = 4
+
+[[tasks]]
+id = "slopchop-watch-command"
+text = "slopchop watch command (Daemon)"
+status = "pending"
+section = "v2.0.0"
+group = "Daemon"
+order = 0
+
+[[tasks]]
+id = "global-hotkey"
+text = "Global hotkey registration"
+status = "pending"
+section = "v2.0.0"
+group = "Daemon"
+order = 1
+
+[[tasks]]
+id = "system-notifications"
+text = "System notifications"
+status = "pending"
+section = "v2.0.0"
+group = "Daemon"
+order = 2
+
+[[tasks]]
+id = "slopchop-graph-command"
+text = "slopchop graph command (Visualization)"
+status = "pending"
+section = "v2.0.0"
+group = "Visualization"
+order = 3
+
+[[tasks]]
+id = "smart-context-error-driven"
+text = "Error-driven packing (Smart Context)"
+status = "pending"
+section = "v2.0.0"
+group = "Context"
+order = 4
+
+[[tasks]]
+id = "god-tier-audit-rewriting"
+text = "God Tier Audit: Rewriting (call-sites, bodies)"
+status = "pending"
+section = "v2.0.0"
+group = "Audit"
+order = 5
+
+[[tasks]]
+id = "legacy-adoption-baseline"
+text = "Legacy adoption baseline mode"
+status = "pending"
+section = "v2.0.0"
+group = "Adoption"
+order = 6
+
+[[tasks]]
+id = "new-task"
+text = "A brand new feature"
+status = "pending"
+section = "v0.1.0"
+test = "tests/new.rs::test_new"
+group = "New Group"
+order = 12
+
+[[tasks]]
+id = "first-new"
+text = "First new task"
+status = "pending"
+section = "v0.1.0"
+order = 13
+
+[[tasks]]
+id = "second-new"
+text = "Second new task (after previous)"
+status = "pending"
+section = "v0.1.0"
+order = 14
+
+[[tasks]]
+id = "after-text-task"
+text = "Task added after text match"
+status = "pending"
+section = "v0.1.0"
+order = 15
+
+[[tasks]]
+id = "after-line-task"
+text = "Task at specific line position"
+status = "pending"
+section = "v0.1.0"
+order = 16

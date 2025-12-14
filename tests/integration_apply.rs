@@ -316,4 +316,59 @@ fn test_block_backup_directory() {
     } else {
         panic!("Should block backup directory access");
     }
+}
+
+#[test]
+fn test_rejects_markdown_fences() {
+    use slopchop_core::apply::types::FileContent;
+
+    // Test backtick fences in non-markdown file
+    let manifest = vec![ManifestEntry {
+        path: "src/lib.rs".to_string(),
+        operation: Operation::Update,
+    }];
+    let mut extracted = HashMap::new();
+
+    // Use raw bytes to create the fence without triggering self-rejection
+    let backtick_fence = String::from_utf8(vec![0x60, 0x60, 0x60]).unwrap_or_default(); // slopchop:ignore
+    extracted.insert(
+        "src/lib.rs".to_string(),
+        FileContent {
+            content: format!("{backtick_fence}rust\nfn main() {{}}\n{backtick_fence}"),
+            line_count: 3,
+        },
+    );
+
+    let outcome = validator::validate(&manifest, &extracted);
+    if let slopchop_core::apply::types::ApplyOutcome::ValidationFailure { errors, .. } = outcome {
+        assert!(
+            errors.iter().any(|e| e.contains("Markdown fences")),
+            "Should reject markdown fences in .rs file: {errors:?}"
+        );
+    } else {
+        panic!("Should have rejected markdown fences in non-markdown file");
+    }
+
+    // Test that markdown files ARE allowed to have fences
+    let manifest_md = vec![ManifestEntry {
+        path: "README.md".to_string(),
+        operation: Operation::Update,
+    }];
+    let mut extracted_md = HashMap::new();
+    extracted_md.insert(
+        "README.md".to_string(),
+        FileContent {
+            content: format!("# Title\n{backtick_fence}rust\nfn main() {{}}\n{backtick_fence}"),
+            line_count: 4,
+        },
+    );
+
+    let outcome_md = validator::validate(&manifest_md, &extracted_md);
+    match outcome_md {
+        slopchop_core::apply::types::ApplyOutcome::Success { .. } => {}
+        slopchop_core::apply::types::ApplyOutcome::ValidationFailure { errors, .. } => {
+            panic!("Markdown files should allow fences: {errors:?}");
+        }
+        _ => panic!("Unexpected outcome for markdown file"),
+    }
 }
