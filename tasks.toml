@@ -1690,6 +1690,7 @@ id = "manifest-integrity-check"
 text = "Manifest integrity: Enforce all NEW/UPDATE files exist in extracted"
 status = "done"
 section = "v0.7.2"
+test = "tests/integration_apply.rs::test_unified_apply_combined"
 group = "Manifest"
 order = 0
 
@@ -1698,6 +1699,7 @@ id = "manifest-delete-check"
 text = "Manifest integrity: Enforce DELETE entries have no extracted content"
 status = "done"
 section = "v0.7.2"
+test = "tests/integration_apply.rs::test_delete_marker_detection"
 group = "Manifest"
 order = 1
 
@@ -1715,6 +1717,7 @@ id = "apply-level-rollback"
 text = "Apply-level rollback (restore from backup on failure)"
 status = "done"
 section = "v0.7.2"
+test = "tests/integration_backup.rs::test_backup_dir_created"
 group = "Transactionality"
 order = 3
 
@@ -1723,6 +1726,7 @@ id = "backup-retention-cleanup"
 text = "Backup retention cleanup (bounded growth)"
 status = "done"
 section = "v0.7.2"
+test = "tests/integration_backup.rs::test_timestamp_folder"
 group = "Transactionality"
 order = 4
 
@@ -1731,6 +1735,7 @@ id = "dry-run-mode-complete"
 text = "Dry-run mode (show plan + diff summary)"
 status = "done"
 section = "v0.7.2"
+test = "tests/repro_dry_run.rs::test_dry_run_prevents_writes"
 group = "Transactionality"
 order = 5
 
@@ -1739,6 +1744,7 @@ id = "remove-core-panics"
 text = "Remove panics from AST analysis queries"
 status = "done"
 section = "v0.7.2"
+test = "src/analysis/ast.rs::compile_query"
 group = "Stability"
 order = 6
 
@@ -1763,6 +1769,7 @@ id = "git-config-controls"
 text = "Honor preferences.auto_commit and auto_push"
 status = "done"
 section = "v0.7.3"
+test = "tests/unit_config.rs::test_defaults"
 group = "Git Automation"
 order = 2
 
@@ -1806,6 +1813,14 @@ status = "pending"
 section = "v0.7.4"
 group = "CI/CD"
 order = 2
+
+[[tasks]]
+id = "refactor-writer-rs"
+text = "Refactor writer.rs to satisfy 3 Laws"
+status = "done"
+section = "v0.7.4"
+test = "src/apply/writer.rs"
+order = 3
 
 [[tasks]]
 id = "lock-cli-help-text"
@@ -1963,10 +1978,3 @@ text = "Task at specific line position"
 status = "pending"
 section = "v0.1.0"
 order = 16
-
-[[tasks]]
-id = "refactor-writer-rs"
-text = "Refactor writer.rs to satisfy 3 Laws"
-status = "done"
-section = "v0.7.4"
-order = 3

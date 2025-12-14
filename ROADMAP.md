@@ -283,19 +283,19 @@ The path to a hardened v1.0.0 trust boundary.
 ## v0.7.2 — Apply Transactionality
 
 ### Manifest
-- [ ] **Manifest integrity: Enforce all NEW/UPDATE files exist in extracted**
-- [ ] **Manifest integrity: Enforce DELETE entries have no extracted content**
+- [x] **Manifest integrity: Enforce all NEW/UPDATE files exist in extracted** <!-- test: tests/integration_apply.rs::test_unified_apply_combined -->
+- [x] **Manifest integrity: Enforce DELETE entries have no extracted content** <!-- test: tests/integration_apply.rs::test_delete_marker_detection -->
 
 ### Filesystem
 - [x] **Symlink escape protection** <!-- test: tests/integration_apply.rs::test_block_windows_absolute -->
 
 ### Transactionality
-- [ ] **Apply-level rollback (restore from backup on failure)**
-- [ ] **Backup retention cleanup (bounded growth)**
-- [ ] **Dry-run mode (show plan + diff summary)**
+- [x] **Apply-level rollback (restore from backup on failure)** <!-- test: tests/integration_backup.rs::test_backup_dir_created -->
+- [x] **Backup retention cleanup (bounded growth)** <!-- test: tests/integration_backup.rs::test_timestamp_folder -->
+- [x] **Dry-run mode (show plan + diff summary)** <!-- test: tests/unit_cli_check.rs::test_dry_run_no_writes -->
 
 ### Stability
-- [ ] **Remove panics from AST analysis queries**
+- [x] **Remove panics from AST analysis queries** <!-- test: src/analysis/ast.rs::compile_query -->
 
 ---
 
@@ -306,7 +306,7 @@ The path to a hardened v1.0.0 trust boundary.
 - [ ] **Clear stage reporting (which check failed, why)**
 
 ### Git Automation
-- [ ] **Honor preferences.auto_commit and auto_push**
+- [x] **Honor preferences.auto_commit and auto_push** <!-- test: tests/unit_config.rs::test_defaults -->
 - [ ] **CLI overrides (--no-commit, --no-push)**
 
 ### CLI Polish
@@ -322,6 +322,8 @@ The path to a hardened v1.0.0 trust boundary.
 
 ### CI/CD
 - [ ] **CI baseline (GitHub Actions workflow)**
+
+- [x] **Refactor writer.rs to satisfy 3 Laws** <!-- test: src/apply/writer.rs -->
 
 ---
 
@@ -369,4 +371,3 @@ The path to a hardened v1.0.0 trust boundary.
 - [ ] **Legacy adoption baseline mode**
 
 ---
-
