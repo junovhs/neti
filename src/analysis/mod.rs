@@ -4,6 +4,7 @@
 pub mod ast;
 pub mod checks;
 pub mod metrics;
+pub mod safety;
 
 use crate::config::Config;
 use crate::lang::{Lang, QueryKind};
@@ -99,56 +100,51 @@ impl RuleEngine {
             config: &self.config.rules,
         };
 
-        Self::check_naming(lang, &ctx, report);
-        Self::check_complexity(lang, &ctx, report);
-        Self::check_banned(lang, &ctx, report);
-    }
-
-    fn check_naming(lang: Lang, ctx: &checks::CheckContext, report: &mut FileReport) {
-        let naming_str = lang.query(QueryKind::Naming);
-        if !naming_str.is_empty() {
-            if let Ok(q) = Query::new(lang.grammar(), naming_str) {
-                checks::check_naming(ctx, &q, &mut report.violations);
+        // Naming
+        if let Some(q_str) = Self::get_query(lang, QueryKind::Naming) {
+            if let Ok(q) = Query::new(lang.grammar(), q_str) {
+                checks::check_naming(&ctx, &q, &mut report.violations);
             }
         }
-    }
 
-    fn check_complexity(lang: Lang, ctx: &checks::CheckContext, report: &mut FileReport) {
-        let defs_str = lang.query(QueryKind::Defs);
-        let complexity_str = lang.query(QueryKind::Complexity);
-
-        if !defs_str.is_empty() && !complexity_str.is_empty() {
-            let defs_q = Query::new(lang.grammar(), defs_str);
-            let comp_q = Query::new(lang.grammar(), complexity_str);
-
-            if let (Ok(d), Ok(c)) = (defs_q, comp_q) {
-                checks::check_metrics(ctx, &d, &c, &mut report.violations);
+        // Complexity
+        let defs_str = Self::get_query(lang, QueryKind::Defs);
+        let comp_str = Self::get_query(lang, QueryKind::Complexity);
+        
+        if let (Some(d_str), Some(c_str)) = (defs_str, comp_str) {
+            if let (Ok(d), Ok(c)) = (Query::new(lang.grammar(), d_str), Query::new(lang.grammar(), c_str)) {
+                checks::check_metrics(&ctx, &d, &c, &mut report.violations);
             }
         }
-    }
 
-    fn check_banned(lang: Lang, ctx: &checks::CheckContext, report: &mut FileReport) {
+        // Banned & Safety (Rust Only)
         if lang == Lang::Rust {
-            // Updated to support method_call_expression for modern tree-sitter-rust
-            let banned_query_str = r"
+            let banned_query_str = r#"
                 (call_expression
                     function: (field_expression field: (field_identifier) @method)
-                    (#match? @method ^(unwrap|expect)$))
-                (method_call_expression
-                    name: (identifier) @method
-                    (#match? @method ^(unwrap|expect)$))
-                (method_invocation
-                    name: (identifier) @method
-                    (#match? @method ^(unwrap|expect)$))
-            ";
+                    (#match? @method "^(unwrap|expect)$"))
+            "#;
             if let Ok(q) = Query::new(lang.grammar(), banned_query_str) {
-                checks::check_banned(ctx, &q, &mut report.violations);
+                checks::check_banned(&ctx, &q, &mut report.violations);
             }
 
+            // Prepare safety context
+            let safety_ctx = safety::CheckContext {
+                root: ctx.root,
+                source: ctx.source,
+                filename: ctx.filename,
+                config: ctx.config,
+            };
+            // Use dummy query for safety (it uses traversal)
             if let Ok(q) = Query::new(lang.grammar(), "") {
-                checks::check_safety(ctx, &q, &mut report.violations);
+                safety::check_safety(&safety_ctx, &q, &mut report.violations);
             }
         }
+    }
+
+    fn get_query(lang: Lang, kind: QueryKind) -> Option<&'static str> {
+        let q = lang.query(kind);
+        if q.is_empty() { None } else { Some(q) }
     }
 
     fn is_ignored(path: &std::path::Path, patterns: &[String]) -> bool {

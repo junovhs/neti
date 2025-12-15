@@ -23,13 +23,13 @@ impl Lang {
         match ext {
             "rs" => Some(Self::Rust),
             "py" => Some(Self::Python),
-            "ts" | "tsx" | "js" | "jsx" => Some(Self::TypeScript),
+            "ts" | "tsx" => Some(Self::TypeScript),
             _ => None,
         }
     }
 
     #[must_use]
-    pub fn grammar(&self) -> Language {
+    pub fn grammar(self) -> Language {
         match self {
             Self::Rust => tree_sitter_rust::language(),
             Self::Python => tree_sitter_python::language(),
@@ -38,72 +38,58 @@ impl Lang {
     }
 
     #[must_use]
-    pub fn skeleton_replacement(&self) -> &'static str {
-        match self {
-            Self::Rust | Self::TypeScript => "{ ... }",
-            Self::Python => "...",
-        }
-    }
-
-    fn index(self) -> usize {
-        match self {
+    pub fn query(self, kind: QueryKind) -> &'static str {
+        let idx = match self {
             Self::Rust => 0,
             Self::Python => 1,
             Self::TypeScript => 2,
-        }
+        };
+        let q_idx = match kind {
+            QueryKind::Naming => 0,
+            QueryKind::Complexity => 1,
+            QueryKind::Imports => 2,
+            QueryKind::Defs => 3,
+            QueryKind::Exports => 4,
+            QueryKind::Skeleton => 5,
+        };
+        QUERIES[idx][q_idx]
     }
 
+    // Helpers for compatibility with existing modules
     #[must_use]
-    pub fn query(self, kind: QueryKind) -> &'static str {
-        let lang_idx = self.index();
-        let query_idx = kind as usize;
-        QUERIES[lang_idx][query_idx]
-    }
-
-    // --- PROXIES (Retained for API compatibility) ---
-
-    #[must_use]
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn q_naming(&self) -> &'static str {
+    pub fn q_naming(self) -> &'static str {
         self.query(QueryKind::Naming)
     }
-
     #[must_use]
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn q_complexity(&self) -> &'static str {
+    pub fn q_complexity(self) -> &'static str {
         self.query(QueryKind::Complexity)
     }
-
     #[must_use]
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn q_imports(&self) -> &'static str {
+    pub fn q_imports(self) -> &'static str {
         self.query(QueryKind::Imports)
     }
-
     #[must_use]
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn q_defs(&self) -> &'static str {
+    pub fn q_defs(self) -> &'static str {
         self.query(QueryKind::Defs)
     }
-
     #[must_use]
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn q_exports(&self) -> &'static str {
+    pub fn q_exports(self) -> &'static str {
         self.query(QueryKind::Exports)
     }
-
     #[must_use]
-    #[allow(clippy::trivially_copy_pass_by_ref)]
-    pub fn q_skeleton(&self) -> &'static str {
+    pub fn q_skeleton(self) -> &'static str {
         self.query(QueryKind::Skeleton)
     }
-
     #[must_use]
-    pub fn q_banned(&self) -> Option<&'static str> {
+    pub fn skeleton_replacement(self) -> &'static str {
         match self {
-            Self::Rust => Some(r"(call_expression function: (field_expression field: (field_identifier) @method)) @call"),
-            _ => None,
+            Self::Rust | Self::TypeScript => " { ... }",
+            Self::Python => "\n    ...",
         }
+    }
+    #[must_use]
+    pub fn q_banned(self) -> Option<&'static str> {
+        None // Handled in mod.rs for now
     }
 }
 
@@ -112,17 +98,18 @@ const QUERIES: [[&str; 6]; 3] = [
     // Rust
     [
         "(function_item name: (identifier) @name)", // Naming
-        r#"
+        r"
             (if_expression) @branch
             (match_arm) @branch
             (while_expression) @branch
             (for_expression) @branch
-            (binary_expression operator: ["&&" "||"]) @branch
-        "#, // Complexity
+            (binary_expression) @branch
+        ", // Complexity
         r"
             (use_declaration argument: (_) @import)
             (mod_item name: (identifier) @mod)
         ", // Imports
+        // Restored full Defs query
         r"
             (function_item name: (identifier) @name) @sig
             (struct_item name: (type_identifier) @name) @sig
@@ -132,6 +119,7 @@ const QUERIES: [[&str; 6]; 3] = [
             (const_item name: (identifier) @name) @sig
             (static_item name: (identifier) @name) @sig
             (type_item name: (type_identifier) @name) @sig
+            (mod_item name: (identifier) @name) @sig
         ", // Defs
         r"
             (function_item (visibility_modifier)) @export

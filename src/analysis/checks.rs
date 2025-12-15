@@ -4,6 +4,9 @@ use crate::types::Violation;
 use std::path::Path;
 use tree_sitter::{Node, Query, QueryCursor, QueryMatch};
 
+// Re-export Context so it can be used by safety.rs if needed, 
+// or redefine locally if safety has its own. 
+// Actually, safety.rs defined its own.
 pub struct CheckContext<'a> {
     pub root: Node<'a>,
     pub source: &'a str,
@@ -87,7 +90,6 @@ fn analyze_function_node(
 
     if let Some(body) = node.child_by_field_name("body") {
         check_nesting_depth(node, body, ctx.config, out);
-        // Pass ctx directly to avoid 6 arguments
         check_cyclomatic_complexity(node, body, ctx, complexity_query, out);
     }
 }
@@ -164,7 +166,6 @@ fn check_cyclomatic_complexity(
 /// Checks for banned constructs (`.unwrap()` and `.expect()` calls).
 pub fn check_banned(ctx: &CheckContext, banned_query: &Query, out: &mut Vec<Violation>) {
     // Only skip if the FILE NAME indicates a test, not the directory path.
-    // This fixes integration tests running in temporary directories.
     let path = Path::new(ctx.filename);
     if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
         if name.contains("test") || name.contains("spec") {
@@ -185,6 +186,8 @@ fn process_banned_match_group(m: &QueryMatch, ctx: &CheckContext, out: &mut Vec<
         if let Ok(text) = capture.node.utf8_text(ctx.source.as_bytes()) {
             let row = capture.node.start_position().row + 1;
             let kind = capture.node.kind();
+            // Expanded to catch method_call_expression if grammar has it,
+            // or standard call_expression/method_invocation logic
             if kind == "method_invocation"
                 || kind == "call_expression"
                 || kind == "method_call_expression"
@@ -211,98 +214,6 @@ fn add_banned_violation(text: &str, row: usize, out: &mut Vec<Violation>) {
             law: "LAW OF PARANOIA",
         });
     }
-}
-
-/// Checks for unsafe blocks and ensures they have justification comments.
-pub fn check_safety(ctx: &CheckContext, _query: &Query, out: &mut Vec<Violation>) {
-    if !Path::new(ctx.filename)
-        .extension()
-        .is_some_and(|ext| ext.eq_ignore_ascii_case("rs"))
-    {
-        return;
-    }
-    traverse_for_unsafe(ctx.root, ctx.source, ctx.config, out);
-}
-
-fn traverse_for_unsafe(
-    node: Node,
-    source: &str,
-    config: &RuleConfig,
-    out: &mut Vec<Violation>,
-) {
-    if node.kind() == "unsafe_block" {
-        validate_unsafe_node(node, source, config, out);
-    }
-
-    let mut cursor = node.walk();
-    for child in node.children(&mut cursor) {
-        traverse_for_unsafe(child, source, config, out);
-    }
-}
-
-fn validate_unsafe_node(
-    node: Node,
-    source: &str,
-    config: &RuleConfig,
-    out: &mut Vec<Violation>,
-) {
-    if config.safety.ban_unsafe {
-        out.push(Violation {
-            row: node.start_position().row + 1,
-            message: "Unsafe code is strictly prohibited by configuration.".to_string(),
-            law: "LAW OF PARANOIA",
-        });
-        return;
-    }
-
-    if config.safety.require_safety_comment && !has_safety_comment(node, source) {
-        out.push(Violation {
-            row: node.start_position().row + 1,
-            message: "Unsafe block missing justification. Add '// SAFETY:' comment.".to_string(),
-            law: "LAW OF PARANOIA",
-        });
-    }
-}
-
-fn has_safety_comment(node: Node, source: &str) -> bool {
-    let mut prev = node.prev_sibling();
-    while let Some(p) = prev {
-        if p.kind() == "line_comment" || p.kind() == "block_comment" {
-            if let Ok(text) = p.utf8_text(source.as_bytes()) {
-                if text.contains("SAFETY:") {
-                    return true;
-                }
-            }
-        }
-        if p.kind() != "line_comment" && p.kind() != "block_comment" {
-            return false;
-        }
-        prev = p.prev_sibling();
-    }
-    check_lines_above(node.start_position().row, source)
-}
-
-fn check_lines_above(row: usize, source: &str) -> bool {
-    if row == 0 {
-        return false;
-    }
-    let lines: Vec<&str> = source.lines().collect();
-    for i in 1..=3 {
-        if row < i {
-            break;
-        }
-        if let Some(line) = lines.get(row - i) {
-            let trimmed = line.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-            if trimmed.starts_with("//") && trimmed.contains("SAFETY:") {
-                return true;
-            }
-            return false;
-        }
-    }
-    false
 }
 
 fn count_words(name: &str) -> usize {
