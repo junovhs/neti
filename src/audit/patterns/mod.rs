@@ -2,6 +2,7 @@
 
 pub mod detect;
 pub mod registry;
+pub mod registry_extra;
 
 use crate::audit::types::{PatternLocation, RepeatedPattern};
 use std::collections::HashMap;
@@ -9,6 +10,7 @@ use std::path::PathBuf;
 
 pub use detect::{detect_custom, detect_in_file};
 pub use registry::PATTERNS;
+pub use registry_extra::EXTRA_PATTERNS;
 
 /// A pattern template to search for.
 pub struct PatternTemplate {
@@ -76,47 +78,58 @@ pub fn aggregate(matches: Vec<PatternMatch>) -> Vec<RepeatedPattern> {
     let mut patterns = Vec::new();
 
     for (name, group_matches) in groups {
-        let template = PATTERNS.iter().find(|t| t.name == name);
-        let min_occurrences = template.map_or(3, |t| t.min_occurrences);
-
-        if group_matches.len() < min_occurrences {
-            continue;
+        if let Some(pattern) = build_repeated_pattern(&name, &group_matches) {
+            patterns.push(pattern);
         }
-
-        let description = template.map_or_else(|| name.clone(), |t| t.description.to_string());
-
-        let locations: Vec<PatternLocation> = group_matches
-            .iter()
-            .map(|m| PatternLocation {
-                file: m.file.clone(),
-                start_line: m.start_line,
-                end_line: m.end_line,
-            })
-            .collect();
-
-        let avg_size: usize = group_matches
-            .iter()
-            .map(|m| m.end_line - m.start_line + 1)
-            .sum::<usize>()
-            / group_matches.len().max(1);
-
-        let potential_savings = avg_size * (group_matches.len() - 1);
-
-        let signature = group_matches
-            .first()
-            .map_or_else(String::new, |m| m.matched_text.clone());
-
-        patterns.push(RepeatedPattern {
-            description,
-            locations,
-            signature,
-            potential_savings,
-        });
     }
 
     patterns.sort_by(|a, b| b.locations.len().cmp(&a.locations.len()));
-
     patterns
+}
+
+fn build_repeated_pattern(name: &str, group_matches: &[PatternMatch]) -> Option<RepeatedPattern> {
+    let template = find_template(name);
+    let min_occurrences = template.map_or(3, |t| t.min_occurrences);
+
+    if group_matches.len() < min_occurrences {
+        return None;
+    }
+
+    let description = template.map_or_else(|| name.to_string(), |t| t.description.to_string());
+
+    let locations: Vec<PatternLocation> = group_matches
+        .iter()
+        .map(|m| PatternLocation {
+            file: m.file.clone(),
+            start_line: m.start_line,
+            end_line: m.end_line,
+        })
+        .collect();
+
+    let avg_size: usize = group_matches
+        .iter()
+        .map(|m| m.end_line - m.start_line + 1)
+        .sum::<usize>()
+        / group_matches.len().max(1);
+
+    let potential_savings = avg_size * (group_matches.len() - 1);
+    let signature = group_matches
+        .first()
+        .map_or_else(String::new, |m| m.matched_text.clone());
+
+    Some(RepeatedPattern {
+        description,
+        locations,
+        signature,
+        potential_savings,
+    })
+}
+
+fn find_template(name: &str) -> Option<&'static PatternTemplate> {
+    PATTERNS
+        .iter()
+        .chain(EXTRA_PATTERNS.iter())
+        .find(|t| t.name == name)
 }
 
 /// Provides recommendations for extracting repeated patterns.
@@ -130,14 +143,12 @@ pub fn recommend_extraction(pattern: &RepeatedPattern) -> String {
         .collect();
 
     if files.len() == 1 {
-        format!(
-            "Extract a helper function in {} to consolidate {count} occurrences",
-            files.iter().next().unwrap_or(&String::new()),
-        )
+        let file = files.iter().next().map_or("file", |s| s.as_str());
+        format!("Extract a helper function in {file} to consolidate {count} occurrences")
     } else {
         format!(
             "Consider creating a shared utility module for {count} occurrences across {} files",
             files.len()
         )
     }
-}
+}

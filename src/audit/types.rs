@@ -7,12 +7,11 @@ use std::path::PathBuf;
 
 /// A structural fingerprint of a code unit (function, struct, impl block).
 /// Uses multiple hash strategies for semantic similarity detection.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct Fingerprint {
     /// Full structural hash (Weisfeiler-Lehman style, identifier-invariant).
     pub hash: u64,
     /// Control flow only hash - ignores expressions, captures branching structure.
-    /// Two functions with same CFG but different expressions will match here.
     pub cfg_hash: u64,
     /// Depth of the AST subtree.
     pub depth: usize,
@@ -24,20 +23,6 @@ pub struct Fingerprint {
     pub loop_count: usize,
     /// Number of return/break/continue points.
     pub exit_count: usize,
-}
-
-impl Default for Fingerprint {
-    fn default() -> Self {
-        Self {
-            hash: 0,
-            cfg_hash: 0,
-            depth: 0,
-            node_count: 0,
-            branch_count: 0,
-            loop_count: 0,
-            exit_count: 0,
-        }
-    }
 }
 
 /// A code unit that can be fingerprinted and compared.
@@ -115,6 +100,15 @@ pub enum DeadCodeReason {
 impl DeadCodeReason {
     #[must_use]
     pub const fn label(self) -> &'static str {
+        match self {
+            Self::Unreachable => "unreachable",
+            Self::Unused => "unused",
+            Self::OnlyDeadCallers => "only dead callers",
+        }
+    }
+
+    #[must_use]
+    pub const fn explanation(self) -> &'static str {
         match self {
             Self::Unreachable => "unreachable from entry points",
             Self::Unused => "defined but never used",

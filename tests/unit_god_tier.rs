@@ -104,8 +104,12 @@ fn test_enhance_plan_generation() -> Result<()> {
         end_line: 1,
         fingerprint: Fingerprint {
             hash: 0,
+            cfg_hash: 0,
             depth: 0,
             node_count: 0,
+            branch_count: 0,
+            loop_count: 0,
+            exit_count: 0,
         },
         tokens: 10,
     };

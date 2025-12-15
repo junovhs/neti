@@ -7,6 +7,7 @@
 //! - **Patterns**: Repeated idioms that could be extracted
 
 pub mod callsites;
+pub mod cfg;
 pub mod codegen;
 pub mod dead_code;
 pub mod diff;
