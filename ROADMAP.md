@@ -271,10 +271,11 @@ The path to a hardened v1.0.0 trust boundary.
 - [x] **Refactor naming tests in unit_analysis.rs to reduce duplication** <!-- test: tests/unit_analysis.rs::test_snake_case_words -->
 - [x] **Refactor graph extraction tests to reduce duplication** <!-- test: tests/unit_graph.rs::test_rust_use_extraction -->
 - [x] **Refactor cli roadmap tests to reduce duplication** <!-- test: tests/unit_cli_roadmap.rs::test_roadmap_tasks -->
-- [ ] **Consolidate duplicate clipboard pipe logic into utils.rs**
-- [ ] **Standardize Config initialization using Config::load()**
-- [ ] **Fix High Arity violation in checks.rs**
-- [ ] **Fix High Complexity violation in graph.rs**
+- [x] **Consolidate duplicate clipboard pipe logic into utils.rs**
+- [x] **Standardize Config initialization using Config::load()**
+- [x] **Fix High Arity violation in checks.rs**
+- [x] **Fix High Complexity violation in graph.rs**
+- [x] **Refactor TUI tab navigation to reduce duplication**
 
 ---
 

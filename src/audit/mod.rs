@@ -1,4 +1,3 @@
-// src/audit/mod.rs
 //! Consolidation audit system for identifying code cleanup opportunities.
 //!
 //! This module provides comprehensive analysis to find:
@@ -14,27 +13,28 @@ pub mod diff;
 pub mod display;
 pub mod enhance;
 pub mod fingerprint;
+pub mod fp_similarity;
 pub mod parameterize;
 pub mod patterns;
 pub mod report;
 pub mod scoring;
 pub mod similarity;
+pub mod similarity_core;
 pub mod types;
 
-pub use types::{AuditReport, AuditStats, Opportunity, OpportunityKind};
+// Re-export AuditReport so cli/audit.rs can find it via crate::audit::AuditReport
+pub use types::AuditReport;
 
+use crate::audit::report::format_terminal;
+use crate::audit::scoring::rank_opportunities;
 use crate::config::Config;
 use crate::discovery;
 use crate::lang::Lang;
-use crate::tokens::Tokenizer;
+use crate::spinner::Spinner;
 use anyhow::Result;
 use rayon::prelude::*;
-use std::collections::HashMap;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::Instant;
-use tree_sitter::Parser;
-use types::{CodeUnit, CodeUnitKind, DeadCode};
 
 /// Options for the consolidation audit.
 #[derive(Debug, Clone)]
@@ -66,214 +66,187 @@ impl Default for AuditOptions {
     }
 }
 
+/// Container for all analysis results from a single file.
+/// This prevents re-parsing the file multiple times.
+#[derive(Default)]
+struct AnalysisResult {
+    units: Vec<types::CodeUnit>,
+    references: Vec<(PathBuf, String, String)>,
+    patterns: Vec<patterns::PatternMatch>,
+}
+
 /// Runs the consolidation audit.
 ///
 /// # Errors
 /// Returns error if file discovery or parsing fails.
 pub fn run(options: &AuditOptions) -> Result<AuditReport> {
-    let start = Instant::now();
+    let start_time = Instant::now();
+    let config = Config::default();
 
-    let config = Config::load();
-
+    let _spin = Spinner::start("Discovering files...");
     let files = discovery::discover(&config)?;
+    let file_count = files.len();
 
-    let (all_units, all_patterns, file_contents) = analyze_files(&files, options);
+    // Single-pass analysis
+    let _spin = Spinner::start("Analyzing code...");
+    let results: Vec<AnalysisResult> = files
+        .par_iter()
+        .flat_map(|path| analyze_file(path, options))
+        .collect();
 
-    let clusters = if options.detect_duplicates {
-        similarity::find_clusters(&all_units)
-    } else {
-        Vec::new()
-    };
+    // Aggregate results
+    let mut all_units = Vec::new();
+    let mut all_references = Vec::new();
+    let mut all_patterns = Vec::new();
 
-    let dead_code = if options.detect_dead_code {
-        detect_dead_code(&all_units, &file_contents)
-    } else {
-        Vec::new()
-    };
+    for res in results {
+        all_units.extend(res.units);
+        all_references.extend(res.references);
+        all_patterns.extend(res.patterns);
+    }
 
-    let repeated_patterns = if options.detect_patterns {
-        patterns::aggregate(all_patterns)
-    } else {
-        Vec::new()
-    };
-
+    let unit_count = all_units.len();
     let mut opportunities = Vec::new();
-
-    for cluster in &clusters {
-        opportunities.push(scoring::score_duplication(cluster, "audit"));
-    }
-
-    for dead in &dead_code {
-        opportunities.push(scoring::score_dead_code(dead, "audit"));
-    }
-
-    for pattern in &repeated_patterns {
-        opportunities.push(scoring::score_pattern(pattern, "audit"));
-    }
-
-    // [God Tier Audit] Enhance top duplication opportunities with refactoring plans
-    // Sort first to ensure we only spend compute on the most impactful items.
-    opportunities = scoring::rank_opportunities(opportunities);
-
-    // We enhance in-place for the top results before truncating.
-    // The complexity of diffing is high, so we limit it.
-    let enhance_limit = options.max_opportunities.min(10);
-
-    enhance::enhance_opportunities(&mut opportunities, enhance_limit, &config);
-
-    if opportunities.len() > options.max_opportunities {
-        opportunities.truncate(options.max_opportunities);
-    }
-
-    let total_potential_savings: usize = opportunities.iter().map(|o| o.impact.lines_saved).sum();
-
-    let stats = AuditStats {
-        files_analyzed: files.len(),
-        units_extracted: all_units.len(),
-        similarity_clusters: clusters.len(),
-        dead_code_units: dead_code.len(),
-        pattern_instances: repeated_patterns.iter().map(|p| p.locations.len()).sum(),
-        total_potential_savings,
-        duration_ms: start.elapsed().as_millis(),
+    let mut stats = types::AuditStats {
+        files_analyzed: file_count,
+        units_extracted: unit_count,
+        ..Default::default()
     };
 
-    Ok(AuditReport {
-        opportunities,
+    // 1. Similarity / Duplication
+    if options.detect_duplicates {
+        let _spin = Spinner::start("Analyzing similarity...");
+        let clusters = similarity::find_clusters(&all_units);
+        stats.similarity_clusters = clusters.len();
+        stats.total_potential_savings += clusters
+            .iter()
+            .map(|c| c.potential_savings)
+            .sum::<usize>();
+
+        for (i, cluster) in clusters.iter().enumerate() {
+            let opp = scoring::score_duplication(cluster, &format!("DUP-{:03}", i + 1));
+            opportunities.push(opp);
+        }
+    }
+
+    // 2. Dead Code
+    if options.detect_dead_code {
+        let _spin = Spinner::start("Detecting dead code...");
+        let dead_code_results =
+            dead_code::detect(&all_units, &all_references, &["main".to_string()]);
+
+        stats.dead_code_units = dead_code_results.len();
+        for (i, dead) in dead_code_results.iter().enumerate() {
+            let opp = scoring::score_dead_code(dead, &format!("DEAD-{:03}", i + 1));
+            opportunities.push(opp);
+        }
+    }
+
+    // 3. Patterns
+    if options.detect_patterns {
+        let _spin = Spinner::start("Scanning patterns...");
+        let repeated = patterns::aggregate(all_patterns);
+
+        stats.pattern_instances = repeated.len();
+        for (i, pattern) in repeated.iter().enumerate() {
+            let opp = scoring::score_pattern(pattern, &format!("PAT-{:03}", i + 1));
+            opportunities.push(opp);
+        }
+    }
+
+    // Enhance top opportunities with plans
+    enhance::enhance_opportunities(&mut opportunities, 5, &config);
+
+    let ranked = rank_opportunities(opportunities);
+    let final_opps = ranked
+        .into_iter()
+        .take(options.max_opportunities)
+        .collect();
+
+    stats.duration_ms = start_time.elapsed().as_millis();
+
+    Ok(types::AuditReport {
+        opportunities: final_opps,
         stats,
     })
 }
 
-/// Formats the report according to the specified format.
-#[must_use]
-pub fn format_report(report: &AuditReport, format: &str) -> String {
-    match format {
-        "json" => report::format_json(report),
-        "ai" => report::format_ai_prompt(report),
-        _ => report::format_terminal(report),
-    }
-}
+fn analyze_file(path: &PathBuf, options: &AuditOptions) -> Option<AnalysisResult> {
+    let content = std::fs::read_to_string(path).ok()?;
+    let lang = Lang::from_ext(path.extension()?.to_str()?)?;
 
-fn analyze_files(
-    files: &[PathBuf],
-    options: &AuditOptions,
-) -> (
-    Vec<CodeUnit>,
-    Vec<patterns::PatternMatch>,
-    HashMap<PathBuf, String>,
-) {
-    let results: Vec<_> = files
-        .par_iter()
-        .filter_map(|path| analyze_file(path, options))
-        .collect();
-
-    let mut all_units = Vec::new();
-    let mut all_patterns = Vec::new();
-    let mut file_contents = HashMap::new();
-
-    for (units, pattern_matches, path, content) in results {
-        all_units.extend(units);
-        all_patterns.extend(pattern_matches);
-        file_contents.insert(path, content);
-    }
-
-    (all_units, all_patterns, file_contents)
-}
-
-fn analyze_file(
-    path: &Path,
-    options: &AuditOptions,
-) -> Option<(Vec<CodeUnit>, Vec<patterns::PatternMatch>, PathBuf, String)> {
-    let content = fs::read_to_string(path).ok()?;
-    let ext = path.extension().and_then(|s| s.to_str())?;
-    let lang = Lang::from_ext(ext)?;
-    let grammar = lang.grammar();
-
-    let mut parser = Parser::new();
-    if parser.set_language(grammar).is_err() {
+    let mut parser = tree_sitter::Parser::new();
+    if parser.set_language(lang.grammar()).is_err() {
         return None;
     }
 
     let tree = parser.parse(&content, None)?;
+    let mut result = AnalysisResult::default();
 
+    // 1. Extract Units (Always needed for core stats, even if dups disabled)
     let raw_units = fingerprint::extract_units(&content, &tree);
-    let units: Vec<CodeUnit> = raw_units
+    result.units = raw_units
         .into_iter()
-        .filter(|(_, _, start, end, _)| end - start + 1 >= options.min_unit_lines)
-        .map(|(name, kind, start_line, end_line, fp)| {
-            let unit_content = extract_lines(&content, start_line, end_line);
-            let tokens = Tokenizer::count(&unit_content);
-
-            CodeUnit {
-                file: path.to_path_buf(),
+        .map(|(name, kind_str, start, end, fp)| {
+            let kind = map_kind(kind_str);
+            let tokens = estimate_tokens(&content, start, end);
+            types::CodeUnit {
+                file: path.clone(),
                 name,
-                kind: parse_unit_kind(kind),
-                start_line,
-                end_line,
+                kind,
+                start_line: start,
+                end_line: end,
                 fingerprint: fp,
                 tokens,
             }
         })
         .collect();
 
-    let pattern_matches = if options.detect_patterns {
-        patterns::detect_in_file(&content, path, &tree, grammar)
-    } else {
-        Vec::new()
-    };
+    // 2. Extract References (for Dead Code)
+    if options.detect_dead_code {
+        let raw_refs = dead_code::analysis::extract_references(&content, path, &tree);
+        result.references = raw_refs
+            .into_iter()
+            .map(|(caller, callee)| (path.clone(), caller, callee))
+            .collect();
+    }
 
-    Some((units, pattern_matches, path.to_path_buf(), content))
+    // 3. Detect Patterns
+    if options.detect_patterns {
+        result.patterns = patterns::detect::detect_in_file(&content, path, &tree, lang.grammar());
+    }
+
+    Some(result)
 }
 
-fn extract_lines(content: &str, start: usize, end: usize) -> String {
-    content
-        .lines()
-        .skip(start.saturating_sub(1))
-        .take(end - start + 1)
-        .collect::<Vec<_>>()
-        .join("\n")
-}
-
-fn parse_unit_kind(kind: &str) -> CodeUnitKind {
-    match kind {
+fn map_kind(kind_str: &str) -> types::CodeUnitKind {
+    use types::CodeUnitKind;
+    match kind_str {
+        "function" => CodeUnitKind::Function,
         "method" => CodeUnitKind::Method,
         "struct" => CodeUnitKind::Struct,
         "enum" => CodeUnitKind::Enum,
         "trait" => CodeUnitKind::Trait,
         "impl" => CodeUnitKind::Impl,
-        "module" => CodeUnitKind::Module,
-        // "function" and everything else
-        _ => CodeUnitKind::Function,
+        _ => CodeUnitKind::Module,
     }
 }
 
-fn detect_dead_code(units: &[CodeUnit], file_contents: &HashMap<PathBuf, String>) -> Vec<DeadCode> {
-    let mut all_refs = Vec::new();
+fn estimate_tokens(content: &str, start_line: usize, end_line: usize) -> usize {
+    content
+        .lines()
+        .skip(start_line.saturating_sub(1))
+        .take(end_line - start_line + 1)
+        .flat_map(str::split_whitespace)
+        .count()
+}
 
-    for (path, content) in file_contents {
-        let Some(ext) = path.extension().and_then(|s| s.to_str()) else {
-            continue;
-        };
-
-        let Some(lang) = Lang::from_ext(ext) else {
-            continue;
-        };
-
-        let mut parser = Parser::new();
-        if parser.set_language(lang.grammar()).is_err() {
-            continue;
-        }
-
-        let Some(tree) = parser.parse(content, None) else {
-            continue;
-        };
-
-        let refs = dead_code::extract_references(content, path, &tree);
-        for (from, to) in refs {
-            all_refs.push((path.clone(), from, to));
-        }
+/// Formats the report according to the specified format.
+#[must_use]
+pub fn format_report(report: &types::AuditReport, format: &str) -> String {
+    match format {
+        "json" => report::json::format_json(report),
+        "ai" => report::ai::format_ai_prompt(report),
+        _ => format_terminal(report),
     }
-
-    let entry_points = vec!["main".to_string(), "run".to_string(), "new".to_string()];
-
-    dead_code::detect(units, &all_refs, &entry_points)
 }

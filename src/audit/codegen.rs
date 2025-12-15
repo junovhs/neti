@@ -1,4 +1,8 @@
+// src/audit/codegen.rs
+//! Code generation for refactoring suggestions.
+
 use super::parameterize::RefactorStrategy;
+use super::types::CodeUnitKind;
 use std::fmt::Write;
 
 /// Generates a consolidated refactoring plan from strategies and unit names.
@@ -9,7 +13,24 @@ pub fn generate_consolidated_plan(
     strategies: &[RefactorStrategy],
     unit_names: &[String],
 ) -> Result<String, std::fmt::Error> {
+    generate_consolidated_plan_with_kind(strategies, unit_names, CodeUnitKind::Function)
+}
+
+/// Generates a consolidated refactoring plan, aware of the unit kind.
+///
+/// # Errors
+/// Returns error if code generation fails.
+pub fn generate_consolidated_plan_with_kind(
+    strategies: &[RefactorStrategy],
+    unit_names: &[String],
+    kind: CodeUnitKind,
+) -> Result<String, std::fmt::Error> {
     let mut buffer = String::new();
+
+    // Handle enums specially - they shouldn't suggest function consolidation
+    if kind == CodeUnitKind::Enum {
+        return generate_enum_suggestion(&mut buffer, unit_names);
+    }
 
     let has_enum_strategy = strategies
         .iter()
@@ -19,41 +40,80 @@ pub fn generate_consolidated_plan(
         .any(|s| matches!(s, RefactorStrategy::GenericParameter { .. }));
 
     if has_generic || has_enum_strategy {
-        let enum_name = infer_enum_name(unit_names);
-        let variants: Vec<String> = unit_names.iter().map(|n| to_variant_name(n)).collect();
-
-        writeln!(buffer, "// REFACTORING SUGGESTION")?;
-        writeln!(buffer, "//")?;
-        writeln!(
-            buffer,
-            "// These {} functions are structurally identical.",
-            unit_names.len()
-        )?;
-        writeln!(
-            buffer,
-            "// Consolidate into one function with an enum parameter:"
-        )?;
-        writeln!(buffer)?;
-        writeln!(buffer, "#[derive(Debug, Clone, Copy)]")?;
-        writeln!(buffer, "pub enum {enum_name} {{")?;
-        for variant in &variants {
-            writeln!(buffer, "    {variant},")?;
-        }
-        writeln!(buffer, "}}")?;
-        writeln!(buffer)?;
-        writeln!(buffer, "// Unified function signature:")?;
-        writeln!(buffer, "pub fn query(&self, kind: {enum_name}) -> &'static str {{")?;
-        writeln!(buffer, "    match (self, kind) {{")?;
-        for variant in &variants {
-            writeln!(buffer, "        (Self::Rust, {enum_name}::{variant}) => todo!(),")?;
-        }
-        writeln!(buffer, "        // #__SLOPCHOP_IGNORE__# other Lang variants")?;
-        writeln!(buffer, "    }}")?;
-        writeln!(buffer, "}}")?;
-        writeln!(buffer)?;
-        writeln!(buffer, "// Delete these functions: {}", unit_names.join(", "))?;
+        generate_function_consolidation(&mut buffer, unit_names)?;
     }
 
+    append_manual_notes(&mut buffer, strategies)?;
+
+    Ok(buffer)
+}
+
+fn generate_enum_suggestion(
+    buffer: &mut String,
+    unit_names: &[String],
+) -> Result<String, std::fmt::Error> {
+    writeln!(buffer, "// PATTERN DETECTED: Similar enum definitions")?;
+    writeln!(buffer, "//")?;
+    writeln!(
+        buffer,
+        "// These {} enums have similar structure.",
+        unit_names.len()
+    )?;
+    writeln!(buffer, "// Consider:")?;
+    writeln!(buffer, "// 1. If they represent the same concept, consolidate into one")?;
+    writeln!(buffer, "// 2. If they share variants, extract a common base enum")?;
+    writeln!(buffer, "// 3. If intentionally separate, add doc comments explaining why")?;
+    writeln!(buffer)?;
+    writeln!(buffer, "// Enums: {}", unit_names.join(", "))?;
+    Ok(buffer.clone())
+}
+
+fn generate_function_consolidation(
+    buffer: &mut String,
+    unit_names: &[String],
+) -> Result<(), std::fmt::Error> {
+    let enum_name = infer_enum_name(unit_names);
+    let variants: Vec<String> = unit_names.iter().map(|n| to_variant_name(n)).collect();
+
+    writeln!(buffer, "// REFACTORING SUGGESTION")?;
+    writeln!(buffer, "//")?;
+    writeln!(
+        buffer,
+        "// These {} functions are structurally identical.",
+        unit_names.len()
+    )?;
+    writeln!(
+        buffer,
+        "// Consolidate into one function with an enum parameter:"
+    )?;
+    writeln!(buffer)?;
+    writeln!(buffer, "#[derive(Debug, Clone, Copy)]")?;
+    writeln!(buffer, "pub enum {enum_name} {{")?;
+    for variant in &variants {
+        writeln!(buffer, "    {variant},")?;
+    }
+    writeln!(buffer, "}}")?;
+    writeln!(buffer)?;
+    writeln!(buffer, "// Unified function signature:")?;
+    writeln!(
+        buffer,
+        "pub fn unified(kind: {enum_name}) -> /* return type */ {{"
+    )?;
+    writeln!(buffer, "    match kind {{")?;
+    for variant in &variants {
+        writeln!(buffer, "        {enum_name}::{variant} => todo!(),")?;
+    }
+    writeln!(buffer, "    }}")?;
+    writeln!(buffer, "}}")?;
+    writeln!(buffer)?;
+    writeln!(buffer, "// Delete these functions: {}", unit_names.join(", "))?;
+    Ok(())
+}
+
+fn append_manual_notes(
+    buffer: &mut String,
+    strategies: &[RefactorStrategy],
+) -> Result<(), std::fmt::Error> {
     let manual_count = strategies
         .iter()
         .filter(|s| matches!(s, RefactorStrategy::ManualAttention))
@@ -61,10 +121,12 @@ pub fn generate_consolidated_plan(
 
     if manual_count > 0 {
         writeln!(buffer)?;
-        writeln!(buffer, "// NOTE: {manual_count} difference(s) may require manual review")?;
+        writeln!(
+            buffer,
+            "// NOTE: {manual_count} difference(s) may require manual review"
+        )?;
     }
-
-    Ok(buffer)
+    Ok(())
 }
 
 /// Generates refactoring suggestion for a single strategy.

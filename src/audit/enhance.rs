@@ -1,3 +1,4 @@
+// src/audit/enhance.rs
 use super::codegen;
 use super::diff;
 use super::parameterize;
@@ -94,11 +95,13 @@ fn generate_plan_from_source(ctx: &RefactorContext, all_units: &[CodeUnit]) -> O
         node_b,
         ctx.src_b.as_bytes(),
     )?;
-    
+
     let strategies = parameterize::infer_strategies(&model);
     let names: Vec<String> = all_units.iter().map(|u| u.name.clone()).collect();
 
-    codegen::generate_consolidated_plan(&strategies, &names).ok()
+    // Pass the unit kind so codegen can generate appropriate suggestions
+    let kind = ctx.unit_a.kind;
+    codegen::generate_consolidated_plan_with_kind(&strategies, &names, kind).ok()
 }
 
 fn find_target_node<'a>(
@@ -154,8 +157,6 @@ fn is_matching_node(
     let row_start = node.start_position().row + 1;
     let row_end = node.end_position().row + 1;
 
-    // Use broader check to support Python/TS/JS
-    // We trust line numbers + name collision is rare enough
     if row_start != start || row_end != end {
         return false;
     }
