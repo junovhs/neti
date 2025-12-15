@@ -1,8 +1,8 @@
 // src/analysis/checks.rs
-use super::metrics;
-use crate::config::RuleConfig;
+use crate::config::types::RuleConfig;
 use crate::types::Violation;
-use tree_sitter::{Node, Query, QueryCursor, QueryMatch, TreeCursor};
+use std::path::Path;
+use tree_sitter::{Node, Query, QueryCursor, QueryMatch};
 
 pub struct CheckContext<'a> {
     pub root: Node<'a>,
@@ -11,105 +11,151 @@ pub struct CheckContext<'a> {
     pub config: &'a RuleConfig,
 }
 
-struct MetricConfig<'a> {
-    value: usize,
-    max: usize,
-    row: usize,
-    title: &'a str,
-    msg_tmpl: &'a str,
-}
-
 /// Checks for naming violations (function name word count).
 pub fn check_naming(ctx: &CheckContext, query: &Query, out: &mut Vec<Violation>) {
-    if is_ignored(ctx.filename, &ctx.config.ignore_naming_on) {
-        return;
+    for pattern in &ctx.config.ignore_naming_on {
+        if ctx.filename.contains(pattern) {
+            return;
+        }
     }
 
     let mut cursor = QueryCursor::new();
-    for m in cursor.matches(query, ctx.root, ctx.source.as_bytes()) {
-        let node = m.captures[0].node;
-        let name = node.utf8_text(ctx.source.as_bytes()).unwrap_or("?");
-        let word_count = count_words(name);
+    let matches = cursor.matches(query, ctx.root, ctx.source.as_bytes());
 
-        if word_count > ctx.config.max_function_words {
-            out.push(Violation {
-                row: node.start_position().row,
-                message: format!(
-                    "Function '{name}' has {word_count} words (Max: {}). Is it doing too much?",
-                    ctx.config.max_function_words
-                ),
-                law: "LAW OF BLUNTNESS",
-            });
-        }
+    for m in matches {
+        process_naming_match(&m, ctx, out);
     }
 }
 
-fn count_words(name: &str) -> usize {
-    if name.contains('_') {
-        name.split('_').count()
-    } else {
-        let caps = name.chars().filter(|c| c.is_uppercase()).count();
-        if name.chars().next().is_some_and(char::is_uppercase) {
-            caps
-        } else {
-            caps + 1
+fn process_naming_match(m: &QueryMatch, ctx: &CheckContext, out: &mut Vec<Violation>) {
+    for capture in m.captures {
+        if let Ok(name) = capture.node.utf8_text(ctx.source.as_bytes()) {
+            let word_count = count_words(name);
+            if word_count > ctx.config.max_function_words {
+                out.push(Violation {
+                    row: capture.node.start_position().row + 1,
+                    message: format!(
+                        "Function name '{name}' has {word_count} words (Max: {})",
+                        ctx.config.max_function_words
+                    ),
+                    law: "LAW OF CONCISENESS",
+                });
+            }
         }
     }
-}
-
-fn is_ignored(filename: &str, patterns: &[String]) -> bool {
-    patterns.iter().any(|p| filename.contains(p))
 }
 
 /// Checks for complexity metrics (arity, depth, cyclomatic complexity).
-pub fn check_metrics(ctx: &CheckContext, complexity_query: &Query, out: &mut Vec<Violation>) {
-    traverse_nodes(ctx, |node| {
-        let kind = node.kind();
-        if kind.contains("function") || kind.contains("method") {
-            let row = node.start_position().row;
+pub fn check_metrics(
+    ctx: &CheckContext,
+    func_query: &Query,
+    complexity_query: &Query,
+    out: &mut Vec<Violation>,
+) {
+    let mut cursor = QueryCursor::new();
+    let matches = cursor.matches(func_query, ctx.root, ctx.source.as_bytes());
 
-            check_metric(
-                &MetricConfig {
-                    value: metrics::count_arguments(node),
-                    max: ctx.config.max_function_args,
-                    row,
-                    title: "High Arity",
-                    msg_tmpl: "Function takes {} arguments. Use a Struct.",
-                },
-                out,
-            );
-
-            check_metric(
-                &MetricConfig {
-                    value: metrics::calculate_max_depth(node),
-                    max: ctx.config.max_nesting_depth,
-                    row,
-                    title: "Deep Nesting",
-                    msg_tmpl: "Max depth is {}. Extract logic.",
-                },
-                out,
-            );
-
-            check_metric(
-                &MetricConfig {
-                    value: metrics::calculate_complexity(node, ctx.source, complexity_query),
-                    max: ctx.config.max_cyclomatic_complexity,
-                    row,
-                    title: "High Complexity",
-                    msg_tmpl: "Score is {}. Hard to test.",
-                },
-                out,
-            );
-        }
-    });
+    for m in matches {
+        process_metric_match(&m, ctx, complexity_query, out);
+    }
 }
 
-fn check_metric(cfg: &MetricConfig, out: &mut Vec<Violation>) {
-    if cfg.value > cfg.max {
-        let detail = cfg.msg_tmpl.replace("{}", &cfg.value.to_string());
+fn process_metric_match(
+    m: &QueryMatch,
+    ctx: &CheckContext,
+    complexity_query: &Query,
+    out: &mut Vec<Violation>,
+) {
+    for capture in m.captures {
+        let node = capture.node;
+        if is_function_kind(node.kind()) {
+            analyze_function_node(node, ctx, complexity_query, out);
+            return;
+        }
+    }
+}
+
+fn analyze_function_node(
+    node: Node,
+    ctx: &CheckContext,
+    complexity_query: &Query,
+    out: &mut Vec<Violation>,
+) {
+    let func_name = get_function_name(node, ctx.source);
+
+    check_argument_count(node, &func_name, ctx.config, out);
+
+    if let Some(body) = node.child_by_field_name("body") {
+        check_nesting_depth(node, body, ctx.config, out);
+        // Pass ctx directly to avoid 6 arguments
+        check_cyclomatic_complexity(node, body, ctx, complexity_query, out);
+    }
+}
+
+fn is_function_kind(kind: &str) -> bool {
+    kind.contains("function") || kind.contains("method")
+}
+
+fn get_function_name(node: Node, source: &str) -> String {
+    node.child_by_field_name("name")
+        .and_then(|n| n.utf8_text(source.as_bytes()).ok())
+        .unwrap_or("<anon>")
+        .to_string()
+}
+
+fn check_argument_count(
+    node: Node,
+    name: &str,
+    config: &RuleConfig,
+    out: &mut Vec<Violation>,
+) {
+    let arg_count = super::metrics::count_arguments(node);
+    if arg_count > config.max_function_args {
         out.push(Violation {
-            row: cfg.row,
-            message: format!("{}: {detail} (Max: {})", cfg.title, cfg.max),
+            row: node.start_position().row + 1,
+            message: format!(
+                "Function '{name}' has {arg_count} args (Max: {})",
+                config.max_function_args
+            ),
+            law: "LAW OF COMPLEXITY",
+        });
+    }
+}
+
+fn check_nesting_depth(
+    func_node: Node,
+    body: Node,
+    config: &RuleConfig,
+    out: &mut Vec<Violation>,
+) {
+    let depth = super::metrics::calculate_max_depth(body);
+    if depth > config.max_nesting_depth {
+        out.push(Violation {
+            row: func_node.start_position().row + 1,
+            message: format!(
+                "Deep Nesting: Max depth is {depth}. Extract logic. (Max: {})",
+                config.max_nesting_depth
+            ),
+            law: "LAW OF COMPLEXITY",
+        });
+    }
+}
+
+fn check_cyclomatic_complexity(
+    func_node: Node,
+    body: Node,
+    ctx: &CheckContext,
+    query: &Query,
+    out: &mut Vec<Violation>,
+) {
+    let complexity = super::metrics::calculate_complexity(body, ctx.source, query);
+    if complexity > ctx.config.max_cyclomatic_complexity {
+        out.push(Violation {
+            row: func_node.start_position().row + 1,
+            message: format!(
+                "High Complexity: Score is {complexity}. Hard to test. (Max: {})",
+                ctx.config.max_cyclomatic_complexity
+            ),
             law: "LAW OF COMPLEXITY",
         });
     }
@@ -117,66 +163,148 @@ fn check_metric(cfg: &MetricConfig, out: &mut Vec<Violation>) {
 
 /// Checks for banned constructs (`.unwrap()` and `.expect()` calls).
 pub fn check_banned(ctx: &CheckContext, banned_query: &Query, out: &mut Vec<Violation>) {
-    let mut cursor = QueryCursor::new();
-    let names = banned_query.capture_names();
+    // Only skip if the FILE NAME indicates a test, not the directory path.
+    // This fixes integration tests running in temporary directories.
+    let path = Path::new(ctx.filename);
+    if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
+        if name.contains("test") || name.contains("spec") {
+            return;
+        }
+    }
 
-    for m in cursor.matches(banned_query, ctx.root, ctx.source.as_bytes()) {
-        process_banned_match(&m, names, ctx, out);
+    let mut cursor = QueryCursor::new();
+    let matches = cursor.matches(banned_query, ctx.root, ctx.source.as_bytes());
+
+    for m in matches {
+        process_banned_match_group(&m, ctx, out);
     }
 }
 
-fn process_banned_match(
-    m: &QueryMatch,
-    names: &[String],
-    ctx: &CheckContext,
+fn process_banned_match_group(m: &QueryMatch, ctx: &CheckContext, out: &mut Vec<Violation>) {
+    for capture in m.captures {
+        if let Ok(text) = capture.node.utf8_text(ctx.source.as_bytes()) {
+            let row = capture.node.start_position().row + 1;
+            let kind = capture.node.kind();
+            if kind == "method_invocation"
+                || kind == "call_expression"
+                || kind == "method_call_expression"
+                || text.contains("unwrap")
+                || text.contains("expect")
+            {
+                add_banned_violation(text, row, out);
+            }
+        }
+    }
+}
+
+fn add_banned_violation(text: &str, row: usize, out: &mut Vec<Violation>) {
+    if text.contains("unwrap") {
+        out.push(Violation {
+            row,
+            message: "Banned: '.unwrap()' found. Use ? or expect().".to_string(),
+            law: "LAW OF PARANOIA",
+        });
+    } else if text.contains("expect") {
+        out.push(Violation {
+            row,
+            message: "Banned: '.expect()' found. Use handleable errors.".to_string(),
+            law: "LAW OF PARANOIA",
+        });
+    }
+}
+
+/// Checks for unsafe blocks and ensures they have justification comments.
+pub fn check_safety(ctx: &CheckContext, _query: &Query, out: &mut Vec<Violation>) {
+    if !Path::new(ctx.filename)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("rs"))
+    {
+        return;
+    }
+    traverse_for_unsafe(ctx.root, ctx.source, ctx.config, out);
+}
+
+fn traverse_for_unsafe(
+    node: Node,
+    source: &str,
+    config: &RuleConfig,
     out: &mut Vec<Violation>,
 ) {
-    let mut method_name: Option<&str> = None;
-    let mut row = 0;
-
-    for cap in m.captures {
-        let capture_name = &names[cap.index as usize];
-
-        if capture_name == "method" {
-            method_name = cap.node.utf8_text(ctx.source.as_bytes()).ok();
-        }
-        if capture_name == "call" {
-            row = cap.node.start_position().row;
-        }
+    if node.kind() == "unsafe_block" {
+        validate_unsafe_node(node, source, config, out);
     }
 
-    if let Some(name) = method_name {
-        if name == "unwrap" || name == "expect" {
-            out.push(Violation {
-                row,
-                message: format!("Banned: '.{name}()'. Use '?' or 'unwrap_or'."),
-                law: "LAW OF PARANOIA",
-            });
-        }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        traverse_for_unsafe(child, source, config, out);
     }
 }
 
-fn traverse_nodes<F>(ctx: &CheckContext, mut cb: F)
-where
-    F: FnMut(Node),
-{
-    let mut cursor = ctx.root.walk();
-    loop {
-        cb(cursor.node());
-        if !advance_cursor(&mut cursor) {
+fn validate_unsafe_node(
+    node: Node,
+    source: &str,
+    config: &RuleConfig,
+    out: &mut Vec<Violation>,
+) {
+    if config.safety.ban_unsafe {
+        out.push(Violation {
+            row: node.start_position().row + 1,
+            message: "Unsafe code is strictly prohibited by configuration.".to_string(),
+            law: "LAW OF PARANOIA",
+        });
+        return;
+    }
+
+    if config.safety.require_safety_comment && !has_safety_comment(node, source) {
+        out.push(Violation {
+            row: node.start_position().row + 1,
+            message: "Unsafe block missing justification. Add '// SAFETY:' comment.".to_string(),
+            law: "LAW OF PARANOIA",
+        });
+    }
+}
+
+fn has_safety_comment(node: Node, source: &str) -> bool {
+    let mut prev = node.prev_sibling();
+    while let Some(p) = prev {
+        if p.kind() == "line_comment" || p.kind() == "block_comment" {
+            if let Ok(text) = p.utf8_text(source.as_bytes()) {
+                if text.contains("SAFETY:") {
+                    return true;
+                }
+            }
+        }
+        if p.kind() != "line_comment" && p.kind() != "block_comment" {
+            return false;
+        }
+        prev = p.prev_sibling();
+    }
+    check_lines_above(node.start_position().row, source)
+}
+
+fn check_lines_above(row: usize, source: &str) -> bool {
+    if row == 0 {
+        return false;
+    }
+    let lines: Vec<&str> = source.lines().collect();
+    for i in 1..=3 {
+        if row < i {
             break;
         }
-    }
-}
-
-fn advance_cursor(cursor: &mut TreeCursor) -> bool {
-    if cursor.goto_first_child() {
-        return true;
-    }
-    while !cursor.goto_next_sibling() {
-        if !cursor.goto_parent() {
+        if let Some(line) = lines.get(row - i) {
+            let trimmed = line.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            if trimmed.starts_with("//") && trimmed.contains("SAFETY:") {
+                return true;
+            }
             return false;
         }
     }
-    true
+    false
+}
+
+fn count_words(name: &str) -> usize {
+    name.split('_').filter(|part| !part.is_empty()).count()
 }

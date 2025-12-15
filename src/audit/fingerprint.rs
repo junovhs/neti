@@ -115,87 +115,9 @@ fn should_hash_text(kind: &str, node: Node, source: &[u8]) -> bool {
 }
 
 /// Computes similarity between two fingerprints.
+///
+/// Delegates to `similarity_core` to keep this file small.
 #[must_use]
-#[allow(clippy::cast_precision_loss)]
 pub fn similarity(a: &Fingerprint, b: &Fingerprint) -> f64 {
-    if a.hash == b.hash {
-        return 1.0;
-    }
-    if a.cfg_hash == b.cfg_hash {
-        return 0.85 + (structural_similarity(a, b) * 0.15);
-    }
-    if cfg_metrics_match(a, b) {
-        return 0.95;
-    }
-    cfg_similarity(a, b) * 0.6 + structural_similarity(a, b) * 0.4
-}
-
-fn cfg_metrics_match(a: &Fingerprint, b: &Fingerprint) -> bool {
-    a.branch_count == b.branch_count
-        && a.loop_count == b.loop_count
-        && a.exit_count == b.exit_count
-}
-
-#[allow(clippy::cast_precision_loss)]
-fn cfg_similarity(a: &Fingerprint, b: &Fingerprint) -> f64 {
-    let branch = metric_sim(a.branch_count, b.branch_count);
-    let loops = metric_sim(a.loop_count, b.loop_count);
-    let exits = metric_sim(a.exit_count, b.exit_count);
-    branch * 0.5 + loops * 0.3 + exits * 0.2
-}
-
-#[allow(clippy::cast_precision_loss)]
-fn structural_similarity(a: &Fingerprint, b: &Fingerprint) -> f64 {
-    metric_sim(a.depth, b.depth) * 0.3 + metric_sim(a.node_count, b.node_count) * 0.7
-}
-
-#[allow(clippy::cast_precision_loss)]
-fn metric_sim(a: usize, b: usize) -> f64 {
-    let max = a.max(b) as f64;
-    if max == 0.0 { 1.0 } else { 1.0 - (a as f64 - b as f64).abs() / max }
-}
-
-/// Extracts fingerprinted units from a parsed file.
-#[must_use]
-pub fn extract_units(
-    source: &str,
-    tree: &tree_sitter::Tree,
-) -> Vec<(String, &'static str, usize, usize, Fingerprint)> {
-    let mut units = Vec::new();
-    extract_from_node(tree.root_node(), source.as_bytes(), &mut units);
-    units
-}
-
-fn extract_from_node(
-    node: Node,
-    source: &[u8],
-    units: &mut Vec<(String, &'static str, usize, usize, Fingerprint)>,
-) {
-    if let Some(unit_kind) = match_unit_kind(node.kind()) {
-        if let Some(name) = extract_name(node, source) {
-            let fp = compute(node, source);
-            let start = node.start_position().row + 1;
-            let end = node.end_position().row + 1;
-            units.push((name, unit_kind, start, end, fp));
-        }
-    }
-    for child in node.children(&mut node.walk()) {
-        extract_from_node(child, source, units);
-    }
-}
-
-fn match_unit_kind(kind: &str) -> Option<&'static str> {
-    match kind {
-        "function_item" | "function_definition" => Some("function"),
-        "impl_item" => Some("impl"),
-        "struct_item" | "struct_definition" => Some("struct"),
-        "enum_item" | "enum_definition" => Some("enum"),
-        "trait_item" | "trait_definition" => Some("trait"),
-        "mod_item" => Some("module"),
-        _ => None,
-    }
-}
-
-fn extract_name(node: Node, source: &[u8]) -> Option<String> {
-    node.child_by_field_name("name")?.utf8_text(source).ok().map(String::from)
+    crate::audit::similarity_core::calculate_similarity(a, b)
 }

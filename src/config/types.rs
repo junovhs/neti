@@ -42,7 +42,7 @@ impl Default for Preferences {
     fn default() -> Self {
         Self {
             theme: Theme::default(),
-            auto_copy: true,
+            auto_copy: default_auto_copy(),
             auto_format: false,
             auto_commit: false,
             auto_push: false,
@@ -50,7 +50,7 @@ impl Default for Preferences {
             allow_dirty_git: false,
             system_bell: false,
             backup_retention: default_backup_retention(),
-            progress_bars: true,
+            progress_bars: default_progress_bars(),
             require_plan: false,
         }
     }
@@ -66,7 +66,7 @@ fn default_backup_retention() -> usize {
     5
 }
 fn default_commit_prefix() -> String {
-    "AI: ".to_string()
+    "slopchop: ".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -85,6 +85,10 @@ pub struct RuleConfig {
     pub ignore_naming_on: Vec<String>,
     #[serde(default = "default_ignore_tokens")]
     pub ignore_tokens_on: Vec<String>,
+    #[serde(default)]
+    pub safety: SafetyConfig,
+    #[serde(default)]
+    pub layers: LayerConfig,
 }
 
 impl Default for RuleConfig {
@@ -97,10 +101,44 @@ impl Default for RuleConfig {
             max_function_words: default_max_words(),
             ignore_naming_on: Vec::new(),
             ignore_tokens_on: default_ignore_tokens(),
+            safety: SafetyConfig::default(),
+            layers: LayerConfig::default(),
         }
     }
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SafetyConfig {
+    #[serde(default = "default_true")]
+    pub require_safety_comment: bool,
+    #[serde(default)]
+    pub ban_unsafe: bool,
+}
+
+impl Default for SafetyConfig {
+    fn default() -> Self {
+        Self {
+            require_safety_comment: true,
+            ban_unsafe: false,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LayerConfig {
+    /// Maps layer names to file patterns (glob or regex).
+    /// e.g. `core` -> `["src/core/**"]`
+    #[serde(default)]
+    pub definitions: HashMap<String, Vec<String>>,
+    /// Maps a layer to the layers it is ALLOWED to import.
+    /// e.g. `ui` -> `["core"]` (UI can import Core)
+    #[serde(default)]
+    pub allowed_deps: HashMap<String, Vec<String>>,
+}
+
+const fn default_true() -> bool {
+    true
+}
 const fn default_max_tokens() -> usize {
     2000
 }
@@ -114,10 +152,10 @@ const fn default_max_args() -> usize {
     5
 }
 const fn default_max_words() -> usize {
-    5
+    3
 }
 fn default_ignore_tokens() -> Vec<String> {
-    vec!["README.md".to_string(), "lock".to_string()]
+    vec!["Cargo.lock".into(), "package-lock.json".into()]
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -132,7 +170,7 @@ impl CommandEntry {
     pub fn into_vec(self) -> Vec<String> {
         match self {
             Self::Single(s) => vec![s],
-            Self::List(v) => v,
+            Self::List(l) => l,
         }
     }
 }

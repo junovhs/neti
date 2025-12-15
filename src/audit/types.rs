@@ -35,6 +35,9 @@ pub struct CodeUnit {
     pub end_line: usize,
     pub fingerprint: Fingerprint,
     pub tokens: usize,
+    /// Semantic signature tokens (e.g., enum variants).
+    #[serde(default)]
+    pub signature: Vec<String>,
 }
 
 impl CodeUnit {

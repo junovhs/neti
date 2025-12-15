@@ -112,6 +112,7 @@ fn test_enhance_plan_generation() -> Result<()> {
             exit_count: 0,
         },
         tokens: 10,
+        signature: Vec::new(),
     };
 
     let unit_b = CodeUnit {

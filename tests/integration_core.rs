@@ -37,7 +37,8 @@ fn make_config(kind: RuleKind, limit: usize) -> RuleConfig {
 
 fn scan(content: &str, rules: RuleConfig) -> Result<Vec<Violation>> {
     let dir = TempDir::new()?;
-    let file_path = dir.path().join("test.rs");
+    // Use 'source.rs' instead of 'test.rs' to avoid "skip test files" logic
+    let file_path = dir.path().join("source.rs");
     let mut file = File::create(&file_path)?;
     write!(file, "{content}")?;
 

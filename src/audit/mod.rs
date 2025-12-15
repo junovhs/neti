@@ -1,3 +1,4 @@
+// src/audit/mod.rs
 //! Consolidation audit system for identifying code cleanup opportunities.
 //!
 //! This module provides comprehensive analysis to find:
@@ -12,6 +13,7 @@ pub mod dead_code;
 pub mod diff;
 pub mod display;
 pub mod enhance;
+pub mod extractor;
 pub mod fingerprint;
 pub mod fp_similarity;
 pub mod parameterize;
@@ -184,10 +186,11 @@ fn analyze_file(path: &PathBuf, options: &AuditOptions) -> Option<AnalysisResult
     let mut result = AnalysisResult::default();
 
     // 1. Extract Units (Always needed for core stats, even if dups disabled)
-    let raw_units = fingerprint::extract_units(&content, &tree);
+    // Updated to use the new extractor module
+    let raw_units = extractor::extract_units(&content, &tree);
     result.units = raw_units
         .into_iter()
-        .map(|(name, kind_str, start, end, fp)| {
+        .map(|(name, kind_str, start, end, fp, signature)| {
             let kind = map_kind(kind_str);
             let tokens = estimate_tokens(&content, start, end);
             types::CodeUnit {
@@ -198,6 +201,7 @@ fn analyze_file(path: &PathBuf, options: &AuditOptions) -> Option<AnalysisResult
                 end_line: end,
                 fingerprint: fp,
                 tokens,
+                signature,
             }
         })
         .collect();
