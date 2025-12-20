@@ -1,6 +1,6 @@
+// src/apply/mod.rs
 pub mod backup;
 pub mod extractor;
-// git module removed per "Lean & Mean" directive
 pub mod manifest;
 pub mod messages;
 pub mod types;
@@ -9,18 +9,37 @@ pub mod verification;
 pub mod writer;
 
 use crate::clipboard;
+use crate::stage::StageManager;
 use anyhow::{Context, Result};
 use colored::Colorize;
 use std::io::{self, Read, Write};
-use types::{ApplyContext, ApplyInput, ApplyOutcome};
+use types::{ApplyContext, ApplyInput, ApplyOutcome, Operation};
 
 /// Executes the apply operation based on user input.
 ///
 /// # Errors
 /// Returns error if input reading or processing fails.
 pub fn run_apply(ctx: &ApplyContext) -> Result<ApplyOutcome> {
+    // Handle --reset flag first
+    if ctx.reset_stage {
+        return reset_stage(ctx);
+    }
+
     let content = read_input(&ctx.input)?;
     process_input(&content, ctx)
+}
+
+fn reset_stage(ctx: &ApplyContext) -> Result<ApplyOutcome> {
+    let mut stage = StageManager::new(&ctx.repo_root);
+
+    if !stage.exists() {
+        println!("{}", "No stage to reset.".yellow());
+        return Ok(ApplyOutcome::StageReset);
+    }
+
+    stage.reset()?;
+    println!("{}", "Stage reset successfully.".green());
+    Ok(ApplyOutcome::StageReset)
 }
 
 fn read_input(input: &ApplyInput) -> Result<String> {
@@ -28,10 +47,13 @@ fn read_input(input: &ApplyInput) -> Result<String> {
         ApplyInput::Clipboard => clipboard::read_clipboard().context("Failed to read clipboard"),
         ApplyInput::Stdin => {
             let mut buf = String::new();
-            io::stdin().read_to_string(&mut buf).context("Failed to read stdin")?;
+            io::stdin()
+                .read_to_string(&mut buf)
+                .context("Failed to read stdin")?;
             Ok(buf)
         }
-        ApplyInput::File(path) => std::fs::read_to_string(path).with_context(|| format!("Failed to read file: {}", path.display())),
+        ApplyInput::File(path) => std::fs::read_to_string(path)
+            .with_context(|| format!("Failed to read file: {}", path.display())),
     }
 }
 
@@ -39,7 +61,7 @@ pub fn print_result(outcome: &ApplyOutcome) {
     messages::print_outcome(outcome);
 }
 
-/// Validates and applies a string payload containing atechnical plan, manifest and files.
+/// Validates and applies a string payload containing a plan, manifest and files.
 ///
 /// # Errors
 /// Returns error if extraction, confirmation or writing fails.
@@ -58,21 +80,25 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
         return Ok(validation);
     }
 
-    apply_to_filesystem(content, ctx)
+    apply_to_stage(content, ctx)
 }
 
 fn check_plan_requirement(plan: Option<&str>, ctx: &ApplyContext) -> Result<bool> {
     if let Some(p) = plan {
         println!("{}", "[PLAN]:".cyan().bold());
         println!("{}", p.trim());
-        if !ctx.force && !ctx.dry_run { return confirm("Apply these changes?"); }
+        if !ctx.force && !ctx.dry_run {
+            return confirm("Apply these changes?");
+        }
         return Ok(true);
     }
     if ctx.config.preferences.require_plan {
         println!("{}", "[X] REJECTED: Missing PLAN block.".red());
         Ok(false)
     } else {
-        if !ctx.force && !ctx.dry_run { return confirm("Apply without a plan?"); }
+        if !ctx.force && !ctx.dry_run {
+            return confirm("Apply without a plan?");
+        }
         Ok(true)
     }
 }
@@ -90,7 +116,7 @@ fn validate_payload(content: &str) -> ApplyOutcome {
     validator::validate(&manifest, &extracted)
 }
 
-fn apply_to_filesystem(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> {
+fn apply_to_stage(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> {
     let extracted = extractor::extract_files(content)?;
     let manifest = manifest::parse_manifest(content)?.unwrap_or_default();
 
@@ -99,11 +125,120 @@ fn apply_to_filesystem(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome
             written: vec!["(Dry Run) Verified".to_string()],
             deleted: vec![],
             backed_up: false,
+            staged: false,
         });
     }
 
+    // Initialize stage manager and ensure stage exists
+    let mut stage = StageManager::new(&ctx.repo_root);
+    let ensure_result = stage.ensure_stage()?;
+
+    if ensure_result.was_created() {
+        println!("{}", "Created staging workspace.".blue());
+    }
+
+    // Write files to the staged worktree
+    let worktree = stage.worktree();
     let retention = ctx.config.preferences.backup_retention;
-    writer::write_files(&manifest, &extracted, None, retention)
+
+    let outcome = writer::write_files(&manifest, &extracted, Some(&worktree), retention)?;
+
+    // Record touched paths in stage state
+    for entry in &manifest {
+        match entry.operation {
+            Operation::Delete => stage.record_delete(&entry.path)?,
+            Operation::Update | Operation::New => stage.record_write(&entry.path)?,
+        }
+    }
+    stage.record_apply()?;
+
+    // Convert outcome to staged version
+    let staged_outcome = match outcome {
+        ApplyOutcome::Success {
+            written,
+            deleted,
+            backed_up,
+            ..
+        } => ApplyOutcome::Success {
+            written,
+            deleted,
+            backed_up,
+            staged: true,
+        },
+        other => other,
+    };
+
+    // Run verification if requested
+    if ctx.check_after {
+        return run_post_apply_verification(ctx, &mut stage, staged_outcome);
+    }
+
+    print_stage_info(&stage);
+    Ok(staged_outcome)
+}
+
+fn run_post_apply_verification(
+    ctx: &ApplyContext,
+    stage: &mut StageManager,
+    outcome: ApplyOutcome,
+) -> Result<ApplyOutcome> {
+    let passed = verification::run_verification_pipeline(ctx, stage.worktree())?;
+
+    if passed {
+        println!("{}", "✓ Verification passed!".green().bold());
+
+        if ctx.auto_promote {
+            return promote_stage(ctx, stage);
+        }
+
+        if confirm("Promote staged changes to workspace?")? {
+            return promote_stage(ctx, stage);
+        }
+
+        print_stage_info(stage);
+        Ok(outcome)
+    } else {
+        println!(
+            "{}",
+            "✗ Verification failed. Changes remain staged.".yellow()
+        );
+        print_stage_info(stage);
+        Ok(outcome)
+    }
+}
+
+fn promote_stage(ctx: &ApplyContext, stage: &mut StageManager) -> Result<ApplyOutcome> {
+    let retention = ctx.config.preferences.backup_retention;
+    let result = stage.promote(retention)?;
+
+    println!("{}", "✓ Promoted to workspace!".green().bold());
+
+    for f in &result.files_written {
+        println!("   {} {f}", "→".green());
+    }
+    for f in &result.files_deleted {
+        println!("   {} {f}", "✗".red());
+    }
+
+    Ok(ApplyOutcome::Promoted {
+        written: result.files_written,
+        deleted: result.files_deleted,
+    })
+}
+
+fn print_stage_info(stage: &StageManager) {
+    println!(
+        "\n{} Changes staged. Run {} to verify, or {} to promote.",
+        "→".blue(),
+        "slopchop check".yellow(),
+        "slopchop apply --promote".yellow()
+    );
+
+    if let Some(state) = stage.state() {
+        let write_count = state.paths_to_write().len();
+        let delete_count = state.paths_to_delete().len();
+        println!("   Stage: {write_count} writes, {delete_count} deletes pending");
+    }
 }
 
 fn confirm(prompt: &str) -> Result<bool> {
@@ -112,4 +247,22 @@ fn confirm(prompt: &str) -> Result<bool> {
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
     Ok(input.trim().eq_ignore_ascii_case("y"))
-}
+}
+
+/// Promotes staged changes to the real workspace.
+///
+/// # Errors
+/// Returns error if promotion fails.
+pub fn run_promote(ctx: &ApplyContext) -> Result<ApplyOutcome> {
+    let mut stage = StageManager::new(&ctx.repo_root);
+
+    if !stage.exists() {
+        println!("{}", "No stage to promote.".yellow());
+        return Ok(ApplyOutcome::ParseError(
+            "No staged changes found.".to_string(),
+        ));
+    }
+
+    stage.load_state()?;
+    promote_stage(ctx, &mut stage)
+}

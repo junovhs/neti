@@ -1,3 +1,4 @@
+// src/apply/extractor.rs
 use crate::apply::types::FileContent;
 use anyhow::Result;
 use regex::Regex;
@@ -76,4 +77,4 @@ fn skip_block(response: &str, start_pos: usize, footer_re: &Regex) -> usize {
     } else {
         start_pos
     }
-}
+}

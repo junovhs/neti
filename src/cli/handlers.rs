@@ -1,3 +1,4 @@
+// src/cli/handlers.rs
 use crate::apply;
 use crate::apply::types::ApplyContext;
 use crate::cli::args::ApplyArgs;
@@ -5,11 +6,16 @@ use crate::config::Config;
 use crate::pack::{self, OutputFormat, PackOptions};
 use crate::prompt::PromptGenerator;
 use crate::signatures::{self, SignatureOptions};
+use crate::stage;
 use crate::trace::{self, TraceOptions};
 use anyhow::{anyhow, Result};
 use colored::Colorize;
 use std::path::{Path, PathBuf};
 use std::process::Command;
+
+fn get_repo_root() -> PathBuf {
+    std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
+}
 
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
@@ -32,9 +38,13 @@ pub struct PackArgs {
 /// Returns error if verification pipeline fails.
 pub fn handle_check() -> Result<()> {
     let config = Config::load();
-    let ctx = ApplyContext::new(&config);
+    let repo_root = get_repo_root();
+    let ctx = ApplyContext::new(&config, repo_root.clone());
 
-    if apply::verification::run_verification_pipeline(&ctx)? {
+    // Use effective_cwd: stage if exists, else repo root
+    let cwd = stage::effective_cwd(&repo_root);
+
+    if apply::verification::run_verification_pipeline(&ctx, &cwd)? {
         println!("{}", "[OK] All checks passed.".green().bold());
         Ok(())
     } else {
@@ -56,9 +66,13 @@ pub fn handle_fix() -> Result<()> {
     for cmd in fix_cmds {
         println!("Running: {cmd}");
         let parts: Vec<&str> = cmd.split_whitespace().collect();
-        let Some((prog, args)) = parts.split_first() else { continue; };
+        let Some((prog, args)) = parts.split_first() else {
+            continue;
+        };
         let status = Command::new(prog).args(args).status()?;
-        if !status.success() { eprintln!("Command failed: {cmd}"); }
+        if !status.success() {
+            eprintln!("Command failed: {cmd}");
+        }
     }
     Ok(())
 }
@@ -117,7 +131,11 @@ pub fn handle_pack(args: PackArgs) -> Result<()> {
 /// # Errors
 /// Returns error if tracing fails.
 pub fn handle_trace(file: &Path, depth: usize, budget: usize) -> Result<()> {
-    let opts = TraceOptions { anchor: file.to_path_buf(), depth, budget };
+    let opts = TraceOptions {
+        anchor: file.to_path_buf(),
+        depth,
+        budget,
+    };
     let output = trace::run(&opts)?;
     println!("{output}");
     Ok(())
@@ -148,26 +166,30 @@ pub fn handle_signatures(opts: SignatureOptions) -> Result<()> {
 /// Returns error if application fails.
 pub fn handle_apply(args: &ApplyArgs) -> Result<()> {
     let config = Config::load();
+    let repo_root = get_repo_root();
     let input = determine_input(args);
+
+    // Handle --promote flag
+    if args.promote {
+        let ctx = ApplyContext::new(&config, repo_root);
+        let outcome = apply::run_promote(&ctx)?;
+        apply::print_result(&outcome);
+        return Ok(());
+    }
 
     let ctx = ApplyContext {
         config: &config,
+        repo_root: repo_root.clone(),
         force: args.force,
         dry_run: args.dry_run,
         input,
+        check_after: args.check,
+        auto_promote: false,
+        reset_stage: args.reset,
     };
 
     let outcome = apply::run_apply(&ctx)?;
     apply::print_result(&outcome);
-
-    if args.check && matches!(outcome, apply::types::ApplyOutcome::Success { .. }) {
-        if apply::verification::run_verification_pipeline(&ctx)? {
-            println!("{}", "[OK] All checks passed.".green().bold());
-        } else {
-            println!("{}", "[!] Verification failed.".red().bold());
-            // We don't exit(1) here to allow the apply to stand, but we warn heavily.
-        }
-    }
 
     Ok(())
 }
@@ -180,4 +202,4 @@ fn determine_input(args: &ApplyArgs) -> apply::types::ApplyInput {
     } else {
         apply::types::ApplyInput::Clipboard
     }
-}
+}

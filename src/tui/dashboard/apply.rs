@@ -5,6 +5,7 @@ use crate::tui::runner;
 use ratatui::backend::CrosstermBackend;
 use ratatui::Terminal;
 use std::io;
+use std::path::PathBuf;
 
 pub fn handle_interactive_apply(
     app: &mut DashboardApp,
@@ -20,7 +21,8 @@ pub fn handle_interactive_apply(
     }
 
     println!("\n🚀 SlopChop Interactive Mode\n");
-    let ctx = crate::apply::types::ApplyContext::new(app.config);
+    let repo_root = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let ctx = crate::apply::types::ApplyContext::new(app.config, repo_root);
 
     match crate::apply::process_input(&payload, &ctx) {
         Ok(outcome) => print_outcome(&outcome, app),
@@ -44,9 +46,28 @@ pub fn handle_interactive_apply(
 
 fn print_outcome(outcome: &ApplyOutcome, app: &mut DashboardApp) {
     match outcome {
-        ApplyOutcome::Success { written, .. } => {
-            println!("\n✅ Applied {} file(s)", written.len());
-            app.log(&format!("✅ Applied {} file(s)", written.len()));
+        ApplyOutcome::Success {
+            written, staged, ..
+        } => {
+            if *staged {
+                println!("\n✅ Staged {} file(s)", written.len());
+                app.log(&format!("✅ Staged {} file(s)", written.len()));
+            } else {
+                println!("\n✅ Applied {} file(s)", written.len());
+                app.log(&format!("✅ Applied {} file(s)", written.len()));
+            }
+        }
+        ApplyOutcome::Promoted { written, deleted } => {
+            println!(
+                "\n✅ Promoted {} file(s), deleted {}",
+                written.len(),
+                deleted.len()
+            );
+            app.log(&format!("✅ Promoted {} file(s)", written.len()));
+        }
+        ApplyOutcome::StageReset => {
+            println!("\n✅ Stage reset");
+            app.log("✅ Stage reset");
         }
         ApplyOutcome::ValidationFailure { errors, .. } => {
             app.log(&format!("❌ Validation failed: {} error(s)", errors.len()));

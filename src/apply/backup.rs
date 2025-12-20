@@ -130,4 +130,4 @@ fn restore_file(src: &Path, dest: &Path) {
         let _ = fs::create_dir_all(parent);
     }
     let _ = fs::copy(src, dest);
-}
+}

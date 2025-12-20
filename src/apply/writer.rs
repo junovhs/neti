@@ -1,3 +1,4 @@
+// src/apply/writer.rs
 use crate::apply::backup;
 use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
 use anyhow::{anyhow, Context, Result};
@@ -13,7 +14,11 @@ struct WriteTransaction {
 
 impl WriteTransaction {
     fn new() -> Self {
-        Self { written: Vec::new(), deleted: Vec::new(), created_fresh: Vec::new() }
+        Self {
+            written: Vec::new(),
+            deleted: Vec::new(),
+            created_fresh: Vec::new(),
+        }
     }
 }
 
@@ -28,7 +33,9 @@ pub fn write_files(
     retention: usize,
 ) -> Result<ApplyOutcome> {
     let root_path = root.map_or_else(|| PathBuf::from("."), Path::to_path_buf);
-    let canonical_root = root_path.canonicalize().unwrap_or_else(|_| root_path.clone());
+    let canonical_root = root_path
+        .canonicalize()
+        .unwrap_or_else(|_| root_path.clone());
 
     let backup_path = backup::create_backup(manifest, root)?;
 
@@ -51,6 +58,7 @@ pub fn write_files(
         written: tx.written,
         deleted: tx.deleted,
         backed_up: backup_path.is_some(),
+        staged: false,
     })
 }
 
@@ -111,15 +119,24 @@ fn write_single_file(
 
     fs::rename(&temp_path, &path).map_err(|e| {
         let _ = fs::remove_file(&temp_path);
-        anyhow!("Atomic rename failed {} to {}: {e}", temp_path.display(), path.display())
+        anyhow!(
+            "Atomic rename failed {} to {}: {e}",
+            temp_path.display(),
+            path.display()
+        )
     })?;
 
     Ok(())
 }
 
 fn create_temp_path(target: &Path) -> PathBuf {
-    let file_name = target.file_name().map_or_else(|| "file".to_string(), |n| n.to_string_lossy().to_string());
-    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
+    let file_name = target
+        .file_name()
+        .map_or_else(|| "file".to_string(), |n| n.to_string_lossy().to_string());
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|d| d.as_nanos())
+        .unwrap_or(0);
     let temp_name = format!(".slopchop_tmp_{timestamp}_{file_name}");
     let parent = target.parent().unwrap_or(Path::new("."));
     parent.join(temp_name)
@@ -129,14 +146,20 @@ fn check_symlink_escape(path: &Path, canonical_root: &Path) -> Result<()> {
     let mut current = PathBuf::new();
     for component in path.components() {
         current.push(component);
-        if !current.exists() { break; }
+        if !current.exists() {
+            break;
+        }
         let meta = fs::symlink_metadata(&current)
             .with_context(|| format!("Failed to check {}", current.display()))?;
         if meta.file_type().is_symlink() {
-            let resolved = current.canonicalize()
+            let resolved = current
+                .canonicalize()
                 .with_context(|| format!("Failed to resolve symlink {}", current.display()))?;
             if !resolved.starts_with(canonical_root) {
-                return Err(anyhow!("Symlink escape blocked: {} points outside repo root", current.display()));
+                return Err(anyhow!(
+                    "Symlink escape blocked: {} points outside repo root",
+                    current.display()
+                ));
             }
         }
     }
@@ -148,4 +171,4 @@ fn resolve_path(path_str: &str, root: Option<&Path>) -> PathBuf {
         Some(r) => r.join(path_str),
         None => PathBuf::from(path_str),
     }
-}
+}

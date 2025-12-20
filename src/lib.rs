@@ -18,8 +18,8 @@ pub mod reporting;
 pub mod signatures;
 pub mod skeleton;
 pub mod spinner;
+pub mod stage;
 pub mod tokens;
 pub mod trace;
 pub mod tui;
 pub mod types;
-// wizard module removed per "Lean & Mean" directive
