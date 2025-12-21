@@ -200,13 +200,8 @@ fn promote_stage(ctx: &ApplyContext, stage: &mut StageManager) -> Result<ApplyOu
     let retention = ctx.config.preferences.backup_retention;
     let result = stage.promote(retention)?;
 
-    println!("{}", "� Promoted to workspace!".green().bold());
-    for f in &result.files_written {
-        println!("   {} {f}", "".green());
-    }
-    for f in &result.files_deleted {
-        println!("   {} {f}", "?".red());
-    }
+    // NOTE: We do NOT print here. The ApplyOutcome::Promoted will be handled
+    // by messages::print_outcome at the top level to avoid double printing.
 
     Ok(ApplyOutcome::Promoted {
         written: result.files_written,
