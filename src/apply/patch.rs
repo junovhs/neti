@@ -132,13 +132,32 @@ fn collect_section(
 
 fn apply_single_instruction(content: &str, instr: PatchInstruction) -> Result<String> {
     let PatchInstruction { search, replace } = instr;
-    let matches: Vec<_> = content.match_indices(&search).collect();
+    
+    // Normalize search block to match target file's EOL
+    let eol = detect_eol(content);
+    let normalized_search = normalize_newlines(&search, eol);
+    let normalized_replace = normalize_newlines(&replace, eol);
+
+    let matches: Vec<_> = content.match_indices(&normalized_search).collect();
 
     match matches.len() {
         0 => Err(anyhow!("Patch failed: SEARCH block not found in file.\nHint: Check indentation and whitespace exactness.")),
-        1 => Ok(content.replace(&search, &replace)),
+        1 => Ok(content.replace(&normalized_search, &normalized_replace)),
         n => Err(anyhow!("Patch failed: Ambiguous SEARCH block. Found {n} matches.\nHint: Include more context in the SEARCH block to make it unique.")),
     }
+}
+
+fn detect_eol(content: &str) -> &str {
+    if content.contains("\r\n") {
+        "\r\n"
+    } else {
+        "\n"
+    }
+}
+
+fn normalize_newlines(text: &str, eol: &str) -> String {
+    // Split by any newline, then join with specific EOL
+    text.lines().collect::<Vec<_>>().join(eol)
 }
 
 fn compute_sha256(content: &str) -> String {
@@ -163,6 +182,23 @@ mod tests {
 "#;
         let result = apply(original, patch)?;
         assert_eq!(result, "fn main() {\n    println!(\"World\");\n}");
+        Ok(())
+    }
+
+    #[test]
+    fn test_apply_crlf_target() -> Result<()> {
+        // Target has CRLF
+        let original = "line1\r\nline2\r\nline3";
+        // Patch definition uses standard \n (via rust string literal)
+        let patch = r"
+<<<< SEARCH
+line2
+====
+line2_fixed
+>>>>
+";
+        let result = apply(original, patch)?;
+        assert_eq!(result, "line1\r\nline2_fixed\r\nline3");
         Ok(())
     }
 
