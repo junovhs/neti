@@ -168,9 +168,9 @@ slopchop apply --reset
 
 ---
 
-## Latest: The Great Pivot
+## Latest: v0.9.0 - The Scalpel
 
-SlopChop has recently been surgically refactored into a **Pure Filesystem Engine**.
-*   **Decoupled Git:** SlopChop no longer manages commits or pushes. It provides a "Green State" which you can then commit using your preferred Git workflow.
-*   **Protocol Hardening:** Transitioned to the `XSC7XSC` Sequence Sigil for maximum reliability across different LLM providers and terminal environments.
-*   **Sandbox Isolation:** Full implementation of the Shadow Worktree, allowing safe experimentation without risk to production source code.
+SlopChop has evolved into a precision instrument with **Surgical Patching**.
+*   **Surgical Edits:** Use `PATCH` blocks to modify specific lines in a file without rewriting the whole content. Verified with SHA256 safety locks.
+*   **Parser Hardening:** Strict protocol validation prevents injection attacks and ensures reliable parsing of complex payloads.
+*   **Sandbox Isolation:** All changes (Files & Patches) are applied to a Shadow Worktree first, ensuring your production code is never touched until verification passes.
