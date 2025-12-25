@@ -1,14 +1,14 @@
 // src/apply/processor.rs
+use crate::apply::executor;
 use crate::apply::manifest;
 use crate::apply::parser;
-use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent, Operation};
+use crate::apply::patch;
+use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent};
 use crate::apply::validator;
-use crate::apply::verification;
-use crate::apply::writer;
 use crate::stage::StageManager;
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use colored::Colorize;
-use std::io::{self, Write};
+use std::path::Path;
 
 /// Validates and applies a string payload containing a plan, manifest and files.
 ///
@@ -19,11 +19,7 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
         return Ok(ApplyOutcome::ParseError("Input is empty".to_string()));
     }
 
-    let blocks = match parser::parse(content) {
-        Ok(b) => b,
-        Err(e) => return Ok(ApplyOutcome::ParseError(format!("Parser Error: {e}"))),
-    };
-
+    let blocks = parser::parse(content).map_err(|e| anyhow!("Parser Error: {e}"))?;
     if blocks.is_empty() {
         return Ok(ApplyOutcome::ParseError("No valid blocks found.".to_string()));
     }
@@ -32,29 +28,19 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
         return Ok(outcome);
     }
 
-    let (manifest, extracted) = extract_content(&blocks)?;
+    let (manifest, mut extracted) = extract_content(&blocks)?;
 
-    warn_on_patch(&blocks);
+    // Process PATCH blocks
+    if let Err(e) = apply_patches(&blocks, &mut extracted, ctx) {
+        return Ok(ApplyOutcome::ParseError(format!("Patch Error: {e}")));
+    }
 
     let validation = validator::validate(&manifest, &extracted);
     if !matches!(validation, ApplyOutcome::Success { .. }) {
         return Ok(validation);
     }
 
-    apply_to_stage_transaction(&manifest, &extracted, ctx)
-}
-
-fn check_plan(blocks: &[Block], ctx: &ApplyContext) -> Result<Option<ApplyOutcome>> {
-    let plan = blocks.iter().find_map(|b| match b {
-        Block::Plan(s) => Some(s.as_str()),
-        _ => None,
-    });
-
-    if check_plan_requirement(plan, ctx)? {
-        Ok(None)
-    } else {
-        Ok(Some(ApplyOutcome::ParseError("Operation cancelled.".to_string())))
-    }
+    executor::apply_to_stage_transaction(&manifest, &extracted, ctx)
 }
 
 fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::ExtractedFiles)> {
@@ -83,9 +69,16 @@ fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::Extracte
     Ok((manifest, extracted))
 }
 
-fn warn_on_patch(blocks: &[Block]) {
-    if blocks.iter().any(|b| matches!(b, Block::Patch { .. })) {
-        println!("{}", "WARN: PATCH blocks detected but currently ignored (Phase 2B pending).".yellow());
+fn check_plan(blocks: &[Block], ctx: &ApplyContext) -> Result<Option<ApplyOutcome>> {
+    let plan = blocks.iter().find_map(|b| match b {
+        Block::Plan(s) => Some(s.as_str()),
+        _ => None,
+    });
+
+    if check_plan_requirement(plan, ctx)? {
+        Ok(None)
+    } else {
+        Ok(Some(ApplyOutcome::ParseError("Operation cancelled.".to_string())))
     }
 }
 
@@ -94,7 +87,7 @@ fn check_plan_requirement(plan: Option<&str>, ctx: &ApplyContext) -> Result<bool
         println!("{}", "[PLAN]:".cyan().bold());
         println!("{}", p.trim());
         if !ctx.force && !ctx.dry_run {
-            return confirm("Apply these changes?");
+            return executor::confirm("Apply these changes?");
         }
         return Ok(true);
     }
@@ -103,132 +96,61 @@ fn check_plan_requirement(plan: Option<&str>, ctx: &ApplyContext) -> Result<bool
         Ok(false)
     } else {
         if !ctx.force && !ctx.dry_run {
-            return confirm("Apply without a plan?");
+            return executor::confirm("Apply without a plan?");
         }
         Ok(true)
     }
 }
 
-fn apply_to_stage_transaction(
-    manifest: &types::Manifest,
+fn apply_patches(
+    blocks: &[Block],
+    extracted: &mut types::ExtractedFiles,
+    ctx: &ApplyContext,
+) -> Result<()> {
+    let mut stage_manager = StageManager::new(&ctx.repo_root);
+    let _ = stage_manager.load_state(); 
+
+    for block in blocks {
+        if let Block::Patch { path, content } = block {
+            let base = get_base_content(path, extracted, &stage_manager, &ctx.repo_root)?;
+            let new_content = patch::apply(&base, content)
+                .map_err(|e| anyhow!("Failed to patch {path}: {e}"))?;
+
+            extracted.insert(
+                path.clone(),
+                FileContent {
+                    line_count: new_content.lines().count(),
+                    content: new_content,
+                },
+            );
+        }
+    }
+    Ok(())
+}
+
+fn get_base_content(
+    path: &str,
     extracted: &types::ExtractedFiles,
-    ctx: &ApplyContext,
-) -> Result<ApplyOutcome> {
-    if ctx.dry_run {
-        return Ok(ApplyOutcome::Success {
-            written: vec!["(Dry Run) Verified".to_string()],
-            deleted: vec![],
-            backed_up: false,
-            staged: false,
-        });
+    stage: &StageManager,
+    repo_root: &Path,
+) -> Result<String> {
+    // 1. Check extracted (previous patches in same payload)
+    if let Some(fc) = extracted.get(path) {
+        return Ok(fc.content.clone());
     }
-
-    let (mut stage, outcome) = execute_stage_transaction(manifest, extracted, ctx)?;
-
-    if ctx.check_after {
-        return run_post_apply_verification(ctx, &mut stage, outcome);
-    }
-
-    print_stage_info(&stage);
-    Ok(outcome)
-}
-
-fn execute_stage_transaction(
-    manifest: &types::Manifest,
-    extracted: &types::ExtractedFiles,
-    ctx: &ApplyContext,
-) -> Result<(StageManager, ApplyOutcome)> {
-    let mut stage = StageManager::new(&ctx.repo_root);
-    let ensure_result = stage.ensure_stage()?;
-
-    if ensure_result.was_created() {
-        println!("{}", "Created staging workspace.".blue());
-    }
-
-    let worktree = stage.worktree();
-    let retention = ctx.config.preferences.backup_retention;
-    let outcome = writer::write_files(manifest, extracted, Some(&worktree), retention)?;
-
-    for entry in manifest {
-        match entry.operation {
-            Operation::Delete => stage.record_delete(&entry.path)?,
-            Operation::Update | Operation::New => stage.record_write(&entry.path)?,
+    // 2. Check stage
+    if stage.exists() {
+        let p = stage.worktree().join(path);
+        if p.exists() {
+            return std::fs::read_to_string(p).map_err(|e| anyhow!("Read staged {path}: {e}"));
         }
     }
-    stage.record_apply()?;
-
-    let staged_outcome = match outcome {
-        ApplyOutcome::Success {
-            written,
-            deleted,
-            backed_up,
-            ..
-        } => ApplyOutcome::Success {
-            written,
-            deleted,
-            backed_up,
-            staged: true,
-        },
-        other => other,
-    };
-
-    Ok((stage, staged_outcome))
-}
-
-fn run_post_apply_verification(
-    ctx: &ApplyContext,
-    stage: &mut StageManager,
-    outcome: ApplyOutcome,
-) -> Result<ApplyOutcome> {
-    let passed = verification::run_verification_pipeline(ctx, stage.worktree())?;
-
-    if passed {
-        println!("{}", " Verification passed!".green().bold());
-        if ctx.auto_promote {
-            return promote_stage(ctx, stage);
-        }
-        if confirm("Promote staged changes to workspace?")? {
-            return promote_stage(ctx, stage);
-        }
-        print_stage_info(stage);
-        Ok(outcome)
-    } else {
-        println!("{}", "? Verification failed. Changes remain staged.".yellow());
-        print_stage_info(stage);
-        Ok(outcome)
+    // 3. Check workspace
+    let p = repo_root.join(path);
+    if p.exists() {
+        return std::fs::read_to_string(p).map_err(|e| anyhow!("Read original {path}: {e}"));
     }
-}
-
-fn promote_stage(ctx: &ApplyContext, stage: &mut StageManager) -> Result<ApplyOutcome> {
-    let retention = ctx.config.preferences.backup_retention;
-    let result = stage.promote(retention)?;
-
-    Ok(ApplyOutcome::Promoted {
-        written: result.files_written,
-        deleted: result.files_deleted,
-    })
-}
-
-fn print_stage_info(stage: &StageManager) {
-    println!(
-        "\n{} Changes staged. Run {} to verify, or {} to promote.",
-        " ".blue(),
-        "slopchop check".yellow(),
-        "slopchop apply --promote".yellow()
-    );
-    if let Some(state) = stage.state() {
-        let write_count = state.paths_to_write().len();
-        let delete_count = state.paths_to_delete().len();
-        println!("   Stage: {write_count} writes, {delete_count} deletes pending");
-    }
-}
-
-fn confirm(prompt: &str) -> Result<bool> {
-    print!("{prompt} [y/N] ");
-    io::stdout().flush()?;
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    Ok(input.trim().eq_ignore_ascii_case("y"))
+    Err(anyhow!("Base file not found for patch: {path}"))
 }
 
 /// Promotes staged changes to the real workspace (standalone command).
@@ -236,13 +158,5 @@ fn confirm(prompt: &str) -> Result<bool> {
 /// # Errors
 /// Returns error if promotion fails.
 pub fn run_promote_standalone(ctx: &ApplyContext) -> Result<ApplyOutcome> {
-    let mut stage = StageManager::new(&ctx.repo_root);
-    if !stage.exists() {
-        println!("{}", "No stage to promote.".yellow());
-        return Ok(ApplyOutcome::ParseError(
-            "No staged changes found.".to_string(),
-        ));
-    }
-    stage.load_state()?;
-    promote_stage(ctx, &mut stage)
+    executor::run_promote_standalone(ctx)
 }

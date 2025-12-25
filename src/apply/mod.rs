@@ -1,8 +1,10 @@
 // src/apply/mod.rs
 pub mod backup;
+pub mod executor;
 pub mod manifest;
 pub mod messages;
 pub mod parser;
+pub mod patch;
 pub mod processor;
 pub mod types;
 pub mod validator;
