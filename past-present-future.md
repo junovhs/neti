@@ -11,24 +11,25 @@ Debt Cleared: We refactored `manager.rs`, `promote.rs`, `copy.rs`, and `validato
 
 2. Where Are We Now?
 
-Status: OPERATIONAL / STABLE.
+Status: OPERATIONAL / HARDENING.
 
 The Binary:
 - `slopchop check`: Scans workspace (uses stage if present).
 - `slopchop apply`: Writes to stage.
 - `slopchop apply --promote`: Writes to workspace.
 
-The Verification:
-- Run `./verify_pivot.sh` to see the proof of the new architecture in action.
+The Security:
+- **Parser Hardened**: `src/apply/parser.rs` now strictly validates block types and rejects file paths that mimic protocol keywords (`MANIFEST`, `PLAN`, etc.) to prevent injection attacks.
 
 3. Where Are We Going? (Phase 2: Hardening)
 
 Per `slopchop_pivot_brief.md`, the next major objectives are:
 
-A) Parser Hardening
-Ensure the extraction logic cannot be tricked into writing to files named "MANIFEST" or "PLAN" or other metadata blocks. We need strict block typing.
+A) Parser Hardening [COMPLETED]
+- Strict Block Validation: Implemented in `parser.rs`.
+- Reserved Name Protection: Implemented (Files cannot be named "MANIFEST", "PLAN", etc.).
 
-B) PATCH Blocks (The "Scalpel")
+B) PATCH Blocks (The "Scalpel") [CURRENT OBJECTIVE]
 Currently, we only support full-file replacement (`FILE`).
 We need to implement `PATCH` blocks for surgical edits:
 - `XSC7XSC PATCH XSC7XSC path/to/file.rs`
@@ -37,4 +38,4 @@ We need to implement `PATCH` blocks for surgical edits:
 - Strict application (no fuzzy matching).
 
 Immediate Next Action:
-Execute verify script, then begin Parser Hardening.
+Begin implementation of `patch/` module to handle surgical text replacements.
