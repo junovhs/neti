@@ -3,41 +3,15 @@ use crate::apply::types::{ManifestEntry, Operation};
 use anyhow::Result;
 use regex::Regex;
 
-const SIGIL: &str = "XSC7XSC";
-
-/// Parses the delivery manifest block using the Sequence Sigil.
+/// Parses the delivery manifest body lines.
 ///
 /// # Errors
 /// Returns error if regex compilation fails.
-pub fn parse_manifest(response: &str) -> Result<Option<Vec<ManifestEntry>>> {
-    if let Some((start, end)) = find_sigil_manifest(response)? {
-        let block = &response[start..end];
-        let entries = parse_manifest_lines(block)?;
-        return Ok(Some(entries));
-    }
-    Ok(None)
-}
-
-fn find_sigil_manifest(response: &str) -> Result<Option<(usize, usize)>> {
-    let open_re = Regex::new(&format!(r"{SIGIL} MANIFEST {SIGIL}"))?;
-    let close_re = Regex::new(&format!(r"{SIGIL} END {SIGIL}"))?;
-
-    let Some(start_match) = open_re.find(response) else {
-        return Ok(None);
-    };
-
-    let Some(end_match) = close_re.find_at(response, start_match.end()) else {
-        return Ok(None);
-    };
-
-    Ok(Some((start_match.end(), end_match.start())))
-}
-
-fn parse_manifest_lines(block: &str) -> Result<Vec<ManifestEntry>> {
+pub fn parse_manifest_body(content: &str) -> Result<Vec<ManifestEntry>> {
     let list_marker_re = Regex::new(r"^\s*(?:[-*]|\d+\.)\s+")?;
     let mut entries = Vec::new();
 
-    for line in block.lines() {
+    for line in content.lines() {
         let trimmed = line.trim();
         if trimmed.is_empty() {
             continue;
@@ -77,3 +51,13 @@ fn parse_operation(line: &str) -> (String, Operation) {
         (line.to_string(), Operation::Update)
     }
 }
+
+/// Deprecated: kept temporarily if needed by old tests, but prefer `parse_manifest_body`.
+///
+/// # Errors
+/// Always returns `Ok(None)`.
+pub fn parse_manifest(_response: &str) -> Result<Option<Vec<ManifestEntry>>> {
+    // This function is now legacy as the parser handles block extraction.
+    // It's stubbed out or redirected to ensure type compatibility if called incorrectly.
+    Ok(None)
+}

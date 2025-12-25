@@ -1,10 +1,12 @@
 // tests/integration_apply.rs
 // slopchop:ignore (test file - allowed .unwrap() for test clarity)
-use slopchop_core::apply::types::{ManifestEntry, Operation};
-use slopchop_core::apply::validator;
+use slopchop_core::apply::types::{Block, FileContent, ManifestEntry, Operation};
+use slopchop_core::apply::{manifest, parser, validator};
 use std::collections::HashMap;
 
 const SIGIL: &str = "XSC7XSC";
+
+// --- Helpers ---
 
 fn make_block(path: &str, content: &str) -> String {
     let header = format!("{SIGIL} FILE {SIGIL} {path}");
@@ -24,6 +26,43 @@ fn make_plan(goal: &str) -> String {
     let footer = format!("{SIGIL} END {SIGIL}");
     format!("{header}\n{goal}\n{footer}\n")
 }
+
+fn parse_blocks_helper(input: &str) -> Vec<Block> {
+    parser::parse(input).unwrap_or_default()
+}
+
+fn extract_files_helper(input: &str) -> HashMap<String, FileContent> {
+    let mut files = HashMap::new();
+    for block in parse_blocks_helper(input) {
+        if let Block::File { path, content } = block {
+            files.insert(
+                path,
+                FileContent {
+                    line_count: content.lines().count(),
+                    content,
+                },
+            );
+        }
+    }
+    files
+}
+
+fn extract_plan_helper(input: &str) -> Option<String> {
+    parse_blocks_helper(input).into_iter().find_map(|b| match b {
+        Block::Plan(s) => Some(s),
+        _ => None,
+    })
+}
+
+fn extract_manifest_helper(input: &str) -> Option<Vec<ManifestEntry>> {
+    let content = parse_blocks_helper(input).into_iter().find_map(|b| match b {
+        Block::Manifest(s) => Some(s),
+        _ => None,
+    })?;
+    manifest::parse_manifest_body(&content).ok()
+}
+
+// --- Tests ---
 
 fn assert_security_rejection(path: &str, error_part: &str) {
     let manifest = vec![ManifestEntry {
@@ -66,14 +105,12 @@ fn test_unified_apply_combined() {
     let block_lib = make_block("src/lib.rs", "pub fn lib() {}");
     let input = format!("{manifest}\n{block_main}\n{block_lib}");
 
-    let manifest_parsed = slopchop_core::apply::manifest::parse_manifest(&input)
-        .unwrap() // slopchop:ignore
-        .unwrap(); // slopchop:ignore
+    let manifest_parsed = extract_manifest_helper(&input).unwrap(); // slopchop:ignore
     assert_eq!(manifest_parsed.len(), 2);
     assert_eq!(manifest_parsed[0].path, "src/main.rs");
     assert_eq!(manifest_parsed[1].path, "src/lib.rs");
 
-    let files = slopchop_core::apply::extractor::extract_files(&input).unwrap(); // slopchop:ignore
+    let files = extract_files_helper(&input);
     assert_eq!(files.len(), 2);
     assert!(files.contains_key("src/main.rs"));
     assert!(files.contains_key("src/lib.rs"));
@@ -81,7 +118,6 @@ fn test_unified_apply_combined() {
 
 #[test]
 fn test_truncation_detects_ellipsis_comment() {
-    use slopchop_core::apply::types::FileContent;
     let manifest = vec![ManifestEntry {
         path: "src/lib.rs".to_string(),
         operation: Operation::Update,
@@ -106,7 +142,6 @@ fn test_truncation_detects_ellipsis_comment() {
 
 #[test]
 fn test_truncation_allows_slopchop_ignore() {
-    use slopchop_core::apply::types::FileContent;
     let manifest = vec![ManifestEntry {
         path: "src/lib.rs".to_string(),
         operation: Operation::Update,
@@ -130,7 +165,6 @@ fn test_truncation_allows_slopchop_ignore() {
 
 #[test]
 fn test_truncation_detects_empty_file() {
-    use slopchop_core::apply::types::FileContent;
     let manifest = vec![ManifestEntry {
         path: "src/empty.rs".to_string(),
         operation: Operation::Update,
@@ -154,7 +188,6 @@ fn test_truncation_detects_empty_file() {
 
 #[test]
 fn test_path_safety_allows_valid() {
-    use slopchop_core::apply::types::FileContent;
     let manifest = vec![ManifestEntry {
         path: "src/nested/deep/file.rs".to_string(),
         operation: Operation::Update,
@@ -181,7 +214,7 @@ fn test_path_safety_allows_valid() {
 #[test]
 fn test_extract_plan() {
     let input = make_plan("GOAL: Fix bugs\nCHANGES:\n1. Fix thing");
-    let plan = slopchop_core::apply::extractor::extract_plan(&input);
+    let plan = extract_plan_helper(&input);
     assert!(plan.is_some());
     let p = plan.unwrap_or_default(); // slopchop:ignore
     assert!(p.contains("GOAL:"));
@@ -190,7 +223,7 @@ fn test_extract_plan() {
 #[test]
 fn test_extract_single_file() {
     let input = make_block("src/lib.rs", "fn hello() {}");
-    let files = slopchop_core::apply::extractor::extract_files(&input).unwrap_or_default(); // slopchop:ignore
+    let files = extract_files_helper(&input);
     assert_eq!(files.len(), 1);
     assert!(files.contains_key("src/lib.rs"));
 }
@@ -200,7 +233,7 @@ fn test_extract_multiple_files() {
     let b1 = make_block("src/a.rs", "fn a() {}");
     let b2 = make_block("src/b.rs", "fn b() {}");
     let input = format!("{b1}\n{b2}");
-    let files = slopchop_core::apply::extractor::extract_files(&input).unwrap_or_default(); // slopchop:ignore
+    let files = extract_files_helper(&input);
     assert_eq!(files.len(), 2);
 }
 
@@ -209,7 +242,10 @@ fn test_extract_skips_manifest() {
     let manifest = make_manifest(&["src/lib.rs"]);
     let block = make_block("src/lib.rs", "fn lib() {}");
     let input = format!("{manifest}\n{block}");
-    let files = slopchop_core::apply::extractor::extract_files(&input).unwrap_or_default(); // slopchop:ignore
+    let files = extract_files_helper(&input);
+    // The parser returns Blocks. Block::Manifest is distinct from Block::File.
+    // extract_files_helper only collects Block::File.
+    // So "MANIFEST" never appears as a file key unless it was enclosed in FILE block (which parser forbids).
     assert_eq!(files.len(), 1);
     assert!(!files.contains_key("MANIFEST"));
 }
@@ -217,10 +253,7 @@ fn test_extract_skips_manifest() {
 #[test]
 fn test_delete_marker_detection() {
     let manifest = make_manifest(&["src/old.rs [DELETE]"]);
-    let parsed = slopchop_core::apply::manifest::parse_manifest(&manifest)
-        .ok()
-        .flatten()
-        .unwrap_or_default(); // slopchop:ignore
+    let parsed = extract_manifest_helper(&manifest).unwrap_or_default(); // slopchop:ignore
     assert_eq!(parsed.len(), 1);
     assert_eq!(parsed[0].operation, Operation::Delete);
 }
@@ -228,7 +261,6 @@ fn test_delete_marker_detection() {
 #[test]
 fn test_delete_operation() {
     use slopchop_core::apply::writer::write_files;
-    use slopchop_core::apply::types::FileContent;
     use tempfile::TempDir;
     use std::fs;
 
@@ -254,8 +286,6 @@ fn test_delete_operation() {
 
 #[test]
 fn test_rejects_markdown_fences() {
-    use slopchop_core::apply::types::FileContent;
-
     // Test backtick fences in non-markdown file
     let manifest = vec![ManifestEntry {
         path: "src/lib.rs".to_string(),

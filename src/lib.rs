@@ -22,4 +22,4 @@ pub mod stage;
 pub mod tokens;
 pub mod trace;
 pub mod tui;
-pub mod types;
+pub mod types;

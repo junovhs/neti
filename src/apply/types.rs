@@ -22,6 +22,16 @@ pub struct FileContent {
     pub line_count: usize,
 }
 
+/// Represents a parsed block from the `SlopChop` protocol stream.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Block {
+    Plan(String),
+    Manifest(String),
+    File { path: String, content: String },
+    Patch { path: String, content: String },
+    Meta(String),
+}
+
 #[derive(Debug)]
 pub enum ApplyOutcome {
     Success {
@@ -81,4 +91,4 @@ impl<'a> ApplyContext<'a> {
 }
 
 pub type Manifest = Vec<ManifestEntry>;
-pub type ExtractedFiles = HashMap<String, FileContent>;
+pub type ExtractedFiles = HashMap<String, FileContent>;
