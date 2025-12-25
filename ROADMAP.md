@@ -126,7 +126,7 @@ The path to a hardened v1.0.0 trust boundary.
 
 ---
 
-## v0.8.0 — Transactional Integrity 🔄 CURRENT
+## v0.8.0 — Transactional Integrity ✅
 
 ### Promotion Mechanics
 - [x] **Atomic Promotion (Stage -> Repo)** <!-- test: tests/integration_stage_promote.rs::test_promote_only_applies_touched_paths -->
@@ -141,17 +141,17 @@ The path to a hardened v1.0.0 trust boundary.
 
 ---
 
-## v0.9.0 — The Scalpel (Hardening) ⏳ NEXT
+## v0.9.0 — The Scalpel (Hardening) 🔄 CURRENT
 
 ### Parser Hardening
-- [ ] **Enum-based Block Tokenizer**
-- [ ] **Strict Block Validation** (Reject unknown KINDs)
-- [ ] **Reserved Name Protection** (Block files named "MANIFEST", "PLAN", etc.)
+- [x] **Enum-based Block Tokenizer** <!-- test: src/apply/parser.rs -->
+- [x] **Strict Block Validation** (Reject unknown KINDs) <!-- test: src/apply/parser.rs -->
+- [x] **Reserved Name Protection** (Block files named "MANIFEST", "PLAN", etc.) <!-- test: tests/integration_apply.rs -->
 
 ### Surgical PATCH Blocks
-- [ ] **PATCH block extraction** (LEFT_CTX, OLD, RIGHT_CTX, NEW)
-- [ ] **Base SHA256 Verification** (Prevent stale patches)
-- [ ] **Exact Match Engine** (Reject if anchor is ambiguous or missing)
+- [x] **PATCH block extraction** (LEFT_CTX, OLD, RIGHT_CTX, NEW) <!-- test: src/apply/patch.rs -->
+- [x] **Base SHA256 Verification** (Prevent stale patches) <!-- test: src/apply/patch.rs -->
+- [x] **Exact Match Engine** (Reject if anchor is ambiguous or missing) <!-- test: src/apply/patch.rs -->
 - [ ] **Auto-Fallback to FILE** (If patch > 75% of file size)
 
 ### Patch UX
