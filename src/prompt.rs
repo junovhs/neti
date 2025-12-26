@@ -67,15 +67,32 @@ path/to/file.rs
 path/to/new_file.rs [NEW]
 {sigil} END {sigil}
 
-3. File Delivery:
+3. File Delivery (for new files or major rewrites):
 {sigil} FILE {sigil} path/to/file.rs
 <raw code content>
 {sigil} END {sigil}
 
+4. Surgical Patch (for small, targeted changes to existing files):
+{sigil} PATCH {sigil} path/to/file.rs
+BASE_SHA256: <sha256 of current staged file bytes>
+MAX_MATCHES: 1
+LEFT_CTX:
+<literal text: code context before OLD>
+OLD:
+<literal text: the exact code to be replaced>
+RIGHT_CTX:
+<literal text: code context after OLD>
+NEW:
+<literal text: the new code to insert>
+{sigil} END {sigil}
+
 RULES:
-- No truncation. Provide full file contents.
+- No truncation. Provide full file contents or complete patch blocks.
 - To bypass truncation detection on a specific line, append '// slopchop:ignore' to that line.
-- No markdown fences around code blocks. The {sigil} markers are the fences."
+- No markdown fences around code blocks. The {sigil} markers are the fences.
+- Use FILE blocks for new files or when changes exceed ~75% of a file's token limit.
+- Use PATCH blocks for small, targeted changes to existing files. Obtain BASE_SHA256 from the 'slopchop pack' command. Ensure LEFT_CTX + OLD + RIGHT_CTX forms a unique anchor.
+"
         )
     }
 
@@ -85,7 +102,7 @@ RULES:
             r"SLOPCHOP CONSTRAINTS:
 - File Tokens < {}
 - Complexity <= {}
-- Use {sigil} Sigil Protocol (PLAN, MANIFEST, FILE)",
+- Use {sigil} Sigil Protocol (PLAN, MANIFEST, FILE, PATCH)",
             self.config.max_file_tokens, self.config.max_cyclomatic_complexity
         )
     }
