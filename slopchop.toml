@@ -22,7 +22,13 @@ ignore_naming_on = [
 ]
 ignore_tokens_on = [
     "README.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
     "lock",
+    # Fix: Ignore the oversized doc files
+    "docs/archived",
+    "docs/v1-brief.md",
+    "pivot_brief.md",
 ]
 
 [rules.safety]
