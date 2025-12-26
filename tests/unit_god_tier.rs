@@ -80,7 +80,8 @@ fn test_codegen_enum() -> Result<()> {
     let output = codegen::generate_refactor(&strategy, "original.rs")?;
     assert!(output.contains("enum MyEnum"));
     assert!(output.contains("Variant1"));
-    assert!(output.contains("#__SLOPCHOP_FILE__#"));
+    // Updated to check for new protocol marker
+    assert!(output.contains("XSC7XSC FILE XSC7XSC"));
     Ok(())
 }
 
@@ -152,4 +153,4 @@ fn test_enhance_plan_generation() -> Result<()> {
         "Plan should suggest enum logic"
     );
     Ok(())
-}
+}

@@ -5,6 +5,8 @@ use super::parameterize::RefactorStrategy;
 use super::types::CodeUnitKind;
 use std::fmt::Write;
 
+const SIGIL: &str = "XSC7XSC";
+
 /// Generates a consolidated refactoring plan from strategies and unit names.
 ///
 /// # Errors
@@ -139,7 +141,7 @@ pub fn generate_refactor(
 ) -> Result<String, std::fmt::Error> {
     let mut buffer = String::new();
 
-    writeln!(buffer, "#__SLOPCHOP_FILE__# {original_path}")?;
+    writeln!(buffer, "{SIGIL} FILE {SIGIL} {original_path}")?;
 
     match strategy {
         RefactorStrategy::ExtractEnum { name, variants } => {
@@ -161,7 +163,7 @@ pub fn generate_refactor(
         }
     }
 
-    writeln!(buffer, "#__SLOPCHOP_END__#")?;
+    writeln!(buffer, "{SIGIL} END {SIGIL}")?;
 
     Ok(buffer)
 }
@@ -196,4 +198,4 @@ fn to_variant_name(name: &str) -> String {
             }
         })
         .collect()
-}
+}

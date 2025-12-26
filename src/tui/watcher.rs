@@ -30,7 +30,8 @@ fn poll_clipboard(tx: &Sender<WatcherEvent>, last_content: &mut String) {
 }
 
 fn is_slopchop_payload(text: &str) -> bool {
-    text.contains("#__SLOPCHOP_FILE__#")
-        || text.contains("#__SLOPCHOP_PLAN__#")
-        || text.contains("#__SLOPCHOP_MANIFEST__#")
-}
+    text.contains("XSC7XSC PLAN XSC7XSC")
+        || text.contains("XSC7XSC MANIFEST XSC7XSC")
+        || text.contains("XSC7XSC FILE XSC7XSC")
+        || text.contains("XSC7XSC PATCH XSC7XSC")
+}
