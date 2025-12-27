@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-12-26
+
+### Added
+
+- **Transport Hardening**: parser now tolerates common AI artifacts on sigil lines (indentation, list markers, blockquotes) to prevent copy-paste failures from chat UIs.
+- **Sanitization Mode**: `slopchop apply --sanitize` (default for clipboard) strips UI-injected markdown code fences from `FILE` blocks in non-markdown files. Use `--strict` to disable.
+- **Enhanced Patch Diagnostics**: `PATCH` failures with 0 matches now display a bounded visual diff summary and a "Did you mean?" probe to help locate the correct context.
+- **Indentation Tolerance**: `PATCH` metadata (like `BASE_SHA256`) is now parsed correctly even if indented.
+
 ## [1.0.0] - 2025-12-25
 
 ### Added

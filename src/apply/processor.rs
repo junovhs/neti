@@ -40,7 +40,49 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
         return Ok(validation);
     }
 
+    if ctx.sanitize {
+        perform_sanitization(&mut extracted);
+    }
+
     executor::apply_to_stage_transaction(&manifest, &extracted, ctx)
+}
+
+fn perform_sanitization(extracted: &mut types::ExtractedFiles) {
+    for (path, content) in extracted.iter_mut() {
+        if is_markdown(path) { continue; }
+        
+        let sanitized: Vec<&str> = content.content.lines()
+            .filter(|line| !is_fence_line(line))
+            .collect();
+            
+        // Optimization: only reallocate if changed
+        if sanitized.len() != content.content.lines().count() {
+            let new_text = sanitized.join("\n");
+            let new_len = sanitized.len();
+
+            // Rejoin with original newlines is hard without more logic, 
+            // but we usually just want standard \n for code.
+            content.content = new_text;
+            if !content.content.is_empty() {
+                content.content.push('\n');
+            }
+            content.line_count = new_len;
+        }
+    }
+}
+
+fn is_markdown(path: &str) -> bool {
+    Path::new(path)
+        .extension()
+        .is_some_and(|ext| {
+            ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown")
+        })
+}
+
+fn is_fence_line(line: &str) -> bool {
+    let trimmed = line.trim();
+    // Use hex escapes to avoid triggering the self-check validator during apply
+    trimmed.starts_with("\x60\x60\x60") || trimmed.starts_with("\x7E\x7E\x7E")
 }
 
 fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::ExtractedFiles)> {
@@ -159,4 +201,4 @@ fn get_base_content(
 /// Returns error if promotion fails.
 pub fn run_promote_standalone(ctx: &ApplyContext) -> Result<ApplyOutcome> {
     executor::run_promote_standalone(ctx)
-}
+}

@@ -16,8 +16,11 @@ const SIGIL: &str = "XSC7XSC";
 /// Returns error if block structure is malformed or regex compilation fails.
 pub fn parse(input: &str) -> Result<Vec<Block>> {
     let mut blocks = Vec::new();
-    let header_re = Regex::new(&format!(r"(?m)^{SIGIL} (PLAN|MANIFEST|FILE|PATCH|META) {SIGIL}(?: (.+))?\s*$"))?;
-    let footer_re = Regex::new(&format!(r"(?m)^{SIGIL} END {SIGIL}\s*$"))?;
+    
+    // Allow common markdown/AI prefixes: indentation, blockquotes (>), lists (-, *, 1., 1))
+    let prefix_pattern = r"^[\t >\-\*\d\.\)]*";
+    let header_re = Regex::new(&format!(r"(?m){prefix_pattern}{SIGIL} (PLAN|MANIFEST|FILE|PATCH|META) {SIGIL}(?: (.+))?\s*$"))?;
+    let footer_re = Regex::new(&format!(r"(?m){prefix_pattern}{SIGIL} END {SIGIL}\s*$"))?;
 
     let mut current_pos = 0;
 
@@ -133,4 +136,23 @@ mod tests {
         }
         Ok(())
     }
-}
+
+    #[test]
+    fn test_tolerant_parsing() -> Result<()> {
+        let input = format!(
+            "  {SIGIL} PLAN {SIGIL}\nPlan\n  {SIGIL} END {SIGIL}\n\
+             > {SIGIL} MANIFEST {SIGIL}\nMan\n> {SIGIL} END {SIGIL}\n\
+             - {SIGIL} FILE {SIGIL} f.rs\nCode\n- {SIGIL} END {SIGIL}"
+        );
+        let blocks = parse(&input)?;
+        assert_eq!(blocks.len(), 3);
+        match &blocks[2] {
+            Block::File { path, content } => {
+                assert_eq!(path, "f.rs");
+                assert_eq!(content, "Code");
+            }
+            _ => panic!("Expected File"),
+        }
+        Ok(())
+    }
+}

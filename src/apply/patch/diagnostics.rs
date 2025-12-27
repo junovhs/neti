@@ -11,8 +11,10 @@ pub fn diagnose_zero_matches(content: &str, search: &str, instr: &PatchInstructi
     if let Some(candidate) = find_closest_candidate(content, search) {
         let _ = writeln!(msg, "\n🔎 Did you mean this region?");
         let _ = writeln!(msg, "{}", "-".repeat(40));
-        let _ = writeln!(msg, "{candidate}");
+        let _ = writeln!(msg, "{}", indent_lines(&candidate, "  "));
         let _ = writeln!(msg, "{}", "-".repeat(40));
+
+        append_diff_summary(&mut msg, search, &candidate);
     }
 
     // 2. Context Mismatch Details
@@ -26,6 +28,42 @@ pub fn diagnose_zero_matches(content: &str, search: &str, instr: &PatchInstructi
     
     msg.push_str("\n\nNEXT: Regenerate the patch using the correct context, or send the full FILE.");
     msg
+}
+
+fn indent_lines(block: &str, prefix: &str) -> String {
+    if block.is_empty() { return String::new(); }
+    let mut out = String::new();
+    for (i, line) in block.lines().enumerate() {
+        if i > 0 { out.push('\n'); }
+        out.push_str(prefix);
+        out.push_str(line);
+    }
+    out
+}
+
+fn append_diff_summary(msg: &mut String, expected: &str, candidate: &str) {
+    let _ = writeln!(msg, "\nDiff summary (expected vs found):");
+    
+    let exp_lines: Vec<&str> = expected.lines().take(8).collect();
+    let cand_lines: Vec<&str> = candidate.lines().take(8).collect();
+    
+    let limit = exp_lines.len().max(cand_lines.len()).min(8);
+    
+    for i in 0..limit {
+        let e = exp_lines.get(i).copied().unwrap_or("");
+        let c = cand_lines.get(i).copied().unwrap_or("");
+        
+        if e == c {
+            let _ = writeln!(msg, "  {e}");
+        } else {
+            let _ = writeln!(msg, "- {e}");
+            let _ = writeln!(msg, "+ {c}");
+        }
+    }
+    
+    if expected.lines().count() > 8 || candidate.lines().count() > 8 {
+        let _ = writeln!(msg, "  ... (truncated)");
+    }
 }
 
 fn append_mismatch_details(msg: &mut String, search: &str) {

@@ -11,7 +11,7 @@ documentation = "https://docs.rs/slopchop"
 readme = "README.md"
 keywords = ["code-quality", "linter", "ast", "developer-tools", "cli"]
 categories = ["development-tools", "command-line-utilities"]
-rust-version = "1.70"
+rust-version = "1.82"
 exclude = [
     "docs/archived/*",
     ".slopchop/*",

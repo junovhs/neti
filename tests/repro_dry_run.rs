@@ -23,6 +23,7 @@ fn test_dry_run_prevents_writes() -> Result<()> {
         check_after: false,
         auto_promote: false,
         reset_stage: false,
+        sanitize: true,
     };
 
     // Construct a payload that attempts to write a file.
@@ -71,4 +72,4 @@ fn ghost() {{}}
     }
 
     Ok(())
-}
+}

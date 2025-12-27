@@ -72,6 +72,7 @@ pub struct ApplyContext<'a> {
     pub check_after: bool,
     pub auto_promote: bool,
     pub reset_stage: bool,
+    pub sanitize: bool,
 }
 
 impl<'a> ApplyContext<'a> {
@@ -86,9 +87,10 @@ impl<'a> ApplyContext<'a> {
             check_after: false,
             auto_promote: false,
             reset_stage: false,
+            sanitize: true, // Default safe for clipboard
         }
     }
 }
 
 pub type Manifest = Vec<ManifestEntry>;
-pub type ExtractedFiles = HashMap<String, FileContent>;
+pub type ExtractedFiles = HashMap<String, FileContent>;

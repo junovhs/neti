@@ -51,12 +51,13 @@ fn process_line(
 ) -> Result<usize> {
     let trimmed = line.trim();
 
-    if let Some(val) = line.strip_prefix("BASE_SHA256:") {
+    // Use trimmed line for metadata to tolerate indentation
+    if let Some(val) = trimmed.strip_prefix("BASE_SHA256:") {
         ctx.base_sha256 = Some(val.trim().to_string());
         return Ok(idx + 1);
     }
     
-    if let Some(val) = line.strip_prefix("MAX_MATCHES:") {
+    if let Some(val) = trimmed.strip_prefix("MAX_MATCHES:") {
         validate_max_matches(val.trim())?;
         return Ok(idx + 1);
     }

@@ -39,6 +39,10 @@ pub enum Commands {
         reset: bool,
         #[arg(long)]
         promote: bool,
+        #[arg(long)]
+        sanitize: bool,
+        #[arg(long, conflicts_with = "sanitize")]
+        strict: bool,
     },
     Clean {
         #[arg(long, short)]
@@ -114,4 +118,6 @@ pub struct ApplyArgs {
     pub file: Option<PathBuf>,
     pub reset: bool,
     pub promote: bool,
+    pub sanitize: bool,
+    pub strict: bool,
 }

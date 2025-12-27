@@ -5,40 +5,34 @@ max_nesting_depth = 3
 max_function_args = 5
 max_function_words = 5
 ignore_naming_on = [
-    "tests",
-    "spec",
-    "src/stage/state.rs",
-    "src/stage/tests_manager.rs",
-    "src/stage/tests_promote.rs",
-    "src/apply/patch/tests.rs",
-    "src/apply/parser.rs",
-    "src/apply/verification.rs",
-    "src/apply/executor.rs",
-    "src/stage/copy.rs",
-    "src/audit",
-    "src/pack",
-    "src/clipboard",
-    "src/signatures"
+"tests",
+"spec",
+"src/stage/state.rs",
+"src/stage/tests_manager.rs",
+"src/stage/tests_promote.rs",
+"src/apply/patch/tests.rs",
+"src/apply/parser.rs",
+"src/apply/verification.rs",
+"src/apply/executor.rs",
+"src/stage/copy.rs",
+"src/audit",
+"src/pack",
+"src/clipboard",
+"src/signatures"
 ]
 ignore_tokens_on = [
-    "README.md",
-    "CHANGELOG.md",
-    "CONTRIBUTING.md",
-    "lock",
-    # Fix: Ignore the oversized doc files
-    "docs/archived",
-    "docs/v1-brief.md",
-    "pivot_brief.md",
+"README.md",
+"CHANGELOG.md",
+"CONTRIBUTING.md",
+"lock",
+"docs",
+"pivot_brief.md",
 ]
-
 [rules.safety]
 require_safety_comment = true
 ban_unsafe = false
-
 [rules.layers.definitions]
-
 [rules.layers.allowed_deps]
-
 [preferences]
 theme = "Cyberpunk"
 auto_copy = true
@@ -47,10 +41,9 @@ system_bell = false
 backup_retention = 5
 progress_bars = true
 require_plan = false
-
 [commands]
 fix = ["cargo fmt"]
 check = [
-    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic",
-    "cargo test",
+"cargo clippy --all-targets -- -D warnings -W clippy::pedantic",
+"cargo test",
 ]

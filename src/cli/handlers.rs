@@ -209,6 +209,8 @@ pub fn handle_apply(args: &ApplyArgs) -> Result<SlopChopExit> {
         return Ok(map_outcome_to_exit(&outcome));
     }
 
+    let sanitize = determine_sanitize(args);
+
     let ctx = ApplyContext {
         config: &config,
         repo_root: repo_root.clone(),
@@ -218,12 +220,23 @@ pub fn handle_apply(args: &ApplyArgs) -> Result<SlopChopExit> {
         check_after: args.check,
         auto_promote: false,
         reset_stage: args.reset,
+        sanitize,
     };
 
     let outcome = apply::run_apply(&ctx)?;
     apply::print_result(&outcome);
 
     Ok(map_outcome_to_exit(&outcome))
+}
+
+fn determine_sanitize(args: &ApplyArgs) -> bool {
+    if args.strict { return false; }
+    if args.sanitize { return true; }
+    
+    // Defaults:
+    // File/Stdin -> Strict (raw pipe)
+    // Clipboard -> Sanitize (assume browser/UI formatting)
+    !matches!((args.stdin, &args.file), (true, _) | (_, Some(_)))
 }
 
 fn map_outcome_to_exit(outcome: &ApplyOutcome) -> SlopChopExit {
