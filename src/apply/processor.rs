@@ -5,6 +5,7 @@ use crate::apply::parser;
 use crate::apply::patch;
 use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent};
 use crate::apply::validator;
+use crate::events::{EventKind, EventLogger};
 use crate::stage::StageManager;
 use anyhow::{anyhow, Result};
 use colored::Colorize;
@@ -31,7 +32,7 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
     let (manifest, mut extracted) = extract_content(&blocks)?;
 
     if ctx.sanitize {
-        perform_sanitization(&mut extracted);
+        perform_sanitization(&mut extracted, ctx);
     }
 
     // Process PATCH blocks
@@ -47,26 +48,36 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
     executor::apply_to_stage_transaction(&manifest, &extracted, ctx)
 }
 
-fn perform_sanitization(extracted: &mut types::ExtractedFiles) {
+fn perform_sanitization(extracted: &mut types::ExtractedFiles, ctx: &ApplyContext) {
+    let logger = EventLogger::new(&ctx.repo_root);
+    
     for (path, content) in extracted.iter_mut() {
         if is_markdown(path) { continue; }
         
+        let original_count = content.content.lines().count();
         let sanitized: Vec<&str> = content.content.lines()
             .filter(|line| !is_fence_line(line))
             .collect();
+        let new_count = sanitized.len();
             
-        // Optimization: only reallocate if changed
-        if sanitized.len() != content.content.lines().count() {
-            let new_text = sanitized.join("\n");
-            let new_len = sanitized.len();
+        if new_count != original_count {
+            let removed = original_count - new_count;
+            println!("   {} Sanitized {} markdown fence lines from {}", "i".blue(), removed, path);
+            
+            logger.log(EventKind::SanitizationPerformed {
+                path: path.clone(),
+                lines_removed: removed,
+            });
 
+            let new_text = sanitized.join("\n");
+            
             // Rejoin with original newlines is hard without more logic, 
             // but we usually just want standard \n for code.
             content.content = new_text;
             if !content.content.is_empty() {
                 content.content.push('\n');
             }
-            content.line_count = new_len;
+            content.line_count = new_count;
         }
     }
 }

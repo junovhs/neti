@@ -45,6 +45,10 @@ pub enum EventKind {
     PromoteFailed {
         error: String,
     },
+    SanitizationPerformed {
+        path: String,
+        lines_removed: usize,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]

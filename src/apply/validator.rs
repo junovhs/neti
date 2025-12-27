@@ -157,7 +157,7 @@ fn check_markdown_fences(path: &str, content: &str) -> Result<(), String> {
         return Ok(());
     }
     if content.contains("\x60\x60\x60") || content.contains("\x7E\x7E\x7E") {
-        return Err(format!("Markdown fences detected in {path}. Content must be raw code."));
+        return Err(format!("Markdown fences detected in {path}. Content must be raw code. Run with --sanitize to strip them automatically."));
     }
     Ok(())
 }
