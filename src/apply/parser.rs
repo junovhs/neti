@@ -60,30 +60,32 @@ pub fn parse(input: &str) -> Result<Vec<Block>> {
 
 /// Removes the transport prefix from every line of the content.
 ///
-/// If the header was `> XSC7XSC FILE...`, we strip `> ` from every line of the body.
-/// This recovers the original file content from the AI's quoted block.
+/// Handles robust stripping:
+/// 1. Try exact prefix match (e.g., "> ").
+/// 2. If that fails, try trimmed prefix (e.g., ">").
+///    This handles cases where empty lines or code lines drop the trailing space.
 fn clean_block_content(raw: &str, prefix: &str) -> String {
-    // If there is no prefix, just trim the newline padding
     if prefix.is_empty() {
         return raw.trim_matches('\n').to_string();
     }
 
-    let mut cleaned = Vec::new();
-    // We skip the first newline if the regex didn't consume it (it usually doesn't)
+    let trimmed_prefix = prefix.trim_end();
     let lines = raw.strip_prefix('\n').unwrap_or(raw).lines();
 
-    for line in lines {
-        if let Some(stripped) = line.strip_prefix(prefix) {
-            cleaned.push(stripped);
-        } else {
-            // If the line doesn't match the prefix (e.g. empty line in a blockquote), 
-            // just take it as-is, or empty if it was just the prefix chars.
-            // Usually, blockquotes have `>` even on empty lines, but sometimes they don't.
-            cleaned.push(line);
-        }
+    lines
+        .map(|line| clean_line(line, prefix, trimmed_prefix))
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+fn clean_line<'a>(line: &'a str, prefix: &str, trimmed_prefix: &str) -> &'a str {
+    if let Some(stripped) = line.strip_prefix(prefix) {
+        stripped
+    } else if !trimmed_prefix.is_empty() {
+        line.strip_prefix(trimmed_prefix).unwrap_or(line)
+    } else {
+        line
     }
-    
-    cleaned.join("\n")
 }
 
 fn create_block(kind: &str, arg: Option<String>, content: String) -> Result<Block> {
@@ -138,16 +140,26 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_file() -> Result<()> {
-        let input = format!("{SIGIL} FILE {SIGIL} src/main.rs\nfn main() {{}}\n{SIGIL} END {SIGIL}");
+    fn test_parse_file_and_patch() -> Result<()> {
+        let input = format!(
+            "{SIGIL} FILE {SIGIL} src/main.rs\nfn main() {{}}\n{SIGIL} END {SIGIL}\n\
+             {SIGIL} PATCH {SIGIL} lib.rs\nDIFF\n{SIGIL} END {SIGIL}"
+        );
         let blocks = parse(&input)?;
-        assert_eq!(blocks.len(), 1);
+        assert_eq!(blocks.len(), 2);
         match &blocks[0] {
             Block::File { path, content } => {
                 assert_eq!(path, "src/main.rs");
                 assert_eq!(content, "fn main() {}");
             }
             _ => panic!("Expected File"),
+        }
+        match &blocks[1] {
+            Block::Patch { path, content } => {
+                assert_eq!(path, "lib.rs");
+                assert_eq!(content, "DIFF");
+            }
+            _ => panic!("Expected Patch"),
         }
         Ok(())
     }
@@ -160,23 +172,8 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_patch() -> Result<()> {
-        let input = format!("{SIGIL} PATCH {SIGIL} lib.rs\nDIFF\n{SIGIL} END {SIGIL}");
-        let blocks = parse(&input)?;
-        match &blocks[0] {
-            Block::Patch { path, content } => {
-                assert_eq!(path, "lib.rs");
-                assert_eq!(content, "DIFF");
-            }
-            _ => panic!("Expected Patch"),
-        }
-        Ok(())
-    }
-
-    #[test]
     fn test_tolerant_parsing() -> Result<()> {
         // Test with indentation and list markers
-        // Notice the content also has the prefix, which should be stripped
         let input = format!(
             "  {SIGIL} PLAN {SIGIL}\n  Plan\n  {SIGIL} END {SIGIL}\n\
              > {SIGIL} MANIFEST {SIGIL}\n> Man\n> {SIGIL} END {SIGIL}\n\
@@ -185,23 +182,35 @@ mod tests {
         let blocks = parse(&input)?;
         assert_eq!(blocks.len(), 3);
         
-        // Plan should have "Plan" (stripped of "  ")
         match &blocks[0] {
             Block::Plan(c) => assert_eq!(c, "Plan"),
             _ => panic!("Expected Plan"),
         }
-
-        // Manifest should have "Man" (stripped of "> ")
         match &blocks[1] {
             Block::Manifest(c) => assert_eq!(c, "Man"),
             _ => panic!("Expected Manifest"),
         }
-
-        // File should have "Code" (stripped of "- ")
         match &blocks[2] {
             Block::File { path, content } => {
                 assert_eq!(path, "f.rs");
                 assert_eq!(content, "Code");
+            }
+            _ => panic!("Expected File"),
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn test_inconsistent_prefix_parsing() -> Result<()> {
+        // Test where header has "> " but body has ">" (no space)
+        let input = format!(
+            "> {SIGIL} FILE {SIGIL} f.rs\n>code\n> {SIGIL} END {SIGIL}"
+        );
+        let blocks = parse(&input)?;
+        assert_eq!(blocks.len(), 1);
+        match &blocks[0] {
+            Block::File { content, .. } => {
+                assert_eq!(content, "code"); // Should strip ">" even if prefix captured "> "
             }
             _ => panic!("Expected File"),
         }

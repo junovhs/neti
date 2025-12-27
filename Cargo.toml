@@ -1,6 +1,6 @@
 [package]
 name = "slopchop"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2021"
 authors = ["Spencer Nunamaker <junovhs@gmail.com>"]
 description = "High-integrity code quality governance and transactional change management for AI-assisted development"
