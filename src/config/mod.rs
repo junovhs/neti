@@ -3,7 +3,7 @@ pub mod io;
 pub mod types;
 
 pub use self::types::{
-    CommandEntry, Config, Preferences, RuleConfig, SlopChopToml, Theme,
+    CommandEntry, Config, Preferences, RuleConfig, SlopChopToml,
 };
 use anyhow::Result;
 
@@ -57,4 +57,4 @@ pub fn save_to_file(
     commands: &std::collections::HashMap<String, Vec<String>>,
 ) -> Result<()> {
     io::save_to_file(rules, prefs, commands)
-}
+}

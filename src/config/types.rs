@@ -1,19 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, Default)]
-pub enum Theme {
-    Nasa,
-    #[default]
-    Cyberpunk,
-    Corporate,
-}
-
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Preferences {
-    #[serde(default)]
-    pub theme: Theme,
     #[serde(default = "default_auto_copy")]
     pub auto_copy: bool,
     #[serde(default)]
@@ -31,7 +21,6 @@ pub struct Preferences {
 impl Default for Preferences {
     fn default() -> Self {
         Self {
-            theme: Theme::default(),
             auto_copy: default_auto_copy(),
             auto_format: false,
             system_bell: false,
@@ -64,8 +53,6 @@ pub struct RuleConfig {
     pub ignore_tokens_on: Vec<String>,
     #[serde(default)]
     pub safety: SafetyConfig,
-    #[serde(default)]
-    pub layers: LayerConfig,
 }
 
 impl Default for RuleConfig {
@@ -79,7 +66,6 @@ impl Default for RuleConfig {
             ignore_naming_on: Vec::new(),
             ignore_tokens_on: default_ignore_tokens(),
             safety: SafetyConfig::default(),
-            layers: LayerConfig::default(),
         }
     }
 }
@@ -94,19 +80,8 @@ pub struct SafetyConfig {
 
 impl Default for SafetyConfig {
     fn default() -> Self {
-        Self {
-            require_safety_comment: true,
-            ban_unsafe: false,
-        }
+        Self { require_safety_comment: true, ban_unsafe: false }
     }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct LayerConfig {
-    #[serde(default)]
-    pub definitions: HashMap<String, Vec<String>>,
-    #[serde(default)]
-    pub allowed_deps: HashMap<String, Vec<String>>,
 }
 
 const fn default_true() -> bool { true }
@@ -117,11 +92,7 @@ const fn default_max_args() -> usize { 5 }
 const fn default_max_words() -> usize { 3 }
 
 fn default_ignore_tokens() -> Vec<String> {
-    vec![
-        "Cargo.lock".into(),
-        "package-lock.json".into(),
-        "README.md".into(),
-    ]
+    vec!["Cargo.lock".into(), "package-lock.json".into(), "README.md".into()]
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -160,4 +131,4 @@ pub struct Config {
     pub rules: RuleConfig,
     pub preferences: Preferences,
     pub commands: HashMap<String, Vec<String>>,
-}
+}

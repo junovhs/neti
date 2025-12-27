@@ -2,7 +2,6 @@
 use super::components;
 use super::state::ConfigApp;
 use super::status_panel;
-use crate::config::Theme;
 use ratatui::layout::{Constraint, Direction, Layout, Rect};
 use ratatui::style::{Color, Style};
 use ratatui::widgets::Block;
@@ -16,34 +15,19 @@ pub struct Palette {
     pub highlight: Color,
 }
 
-fn get_palette(theme: Theme) -> Palette {
-    match theme {
-        Theme::Nasa => Palette {
-            primary: Color::Cyan,
-            secondary: Color::Blue,
-            text: Color::White,
-            bg: Color::Black,
-            highlight: Color::Cyan,
-        },
-        Theme::Cyberpunk => Palette {
-            primary: Color::Magenta,
-            secondary: Color::Cyan,
-            text: Color::Green,
-            bg: Color::Black,
-            highlight: Color::Magenta,
-        },
-        Theme::Corporate => Palette {
-            primary: Color::White,
-            secondary: Color::Gray,
-            text: Color::Gray,
-            bg: Color::Black,
-            highlight: Color::White,
-        },
+fn get_palette() -> Palette {
+    // Hardcoded high-integrity palette
+    Palette {
+        primary: Color::Magenta,
+        secondary: Color::Cyan,
+        text: Color::Green,
+        bg: Color::Black,
+        highlight: Color::Magenta,
     }
 }
 
 pub fn draw(f: &mut Frame, app: &ConfigApp) {
-    let pal = get_palette(app.preferences.theme);
+    let pal = get_palette();
     let area = f.area();
 
     let block = Block::default().style(Style::default().bg(pal.bg));
@@ -66,7 +50,7 @@ pub fn draw(f: &mut Frame, app: &ConfigApp) {
 /// Renders just the main content (Settings + Context), skipping header/footer.
 /// Used for embedding in Dashboard.
 pub fn draw_embed(f: &mut Frame, app: &ConfigApp, area: Rect) {
-    let pal = get_palette(app.preferences.theme);
+    let pal = get_palette();
     draw_main(f, app, area, &pal);
 }
 
