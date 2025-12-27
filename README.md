@@ -75,7 +75,7 @@ The `XSC7XSC` sigil is:
  OLD: ...
  RIGHT_CTX: ...
  NEW: ...
- XSC7XSC END XSC7XSC
+ XSC7XSC END [SIGIL]
 ```
 
 ---
@@ -91,7 +91,7 @@ A fast, deterministic scan for Law violations.
 The ultimate gatekeeper command. It runs:
 1.  Your configured commands (formatters, linters, tests).
 2.  The SlopChop structural scan.
-*   **Context Aware:** If a stage exists, it runs everything inside the `.slopchop` worktree.
+*   **Context Aware:** If a stage exists, it runs checks inside the stage. If not, it runs them in your workspace.
 
 ### `slopchop apply` (Hardened Ingestion)
 Applies a protocol payload from clipboard, stdin, or file.
@@ -103,11 +103,16 @@ Applies a protocol payload from clipboard, stdin, or file.
 *   **Options:** 
     *   `--reset`: Wipe the sandbox and start fresh.
     *   `--promote`: Commit verified staged changes to the real repo.
+    *   `--sanitize`: Strip UI/Markdown artifacts (Default for Clipboard).
+    *   `--strict`: Disable sanitization (use for raw file pipes).
 
 ### `slopchop pack` (AI Context Generation)
 Knits your repository into a single high-density context file (`context.txt`).
 *   **Focus Mode:** Use `--focus <file>` to provide full source for target files while automatically providing "skeletons" (signatures only) for all dependencies.
 *   **Token Efficient:** Dramatically reduces context size by stripping function bodies from peripheral code.
+*   **Globbing Tip**: To select multiple files (e.g., all markdown), let your shell do the work. Do **not** quote the wildcard.
+    *   ✅ `slopchop pack --focus docs/*.md`
+    *   ❌ `slopchop pack --focus "docs/*.md"` (Passes literal asterisk; finds nothing)
 
 ### `slopchop audit` (Refactor Radar)
 Searches for repo-wide duplication and consolidation opportunities.
@@ -181,10 +186,9 @@ slopchop apply --reset
 
 ---
 
-## Latest: v1.0.0 - The Trust Boundary
+## Latest: v1.1.0 - Transport Hardening
 
-SlopChop v1.0.0 completes the transition to a fully staged, high-integrity architecture.
-*   **Staged Workspace:** Changes are sandboxed in `.slopchop/stage/` until verified.
-*   **Context-Anchored Patching:** Surgical `PATCH` blocks with `BASE_SHA256` locking prevent stale overwrites.
-*   **Audit Trail:** Every action is logged to `.slopchop/events.jsonl`.
-*   **No Git Dependency:** SlopChop manages its own transactional state.
+SlopChop v1.1.0 adds robust protection against "copy-paste slop":
+*   **Parser Resilience:** Tolerates indentation (`> `) and artifacts from chat UIs.
+*   **Sanitization:** Automatically strips UI-injected markdown code fences from payloads.
+*   **Enhanced Diagnostics:** PATCH failures now show "Did you mean?" hints and visual diffs.
