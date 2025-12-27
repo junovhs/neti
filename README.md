@@ -57,16 +57,16 @@ The `XSC7XSC` sigil is:
  GOAL: Refactor the auth module.
  CHANGES:
  1. Move login logic to login.rs.
- XSC7XSC END XSC7XSC
+ XSC7XSC END [SIGIL]
 
  XSC7XSC MANIFEST XSC7XSC
  src/auth.rs
  src/login.rs [NEW]
- XSC7XSC END XSC7XSC
+ XSC7XSC END [SIGIL]
 
  XSC7XSC FILE XSC7XSC src/auth.rs
  // file content...
- XSC7XSC END XSC7XSC
+ XSC7XSC END [SIGIL]
  
  XSC7XSC PATCH XSC7XSC src/auth.rs
  BASE_SHA256: <hash>
