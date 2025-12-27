@@ -94,7 +94,9 @@ fn create_block(kind: &str, arg: Option<String>, content: String) -> Result<Bloc
         "MANIFEST" => Ok(Block::Manifest(content)),
         "META" => Ok(Block::Meta(content)),
         "FILE" => {
-            let path = arg.ok_or_else(|| anyhow!("FILE block missing path argument"))?;
+            let arg_str = arg.ok_or_else(|| anyhow!("FILE block missing path argument"))?;
+            // Extract only the path, ignoring tags like SHA256:... or [SKELETON]
+            let path = arg_str.split_whitespace().next().unwrap_or(&arg_str).to_string();
             validate_path_keyword(&path)?;
             Ok(Block::File { path, content })
         },

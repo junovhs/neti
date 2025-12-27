@@ -3,6 +3,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
+use sha2::{Digest, Sha256};
 
 use super::{FocusContext, PackOptions};
 use crate::skeleton;
@@ -68,12 +69,22 @@ fn write_peripheral_section(
 
 fn write_slopchop_file(out: &mut String, path: &Path, skeletonize: bool) -> Result<()> {
     let p_str = path.to_string_lossy().replace('\\', "/");
-    writeln!(out, "{SIGIL} FILE {SIGIL} {p_str}")?;
-
+    
     match fs::read_to_string(path) {
-        Ok(content) if skeletonize => out.push_str(&skeleton::clean(path, &content)),
-        Ok(content) => out.push_str(&content),
-        Err(e) => writeln!(out, "// <ERROR READING FILE: {e}>")?,
+        Ok(content) => {
+            let hash = compute_hash(&content);
+            writeln!(out, "{SIGIL} FILE {SIGIL} {p_str} SHA256:{hash}")?;
+            
+            if skeletonize {
+                out.push_str(&skeleton::clean(path, &content));
+            } else {
+                out.push_str(&content);
+            }
+        }
+        Err(e) => {
+            writeln!(out, "{SIGIL} FILE {SIGIL} {p_str}")?;
+            writeln!(out, "// <ERROR READING FILE: {e}>")?;
+        }
     }
 
     writeln!(out, "\n{SIGIL} END {SIGIL}\n")?;
@@ -82,11 +93,17 @@ fn write_slopchop_file(out: &mut String, path: &Path, skeletonize: bool) -> Resu
 
 fn write_slopchop_file_skeleton(out: &mut String, path: &Path) -> Result<()> {
     let p_str = path.to_string_lossy().replace('\\', "/");
-    writeln!(out, "{SIGIL} FILE {SIGIL} {p_str} [SKELETON]")?;
-
+    
     match fs::read_to_string(path) {
-        Ok(content) => out.push_str(&skeleton::clean(path, &content)),
-        Err(e) => writeln!(out, "// <ERROR READING FILE: {e}>")?,
+        Ok(content) => {
+            let hash = compute_hash(&content);
+            writeln!(out, "{SIGIL} FILE {SIGIL} {p_str} [SKELETON] SHA256:{hash}")?;
+            out.push_str(&skeleton::clean(path, &content));
+        }
+        Err(e) => {
+            writeln!(out, "{SIGIL} FILE {SIGIL} {p_str} [SKELETON]")?;
+            writeln!(out, "// <ERROR READING FILE: {e}>")?;
+        }
     }
 
     writeln!(out, "\n{SIGIL} END {SIGIL}\n")?;
@@ -149,16 +166,20 @@ fn write_xml_doc(
     focus_attr: Option<&str>,
 ) -> Result<()> {
     let p_str = path.to_string_lossy().replace('\\', "/");
-    let attr = focus_attr.map_or(String::new(), |f| format!(" focus=\"{f}\""));
-
-    writeln!(out, "  <document path=\"{p_str}\"{attr}><![CDATA[")?;
-
+    
     match fs::read_to_string(path) {
         Ok(content) => {
+            let hash = compute_hash(&content);
+            let attr = focus_attr.map_or(String::new(), |f| format!(" focus=\"{f}\""));
+            writeln!(out, "  <document path=\"{p_str}\" sha256=\"{hash}\"{attr}><![CDATA[")?;
+
             let text = if skeletonize { skeleton::clean(path, &content) } else { content };
             out.push_str(&text.replace("]]>", "]]]]><![CDATA[>"));
         }
-        Err(e) => writeln!(out, "<!-- ERROR: {e} -->")?,
+        Err(e) => {
+            writeln!(out, "  <document path=\"{p_str}\">")?;
+            writeln!(out, "<!-- ERROR: {e} -->")?;
+        }
     }
 
     writeln!(out, "]]></document>")?;
@@ -169,4 +190,10 @@ fn should_skeletonize(path: &Path, opts: &PackOptions) -> bool {
     if opts.skeleton { return true; }
     if let Some(target) = &opts.target { return !path.ends_with(target); }
     false
-}
+}
+
+fn compute_hash(content: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(content.as_bytes());
+    format!("{:x}", hasher.finalize())
+}
