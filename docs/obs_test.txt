@@ -1,3 +1,0 @@
-This is a text file.
-It should not have markdown fences.
-The sanitizer should strip them and log the event.
