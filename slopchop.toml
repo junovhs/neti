@@ -34,13 +34,13 @@ require_safety_comment = true
 ban_unsafe = false
 
 [rules.locality]
-max_distance = 4
+max_distance = 2
 l1_threshold = 2
 hub_threshold = 1.0
 min_hub_afferent = 5
 god_module_threshold = 20
 deadwood_threshold = 2
-mode = "warn"
+mode = "error"
 hubs = []
 exempt_patterns = []
 
@@ -50,11 +50,11 @@ auto_format = false
 system_bell = false
 backup_retention = 5
 progress_bars = true
-require_plan = true
+require_plan = false
 
 [commands]
+fix = ["cargo fmt"]
 check = [
     "cargo clippy --all-targets -- -D warnings -W clippy::pedantic",
     "cargo test",
 ]
-fix = ["cargo fmt"]

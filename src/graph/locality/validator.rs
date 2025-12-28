@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 use super::classifier::{classify, ClassifierConfig};
 use super::coupling::compute_coupling;
 use super::distance::compute_distance;
+use super::exemptions::is_structural_pattern;
 use super::types::{Coupling, EdgeVerdict, LocalityEdge, NodeIdentity, PassReason};
 
 /// Configuration for locality validation.
@@ -64,6 +65,11 @@ pub fn validate_edge(
     config: &ValidatorConfig,
 ) -> EdgeVerdict {
     let edge = build_locality_edge(from, to, target_coupling, config);
+
+    // Check structural patterns first (lib.rs, mod.rs re-exports, vertical)
+    if is_structural_pattern(from, to) {
+        return EdgeVerdict::Pass { reason: PassReason::Exempted };
+    }
 
     if let Some(reason) = check_distance(&edge, config) {
         return EdgeVerdict::Pass { reason };
@@ -134,15 +140,15 @@ fn match_pattern(pattern: &str, path_str: &str) -> bool {
 fn generate_suggestion(edge: &LocalityEdge, coupling: &Coupling) -> String {
     if coupling.afferent > 3 {
         format!(
-            "Target '{}' is becoming a Hub (Ca={}). Extract to src/core/.",
+            "Target '{}' has high fan-in (Ca={}). Consider promoting to Hub.",
             edge.to.display(),
             coupling.afferent
         )
     } else {
         format!(
-            "Move '{}' closer to '{}'.",
-            edge.to.display(),
-            edge.from.display()
+            "Sideways dep: {} → {}. Move closer or extract shared Hub.",
+            edge.from.display(),
+            edge.to.display()
         )
     }
 }

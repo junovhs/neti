@@ -3,13 +3,17 @@
 
 use anyhow::Result;
 use colored::Colorize;
-use std::path::PathBuf;
+use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
 use crate::config::Config;
 use crate::discovery;
 use crate::exit::SlopChopExit;
 use crate::graph::imports;
-use crate::graph::locality::{validate_graph, ValidationReport};
+use crate::graph::locality::analysis::analyze;
+use crate::graph::locality::coupling::compute_coupling;
+use crate::graph::locality::report::print_full_report;
+use crate::graph::locality::{validate_graph, Coupling};
 use crate::graph::resolver;
 
 /// Runs locality validation on the codebase.
@@ -29,12 +33,21 @@ pub fn handle_locality() -> Result<SlopChopExit> {
     let files = discovery::discover(&config)?;
     let edges = collect_edges(&project_root, &files)?;
 
+    // Compute couplings for analysis
+    let couplings: HashMap<PathBuf, Coupling> = compute_coupling(
+        edges.iter().map(|(a, b)| (a.as_path(), b.as_path())),
+    );
+
     let report = validate_graph(
         edges.iter().map(|(a, b)| (a.as_path(), b.as_path())),
         &locality_config,
     );
 
-    print_report(&report);
+    // Deep analysis
+    let analysis = analyze(&report, &couplings);
+
+    // Rich output
+    print_full_report(&report, &analysis);
 
     if report.is_clean() || !config.rules.locality.is_error_mode() {
         Ok(SlopChopExit::Success)
@@ -43,10 +56,7 @@ pub fn handle_locality() -> Result<SlopChopExit> {
     }
 }
 
-fn collect_edges(
-    root: &std::path::Path,
-    files: &[PathBuf],
-) -> Result<Vec<(PathBuf, PathBuf)>> {
+fn collect_edges(root: &Path, files: &[PathBuf]) -> Result<Vec<(PathBuf, PathBuf)>> {
     let mut edges = Vec::new();
 
     for file in files {
@@ -55,7 +65,9 @@ fn collect_edges(
 
         for import_str in raw_imports {
             if let Some(resolved) = resolver::resolve(root, file, &import_str) {
-                edges.push((file.clone(), resolved));
+                let from = normalize_path(file, root);
+                let to = normalize_path(&resolved, root);
+                edges.push((from, to));
             }
         }
     }
@@ -63,54 +75,8 @@ fn collect_edges(
     Ok(edges)
 }
 
-fn print_report(report: &ValidationReport) {
-    println!(
-        "\n{} Locality Analysis: {} edges, {} passed, {} failed",
-        "→".cyan().bold(),
-        report.total_edges,
-        report.passed.len().to_string().green(),
-        format_failed_count(report.failed.len()),
-    );
-
-    if report.failed.is_empty() {
-        println!("{}", "  ✓ All dependencies respect locality.".green());
-        return;
-    }
-
-    println!("\n{}", "  Violations:".red().bold());
-    for edge in &report.failed {
-        println!(
-            "    {} → {} (D={}, K={:.2}, {})",
-            edge.from.display(),
-            edge.to.display().to_string().red(),
-            edge.distance,
-            edge.target_skew,
-            edge.target_identity.label(),
-        );
-    }
-
-    print_entropy(report);
-}
-
-fn format_failed_count(count: usize) -> String {
-    if count == 0 {
-        count.to_string().green().to_string()
-    } else {
-        count.to_string().red().to_string()
-    }
-}
-
-fn print_entropy(report: &ValidationReport) {
-    let entropy_pct = report.entropy * 100.0;
-    let entropy_str = format!("{entropy_pct:.1}%");
-
-    let colored = if entropy_pct > 30.0 {
-        entropy_str.red()
-    } else if entropy_pct > 10.0 {
-        entropy_str.yellow()
-    } else {
-        entropy_str.green()
-    };
-
-    println!("\n  Topological Entropy: {colored}");
+/// Strips the project root to get a relative path for consistent D calculation.
+fn normalize_path(path: &Path, root: &Path) -> PathBuf {
+    path.strip_prefix(root)
+        .map_or_else(|_| path.to_path_buf(), Path::to_path_buf)
 }
