@@ -4,17 +4,15 @@
 use anyhow::Result;
 use colored::Colorize;
 use std::collections::HashMap;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::config::Config;
 use crate::discovery;
 use crate::exit::SlopChopExit;
-use crate::graph::imports;
 use crate::graph::locality::analysis::analyze;
 use crate::graph::locality::coupling::compute_coupling;
 use crate::graph::locality::report::print_full_report;
-use crate::graph::locality::{validate_graph, Coupling};
-use crate::graph::resolver;
+use crate::graph::locality::{collect_edges, validate_graph, Coupling};
 
 /// Runs locality validation on the codebase.
 ///
@@ -33,7 +31,6 @@ pub fn handle_locality() -> Result<SlopChopExit> {
     let files = discovery::discover(&config)?;
     let edges = collect_edges(&project_root, &files)?;
 
-    // Compute couplings for analysis
     let couplings: HashMap<PathBuf, Coupling> = compute_coupling(
         edges.iter().map(|(a, b)| (a.as_path(), b.as_path())),
     );
@@ -43,10 +40,7 @@ pub fn handle_locality() -> Result<SlopChopExit> {
         &locality_config,
     );
 
-    // Deep analysis
     let analysis = analyze(&report, &couplings);
-
-    // Rich output
     print_full_report(&report, &analysis);
 
     if report.is_clean() || !config.rules.locality.is_error_mode() {
@@ -54,29 +48,4 @@ pub fn handle_locality() -> Result<SlopChopExit> {
     } else {
         Ok(SlopChopExit::CheckFailed)
     }
-}
-
-fn collect_edges(root: &Path, files: &[PathBuf]) -> Result<Vec<(PathBuf, PathBuf)>> {
-    let mut edges = Vec::new();
-
-    for file in files {
-        let content = std::fs::read_to_string(file)?;
-        let raw_imports = imports::extract(file, &content);
-
-        for import_str in raw_imports {
-            if let Some(resolved) = resolver::resolve(root, file, &import_str) {
-                let from = normalize_path(file, root);
-                let to = normalize_path(&resolved, root);
-                edges.push((from, to));
-            }
-        }
-    }
-
-    Ok(edges)
-}
-
-/// Strips the project root to get a relative path for consistent D calculation.
-fn normalize_path(path: &Path, root: &Path) -> PathBuf {
-    path.strip_prefix(root)
-        .map_or_else(|_| path.to_path_buf(), Path::to_path_buf)
 }
