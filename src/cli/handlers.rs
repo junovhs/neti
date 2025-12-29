@@ -6,16 +6,14 @@ use crate::cli::args::ApplyArgs;
 use crate::config::Config;
 use crate::discovery;
 use crate::exit::SlopChopExit;
+use crate::map;
 use crate::pack::{self, OutputFormat, PackOptions};
-use crate::prompt::PromptGenerator;
 use crate::reporting;
 use crate::signatures::{self, SignatureOptions};
 use crate::stage;
-use crate::trace::{self, TraceOptions};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use colored::Colorize;
-use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::path::PathBuf;
 
 fn get_repo_root() -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
@@ -47,13 +45,13 @@ pub fn handle_scan(verbose: bool, locality: bool) -> Result<SlopChopExit> {
 
     let mut config = Config::load();
     config.verbose = verbose;
-    
+
     let files = discovery::discover(&config)?;
     let engine = RuleEngine::new(config);
     let report = engine.scan(files);
-    
+
     reporting::print_report(&report)?;
-    
+
     if report.has_errors() {
         Ok(SlopChopExit::CheckFailed)
     } else {
@@ -70,7 +68,6 @@ pub fn handle_check() -> Result<SlopChopExit> {
     let repo_root = get_repo_root();
     let ctx = ApplyContext::new(&config, repo_root.clone());
 
-    // Use effective_cwd: stage if exists, else repo root
     let cwd = stage::effective_cwd(&repo_root);
 
     if apply::verification::run_verification_pipeline(&ctx, &cwd)? {
@@ -79,66 +76,6 @@ pub fn handle_check() -> Result<SlopChopExit> {
     } else {
         Ok(SlopChopExit::CheckFailed)
     }
-}
-
-/// Handles the fix command.
-///
-/// # Errors
-/// Returns error if command execution fails.
-pub fn handle_fix() -> Result<SlopChopExit> {
-    let config = Config::load();
-    let Some(fix_cmds) = config.commands.get("fix") else {
-        println!("No 'fix' command configured in slopchop.toml");
-        return Ok(SlopChopExit::Success);
-    };
-
-    let mut failed = false;
-    for cmd in fix_cmds {
-        println!("Running: {cmd}");
-        let parts: Vec<&str> = cmd.split_whitespace().collect();
-        let Some((prog, args)) = parts.split_first() else {
-            continue;
-        };
-        let status = Command::new(prog).args(args).status()?;
-        if !status.success() {
-            eprintln!("Command failed: {cmd}");
-            failed = true;
-        }
-    }
-    
-    if failed {
-        Ok(SlopChopExit::Error)
-    } else {
-        Ok(SlopChopExit::Success)
-    }
-}
-
-/// Handles the dashboard command.
-///
-/// # Errors
-/// Returns error if TUI fails to initialize or run.
-pub fn handle_dashboard() -> Result<SlopChopExit> {
-    let mut config = Config::load();
-    crate::tui::dashboard::run(&mut config)?;
-    Ok(SlopChopExit::Success)
-}
-
-/// Handles the prompt generation command.
-///
-/// # Errors
-/// Returns error if prompt generation fails or clipboard access fails.
-pub fn handle_prompt(copy: bool) -> Result<SlopChopExit> {
-    let config = Config::load();
-    let gen = PromptGenerator::new(config.rules);
-    let prompt = gen.generate().map_err(|e| anyhow!(e.to_string()))?;
-
-    if copy {
-        crate::clipboard::copy_to_clipboard(&prompt).map_err(|e| anyhow!(e.to_string()))?;
-        println!("System prompt copied to clipboard.");
-    } else {
-        println!("{prompt}");
-    }
-    Ok(SlopChopExit::Success)
 }
 
 /// Handles the pack command.
@@ -162,27 +99,12 @@ pub fn handle_pack(args: PackArgs) -> Result<SlopChopExit> {
     Ok(SlopChopExit::Success)
 }
 
-/// Handles the trace command.
-///
-/// # Errors
-/// Returns error if tracing fails.
-pub fn handle_trace(file: &Path, depth: usize, budget: usize) -> Result<SlopChopExit> {
-    let opts = TraceOptions {
-        anchor: file.to_path_buf(),
-        depth,
-        budget,
-    };
-    let output = trace::run(&opts)?;
-    println!("{output}");
-    Ok(SlopChopExit::Success)
-}
-
 /// Handles the map command.
 ///
 /// # Errors
 /// Returns error if mapping fails.
 pub fn handle_map(deps: bool) -> Result<SlopChopExit> {
-    let output = trace::map(deps)?;
+    let output = map::generate(deps)?;
     println!("{output}");
     Ok(SlopChopExit::Success)
 }
@@ -192,7 +114,7 @@ pub fn handle_map(deps: bool) -> Result<SlopChopExit> {
 /// # Errors
 /// Returns error if signature extraction fails.
 pub fn handle_signatures(opts: SignatureOptions) -> Result<SlopChopExit> {
-    signatures::run(&opts).map_err(|e| anyhow!(e.to_string()))?;
+    signatures::run(&opts)?;
     Ok(SlopChopExit::Success)
 }
 
@@ -205,7 +127,6 @@ pub fn handle_apply(args: &ApplyArgs) -> Result<SlopChopExit> {
     let repo_root = get_repo_root();
     let input = determine_input(args);
 
-    // Handle --promote flag
     if args.promote {
         let ctx = ApplyContext::new(&config, repo_root);
         let outcome = apply::run_promote(&ctx)?;
@@ -234,20 +155,21 @@ pub fn handle_apply(args: &ApplyArgs) -> Result<SlopChopExit> {
 }
 
 fn determine_sanitize(args: &ApplyArgs) -> bool {
-    if args.strict { return false; }
-    if args.sanitize { return true; }
-    
-    // Defaults:
-    // File/Stdin -> Strict (raw pipe)
-    // Clipboard -> Sanitize (assume browser/UI formatting)
+    if args.strict {
+        return false;
+    }
+    if args.sanitize {
+        return true;
+    }
+    // Defaults: File/Stdin -> Strict, Clipboard -> Sanitize
     !matches!((args.stdin, &args.file), (true, _) | (_, Some(_)))
 }
 
 fn map_outcome_to_exit(outcome: &ApplyOutcome) -> SlopChopExit {
     match outcome {
-        ApplyOutcome::Success { .. } | ApplyOutcome::Promoted { .. } | ApplyOutcome::StageReset => {
-            SlopChopExit::Success
-        }
+        ApplyOutcome::Success { .. }
+        | ApplyOutcome::Promoted { .. }
+        | ApplyOutcome::StageReset => SlopChopExit::Success,
         ApplyOutcome::ValidationFailure { .. } => SlopChopExit::InvalidInput,
         ApplyOutcome::ParseError(msg) => {
             if msg.contains("Patch mismatch")
@@ -258,7 +180,7 @@ fn map_outcome_to_exit(outcome: &ApplyOutcome) -> SlopChopExit {
             } else {
                 SlopChopExit::InvalidInput
             }
-        },
+        }
         ApplyOutcome::WriteError(_) => SlopChopExit::Error,
     }
 }

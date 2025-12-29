@@ -1,4 +1,4 @@
-.slopchop_apply_backup
+.slopchop
 target
 node_modules
 .git
@@ -8,3 +8,6 @@ tasks.toml
 SIGNATURES.txt
 SIGNATURES.rs
 .slopchop
+tests
+Cargo.lock
+/docs/archived/

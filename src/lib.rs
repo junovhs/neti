@@ -1,3 +1,4 @@
+// src/lib.rs
 pub mod analysis;
 pub mod apply;
 pub mod audit;
@@ -13,6 +14,7 @@ pub mod events;
 pub mod exit;
 pub mod graph;
 pub mod lang;
+pub mod map;
 pub mod pack;
 pub mod project;
 pub mod prompt;
@@ -22,6 +24,4 @@ pub mod skeleton;
 pub mod spinner;
 pub mod stage;
 pub mod tokens;
-pub mod trace;
-pub mod tui;
 pub mod types;
