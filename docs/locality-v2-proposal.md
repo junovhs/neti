@@ -1,14 +1,21 @@
 # Locality v2: Antifragile Architecture Detection
 
-**Status:** Proposal  
+**Status:** Approved Proposal  
 **Created:** 2025-12-28  
-**Author:** Claude (via consultation with Spencer)
+**Priority:** Next implementation target
 
 ---
 
 ## Executive Summary
 
-The current locality system requires manual configuration to avoid false positives. This proposal upgrades it to be zero-config and self-correcting by inferring architectural intent from the codebase structure itself.
+The current locality system requires manual configuration to avoid false positives. This proposal upgrades it to be zero-config and self-correcting by:
+
+1. Detecting dependency cycles (hard error)
+2. Auto-detecting hubs from graph metrics
+3. Only flagging bidirectional coupling (not layered dependencies)
+4. Inferring architectural layers automatically
+
+The result: zero config, zero false positives, genuine architectural enforcement.
 
 ---
 
@@ -19,26 +26,26 @@ The current locality system requires manual configuration to avoid false positiv
 The locality scanner produces violations that require manual intervention:
 
 ```
-▸ MISSING_HUB
+? MISSING_HUB
     src\clipboard\mod.rs (fan-in: 4)
-    → Add to [rules.locality].hubs in slopchop.toml
+     Add to [rules.locality].hubs in slopchop.toml
 
-▸ TIGHT_COUPLING
-    src\cli\handlers.rs → src\apply\mod.rs
-    → 'cli' ↔ 'apply' coupled. Merge or extract shared interface
+? TIGHT_COUPLING
+    src\cli\handlers.rs  src\apply\mod.rs
+     'cli'  'apply' coupled. Merge or extract shared interface
 ```
 
 ### Why This Is Fragile
 
-1. **Manual hub declarations decay.** Every new utility module requires config updates. Forget once, get noise forever.
+1. **Manual hub declarations decay.** Every new utility module requires config updates.
 
-2. **False positive tight coupling.** CLI → Apply is correct layering, not bad coupling. The algorithm cannot distinguish intended architecture from accidental spaghetti.
+2. **False positive tight coupling.** `cli  apply` is correct layering, not bad coupling. The algorithm cannot distinguish intended architecture from accidental spaghetti.
 
-3. **Configuration as debt.** The more config required, the less the tool gets used. Users disable features rather than maintain them.
+3. **Configuration as debt.** The more config required, the less the tool gets used.
 
 ### The Antifragile Principle
 
-A system is antifragile when it gets *better* under stress rather than worse. An antifragile locality system would:
+A system is antifragile when it gets *better* under stress. An antifragile locality system would:
 
 - Require zero configuration
 - Automatically adapt as the codebase evolves
@@ -47,161 +54,189 @@ A system is antifragile when it gets *better* under stress rather than worse. An
 
 ---
 
-## 2. Current Architecture
+## 2. The Core Insight: No Cycles
+
+The Acyclic Dependencies Principle (ADP) is one of the most agreed-upon rules in software architecture:
+
+> "The dependency graph of packages must have no cycles." - Robert C. Martin
+
+**Why cycles are universally bad:**
+
+1. **Can't understand in isolation** - To understand A, you need B. To understand B, you need A.
+2. **Can't test in isolation** - Same problem.
+3. **Can't compile separately** - Everything recompiles together.
+4. **Indicates confused responsibilities** - If A needs B and B needs A, they're one thing pretending to be two.
+
+**Languages that enforce this:**
+- **Rust:** Circular mod imports are a compile error
+- **Go:** Circular imports are a compile error
+- **Java/C#:** Allow cycles  every large codebase becomes spaghetti
+
+**The insight:** If we enforce no cycles, layer inference becomes trivial. A DAG (directed acyclic graph) can always be topologically sorted into layers. Cycles are the only thing that breaks it.
+
+**Two birds, one stone:** Cycle detection is both a critical architectural check AND the foundation for layer inference.
+
+---
+
+## 3. Current Architecture
 
 ### What Exists
 
 ```
 src/graph/locality/
-├── classifier.rs    # Computes node identity (Hub, Leaf, Deadwood, GodModule)
-├── coupling.rs      # Measures cross-module coupling
-├── distance.rs      # LCA-based topological distance
-├── validator.rs     # Universal Locality Algorithm (D ≤ 2 pass, D > 2 needs Hub)
-└── mod.rs
+��� classifier.rs    # Computes node identity (Hub, Leaf, Deadwood, GodModule)
+��� coupling.rs      # Measures cross-module coupling
+��� distance.rs      # LCA-based topological distance
+��� validator.rs     # Universal Locality Algorithm
+��� mod.rs
 ```
 
-### Current Algorithm
-
-```
-For each edge (A → B):
-  1. Compute distance D via LCA
-  2. If D ≤ 2: PASS (L1 cache)
-  3. If D > 2 and B is Hub (K ≥ 1.0): PASS
-  4. If D > 2 and B is not Hub: FAIL
-```
-
-### Current Config
+### Current Config (Fragile)
 
 ```toml
 [rules.locality]
 max_distance = 4
-hub_threshold = 1.0      # Skew K threshold for hub status
-min_hub_afferent = 5     # Minimum fan-in for hub status
-hubs = []                # Manual hub list (the fragile part)
+hub_threshold = 1.0
+min_hub_afferent = 5
+hubs = ["src/clipboard/mod.rs", "src/stage/mod.rs"]  # manual babysitting
 ```
 
 ---
 
-## 3. Proposed Solution
+## 4. Proposed Solution
 
-### 3.1 Auto-Hub Detection
+### Phase 0: Cycle Detection (Foundation)
 
-**Change:** Remove manual `hubs` config. Compute hub status entirely from graph metrics.
+**The rule:** No dependency cycles. Ever.
 
-**Current:**
-```toml
-hubs = ["src/clipboard/mod.rs", "src/stage/mod.rs"]
+```rust
+fn detect_cycles(graph: &Graph) -> Vec<Cycle> {
+    // Standard DFS-based cycle detection
+    // Returns all cycles found as ordered lists of modules
+    let mut visited = HashSet::new();
+    let mut rec_stack = HashSet::new();
+    let mut cycles = Vec::new();
+    
+    for module in graph.modules() {
+        if !visited.contains(&module) {
+            dfs_find_cycles(module, graph, &mut visited, &mut rec_stack, &mut cycles);
+        }
+    }
+    
+    cycles
+}
 ```
 
-**Proposed:**
-```toml
-auto_hub_threshold = 3   # fan-in >= 3 = automatic hub (or remove entirely, just use algorithm)
+**Output:**
+```
+DEPENDENCY CYCLE DETECTED (hard error)
+
+  apply/mod.rs
+     cli/handlers.rs
+     apply/verification.rs
+     apply/mod.rs   cycle completes here
+
+Cycles indicate confused responsibilities. 
+Either merge these modules or extract shared logic to a lower layer.
 ```
 
-**Algorithm change:**
+**This is a hard error.** Cycles block all other locality checks. Fix cycles first.
+
+---
+
+### Phase 1: Auto-Hub Detection
+
+**Change:** Remove manual `hubs` config. Compute hub status from graph metrics.
+
 ```rust
 fn is_hub(node: &Node, graph: &Graph) -> bool {
     let fan_in = graph.afferent_coupling(node);
     let fan_out = graph.efferent_coupling(node);
-    let skew = compute_skew(fan_in, fan_out);
     
-    // Auto-hub: High fan-in relative to fan-out
-    fan_in >= 3 && skew >= 0.5
+    // High fan-in, low fan-out = hub (utility that many depend on)
+    fan_in >= 3 && fan_in > fan_out
 }
 ```
 
-**Result:** clipboard and stage automatically become hubs because they have high fan-in. No config needed. New utility modules auto-promote as usage grows.
+**Result:** `clipboard` and `stage` automatically become hubs. No config needed. New utility modules auto-promote as usage grows.
 
 ---
 
-### 3.2 Directional Coupling Detection
+### Phase 2: Directional Coupling Detection
 
-**Problem:** Current algorithm flags all cross-module edges as coupling. But A → B is not the same as A ↔ B.
-
-**Proposed:** Only flag *bidirectional* coupling.
+**Change:** Only flag bidirectional coupling, not unidirectional layering.
 
 ```rust
 fn detect_coupling(graph: &Graph) -> Vec<CouplingViolation> {
     let mut violations = Vec::new();
     
-    for (module_a, module_b) in graph.cross_module_edges() {
+    for (module_a, module_b) in graph.module_pairs() {
         let a_to_b = graph.has_edge(module_a, module_b);
         let b_to_a = graph.has_edge(module_b, module_a);
         
         if a_to_b && b_to_a {
             // Bidirectional = actual coupling problem
-            violations.push(CouplingViolation::Circular { a: module_a, b: module_b });
+            violations.push(CouplingViolation::Bidirectional { a: module_a, b: module_b });
         }
-        // Unidirectional edges are fine - that's just layering
+        // Unidirectional is fine - that's just layering
     }
     
     violations
 }
 ```
 
-**Result:** `cli → apply` stops being flagged. Only actual circular dependencies get reported.
+**Result:** `cli  apply` stops being flagged. Only genuine mutual dependencies get reported.
 
 ---
 
-### 3.3 Layer Inference
+### Phase 3: Layer Inference
 
-**Advanced option:** Infer layer order from the dependency graph itself.
+**Prerequisite:** No cycles (Phase 0 must pass)
+
+**Algorithm:**
 
 ```rust
 fn infer_layers(graph: &Graph) -> Vec<Vec<Module>> {
-    // Topological sort of modules by dependency depth
-    // Modules with no internal dependencies = bottom layer
-    // Modules that only depend on lower layers = next layer up
-    // etc.
-}
-```
-
-This would produce:
-```
-Layer 0 (infrastructure): tokens, constants, error
-Layer 1 (utilities): clipboard, stage, skeleton
-Layer 2 (core logic): apply, pack, analysis, audit
-Layer 3 (interface): cli
-Layer 4 (entrypoint): bin
-```
-
-**Violation rule:** Edges must flow downward. Layer N can depend on Layer N-1, N-2, etc. Layer N cannot depend on Layer N+1.
-
-**Result:** No config needed. Layer order is computed. Violations only fire for upward dependencies.
-
----
-
-### 3.4 Encapsulation Enforcement
-
-**Problem:** `verification.rs` imports `cli::locality` directly instead of through `cli/mod.rs`.
-
-**Current behavior:** Flags as ENCAPSULATION_BREACH with manual suggestion.
-
-**Proposed:** Automatic enforcement rule.
-
-```rust
-fn check_encapsulation(import: &Import) -> Option<Violation> {
-    let target_path = import.target_path();
+    let mut layers = vec![];
+    let mut assigned = HashSet::new();
     
-    // If importing from a directory that has mod.rs,
-    // the import must go through mod.rs
-    if target_path.parent_has_mod_rs() && !target_path.is_mod_rs() {
-        Some(Violation::EncapsulationBreach {
-            from: import.source(),
-            to: target_path,
-            should_use: target_path.parent_mod_rs(),
-        })
-    } else {
-        None
+    loop {
+        // Find modules whose dependencies are all in lower layers
+        let next_layer: Vec<_> = graph.modules()
+            .filter(|m| !assigned.contains(m))
+            .filter(|m| graph.deps(m).all(|d| assigned.contains(&d)))
+            .collect();
+        
+        if next_layer.is_empty() { break; }
+        
+        for m in &next_layer { assigned.insert(m.clone()); }
+        layers.push(next_layer);
     }
+    
+    layers
 }
 ```
 
-**Result:** This is already working. No change needed, just noting it's correct.
+**Output:**
+```
+INFERRED LAYERS
+
+  L0 (foundation):  constants, error, tokens
+  L1 (config):      config, types
+  L2 (utilities):   clipboard, stage, skeleton, lang
+  L3 (core):        discovery, analysis, graph
+  L4 (features):    apply, pack, audit, signatures, map
+  L5 (interface):   cli
+  L6 (entry):       bin
+
+All dependencies flow downward. �
+```
+
+**Violation rule:** Edges must go down. Layer N can import from N-1, N-2, etc. Never from N+1.
 
 ---
 
-## 4. Configuration After Changes
+## 5. Configuration After Changes
 
 ### Before (Fragile)
 
@@ -213,7 +248,6 @@ min_hub_afferent = 5
 hubs = [
     "src/clipboard/mod.rs",
     "src/stage/mod.rs",
-    # ... grows forever ...
 ]
 ```
 
@@ -221,99 +255,87 @@ hubs = [
 
 ```toml
 [rules.locality]
-mode = "warn"   # or "error" once validated
-# That's it. Everything else is inferred.
+mode = "warn"   # or "error"
 ```
 
-Optional tuning (rarely needed):
-```toml
-[rules.locality]
-mode = "warn"
-auto_hub_fan_in = 3        # Override auto-hub threshold (default: 3)
-exempt_patterns = ["test"] # Skip test files
-```
+That's it. Everything else is inferred from the graph.
 
 ---
 
-## 5. Implementation Plan
+## 6. Implementation Plan
 
-### Phase 1: Auto-Hub (Low Risk)
+| Phase | Effort | Risk | Description |
+|-------|--------|------|-------------|
+| 0 | 1-2 hrs | Low | Cycle detection (DFS, hard error) |
+| 1 | 1-2 hrs | Low | Auto-hub (fan-in threshold) |
+| 2 | 2-3 hrs | Low | Directional coupling (bidirectional only) |
+| 3 | 2-3 hrs | Medium | Layer inference (toposort + violation check) |
 
-**Effort:** 1-2 hours  
-**Files:** `src/graph/locality/classifier.rs`, `src/config/locality.rs`
+**Total:** 6-10 hours
 
-1. Change `is_hub()` to use fan-in threshold without manual list
-2. Keep `hubs` config as override, but make it optional
-3. Default behavior: auto-detect
-
-**Test:** Run `slopchop scan --locality` — MISSING_HUB violations should disappear.
-
-### Phase 2: Directional Coupling (Medium Risk)
-
-**Effort:** 2-3 hours  
-**Files:** `src/graph/locality/coupling.rs`, `src/cli/locality.rs`
-
-1. Modify coupling detection to track edge direction
-2. Only flag bidirectional edges
-3. Update output format to show direction
-
-**Test:** TIGHT_COUPLING for `cli → apply` should disappear. Actual circular deps (if any) still flagged.
-
-### Phase 3: Layer Inference (Optional, Higher Risk)
-
-**Effort:** 3-4 hours  
-**Files:** New `src/graph/locality/layers.rs`
-
-1. Implement topological layer computation
-2. Add layer violation detection
-3. Show inferred layers in output
-
-**Test:** Run on SlopChop itself, verify inferred layers match intuition.
+**File locations:**
+- Phase 0: New `src/graph/locality/cycles.rs`
+- Phase 1: Modify `src/graph/locality/classifier.rs`
+- Phase 2: Modify `src/graph/locality/coupling.rs`
+- Phase 3: New `src/graph/locality/layers.rs`
 
 ---
 
-## 6. Success Criteria
+## 7. Success Criteria
 
 | Metric | Before | After |
 |--------|--------|-------|
-| Config lines needed | 5-10+ | 1-2 |
+| Config lines required | 5-10+ | 1 |
 | False positives on SlopChop | 7 | 0 |
 | Manual hub declarations | Required | Never |
-| New module onboarding | Edit config | Automatic |
+| Cycle detection | None | Hard error |
 
 **Definition of Done:**
 
-1. `slopchop scan --locality` on SlopChop produces 0 violations (or only genuine ones)
-2. No `hubs = [...]` in default config
-3. TIGHT_COUPLING only fires for bidirectional dependencies
-4. Documentation updated
+1. `slopchop scan --locality` on SlopChop produces 0 false positives
+2. Cycles are detected and reported as hard errors
+3. No `hubs = [...]` in config
+4. TIGHT_COUPLING only fires for bidirectional dependencies
+5. Layer visualization shows correct architecture
 
 ---
 
-## 7. Risks and Mitigations
+## 8. Expected Output After Implementation
 
-| Risk | Likelihood | Mitigation |
-|------|------------|------------|
-| Auto-hub threshold wrong | Medium | Make it configurable, default conservative |
-| Layer inference incorrect | Low | Phase 3 is optional, can skip |
-| Breaks existing behavior | Low | Keep old config as fallback |
+```
+$ slopchop scan --locality
+
+LOCALITY SCAN
+
+Cycle Check .............. � No cycles detected
+Hub Detection ............ 3 auto-detected (clipboard, stage, config)
+Layer Analysis ........... 7 layers inferred
+
+LAYERS
+  L0: constants, error, tokens
+  L1: config, types  
+  L2: clipboard, stage, skeleton, lang
+  L3: discovery, analysis, graph
+  L4: apply, pack, audit, signatures, map
+  L5: cli
+  L6: bin
+
+EDGES: 144 total | 144 passed | 0 violations
+
+Topological Entropy: 4.9%
+Architecture is clean.
+```
 
 ---
 
-## 8. Decision
+## 9. Instructions for Implementation
 
-**Recommended path:** Implement Phase 1 and Phase 2. Skip Phase 3 unless needed.
+**To the next AI session:**
 
-This gives 90% of the benefit (zero false positives, zero config) with 50% of the effort.
+Your top priority is implementing Phases 0-3 of this document.
 
----
-
-## Appendix: Research Foundation
-
-The locality system is based on:
-
-- **Martin's Stability Metrics** — Fan-in/fan-out, Instability (I), Abstractness
-- **LCA Distance** — Topological distance via Lowest Common Ancestor in module tree
-- **Skew (K)** — Novel metric: `K = ln((Cₐ+1)/(Cₑ+1))` distinguishing hubs from leaves
-
-See `docs/software-topology-brief.md` for full theoretical background.
+1. Read this entire proposal first
+2. Implement in order: Phase 0  1  2  3
+3. Test each phase with `slopchop scan --locality` before proceeding
+4. Success = zero false positives on SlopChop itself
+5. Update docs/past-present-future.md when complete
