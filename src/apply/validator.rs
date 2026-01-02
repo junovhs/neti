@@ -6,6 +6,7 @@ use std::path::{Component, Path};
 const PROTECTED_FILES: &[&str] = &[
     ".slopchopignore",
     "slopchop.toml",
+    "build.rs",
     "Cargo.lock",
     "package-lock.json",
     "yarn.lock",
@@ -14,6 +15,7 @@ const PROTECTED_FILES: &[&str] = &[
 
 const BLOCKED_DIRS: &[&str] = &[
     ".git",
+    ".cargo",
     ".env",
     ".ssh",
     ".aws",
@@ -80,13 +82,23 @@ fn check_manifest_consistency(
     match entry.operation {
         Operation::New | Operation::Update => {
             if !extracted.contains_key(&entry.path) {
-                let verb = if entry.operation == Operation::New { "create" } else { "update" };
-                errors.push(format!("Manifest says {verb} '{}', but no file block found.", entry.path));
+                let verb = if entry.operation == Operation::New {
+                    "create"
+                } else {
+                    "update"
+                };
+                errors.push(format!(
+                    "Manifest says {verb} '{}', but no file block found.",
+                    entry.path
+                ));
             }
         }
         Operation::Delete => {
             if extracted.contains_key(&entry.path) {
-                errors.push(format!("Manifest says delete '{}', but file block provided.", entry.path));
+                errors.push(format!(
+                    "Manifest says delete '{}', but file block provided.",
+                    entry.path
+                ));
             }
         }
     }
@@ -111,8 +123,14 @@ fn check_absolute_path(path_str: &str) -> Result<(), String> {
 fn is_absolute_os(path_str: &str) -> bool {
     let is_drive = path_str.len() >= 2
         && path_str.chars().nth(1) == Some(':')
-        && path_str.chars().next().is_some_and(|c| c.is_ascii_alphabetic());
-    is_drive || path_str.starts_with('\\') || path_str.starts_with('/') || Path::new(path_str).is_absolute()
+        && path_str
+            .chars()
+            .next()
+            .is_some_and(|c| c.is_ascii_alphabetic());
+    is_drive
+        || path_str.starts_with('\\')
+        || path_str.starts_with('/')
+        || Path::new(path_str).is_absolute()
 }
 
 fn check_path_components(path: &Path, original_str: &str) -> Result<(), String> {
@@ -143,7 +161,9 @@ fn is_allowed_dotfile(s: &str) -> bool {
 }
 
 fn is_protected(path_str: &str) -> bool {
-    PROTECTED_FILES.iter().any(|&f| f.eq_ignore_ascii_case(path_str))
+    PROTECTED_FILES
+        .iter()
+        .any(|&f| f.eq_ignore_ascii_case(path_str))
 }
 
 fn validate_content(path: &str, content: &str) -> Result<(), String> {
@@ -166,32 +186,36 @@ fn check_markdown_fences(path: &str, content: &str) -> Result<(), String> {
 }
 
 fn is_markdown_file(path: &str) -> bool {
-    Path::new(path).extension().is_some_and(|ext| {
-        ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown")
-    })
+    Path::new(path)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown"))
 }
 
 fn check_truncation(path: &str, content: &str) -> Result<(), String> {
     if let Some(line) = find_truncation_line(content) {
-        return Err(format!("Truncation detected in {path} at line {line}: AI gave up."));
+        return Err(format!(
+            "Truncation detected in {path} at line {line}: AI gave up."
+        ));
     }
     Ok(())
 }
 
 fn find_truncation_line(content: &str) -> Option<usize> {
     let patterns = [
-        "// ...", // slopchop:ignore
-        "/* ... */", // slopchop:ignore
-        "# ...", // slopchop:ignore
-        "// rest of", // slopchop:ignore
-        "// remaining", // slopchop:ignore
+        "// ...",             // slopchop:ignore
+        "/* ... */",          // slopchop:ignore
+        "# ...",              // slopchop:ignore
+        "// rest of",         // slopchop:ignore
+        "// remaining",       // slopchop:ignore
         "// TODO: implement", // slopchop:ignore
-        "// implementation", // slopchop:ignore
-        "pass  #", // slopchop:ignore
+        "// implementation",  // slopchop:ignore
+        "pass  #",            // slopchop:ignore
     ];
 
     for (i, line) in content.lines().enumerate() {
-        if line.contains("slopchop:ignore") { continue; }
+        if line.contains("slopchop:ignore") {
+            continue;
+        }
         let lower = line.to_lowercase();
         if patterns.iter().any(|p| lower.contains(&p.to_lowercase())) {
             return Some(i + 1);
