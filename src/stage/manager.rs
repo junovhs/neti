@@ -121,7 +121,7 @@ impl StageManager {
         // Initialize state
         let new_state = StageState::new();
         new_state.save(&state_file_path(&self.repo_root))?;
-        
+
         // Log event
         let logger = EventLogger::new(&self.repo_root);
         logger.log(EventKind::StageCreated { id: new_state.id.clone() });
@@ -207,16 +207,13 @@ impl StageManager {
             &backup_dir,
         )?;
 
-        // Clear touched paths after successful promotion
-        if let Some(state) = &mut self.state {
-            state.clear_touched();
-            state.save(&state_file_path(&self.repo_root))?;
-        }
-
-        // Cleanup old backups
+        // Cleanup old backups before reset (which clears stage dir)
         if retention > 0 {
             let _ = cleanup_old_backups(&backup_dir, retention);
         }
+
+        // Clear entire stage after successful promotion to prevent contamination
+        self.reset()?;
 
         Ok(result)
     }

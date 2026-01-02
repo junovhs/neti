@@ -24,19 +24,16 @@ use anyhow::{anyhow, Result};
 pub fn apply(original: &str, patch_content: &str) -> Result<String> {
     let (instructions, metadata) = parse_patch(patch_content)?;
 
-    // 1. Verify Base Hash (V1 Mandatory)
     if let Some(expected_hash) = metadata.base_sha256 {
         verify_hash(original, &expected_hash)?;
     } else if matches!(metadata.format, PatchFormat::V1) {
         return Err(anyhow!("Invalid V1 Patch: BASE_SHA256 is required."));
     }
 
-    // 2. Warn on Deprecated Format
     if matches!(metadata.format, PatchFormat::V0) {
-        eprintln!("Warning: Deprecated V0 PATCH format detected. Please upgrade to V1 (Context-Anchored).");
+        eprintln!("Warning: Deprecated V0 PATCH format. Please upgrade to V1.");
     }
 
-    // 3. Apply Instructions Sequentially
     let mut current_content = original.to_string();
     for instr in instructions {
         current_content = apply_single_instruction(&current_content, &instr)?;
@@ -74,7 +71,6 @@ fn detect_format(content: &str) -> PatchFormat {
             return PatchFormat::V1;
         }
     }
-    // Default to V1 if ambiguous or empty
     PatchFormat::V1
 }
 
@@ -100,28 +96,49 @@ fn apply_single_instruction(content: &str, instr: &PatchInstruction) -> Result<S
 
     let matches: Vec<_> = content.match_indices(&norm_search).collect();
 
+    if matches.len() == 1 {
+        return Ok(perform_splice(content, matches[0].0, &norm_search, &norm_replace));
+    }
+
+    if matches.len() > 1 {
+        return Err(anyhow!(diagnose_ambiguous(matches.len(), &matches, content)));
+    }
+
+    // Zero matches: try without trailing EOL (handles files without final newline)
+    try_match_trimmed(content, &norm_search, &norm_replace, eol, instr)
+}
+
+fn try_match_trimmed(
+    content: &str,
+    search: &str,
+    replace: &str,
+    eol: &str,
+    instr: &PatchInstruction,
+) -> Result<String> {
+    let Some(trimmed_search) = search.strip_suffix(eol) else {
+        return Err(anyhow!(diagnose_zero_matches(content, search, instr)));
+    };
+
+    let matches: Vec<_> = content.match_indices(trimmed_search).collect();
+
     match matches.len() {
-        0 => Err(anyhow!(diagnose_zero_matches(content, &norm_search, instr))),
-        1 => Ok(perform_splice(content, matches[0].0, &norm_search, &norm_replace)),
+        0 => Err(anyhow!(diagnose_zero_matches(content, search, instr))),
+        1 => {
+            let trimmed_replace = replace.strip_suffix(eol).unwrap_or(replace);
+            Ok(perform_splice(content, matches[0].0, trimmed_search, trimmed_replace))
+        }
         n => Err(anyhow!(diagnose_ambiguous(n, &matches, content))),
     }
 }
 
-fn perform_splice(
-    content: &str,
-    start: usize,
-    search: &str,
-    replace: &str,
-) -> String {
+fn perform_splice(content: &str, start: usize, search: &str, replace: &str) -> String {
     let end = start + search.len();
-    
-    // Pre-calculate capacity
     let new_len = content.len() + replace.len().saturating_sub(search.len());
-    let mut new_content = String::with_capacity(new_len);
-    
-    new_content.push_str(&content[..start]);
-    new_content.push_str(replace);
-    new_content.push_str(&content[end..]);
-    
-    new_content
-}
+    let mut result = String::with_capacity(new_len);
+
+    result.push_str(&content[..start]);
+    result.push_str(replace);
+    result.push_str(&content[end..]);
+
+    result
+}
