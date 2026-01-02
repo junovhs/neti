@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-01-02
+
+### Added
+- **Split-Brain Protection**: Promotion now performs a pre-flight "base hash" verification to ensure workspace files haven't been manually modified during the staging period.
+- **Stress Testing Suite**: Completed physical verification of 42 adversarial cases (paths, sigils, concurrency).
+
+### Fixed
+- **S03 (Path Traversal)**: Hardened path validator with byte-level null character detection to prevent truncation attacks.
+- **I01 (Sigil Injection)**: Redesigned the parser to use prefixed terminator sigils, preventing greedy matching of embedded protocol markers.
+
+## [1.3.1] - 2026-01-01
+
+### Added
+- **Locality v2**: Automated layer inference (toposort-based) and cycle detection for module-level dependencies.
+- **Directional Coupling**: Enhanced coupling heuristics to distinguish between intentional directional dependencies and problematic bidirectional cycles.
+
 ## [1.1.0] - 2025-12-26
 
 ### Added

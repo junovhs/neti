@@ -1,0 +1,26 @@
+﻿cargo :     Checking slopchop v1.3.2 
+(C:\Users\SpencerNunamakerTrav\slopchop)
+At line:1 char:1
++ cargo clippy --all-targets -- -D warnings -W 
+clippy::pedantic 2>&1 |  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking sl.. 
+   .rTrav\slopchop):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+error: unused import: `PathBuf`
+  --> src\apply\executor.rs:11:23
+   |
+11 | use std::path::{Path, PathBuf};
+   |                       ^^^^^^^
+   |
+   = note: `-D unused-imports` implied by `-D warnings`
+   = help: to override `-D warnings` add 
+`#[allow(unused_imports)]`
+
+error: could not compile `slopchop` (lib) due to 1 previous 
+error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `slopchop` (lib test) due to 1 
+previous error

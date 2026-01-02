@@ -18,6 +18,7 @@ pub struct PatchInstruction {
     pub context_left: Option<String>,
 }
 
+#[must_use]
 pub fn detect_eol(content: &str) -> &str {
     if content.contains("\r\n") {
         "\r\n"
@@ -26,6 +27,7 @@ pub fn detect_eol(content: &str) -> &str {
     }
 }
 
+#[must_use]
 pub fn normalize_newlines(text: &str, eol: &str) -> String {
     // robust normalization that preserves trailing newlines and blank lines
     let lf_only = text.replace("\r\n", "\n").replace('\r', "\n");
@@ -36,6 +38,7 @@ pub fn normalize_newlines(text: &str, eol: &str) -> String {
     }
 }
 
+#[must_use]
 pub fn compute_sha256(content: &str) -> String {
     let mut hasher = Sha256::new();
     hasher.update(content);
@@ -44,6 +47,7 @@ pub fn compute_sha256(content: &str) -> String {
 
 /// Collects lines until a specific keyword is found.
 /// Used by both parsers for section extraction.
+#[must_use]
 pub fn collect_until_keyword(lines: &[&str], start: usize, keywords: &[&str]) -> (String, usize) {
     let mut collected = Vec::new();
     let mut i = start;
@@ -69,6 +73,9 @@ pub fn collect_until_keyword(lines: &[&str], start: usize, keywords: &[&str]) ->
 }
 
 /// Collects a strictly delimited section (V0 style).
+///
+/// # Errors
+/// Returns error if the terminator is not found.
 pub fn collect_section(
     lines: &[&str],
     start_index: usize,

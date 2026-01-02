@@ -4,6 +4,10 @@
 use super::common::{collect_section, PatchInstruction};
 use anyhow::{anyhow, Result};
 
+/// Parses a legacy V0 patch payload.
+///
+/// # Errors
+/// Returns error if no valid SEARCH blocks are found or if the patch is malformed.
 pub fn parse(content: &str) -> Result<(Vec<PatchInstruction>, Option<String>)> {
     let mut instructions = Vec::new();
     let mut base_sha256 = None;

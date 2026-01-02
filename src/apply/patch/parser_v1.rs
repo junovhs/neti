@@ -6,6 +6,10 @@ use anyhow::{anyhow, Result};
 
 const KEYWORDS: &[&str] = &["LEFT_CTX:", "OLD:", "RIGHT_CTX:", "NEW:", "XSC7XSC END"];
 
+/// Parses a V1 patch payload.
+///
+/// # Errors
+/// Returns error if the patch is malformed or headers are inconsistent.
 pub fn parse(content: &str) -> Result<(Vec<PatchInstruction>, Option<String>)> {
     let mut ctx = ParseContext {
         base_sha256: None,

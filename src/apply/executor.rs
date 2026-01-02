@@ -8,6 +8,7 @@ use crate::events::{EventKind, EventLogger};
 use crate::stage::StageManager;
 use anyhow::Result;
 use colored::Colorize;
+use std::path::Path;
 use std::io::{self, Write};
 
 /// Executes the transaction to write changes to the stage.
@@ -78,23 +79,39 @@ fn execute_stage_transaction(
     let outcome = writer::write_files(manifest, extracted, Some(&worktree), retention)?;
 
     // Update stage tracking state
-    for entry in manifest {
-        let base_path = ctx.repo_root.join(&entry.path);
-        let base_hash = if base_path.exists() && base_path.is_file() {
-            let content = std::fs::read_to_string(&base_path)?;
-            Some(crate::apply::patch::common::compute_sha256(&content))
-        } else {
-            None
-        };
+    update_stage_records(&mut stage, &ctx.repo_root, manifest)?;
 
+    let staged_outcome = remap_staged_outcome(outcome);
+    Ok((stage, staged_outcome))
+}
+
+fn update_stage_records(
+    stage: &mut StageManager,
+    repo_root: &Path,
+    manifest: &Manifest,
+) -> Result<()> {
+    for entry in manifest {
+        let base_hash = get_base_hash(repo_root, &entry.path)?;
         match entry.operation {
             Operation::Delete => stage.record_delete(&entry.path, base_hash)?,
             Operation::Update | Operation::New => stage.record_write(&entry.path, base_hash)?,
         }
     }
-    stage.record_apply()?;
+    stage.record_apply()
+}
 
-    let staged_outcome = match outcome {
+fn get_base_hash(repo_root: &Path, path: &str) -> Result<Option<String>> {
+    let base_path = repo_root.join(path);
+    if base_path.exists() && base_path.is_file() {
+        let content = std::fs::read_to_string(&base_path)?;
+        Ok(Some(crate::apply::patch::common::compute_sha256(&content)))
+    } else {
+        Ok(None)
+    }
+}
+
+fn remap_staged_outcome(outcome: ApplyOutcome) -> ApplyOutcome {
+    match outcome {
         ApplyOutcome::Success { written, deleted, backed_up, .. } => ApplyOutcome::Success {
             written,
             deleted,
@@ -102,9 +119,7 @@ fn execute_stage_transaction(
             staged: true,
         },
         other => other,
-    };
-
-    Ok((stage, staged_outcome))
+    }
 }
 
 fn run_post_apply_verification(

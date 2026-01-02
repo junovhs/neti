@@ -31,9 +31,9 @@ SlopChop implements an **Implicit Staged Workspace**. This is its most significa
 Unlike traditional tools that write directly to your source files, `slopchop apply` never touches your real files initially. Instead, it creates a **Shadow Worktree** in `.slopchop/stage/worktree/`.
 
 ### The Loop:
-1.  **Stage:** You `apply` a change payload. SlopChop writes it to the sandbox.
+1.  **Stage:** You `apply` a change payload. SlopChop writes it to the sandbox and records a `base_hash` of the workspace.
 2.  **Verify:** You run `check`. SlopChop executes your test suite and its own scan **inside the sandbox**.
-3.  **Promote:** Once the sandbox is verified "Green," you run `slopchop apply --promote`. Only then are the files moved to your real workspace.
+3.  **Promote:** Run `slopchop apply --promote`. SlopChop verifies that the workspace files haven't changed since Step 1 (**Split-Brain Protection**) before atomically moving files.
 
 This ensures your repository never ends in a "half-broken" state. If a change fails verification, you simply `reset` the stage or patch the sandbox.
 
@@ -186,7 +186,13 @@ slopchop apply --reset
 
 ---
 
-## Latest: v1.1.0 - Transport Hardening
+## Latest: v1.3.2 - High Integrity & Locality v2
+
+SlopChop v1.3.2 is the "God Tier Integrity" release:
+*   **Split-Brain Protection:** Blocks promotion if workspace files were manually modified after staging.
+*   **Hardened Sandbox:** Fixed S03 (Null byte paths) and I01 (Greedy sigils) vulnerabilities.
+*   **Locality v2:** Automated module layer inference and cycle detection to keep your architecture linear.
+*   **Physical Stress Testing:** 100% verified coverage across adversarial edge cases.
 
 SlopChop v1.1.0 adds robust protection against "copy-paste slop":
 *   **Parser Resilience:** Tolerates indentation (`> `) and artifacts from chat UIs.
