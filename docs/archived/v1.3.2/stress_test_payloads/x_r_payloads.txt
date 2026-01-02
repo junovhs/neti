@@ -1,0 +1,39 @@
+# X01: Null byte in content
+XSC7XSC PLAN XSC7XSC
+X01: Null byte in content.
+XSC7XSC END XSC7XSC
+XSC7XSC MANIFEST XSC7XSC
+src/null_content_test.rs [NEW]
+XSC7XSC END XSC7XSC
+XSC7XSC FILE XSC7XSC src/null_content_test.rs
+// Before null \0 After null
+XSC7XSC END XSC7XSC
+
+# X06: Single character patch
+XSC7XSC PLAN XSC7XSC
+X06: Single character file.
+XSC7XSC END XSC7XSC
+XSC7XSC MANIFEST XSC7XSC
+src/single_char.txt [NEW]
+XSC7XSC END XSC7XSC
+XSC7XSC FILE XSC7XSC src/single_char.txt
+A
+XSC7XSC END XSC7XSC
+
+# R06: Workspace dirty
+# We will manually dirty src/lib.rs first.
+XSC7XSC PLAN XSC7XSC
+R06: Dirty workspace.
+XSC7XSC END XSC7XSC
+XSC7XSC MANIFEST XSC7XSC
+src/lib.rs
+XSC7XSC END XSC7XSC
+XSC7XSC PATCH XSC7XSC src/lib.rs
+BASE_SHA256: 013723326759c8828557ee02b00511de49c1fd4e6720d2091936c349910e54d6
+LEFT_CTX:
+OLD:
+// dirty line
+RIGHT_CTX:
+NEW:
+// patched line
+XSC7XSC END XSC7XSC

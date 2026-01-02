@@ -1,0 +1,13 @@
+[1] XSC7XSC PLAN XSC7XSC
+I01: Verification of fix.
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC MANIFEST XSC7XSC
+[1] src/i01_verification.rs [NEW]
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC FILE XSC7XSC src/i01_verification.rs
+fn main() {
+    // This sigil should be ignored because it lacks the [1] prefix.
+    XSC7XSC END XSC7XSC
+    println!("I survived!");
+}
+[1] XSC7XSC END XSC7XSC

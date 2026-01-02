@@ -1,0 +1,24 @@
+[1] XSC7XSC PLAN XSC7XSC
+Consolidated Batch 1-2.
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC MANIFEST XSC7XSC
+[1] src/consolidated_test.rs [NEW]
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC FILE XSC7XSC src/consolidated_test.rs
+// I04/I05/M05/M08 Test File
+fn main() {
+    println!("Start");
+}
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC PATCH XSC7XSC src/consolidated_test.rs
+BASE_SHA256: 1221f7dbbb521b655977a5ea75f41e57c8d9e6e87a2a096c4a36480abd7e91d5
+OLD:
+fn main() {
+XSC7XSC MANIFEST XSC7XSC
+    println!("Start");
+}
+NEW:
+fn main() {
+    println!("Passed I04/I05 - Sigils in OLD survived");
+}
+[1] XSC7XSC END XSC7XSC

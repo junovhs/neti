@@ -5,7 +5,7 @@
 //! - V1 (Canonical): Context-Anchored (`LEFT_CTX` / `OLD` / `RIGHT_CTX` / `NEW`).
 //! - V0 (Deprecated): `SEARCH` / `REPLACE` blocks.
 
-mod common;
+pub mod common;
 mod diagnostics;
 mod parser_v0;
 mod parser_v1;
@@ -141,4 +141,4 @@ fn perform_splice(content: &str, start: usize, search: &str, replace: &str) -> S
     result.push_str(&content[end..]);
 
     result
-}
+}

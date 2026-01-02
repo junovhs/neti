@@ -93,6 +93,9 @@ fn check_manifest_consistency(
 }
 
 fn validate_path(path_str: &str) -> Result<(), String> {
+    if path_str.as_bytes().contains(&0) {
+        return Err(format!("Path contains illegal null character: {path_str}"));
+    }
     check_absolute_path(path_str)?;
     let path = Path::new(path_str);
     check_path_components(path, path_str)
@@ -195,4 +198,4 @@ fn find_truncation_line(content: &str) -> Option<usize> {
         }
     }
     None
-}
+}

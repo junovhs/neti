@@ -1,0 +1,33 @@
+[1] XSC7XSC PLAN XSC7XSC
+I04/I05 Success Case.
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC MANIFEST XSC7XSC
+[1] src/i04_test.rs [NEW]
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC FILE XSC7XSC src/i04_test.rs
+fn main() {
+    println!("I04 base");
+    println!("I05 base");
+}
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC PATCH XSC7XSC src/i04_test.rs
+BASE_SHA256: 4927233857e4e16d40776b3252a945638c4c7987e91d575005e046a36480abd7
+LEFT_CTX:
+fn main() {
+XSC7XSC MANIFEST XSC7XSC
+OLD:
+    println!("I04 base");
+RIGHT_CTX:
+NEW:
+    println!("Matched despite sigil in LEFT_CTX");
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC PATCH XSC7XSC src/i04_test.rs
+BASE_SHA256: 4927233857e4e16d40776b3252a945638c4c7987e91d575005e046a36480abd7
+LEFT_CTX:
+OLD:
+    println!("I05 base");
+XSC7XSC FILE XSC7XSC
+RIGHT_CTX:
+NEW:
+    println!("Matched despite sigil in OLD");
+[1] XSC7XSC END XSC7XSC

@@ -135,11 +135,11 @@ impl StageManager {
     ///
     /// # Errors
     /// Returns error if state cannot be saved.
-    pub fn record_write(&mut self, path: &str) -> Result<()> {
+    pub fn record_write(&mut self, path: &str, base_hash: Option<String>) -> Result<()> {
         self.ensure_state_loaded()?;
 
         if let Some(state) = &mut self.state {
-            state.record_write(path);
+            state.record_write(path, base_hash);
             state.save(&state_file_path(&self.repo_root))?;
         }
 
@@ -150,11 +150,11 @@ impl StageManager {
     ///
     /// # Errors
     /// Returns error if state cannot be saved.
-    pub fn record_delete(&mut self, path: &str) -> Result<()> {
+    pub fn record_delete(&mut self, path: &str, base_hash: Option<String>) -> Result<()> {
         self.ensure_state_loaded()?;
 
         if let Some(state) = &mut self.state {
-            state.record_delete(path);
+            state.record_delete(path, base_hash);
             state.save(&state_file_path(&self.repo_root))?;
         }
 
@@ -185,10 +185,10 @@ impl StageManager {
 
         let state = self.state.as_ref().context("No stage state found")?;
 
-        let paths_to_write: Vec<&str> = state.paths_to_write();
-        let paths_to_delete: Vec<&str> = state.paths_to_delete();
+        let to_write = state.paths_to_write();
+        let to_delete = state.paths_to_delete();
 
-        if paths_to_write.is_empty() && paths_to_delete.is_empty() {
+        if to_write.is_empty() && to_delete.is_empty() {
             return Ok(PromoteResult {
                 files_written: vec![],
                 files_deleted: vec![],
@@ -202,8 +202,8 @@ impl StageManager {
         let result = promote_to_workspace(
             &self.repo_root,
             &worktree,
-            &paths_to_write,
-            &paths_to_delete,
+            &to_write,
+            &to_delete,
             &backup_dir,
         )?;
 

@@ -1,6 +1,8 @@
 // src/stage/promote.rs
 //! Transactional promotion from staged worktree to real workspace.
 
+use super::state::TouchedPath;
+
 use anyhow::{anyhow, Context, Result};
 use std::collections::HashSet;
 use std::fs;
@@ -18,28 +20,31 @@ pub struct PromoteResult {
 /// Promotes touched paths from stage to real workspace.
 ///
 /// # Errors
-/// Returns error if promotion fails. On failure, attempts rollback.
+/// Returns error if promotion fails or hash mismatch is detected.
 pub fn promote_to_workspace(
     repo_root: &Path,
     worktree: &Path,
-    paths_to_write: &[&str],
-    paths_to_delete: &[&str],
+    to_write: &[&TouchedPath],
+    to_delete: &[&TouchedPath],
     backup_dir: &Path,
 ) -> Result<PromoteResult> {
+    // Phase 0: Pre-flight hash verification (Split-Brain Prevention)
+    verify_workspace_integrity(repo_root, to_write, to_delete)?;
+
     let backup_path = create_backup_dir(backup_dir)?;
 
     // Collect all paths that will be modified
-    let all_paths: HashSet<&str> = paths_to_write
+    let all_paths: HashSet<&str> = to_write
         .iter()
-        .chain(paths_to_delete.iter())
-        .copied()
+        .chain(to_delete.iter())
+        .map(|t| t.path.as_str())
         .collect();
 
     // Phase 1: Backup existing files
     let backed_up = backup_existing_files(repo_root, &all_paths, &backup_path)?;
 
     // Phase 2: Apply changes (with rollback on failure)
-    let result = apply_changes(repo_root, worktree, paths_to_write, paths_to_delete);
+    let result = apply_changes(repo_root, worktree, to_write, to_delete);
 
     match result {
         Ok((written, deleted)) => Ok(PromoteResult {
@@ -57,6 +62,37 @@ pub fn promote_to_workspace(
             Err(anyhow!("Promotion failed (rolled back): {e}"))
         }
     }
+}
+
+/// Verifies that workspace files haven't changed since they were staged.
+fn verify_workspace_integrity(
+    repo_root: &Path,
+    to_write: &[&TouchedPath],
+    to_delete: &[&TouchedPath],
+) -> Result<()> {
+    for touched in to_write.iter().chain(to_delete.iter()) {
+        if let Some(expected_hash) = &touched.base_hash {
+            let path = repo_root.join(&touched.path);
+            if !path.exists() {
+                return Err(anyhow!(
+                    "Split-brain detected: {} was expected to exist but is missing.",
+                    touched.path
+                ));
+            }
+            let content = fs::read_to_string(&path)
+                .with_context(|| format!("Failed to read {} for integrity check", touched.path))?;
+            let actual_hash = crate::apply::patch::common::compute_sha256(&content);
+            
+            if actual_hash != *expected_hash {
+                return Err(anyhow!(
+                    "Split-brain detected: {} has been modified manually since it was staged. \
+                     Aborting promotion to prevent overwriting your changes.",
+                    touched.path
+                ));
+            }
+        }
+    }
+    Ok(())
 }
 
 /// Creates a timestamped backup directory.
@@ -100,14 +136,15 @@ fn backup_existing_files(
 fn apply_changes(
     repo_root: &Path,
     worktree: &Path,
-    paths_to_write: &[&str],
-    paths_to_delete: &[&str],
+    to_write: &[&TouchedPath],
+    to_delete: &[&TouchedPath],
 ) -> Result<(Vec<String>, Vec<String>)> {
     let mut written = Vec::new();
     let mut deleted = Vec::new();
 
     // Apply writes: copy from stage to real workspace
-    for path in paths_to_write {
+    for touched in to_write {
+        let path = &touched.path;
         let src = worktree.join(path);
         let dest = repo_root.join(path);
 
@@ -123,16 +160,17 @@ fn apply_changes(
         fs::copy(&src, &dest)
             .with_context(|| format!("Failed to copy {} to {}", src.display(), dest.display()))?;
 
-        written.push((*path).to_string());
+        written.push(path.clone());
     }
 
     // Apply deletes
-    for path in paths_to_delete {
+    for touched in to_delete {
+        let path = &touched.path;
         let target = repo_root.join(path);
         if target.exists() {
             fs::remove_file(&target)
                 .with_context(|| format!("Failed to delete {}", target.display()))?;
-            deleted.push((*path).to_string());
+            deleted.push(path.clone());
         }
     }
 
@@ -189,4 +227,4 @@ pub fn cleanup_old_backups(backup_base: &Path, keep_count: usize) -> Result<usiz
     }
 
     Ok(removed)
-}
+}

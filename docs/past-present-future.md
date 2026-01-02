@@ -1,7 +1,7 @@
 # Past / Present / Future
 
 **Status:** Canonical (living snapshot)  
-**Last updated:** 2026-01-02 (v1.3.1)  
+**Last updated:** 2026-01-02 (v1.3.2)  
 **Canonical policy:** This document states the current operational reality and the single next action.
 
 ---
@@ -27,6 +27,12 @@
 - Archived v1.3.0 feature proposals and stress tests.
 - Bumped version to v1.3.1.
 - Verified zero-violation state on the new topology.
+
+**v1.3.2: Patch Security & Stress Test Hardening.**
+- Fixed critical vulnerabilities: S03 (Null Byte in Path) and I01 (Sigil Injection).
+- Verified semantic matcher robustness (W06: Trailing Newline Fallback).
+- Strengthened protocol parser with specific prefix binding.
+- Systematic stress testing of Categories 1-9 completed.
 
 
 ---

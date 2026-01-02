@@ -63,9 +63,9 @@ fn test_record_and_track_writes() -> Result<()> {
     let mut manager = StageManager::new(repo.path());
     manager.ensure_stage()?;
 
-    manager.record_write("src/new.rs")?;
-    manager.record_write("src/another.rs")?;
-    manager.record_delete("src/old.rs")?;
+    manager.record_write("src/new.rs", None)?;
+    manager.record_write("src/another.rs", Some("hash123".to_string()))?;
+    manager.record_delete("src/old.rs", None)?;
 
     let state = manager.state().expect("State should be loaded");
     assert_eq!(state.paths_to_write().len(), 2);
@@ -114,7 +114,7 @@ fn test_promote_basic() -> Result<()> {
     // Write a new file to stage
     let new_file = manager.worktree().join("new.rs");
     fs::write(&new_file, "// new file")?;
-    manager.record_write("new.rs")?;
+    manager.record_write("new.rs", None)?;
 
     // Promote
     let result = manager.promote(3)?;
@@ -149,4 +149,4 @@ fn test_stage_id_persists() -> Result<()> {
     assert_eq!(id1, id2);
 
     Ok(())
-}
+}

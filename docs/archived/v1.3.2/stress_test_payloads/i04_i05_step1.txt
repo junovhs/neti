@@ -1,0 +1,12 @@
+[1] XSC7XSC PLAN XSC7XSC
+I04/I05 Step 1: Create base file.
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC MANIFEST XSC7XSC
+[1] src/i04_i05_base.rs [NEW]
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC FILE XSC7XSC src/i04_i05_base.rs
+fn main() {
+    println!("I04 base");
+    println!("I05 base");
+}
+[1] XSC7XSC END XSC7XSC

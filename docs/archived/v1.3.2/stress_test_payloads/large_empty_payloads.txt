@@ -1,0 +1,22 @@
+# X04: Large payload (100KB+)
+# We will create a file with many lines to reach 100KB.
+# 100KB is roughly 2500 lines of 40 chars.
+XSC7XSC PLAN XSC7XSC
+X04: Large payload test.
+XSC7XSC END XSC7XSC
+XSC7XSC MANIFEST XSC7XSC
+src/large_file.txt [NEW]
+XSC7XSC END XSC7XSC
+XSC7XSC FILE XSC7XSC src/large_file.txt
+$(for ($i=1; $i -le 3000; $i++) { "Line $i: Content content content content content content content content content" })
+XSC7XSC END XSC7XSC
+
+# X07: Empty file target
+XSC7XSC PLAN XSC7XSC
+X07: Empty file target.
+XSC7XSC END XSC7XSC
+XSC7XSC MANIFEST XSC7XSC
+src/empty_target.rs [NEW]
+XSC7XSC END XSC7XSC
+XSC7XSC FILE XSC7XSC src/empty_target.rs
+XSC7XSC END XSC7XSC

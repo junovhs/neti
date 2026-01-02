@@ -1,0 +1,11 @@
+XSC7XSC PLAN XSC7XSC
+X01: Null byte in content.
+XSC7XSC END XSC7XSC
+XSC7XSC MANIFEST XSC7XSC
+src/null_content_test.rs [NEW]
+XSC7XSC END XSC7XSC
+XSC7XSC FILE XSC7XSC src/null_content_test.rs
+// Before null 
+// This line has a null byte: \0
+// After null
+XSC7XSC END XSC7XSC

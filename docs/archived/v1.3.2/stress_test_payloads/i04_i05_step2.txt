@@ -1,0 +1,21 @@
+[1] XSC7XSC PLAN XSC7XSC
+I04/I05 Step 2: Minimal context.
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC MANIFEST XSC7XSC
+[1] src/i04_i05_base.rs
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC PATCH XSC7XSC src/i04_i05_base.rs
+BASE_SHA256: ed34d902edc15bc58faa23f88f836ed4c9d47cb5e1e6c66f56c2926509b8d711
+OLD:
+fn main() {
+XSC7XSC MANIFEST XSC7XSC
+    println!("I04 base");
+    println!("I05 base");
+}
+NEW:
+fn main() {
+XSC7XSC MANIFEST XSC7XSC
+    println!("Passed I04");
+    println!("Passed I05");
+}
+[1] XSC7XSC END XSC7XSC

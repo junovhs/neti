@@ -79,9 +79,17 @@ fn execute_stage_transaction(
 
     // Update stage tracking state
     for entry in manifest {
+        let base_path = ctx.repo_root.join(&entry.path);
+        let base_hash = if base_path.exists() && base_path.is_file() {
+            let content = std::fs::read_to_string(&base_path)?;
+            Some(crate::apply::patch::common::compute_sha256(&content))
+        } else {
+            None
+        };
+
         match entry.operation {
-            Operation::Delete => stage.record_delete(&entry.path)?,
-            Operation::Update | Operation::New => stage.record_write(&entry.path)?,
+            Operation::Delete => stage.record_delete(&entry.path, base_hash)?,
+            Operation::Update | Operation::New => stage.record_write(&entry.path, base_hash)?,
         }
     }
     stage.record_apply()?;

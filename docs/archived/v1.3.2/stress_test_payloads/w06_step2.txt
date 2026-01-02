@@ -1,0 +1,15 @@
+[1] XSC7XSC PLAN XSC7XSC
+W06 Step 2: Patch staged file.
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC MANIFEST XSC7XSC
+[1] src/w06_base.rs
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC PATCH XSC7XSC src/w06_base.rs
+BASE_SHA256: ef32637cb9c3ec2e3968c9cbdf26a5e9c172be94f88af533e14bd43f892d5297
+LEFT_CTX:
+OLD:
+fn main() {}
+RIGHT_CTX:
+NEW:
+fn main() { println!("Fallback Success!"); }
+[1] XSC7XSC END XSC7XSC

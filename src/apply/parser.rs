@@ -21,11 +21,9 @@ pub fn parse(input: &str) -> Result<Vec<Block>> {
     let mut current_pos = 0;
 
     while let Some(header_match) = header_re.find_at(input, current_pos) {
-        let block = parse_single_block(input, &header_re, &footer_re, &header_match)?;
-        let footer_end = find_footer_end(input, header_match.end(), &footer_re)?;
-
+        let (block, next_pos) = parse_single_block(input, &header_re, &footer_re, &header_match)?;
         blocks.push(block);
-        current_pos = footer_end;
+        current_pos = next_pos;
     }
 
     Ok(blocks)
@@ -33,7 +31,7 @@ pub fn parse(input: &str) -> Result<Vec<Block>> {
 
 fn compile_patterns() -> Result<(Regex, Regex)> {
     // Allow common markdown/AI prefixes: indentation, blockquotes, lists
-    let prefix = r"(?P<prefix>[\t >\-\*\d\.\)]*)";
+    let prefix = r"(?P<prefix>[\t >\-\*\d\.\)\[\]]*)";
 
     let header = Regex::new(&format!(
         r"(?m)^{prefix}{SIGIL} (PLAN|MANIFEST|FILE|PATCH|META) {SIGIL}(?: (.+))?\s*$"
@@ -46,9 +44,9 @@ fn compile_patterns() -> Result<(Regex, Regex)> {
 fn parse_single_block(
     input: &str,
     header_re: &Regex,
-    footer_re: &Regex,
+    _footer_re: &Regex,
     header_match: &regex::Match,
-) -> Result<Block> {
+) -> Result<(Block, usize)> {
     let caps = header_re
         .captures(&input[header_match.start()..header_match.end()])
         .ok_or_else(|| anyhow!("Regex capture failed at {}", header_match.start()))?;
@@ -58,22 +56,23 @@ fn parse_single_block(
     let prefix = caps.name("prefix").map_or("", |m| m.as_str());
 
     let content_start = header_match.end();
-    let footer_match = footer_re
+    
+    // Fix I01: Bind footer to the specific prefix used by the header to prevent
+    // content with different (or no) prefixes from terminating the block early.
+    let escaped_prefix = regex::escape(prefix);
+    let specific_footer_re = Regex::new(&format!(r"(?m)^{escaped_prefix}{SIGIL} END {SIGIL}\s*$"))?;
+
+    let footer_match = specific_footer_re
         .find_at(input, content_start)
         .ok_or_else(|| anyhow!("Unclosed block: {kind} at byte {content_start}"))?;
 
     let raw_content = &input[content_start..footer_match.start()];
     let clean_content = clean_block_content(raw_content, prefix);
 
-    create_block(kind, arg, clean_content)
+    let block = create_block(kind, arg, clean_content)?;
+    Ok((block, footer_match.end()))
 }
 
-fn find_footer_end(input: &str, start: usize, footer_re: &Regex) -> Result<usize> {
-    footer_re
-        .find_at(input, start)
-        .map(|m| m.end())
-        .ok_or_else(|| anyhow!("Footer not found after position {start}"))
-}
 
 #[cfg(test)]
 mod tests {

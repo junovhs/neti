@@ -1,0 +1,39 @@
+[1] XSC7XSC PLAN XSC7XSC
+Batch 1: Sigil and structural tests.
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC MANIFEST XSC7XSC
+[1] src/i04_test.rs [NEW]
+[1] src/i06_test.rs [NEW]
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC FILE XSC7XSC src/i04_test.rs
+// Base file for I04 and I05
+fn main() {
+    println!("I04/I05 base");
+}
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC PATCH XSC7XSC src/i04_test.rs
+BASE_SHA256: 3d1c37b6de23555c4238e894877145fd736a5758204b77f8de700deced7f34c6
+LEFT_CTX:
+// Base file for I04 and I05
+XSC7XSC MANIFEST XSC7XSC
+OLD:
+fn main() {
+RIGHT_CTX:
+NEW:
+fn main() {
+    println!("Matched despite sigil in LEFT_CTX");
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC PATCH XSC7XSC src/i04_test.rs
+BASE_SHA256: 3d1c37b6de23555c4238e894877145fd736a5758204b77f8de700deced7f34c6
+LEFT_CTX:
+OLD:
+println!("I04/I05 base");
+XSC7XSC FILE XSC7XSC
+RIGHT_CTX:
+NEW:
+println!("Matched despite sigil in OLD");
+[1] XSC7XSC END XSC7XSC
+[1] XSC7XSC FILE XSC7XSC src/i06_test.rs
+This block should fail because it's not closed correctly.
+[1] XSC7XSC PLAN XSC7XSC
+Wait, I shouldn't be here.

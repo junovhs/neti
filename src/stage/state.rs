@@ -24,6 +24,8 @@ pub struct TouchedPath {
     pub path: String,
     /// The kind of operation performed.
     pub kind: TouchKind,
+    /// Expected SHA256 of the base file in the workspace (if it existed).
+    pub base_hash: Option<String>,
     /// Timestamp of the operation (Unix epoch seconds).
     pub timestamp: u64,
 }
@@ -85,17 +87,17 @@ impl StageState {
     }
 
     /// Records a file write operation.
-    pub fn record_write(&mut self, path: &str) {
-        self.record_touch(path, TouchKind::Write);
+    pub fn record_write(&mut self, path: &str, base_hash: Option<String>) {
+        self.record_touch(path, TouchKind::Write, base_hash);
     }
 
     /// Records a file delete operation.
-    pub fn record_delete(&mut self, path: &str) {
-        self.record_touch(path, TouchKind::Delete);
+    pub fn record_delete(&mut self, path: &str, base_hash: Option<String>) {
+        self.record_touch(path, TouchKind::Delete, base_hash);
     }
 
     /// Records a touch operation, updating the timestamp if path already exists.
-    fn record_touch(&mut self, path: &str, kind: TouchKind) {
+    fn record_touch(&mut self, path: &str, kind: TouchKind, base_hash: Option<String>) {
         let now = current_timestamp();
         self.updated_at = now;
 
@@ -106,6 +108,7 @@ impl StageState {
         self.touched.push(TouchedPath {
             path: path.to_string(),
             kind,
+            base_hash,
             timestamp: now,
         });
     }
@@ -118,21 +121,19 @@ impl StageState {
 
     /// Returns all paths that need to be promoted (written files).
     #[must_use]
-    pub fn paths_to_write(&self) -> Vec<&str> {
+    pub fn paths_to_write(&self) -> Vec<&TouchedPath> {
         self.touched
             .iter()
             .filter(|t| t.kind == TouchKind::Write)
-            .map(|t| t.path.as_str())
             .collect()
     }
 
     /// Returns all paths that need to be deleted during promotion.
     #[must_use]
-    pub fn paths_to_delete(&self) -> Vec<&str> {
+    pub fn paths_to_delete(&self) -> Vec<&TouchedPath> {
         self.touched
             .iter()
             .filter(|t| t.kind == TouchKind::Delete)
-            .map(|t| t.path.as_str())
             .collect()
     }
 
@@ -188,7 +189,7 @@ mod tests {
     #[test]
     fn test_record_write() {
         let mut state = StageState::new();
-        state.record_write("src/main.rs");
+        state.record_write("src/main.rs", None);
         assert_eq!(state.touched.len(), 1);
         assert_eq!(state.touched[0].kind, TouchKind::Write);
     }
@@ -196,7 +197,7 @@ mod tests {
     #[test]
     fn test_record_delete() {
         let mut state = StageState::new();
-        state.record_delete("src/old.rs");
+        state.record_delete("src/old.rs", None);
         assert_eq!(state.touched.len(), 1);
         assert_eq!(state.touched[0].kind, TouchKind::Delete);
     }
@@ -207,35 +208,36 @@ mod tests {
         let path = temp.path().join("state.json");
 
         let mut state = StageState::new();
-        state.record_write("src/lib.rs");
+        state.record_write("src/lib.rs", Some("abc".to_string()));
         state.save(&path)?;
 
         let loaded = StageState::load(&path)?;
         assert_eq!(loaded.id, state.id);
         assert_eq!(loaded.touched.len(), 1);
+        assert_eq!(loaded.touched[0].base_hash.as_deref(), Some("abc"));
         Ok(())
     }
 
     #[test]
     fn test_paths_to_write() {
         let mut state = StageState::new();
-        state.record_write("src/a.rs");
-        state.record_delete("src/b.rs");
-        state.record_write("src/c.rs");
+        state.record_write("src/a.rs", None);
+        state.record_delete("src/b.rs", None);
+        state.record_write("src/c.rs", None);
 
         let writes = state.paths_to_write();
         assert_eq!(writes.len(), 2);
-        assert!(writes.contains(&"src/a.rs"));
-        assert!(writes.contains(&"src/c.rs"));
+        assert!(writes.iter().any(|t| t.path == "src/a.rs"));
+        assert!(writes.iter().any(|t| t.path == "src/c.rs"));
     }
 
     #[test]
     fn test_overwrite_touch_updates_kind() {
         let mut state = StageState::new();
-        state.record_write("src/file.rs");
-        state.record_delete("src/file.rs");
+        state.record_write("src/file.rs", None);
+        state.record_delete("src/file.rs", None);
 
         assert_eq!(state.touched.len(), 1);
         assert_eq!(state.touched[0].kind, TouchKind::Delete);
     }
-}
+}

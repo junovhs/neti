@@ -1,4 +1,4 @@
-pub mod analysis;
+﻿pub mod analysis;
 pub mod apply;
 pub mod audit;
 pub mod clean;
@@ -23,4 +23,4 @@ pub mod skeleton;
 pub mod spinner;
 pub mod stage;
 pub mod tokens;
-pub mod types;
+pub mod types;

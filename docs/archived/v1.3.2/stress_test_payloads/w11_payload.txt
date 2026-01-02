@@ -1,0 +1,12 @@
+XSC7XSC PLAN XSC7XSC
+W11: UTF-8 characters.
+XSC7XSC END XSC7XSC
+XSC7XSC MANIFEST XSC7XSC
+src/utf8_test.rs [NEW]
+XSC7XSC END XSC7XSC
+XSC7XSC FILE XSC7XSC src/utf8_test.rs
+// 🦀 emoji test
+fn main() {
+    println!("Hello, 世界! 🦀");
+}
+XSC7XSC END XSC7XSC
