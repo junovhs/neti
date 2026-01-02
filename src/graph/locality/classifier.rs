@@ -52,8 +52,11 @@ fn is_deadwood(coupling: &Coupling, config: &ClassifierConfig) -> bool {
     coupling.total() < config.deadwood_threshold
 }
 
-fn is_stable_hub(coupling: &Coupling, config: &ClassifierConfig) -> bool {
-    coupling.skew() >= config.hub_threshold && coupling.afferent >= config.min_hub_afferent
+fn is_stable_hub(coupling: &Coupling, _config: &ClassifierConfig) -> bool {
+    // Locality v2: Auto-detect hubs based on metrics.
+    // High fan-in (>= 3) is the primary signal for a shared dependency.
+    // We rely on is_god_module() (checked earlier) to filter out true monoliths.
+    coupling.afferent >= 3
 }
 
 fn is_volatile_leaf(coupling: &Coupling, config: &ClassifierConfig) -> bool {

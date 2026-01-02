@@ -2,7 +2,7 @@
 //! Configuration for the Law of Locality enforcement.
 
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+
 
 use crate::graph::locality::{ClassifierConfig, ValidatorConfig};
 
@@ -24,9 +24,6 @@ pub struct LocalityConfig {
     pub deadwood_threshold: usize,
     /// Enforcement mode: "error", "warn", or "off"
     pub mode: String,
-    /// Paths explicitly granted Hub status
-    #[serde(default)]
-    pub hubs: Vec<PathBuf>,
     /// Glob patterns to exempt from checks
     #[serde(default)]
     pub exempt_patterns: Vec<String>,
@@ -42,7 +39,6 @@ impl Default for LocalityConfig {
             god_module_threshold: 20,
             deadwood_threshold: 2,
             mode: "warn".to_string(),
-            hubs: Vec::new(),
             exempt_patterns: Vec::new(),
         }
     }
@@ -62,7 +58,6 @@ impl LocalityConfig {
                 deadwood_threshold: self.deadwood_threshold,
                 volatile_leaf_efferent: 5,
             },
-            manual_hubs: self.hubs.clone(),
             exempt_patterns: self.exempt_patterns.clone(),
         }
     }

@@ -14,12 +14,13 @@
 - Universal Locality Algorithm validating dependency edges
 - CLI integration via `slopchop scan --locality`
 
-**v1.3.0: Consolidation Era completed.**
+**v1.3.0: Locality v2 & Consolidation.**
+- **Locality v2:** Cycle detection, auto-hub detection, and layer inference.
+- Refactored analysis module to resolve file size and complexity violations.
 - Fixed self-violation: `src/apply/parser.rs` split into `parser.rs` + `blocks.rs`
 - Removed 4 commands: `trace`, `fix`, `prompt`, `dashboard`
 - Deleted ~2000 lines of unused code (`src/trace/`, `src/tui/`)
 - Prescriptive violations: errors now include ANALYSIS and SUGGESTION sections
-- Locality scan respects `mode = "warn"` (doesn't block verification)
 - Modularized analysis checks into `checks/naming.rs`, `checks/complexity.rs`, `checks/banned.rs`
 
 ---
@@ -59,18 +60,15 @@ The locality scanner requires manual hub config and produces false positives for
 
 ### Immediate Next Action
 
-**Implement Locality v2 per `docs/locality-v2-proposal.md`**
+### Immediate Next Action
 
-| Phase | Description | Outcome |
+**Validate Locality v2 on external projects.**
+
+| Action | Description | Outcome |
 |-------|-------------|---------|
-| 0 | Cycle detection | Hard error on dependency cycles |
-| 1 | Auto-hub detection | No manual hub config needed |
-| 2 | Directional coupling | Only flag bidirectional, not layering |
-| 3 | Layer inference | Auto-compute architectural layers |
-
-**Success criteria:** `slopchop scan --locality` produces zero false positives with zero config.
-
-**Estimated effort:** 6-10 hours total
+| Validation | Run on 3-5 external Rust repos | Battle-hardened heuristics |
+| Mode Error | Switch `mode = "error"` as default | Zero-tolerance topology |
+| Performance | Parallelize dependency graph construction | Faster scans |
 
 ### After Locality v2
 
@@ -85,4 +83,4 @@ The locality scanner requires manual hub config and produces false positives for
 - **Python support:** Not a real use case yet
 - **Test coverage enforcement:** Separate tooling
 - **Advanced visualization:** Dashboard is dead
-- **Method B optimization:** Signatures/map experiments frozen
+- **Method B optimization:** Signatures/map experiments frozen

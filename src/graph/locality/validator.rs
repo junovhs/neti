@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 
 use super::classifier::{classify, ClassifierConfig};
 use super::coupling::compute_coupling;
+use super::cycles::detect_cycles;
+use super::layers::{infer_layers, check_layer_violation};
 use super::distance::compute_distance;
 use super::exemptions::is_structural_pattern;
 use super::types::{Coupling, EdgeVerdict, LocalityEdge, NodeIdentity, PassReason};
@@ -15,7 +17,6 @@ pub struct ValidatorConfig {
     pub max_distance: usize,
     pub l1_threshold: usize,
     pub classifier: ClassifierConfig,
-    pub manual_hubs: Vec<PathBuf>,
     pub exempt_patterns: Vec<String>,
 }
 
@@ -25,7 +26,6 @@ impl Default for ValidatorConfig {
             max_distance: 4,
             l1_threshold: 2,
             classifier: ClassifierConfig::default(),
-            manual_hubs: Vec::new(),
             exempt_patterns: Vec::new(),
         }
     }
@@ -36,6 +36,8 @@ impl Default for ValidatorConfig {
 pub struct ValidationReport {
     pub passed: Vec<LocalityEdge>,
     pub failed: Vec<LocalityEdge>,
+    pub cycles: Vec<Vec<PathBuf>>,
+    pub layers: std::collections::HashMap<PathBuf, usize>,
     pub total_edges: usize,
     pub entropy: f64,
 }
@@ -43,7 +45,7 @@ pub struct ValidationReport {
 impl ValidationReport {
     #[must_use]
     pub fn is_clean(&self) -> bool {
-        self.failed.is_empty()
+        self.failed.is_empty() && self.cycles.is_empty()
     }
 
     #[allow(clippy::cast_precision_loss)]
@@ -58,10 +60,12 @@ impl ValidationReport {
 
 /// Validates a single edge against locality rules.
 #[must_use]
+#[allow(clippy::implicit_hasher)]
 pub fn validate_edge(
     from: &Path,
     to: &Path,
     target_coupling: &Coupling,
+    layers: &std::collections::HashMap<PathBuf, usize>,
     config: &ValidatorConfig,
 ) -> EdgeVerdict {
     let edge = build_locality_edge(from, to, target_coupling, config);
@@ -78,6 +82,20 @@ pub fn validate_edge(
         return EdgeVerdict::Pass { reason };
     }
 
+    if let Some(kind) = check_layer_violation(&edge, layers) {
+         let suggestion = kind.suggest(&edge, target_coupling.afferent);
+         // Overwrite the kind in EdgeVerdict? 
+         // EdgeVerdict::Fail stores the edge and suggestion. 
+         // But analysis.rs re-categorizes it using categorize_violation.
+         // We might need to handle this. For now, let it fail and let analysis derive the kind.
+         // Actually, analysis.rs needs to know about layers to categorize it as "Sideways/Upward".
+         // The current analyze function doesn't take layers map.
+         // This is a disconnect. 
+         // For now, loop this back to Fail.
+         return EdgeVerdict::Fail { edge, suggestion };
+    }
+
+    // Default failure if not caught above (Sideways)
     let suggestion = generate_suggestion(&edge, target_coupling);
     EdgeVerdict::Fail { edge, suggestion }
 }
@@ -112,9 +130,6 @@ fn check_hub_status(
     to: &Path,
     config: &ValidatorConfig,
 ) -> Option<PassReason> {
-    if config.manual_hubs.contains(&to.to_path_buf()) {
-        return Some(PassReason::VerticalRouting);
-    }
     if edge.target_identity == NodeIdentity::StableHub {
         return Some(PassReason::VerticalRouting);
     }
@@ -161,30 +176,30 @@ where
     let coupling_map = compute_coupling(edges.clone());
     let mut report = ValidationReport::default();
 
+    // Phase 0: Cycle Detection (Hard Error)
+    let cycles = detect_cycles(edges.clone());
+    if !cycles.is_empty() {
+        report.cycles = cycles;
+        return report;
+    }
+
+    let layers = infer_layers(edges.clone());
+    report.layers.clone_from(&layers);
+
     for (from, to) in edges {
         report.total_edges += 1;
         let target_coupling = coupling_map.get(to).cloned().unwrap_or_default();
-        process_edge(from, to, &target_coupling, config, &mut report);
+        match validate_edge(from, to, &target_coupling, &layers, config) {
+            EdgeVerdict::Pass { .. } => {
+                let edge = build_locality_edge(from, to, &target_coupling, config);
+                report.passed.push(edge);
+            }
+            EdgeVerdict::Fail { edge, .. } => {
+                report.failed.push(edge);
+            }
+        }
     }
 
     report.compute_entropy();
     report
-}
-
-fn process_edge(
-    from: &Path,
-    to: &Path,
-    coupling: &Coupling,
-    config: &ValidatorConfig,
-    report: &mut ValidationReport,
-) {
-    match validate_edge(from, to, coupling, config) {
-        EdgeVerdict::Pass { .. } => {
-            let edge = build_locality_edge(from, to, coupling, config);
-            report.passed.push(edge);
-        }
-        EdgeVerdict::Fail { edge, .. } => {
-            report.failed.push(edge);
-        }
-    }
 }

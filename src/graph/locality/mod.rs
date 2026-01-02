@@ -7,9 +7,11 @@
 pub mod analysis;
 pub mod classifier;
 pub mod coupling;
+pub mod cycles;
 pub mod distance;
 pub mod edges;
 pub mod exemptions;
+pub mod layers;
 pub mod report;
 pub mod types;
 pub mod validator;

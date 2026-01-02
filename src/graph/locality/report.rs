@@ -16,6 +16,7 @@ pub fn print_full_report(report: &ValidationReport, analysis: &TopologyAnalysis)
     }
 
     print_violations_by_category(analysis);
+    print_layers(report);
     print_god_modules(analysis);
     print_hub_candidates(analysis);
     print_module_coupling(analysis);
@@ -52,22 +53,23 @@ fn print_violations_by_category(analysis: &TopologyAnalysis) {
         ViolationKind::EncapsulationBreach,
         ViolationKind::GodModule,
         ViolationKind::MissingHub,
-        ViolationKind::TightCoupling,
+        ViolationKind::MissingHub,
         ViolationKind::SidewaysDep,
+        ViolationKind::UpwardDep,
     ];
 
     for kind in &order {
         if let Some(violations) = by_kind.get(kind) {
             println!(
                 "\n{} {} ({})",
-                "▸".yellow(),
+                ">>".yellow(),
                 kind.label().yellow().bold(),
                 kind.description()
             );
 
             for v in violations {
                 println!(
-                    "    {} → {}",
+                    "    {} -> {}",
                     v.edge.from.display(),
                     v.edge.to.display().to_string().red()
                 );
@@ -85,12 +87,12 @@ fn print_god_modules(analysis: &TopologyAnalysis) {
     println!("\n{}", "GOD MODULES (3+ outbound violations)".red().bold());
     for gm in &analysis.god_modules {
         println!(
-            "  {} → {} violations",
+            "  {} -> {} violations",
             gm.path.display().to_string().red(),
             gm.outbound_violations
         );
         for target in &gm.targets {
-            println!("      → {}", target.display());
+            println!("      -> {}", target.display());
         }
     }
 }
@@ -113,8 +115,8 @@ fn print_hub_candidates(analysis: &TopologyAnalysis) {
         );
     }
     println!(
-        "\n  {} Add these to [rules.locality].hubs in slopchop.toml",
-        "→".cyan()
+        "\n  {} High fan-in modules are auto-detected as Hubs if they have low fan-out.",
+        "->".cyan()
     );
 }
 
@@ -126,7 +128,7 @@ fn print_module_coupling(analysis: &TopologyAnalysis) {
     println!("\n{}", "MODULE COUPLING".cyan().bold());
     for (a, b, count) in &analysis.module_coupling {
         let bar = "█".repeat(*count);
-        println!("  {a} ↔ {b}: {bar} ({count})");
+        println!("  {a} - {b}: {bar} ({count})");
     }
 }
 
@@ -143,4 +145,48 @@ fn print_entropy(report: &ValidationReport) {
     };
 
     println!("\n  Topological Entropy: {colored}");
+}
+
+fn print_layers(report: &ValidationReport) {
+    if report.layers.is_empty() {
+        return;
+    }
+
+    println!("\n{}", "INFERRED LAYERS".cyan().bold());
+    
+    // Group modules by layer
+    let mut layers: std::collections::HashMap<usize, Vec<String>> = std::collections::HashMap::new();
+    for (path, layer) in &report.layers {
+        // Only show relevant top-level concepts or significant modules to avoid noise?
+        // Proposal showed: "L0: constants, error..." (implied module basenames)
+        let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("?");
+        // Clean up "mod" noise? No, just show file stem.
+        // If it's a mod.rs, maybe show parent?
+        let name = if name == "mod" {
+             path.parent().and_then(|p| p.file_name()).and_then(|s| s.to_str()).unwrap_or("mod")
+        } else {
+             name
+        };
+        layers.entry(*layer).or_default().push(name.to_string());
+    }
+
+    // Sort layers
+    let mut sorted_layers: Vec<_> = layers.into_iter().collect();
+    sorted_layers.sort_by_key(|(l, _)| *l);
+
+    for (layer, modules) in sorted_layers {
+        let mut mods = modules;
+        // Deduplicate and sort
+        mods.sort();
+        mods.dedup();
+        
+        // Truncate if too many?
+        let list = if mods.len() > 10 {
+            format!("{}, ... ({} total)", mods[0..8].join(", "), mods.len())
+        } else {
+            mods.join(", ")
+        };
+
+        println!("  L{layer}: {list}");
+    }
 }

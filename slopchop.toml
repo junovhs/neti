@@ -41,7 +41,6 @@ min_hub_afferent = 5
 god_module_threshold = 20
 deadwood_threshold = 2
 mode = "warn"
-hubs = []
 exempt_patterns = []
 
 [preferences]
