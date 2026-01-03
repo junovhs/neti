@@ -1,12 +1,18 @@
 # Past / Present / Future
 
 **Status:** Canonical (living snapshot)  
-**Last updated:** 2026-01-02 (v1.3.2)  
+**Last updated:** 2026-01-02 (v1.3.3)  
 **Canonical policy:** This document states the current operational reality and the single next action.
 
 ---
 
 ## 1) Past (What changed recently)
+
+**v1.3.3: Hash Normalization Fix.**
+- Fixed critical CRLF hash flip-flopping bug on Windows that blocked patch workflow.
+- Consolidated to single `compute_sha256()` function with line ending normalization.
+- Removed duplicate `compute_hash()` from `formats.rs`.
+- Added `test_eol_normalization` and `test_hash_stability` tests.
 
 **v1.2.x: The Law of Locality was added.**
 - Stability Classifier computing fan-in, fan-out, Instability, and Skew
@@ -39,9 +45,9 @@
 
 ## 2) Present (Where we are right now)
 
-**Status:** STABLE - Ready for Locality v2
+**Status:** STABLE - Patch workflow unblocked
 
-SlopChop passes all its own checks. The codebase is clean and consolidated.
+SlopChop passes all its own checks. Hash computation is now cross-platform stable.
 
 ### Core Commands
 
@@ -94,3 +100,4 @@ The locality scanner requires manual hub config and produces false positives for
 - **Test coverage enforcement:** Separate tooling
 - **Advanced visualization:** Dashboard is dead
 - **Method B optimization:** Signatures/map experiments frozen
+

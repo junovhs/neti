@@ -1,6 +1,9 @@
 use crate::config::RuleConfig;
 use anyhow::Result;
 
+/// Current protocol version for AI compatibility tracking.
+const PROTOCOL_VERSION: &str = "1.3.3";
+
 pub struct PromptGenerator {
     config: RuleConfig,
 }
@@ -33,6 +36,19 @@ impl PromptGenerator {
     /// Returns error if generation fails.
     pub fn wrap_header(&self) -> Result<String> {
         self.generate()
+    }
+
+    /// Generates a minimal one-liner for token-constrained contexts.
+    #[must_use]
+    pub fn generate_short(&self) -> String {
+        format!(
+            "SlopChop v{}: <{}tok, C{}, D{}, A{}> Use XSC7XSC protocol.",
+            PROTOCOL_VERSION,
+            self.config.max_file_tokens,
+            self.config.max_cyclomatic_complexity,
+            self.config.max_nesting_depth,
+            self.config.max_function_args,
+        )
     }
 
     fn build_system_prompt(&self) -> String {
@@ -99,11 +115,13 @@ RULES:
     fn build_reminder(&self) -> String {
         let sigil = "XSC7XSC";
         format!(
-            r"SLOPCHOP CONSTRAINTS:
+            r"SLOPCHOP v{PROTOCOL_VERSION} CONSTRAINTS:
 - File Tokens < {}
-- Complexity <= {}
+- Complexity <= {}, Nesting <= {}
 - Use {sigil} Sigil Protocol (PLAN, MANIFEST, FILE, PATCH)",
-            self.config.max_file_tokens, self.config.max_cyclomatic_complexity
+            self.config.max_file_tokens,
+            self.config.max_cyclomatic_complexity,
+            self.config.max_nesting_depth,
         )
     }
 }

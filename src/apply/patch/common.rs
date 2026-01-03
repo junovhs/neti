@@ -59,20 +59,20 @@ pub fn collect_until_keyword(lines: &[&str], start: usize, keywords: &[&str]) ->
     while i < lines.len() {
         let line = lines[i];
         let trimmed = line.trim();
-        
+
         if keywords.iter().any(|k| trimmed.starts_with(k)) {
             break;
         }
         collected.push(line);
         i += 1;
     }
-    
+
     // Join with simple \n. Normalization happens at application time.
     let mut joined = collected.join("\n");
     if !joined.is_empty() {
         joined.push('\n');
     }
-    
+
     (joined, i)
 }
 
@@ -134,4 +134,4 @@ mod hash_tests {
             assert_eq!(compute_sha256(content), first);
         }
     }
-}
+}

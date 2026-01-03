@@ -9,6 +9,7 @@ use crate::events::{EventKind, EventLogger};
 use crate::stage::StageManager;
 use anyhow::{anyhow, Result};
 use colored::Colorize;
+use std::collections::HashSet;
 use std::path::Path;
 
 /// Validates and applies a string payload containing a plan, manifest and files.
@@ -22,7 +23,9 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
 
     let blocks = parser::parse(content).map_err(|e| anyhow!("Parser Error: {e}"))?;
     if blocks.is_empty() {
-        return Ok(ApplyOutcome::ParseError("No valid blocks found.".to_string()));
+        return Ok(ApplyOutcome::ParseError(
+            "No valid blocks found.".to_string(),
+        ));
     }
 
     if let Some(outcome) = check_plan(&blocks, ctx)? {
@@ -50,28 +53,37 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
 
 fn perform_sanitization(extracted: &mut types::ExtractedFiles, ctx: &ApplyContext) {
     let logger = EventLogger::new(&ctx.repo_root);
-    
+
     for (path, content) in extracted.iter_mut() {
-        if is_markdown(path) { continue; }
-        
+        if is_markdown(path) {
+            continue;
+        }
+
         let original_count = content.content.lines().count();
-        let sanitized: Vec<&str> = content.content.lines()
+        let sanitized: Vec<&str> = content
+            .content
+            .lines()
             .filter(|line| !is_fence_line(line))
             .collect();
         let new_count = sanitized.len();
-            
+
         if new_count != original_count {
             let removed = original_count - new_count;
-            println!("   {} Sanitized {} markdown fence lines from {}", "i".blue(), removed, path);
-            
+            println!(
+                "   {} Sanitized {} markdown fence lines from {}",
+                "i".blue(),
+                removed,
+                path
+            );
+
             logger.log(EventKind::SanitizationPerformed {
                 path: path.clone(),
                 lines_removed: removed,
             });
 
             let new_text = sanitized.join("\n");
-            
-            // Rejoin with original newlines is hard without more logic, 
+
+            // Rejoin with original newlines is hard without more logic,
             // but we usually just want standard \n for code.
             content.content = new_text;
             if !content.content.is_empty() {
@@ -85,9 +97,7 @@ fn perform_sanitization(extracted: &mut types::ExtractedFiles, ctx: &ApplyContex
 fn is_markdown(path: &str) -> bool {
     Path::new(path)
         .extension()
-        .is_some_and(|ext| {
-            ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown")
-        })
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("md") || ext.eq_ignore_ascii_case("markdown"))
 }
 
 fn is_fence_line(line: &str) -> bool {
@@ -131,7 +141,9 @@ fn check_plan(blocks: &[Block], ctx: &ApplyContext) -> Result<Option<ApplyOutcom
     if check_plan_requirement(plan, ctx)? {
         Ok(None)
     } else {
-        Ok(Some(ApplyOutcome::ParseError("Operation cancelled.".to_string())))
+        Ok(Some(ApplyOutcome::ParseError(
+            "Operation cancelled.".to_string(),
+        )))
     }
 }
 
@@ -161,13 +173,21 @@ fn apply_patches(
     ctx: &ApplyContext,
 ) -> Result<()> {
     let mut stage_manager = StageManager::new(&ctx.repo_root);
-    let _ = stage_manager.load_state(); 
+    let _ = stage_manager.load_state();
+
+    // Track files that have already been hash-verified
+    let mut verified: HashSet<String> = HashSet::new();
 
     for block in blocks {
         if let Block::Patch { path, content } = block {
             let base = get_base_content(path, extracted, &stage_manager, &ctx.repo_root)?;
-            let new_content = patch::apply(&base, content)
+
+            // Only verify hash on first patch to each file
+            let skip_hash = verified.contains(path);
+            let new_content = patch::apply_with_options(&base, content, skip_hash)
                 .map_err(|e| anyhow!("Failed to patch {path}: {e}"))?;
+
+            verified.insert(path.clone());
 
             extracted.insert(
                 path.clone(),

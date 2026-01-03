@@ -22,12 +22,23 @@ use anyhow::{anyhow, Result};
 /// # Errors
 /// Returns error if patch format is invalid, blocks not found, hash mismatch, or application fails.
 pub fn apply(original: &str, patch_content: &str) -> Result<String> {
+    apply_with_options(original, patch_content, false)
+}
+
+/// Applies a surgical patch with optional hash verification skip.
+/// Used when applying multiple patches to the same file - only the first needs verification.
+///
+/// # Errors
+/// Returns error if patch format is invalid, blocks not found, hash mismatch, or application fails.
+pub fn apply_with_options(original: &str, patch_content: &str, skip_hash: bool) -> Result<String> {
     let (instructions, metadata) = parse_patch(patch_content)?;
 
-    if let Some(expected_hash) = metadata.base_sha256 {
-        verify_hash(original, &expected_hash)?;
-    } else if matches!(metadata.format, PatchFormat::V1) {
-        return Err(anyhow!("Invalid V1 Patch: BASE_SHA256 is required."));
+    if !skip_hash {
+        if let Some(expected_hash) = metadata.base_sha256 {
+            verify_hash(original, &expected_hash)?;
+        } else if matches!(metadata.format, PatchFormat::V1) {
+            return Err(anyhow!("Invalid V1 Patch: BASE_SHA256 is required."));
+        }
     }
 
     if matches!(metadata.format, PatchFormat::V0) {
@@ -50,14 +61,24 @@ struct PatchMetadata {
 fn parse_patch(content: &str) -> Result<(Vec<PatchInstruction>, PatchMetadata)> {
     let format = detect_format(content);
     match format {
-        PatchFormat::V0 => parser_v0::parse(content).map(|(i, h)| (i, PatchMetadata {
-            base_sha256: h,
-            format: PatchFormat::V0,
-        })),
-        PatchFormat::V1 => parser_v1::parse(content).map(|(i, h)| (i, PatchMetadata {
-            base_sha256: h,
-            format: PatchFormat::V1,
-        })),
+        PatchFormat::V0 => parser_v0::parse(content).map(|(i, h)| {
+            (
+                i,
+                PatchMetadata {
+                    base_sha256: h,
+                    format: PatchFormat::V0,
+                },
+            )
+        }),
+        PatchFormat::V1 => parser_v1::parse(content).map(|(i, h)| {
+            (
+                i,
+                PatchMetadata {
+                    base_sha256: h,
+                    format: PatchFormat::V1,
+                },
+            )
+        }),
     }
 }
 
@@ -97,11 +118,20 @@ fn apply_single_instruction(content: &str, instr: &PatchInstruction) -> Result<S
     let matches: Vec<_> = content.match_indices(&norm_search).collect();
 
     if matches.len() == 1 {
-        return Ok(perform_splice(content, matches[0].0, &norm_search, &norm_replace));
+        return Ok(perform_splice(
+            content,
+            matches[0].0,
+            &norm_search,
+            &norm_replace,
+        ));
     }
 
     if matches.len() > 1 {
-        return Err(anyhow!(diagnose_ambiguous(matches.len(), &matches, content)));
+        return Err(anyhow!(diagnose_ambiguous(
+            matches.len(),
+            &matches,
+            content
+        )));
     }
 
     // Zero matches: try without trailing EOL (handles files without final newline)
@@ -125,7 +155,12 @@ fn try_match_trimmed(
         0 => Err(anyhow!(diagnose_zero_matches(content, search, instr))),
         1 => {
             let trimmed_replace = replace.strip_suffix(eol).unwrap_or(replace);
-            Ok(perform_splice(content, matches[0].0, trimmed_search, trimmed_replace))
+            Ok(perform_splice(
+                content,
+                matches[0].0,
+                trimmed_search,
+                trimmed_replace,
+            ))
         }
         n => Err(anyhow!(diagnose_ambiguous(n, &matches, content))),
     }
