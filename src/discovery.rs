@@ -55,8 +55,6 @@ where
     (paths, errors)
 }
 
-// --- Heuristics ---
-
 static BIN_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(BIN_EXT_PATTERN).unwrap_or_else(|_| panic!("Invalid Regex")));
 static SECRET_RE: LazyLock<Regex> =
@@ -86,7 +84,6 @@ fn is_code_like(path: &PathBuf) -> bool {
         return true;
     }
 
-    // Fall back to checking file content for shebang
     if let Ok(content) = fs::read_to_string(path) {
         if content.starts_with("#!") {
             return true;
@@ -96,19 +93,22 @@ fn is_code_like(path: &PathBuf) -> bool {
     false
 }
 
-// --- Config Filtering ---
+/// Normalizes a path to use forward slashes (cross-platform pattern matching).
+fn normalize_path(path: &Path) -> String {
+    path.to_string_lossy().replace('\\', "/")
+}
 
 fn filter_config(mut paths: Vec<PathBuf>, config: &Config) -> Vec<PathBuf> {
     if !config.include_patterns.is_empty() {
         paths.retain(|p| {
-            let s = p.to_string_lossy();
+            let s = normalize_path(p);
             config.include_patterns.iter().any(|re| re.is_match(&s))
         });
     }
 
     if !config.exclude_patterns.is_empty() {
         paths.retain(|p| {
-            let s = p.to_string_lossy();
+            let s = normalize_path(p);
             !config.exclude_patterns.iter().any(|re| re.is_match(&s))
         });
     }
@@ -127,4 +127,4 @@ pub fn group_by_directory(files: &[PathBuf]) -> HashMap<PathBuf, Vec<PathBuf>> {
     }
 
     groups
-}
+}

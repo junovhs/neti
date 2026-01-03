@@ -38,10 +38,14 @@ pub fn normalize_newlines(text: &str, eol: &str) -> String {
     }
 }
 
+/// Computes SHA256 hash of content with normalized line endings.
+/// Always normalizes CRLF/CR to LF before hashing to ensure consistent
+/// hashes across Windows/Unix platforms.
 #[must_use]
 pub fn compute_sha256(content: &str) -> String {
+    let normalized = content.replace("\r\n", "\n").replace('\r', "\n");
     let mut hasher = Sha256::new();
-    hasher.update(content);
+    hasher.update(normalized.as_bytes());
     format!("{:x}", hasher.finalize())
 }
 
@@ -103,3 +107,31 @@ pub fn collect_section(
 
     Ok((collected.join("\n"), i))
 }
+
+#[cfg(test)]
+mod hash_tests {
+    use super::*;
+
+    #[test]
+    fn test_eol_normalization() {
+        let lf_content = "line one\nline two\nline three\n";
+        let crlf_content = "line one\r\nline two\r\nline three\r\n";
+        let mixed = "line one\r\nline two\nline three\r\n";
+
+        let hash_lf = compute_sha256(lf_content);
+        let hash_crlf = compute_sha256(crlf_content);
+        let hash_mixed = compute_sha256(mixed);
+
+        assert_eq!(hash_lf, hash_crlf);
+        assert_eq!(hash_lf, hash_mixed);
+    }
+
+    #[test]
+    fn test_hash_stability() {
+        let content = "fn main() {\r\n    println!(\"hello\");\r\n}\r\n";
+        let first = compute_sha256(content);
+        for _ in 0..100 {
+            assert_eq!(compute_sha256(content), first);
+        }
+    }
+}

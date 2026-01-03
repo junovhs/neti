@@ -1,13 +1,18 @@
+# Infrastructure
 .slopchop
 target
 node_modules
 .git
-DESIGN.md
-ROADMAP.md
-tasks.toml
-SIGNATURES.txt
-SIGNATURES.rs
-.slopchop
-tests
 Cargo.lock
-/docs/archived/
+# Archived docs (28k tokens)
+docs/archived
+# Experimental commands (42k tokens)
+src/audit
+src/graph
+src/signatures
+src/map.rs
+# Test files
+tests
+src/stage/tests_manager.rs
+src/stage/tests_promote.rs
+src/apply/patch/tests.rs

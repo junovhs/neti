@@ -3,9 +3,9 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use sha2::{Digest, Sha256};
 
 use super::{FocusContext, PackOptions};
+use crate::apply::patch::common::compute_sha256;
 use crate::skeleton;
 
 const SIGIL: &str = "XSC7XSC";
@@ -72,7 +72,7 @@ fn write_slopchop_file(out: &mut String, path: &Path, skeletonize: bool) -> Resu
     
     match fs::read_to_string(path) {
         Ok(content) => {
-            let hash = compute_hash(&content);
+            let hash = compute_sha256(&content);
             writeln!(out, "{SIGIL} FILE {SIGIL} {p_str} SHA256:{hash}")?;
             
             if skeletonize {
@@ -96,7 +96,7 @@ fn write_slopchop_file_skeleton(out: &mut String, path: &Path) -> Result<()> {
     
     match fs::read_to_string(path) {
         Ok(content) => {
-            let hash = compute_hash(&content);
+            let hash = compute_sha256(&content);
             writeln!(out, "{SIGIL} FILE {SIGIL} {p_str} [SKELETON] SHA256:{hash}")?;
             out.push_str(&skeleton::clean(path, &content));
         }
@@ -169,7 +169,7 @@ fn write_xml_doc(
     
     match fs::read_to_string(path) {
         Ok(content) => {
-            let hash = compute_hash(&content);
+            let hash = compute_sha256(&content);
             let attr = focus_attr.map_or(String::new(), |f| format!(" focus=\"{f}\""));
             writeln!(out, "  <document path=\"{p_str}\" sha256=\"{hash}\"{attr}><![CDATA[")?;
 
@@ -190,10 +190,4 @@ fn should_skeletonize(path: &Path, opts: &PackOptions) -> bool {
     if opts.skeleton { return true; }
     if let Some(target) = &opts.target { return !path.ends_with(target); }
     false
-}
-
-fn compute_hash(content: &str) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(content.as_bytes());
-    format!("{:x}", hasher.finalize())
-}
+}
