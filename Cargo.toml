@@ -44,8 +44,7 @@ sha2 = "0.10"
 # THE BRAINS - Tokenization
 tiktoken-rs = "0.5"
 
-# UI / TUI (optional feature)
-ratatui = { version = "0.29", optional = true }
+# UI / TUI
 crossterm = "0.28"
 
 # Structural Parsing
@@ -56,10 +55,6 @@ tree-sitter-typescript = "0.20"
 
 [dev-dependencies]
 tempfile = "3.10"
-
-[features]
-default = ["tui"]
-tui = ["dep:ratatui"]
 
 # Profile for release builds - optimize for size and speed
 [profile.release]

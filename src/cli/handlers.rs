@@ -154,7 +154,7 @@ pub fn handle_apply(args: &ApplyArgs) -> Result<SlopChopExit> {
         dry_run: args.dry_run,
         input,
         check_after: args.check,
-        auto_promote: false,
+        auto_promote: config.preferences.auto_promote,
         reset_stage: args.reset,
         sanitize,
     };

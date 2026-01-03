@@ -2,7 +2,7 @@ use crate::config::RuleConfig;
 use anyhow::Result;
 
 /// Current protocol version for AI compatibility tracking.
-const PROTOCOL_VERSION: &str = "1.3.3";
+const PROTOCOL_VERSION: &str = "1.3.4";
 
 pub struct PromptGenerator {
     config: RuleConfig,
