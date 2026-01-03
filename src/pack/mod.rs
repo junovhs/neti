@@ -56,7 +56,7 @@ pub fn run(options: &PackOptions) -> Result<()> {
     let mut stage = StageManager::new(&repo_root);
     let _ = stage.load_state();
 
-    print_start_message(options, stage.exists());
+    print_start_message(options, stage.exists(), &config);
 
     // If stage exists, we discover files relative to the stage worktree
     let walk_root = if stage.exists() { stage.worktree() } else { repo_root.clone() };
@@ -76,11 +76,13 @@ pub fn run(options: &PackOptions) -> Result<()> {
     std::env::set_current_dir(original_cwd)?;
     
     let token_count = Tokenizer::count(&content);
-    output_result(&content, token_count, options)
+    output_result(&content, token_count, options, &config)
 }
 
-fn print_start_message(options: &PackOptions, is_staged: bool) {
-    if options.stdout || options.copy { return; }
+fn print_start_message(options: &PackOptions, is_staged: bool, config: &Config) {
+    if options.stdout { return; }
+    if options.copy || config.preferences.auto_copy { return; }
+
     let mode = if is_staged { "[STAGE MODE]" } else { "[WORKSPACE MODE]" };
     
     if options.focus.is_empty() {
@@ -166,20 +168,30 @@ fn write_footer(ctx: &mut String, config: &Config) -> Result<()> {
     Ok(())
 }
 
-fn output_result(content: &str, tokens: usize, opts: &PackOptions) -> Result<()> {
+fn output_result(content: &str, tokens: usize, opts: &PackOptions, config: &Config) -> Result<()> {
     let info = format!("\n?? Context Size: {} tokens", tokens.to_string().yellow().bold());
+    
     if opts.stdout {
         print!("{content}");
         eprintln!("{info}");
         return Ok(());
     }
-    if opts.copy {
-        let msg = clipboard::smart_copy(content)?;
-        println!("{} ({msg}){info}", " Copied to clipboard".green());
-        return Ok(());
+
+    if opts.copy || config.preferences.auto_copy {
+        match clipboard::smart_copy(content) {
+            Ok(msg) => {
+                println!("{} ({msg}){info}", "� Copied to clipboard".green());
+                return Ok(());
+            }
+            Err(e) => {
+                eprintln!("{} Failed to copy to clipboard: {e}", "?".yellow());
+                eprintln!("Falling back to file output...");
+            }
+        }
     }
+
     let output_path = PathBuf::from("context.txt");
     fs::write(&output_path, content)?;
     println!("? Generated 'context.txt'{info}");
     Ok(())
-}
+}

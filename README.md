@@ -106,13 +106,18 @@ Applies a protocol payload from clipboard, stdin, or file.
     *   `--sanitize`: Strip UI/Markdown artifacts (Default for Clipboard).
     *   `--strict`: Disable sanitization (use for raw file pipes).
 
+### `slopchop config` (Interactive Setup)
+Opens a TUI editor to configure rules and preferences.
+*   **Interactive:** Navigate with arrow keys, toggle with Enter.
+*   **Preferences:** Set `auto_copy`, `backup_retention`, or `locality` modes.
+
 ### `slopchop pack` (AI Context Generation)
 Knits your repository into a single high-density context file (`context.txt`).
 *   **Focus Mode:** Use `--focus <file>` to provide full source for target files while automatically providing "skeletons" (signatures only) for all dependencies.
 *   **Token Efficient:** Dramatically reduces context size by stripping function bodies from peripheral code.
 *   **Globbing Tip**: To select multiple files (e.g., all markdown), let your shell do the work. Do **not** quote the wildcard.
-    *   ✅ `slopchop pack --focus docs/*.md`
-    *   ❌ `slopchop pack --focus "docs/*.md"` (Passes literal asterisk; finds nothing)
+    *   ? `slopchop pack --focus docs/*.md`
+    *   ? `slopchop pack --focus "docs/*.md"` (Passes literal asterisk; finds nothing)
 
 ### `slopchop audit` (Refactor Radar)
 Searches for repo-wide duplication and consolidation opportunities.
@@ -185,19 +190,18 @@ slopchop apply --reset
 
 ---
 
-## Latest: v1.3.3 - Cross-Platform Patch Reliability
+## Latest: v1.3.4 - UX Polish & Configuration
 
-SlopChop v1.3.3 fixes critical patch workflow issues:
-*   **Hash Normalization:** CRLF and LF files now produce identical hashes, fixing the "flip-flop" bug on Windows.
-*   **Multi-Patch Support:** Multiple patches to the same file in a single payload now work correctly.
-*   **Unified Hashing:** Single `compute_sha256()` function used across pack and apply.
+SlopChop v1.3.4 adds interactive configuration and improves the AI workflow loop:
+*   **Interactive Config:** Run `slopchop config` to edit rules and preferences via TUI.
+*   **Paste-Back Restored:** Verification failures now auto-copy AI feedback packets to clipboard.
+*   **Pack Fix:** Fixed `slopchop pack` auto-copy reliability.
+
+### Previous: v1.3.3 - Cross-Platform Patch Reliability
+*   **Hash Normalization:** CRLF and LF files now produce identical hashes.
+*   **Multi-Patch Support:** Multiple patches to the same file work correctly.
 
 ### Previous: v1.3.2 - High Integrity & Locality v2
-*   **Split-Brain Protection:** Blocks promotion if workspace files were manually modified after staging.
-*   **Hardened Sandbox:** Fixed S03 (Null byte paths) and I01 (Greedy sigils) vulnerabilities.
-*   **Locality v2:** Automated module layer inference and cycle detection.
-
-### Previous: v1.1.0 - Transport Hardening
-*   **Parser Resilience:** Tolerates indentation and artifacts from chat UIs.
-*   **Sanitization:** Automatically strips UI-injected markdown code fences.
-*   **Enhanced Diagnostics:** PATCH failures show "Did you mean?" hints.
+*   **Split-Brain Protection:** Blocks promotion if workspace files were manually modified.
+*   **Hardened Sandbox:** Fixed S03 and I01 vulnerabilities.
+

@@ -1,5 +1,6 @@
 // src/apply/messages.rs
 use crate::apply::types::ApplyOutcome;
+use crate::config::Config;
 use colored::Colorize;
 
 pub fn print_outcome(outcome: &ApplyOutcome) {
@@ -45,7 +46,7 @@ fn handle_failure(ai_message: &str) {
 
 fn print_changes(written: &[String], deleted: &[String]) {
     for file in written {
-        println!("   {} {file}", "".green());
+        println!("   {} {file}", " ".green());
     }
     for file in deleted {
         println!("   {} {file}", "?".red());
@@ -53,9 +54,27 @@ fn print_changes(written: &[String], deleted: &[String]) {
 }
 
 pub fn print_ai_feedback(ai_message: &str) {
-    println!("\n{}", " Paste this back to the AI:".cyan().bold());
+    let config = Config::load();
+
+    println!("\n{}", "? Paste this back to the AI:".cyan().bold());
     println!("{ai_message}");
-    let _ = crate::clipboard::copy_to_clipboard(ai_message);
+
+    if config.preferences.write_fix_packet {
+        let path = &config.preferences.fix_packet_path;
+        if let Err(e) = std::fs::write(path, ai_message) {
+            eprintln!("Could not write fix packet to {path}: {e}");
+        } else {
+            println!("{}", format!("Fix packet written to: {path}").dimmed());
+        }
+    }
+
+    if config.preferences.auto_copy {
+        if let Err(e) = crate::clipboard::copy_to_clipboard(ai_message) {
+            eprintln!("{}", format!("Warning: Auto-copy failed: {e}").yellow());
+        } else {
+            println!("{}", "  (Copied to clipboard)".dimmed());
+        }
+    }
 }
 
 #[must_use]

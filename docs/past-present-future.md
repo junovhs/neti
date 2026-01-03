@@ -1,53 +1,39 @@
 # Past / Present / Future
 
 **Status:** Canonical (living snapshot)  
-**Last updated:** 2026-01-03 (v1.3.3)  
+**Last updated:** 2026-01-03 (v1.3.4)  
 **Canonical policy:** This document states the current operational reality and the single next action.
 
 ---
 
 ## 1) Past (What changed recently)
 
+**v1.3.4: UX Polish & Configuration.**
+- **`slopchop config`**: Interactive TUI editor for settings.
+- **Paste-Back Restoration**: Verification failures now auto-copy structured AI feedback.
+- **Pack Fix**: Fixed `slopchop pack` ignoring auto-copy preferences.
+
 **v1.3.3: Cross-Platform Patch Reliability.**
-- Fixed critical CRLF hash flip-flopping bug on Windows that blocked patch workflow.
-- Fixed multi-patch verification: only first patch to each file is hash-verified.
-- Consolidated to single `compute_sha256()` function with line ending normalization.
-- Added `apply_with_options()` to support skip-hash for chained patches.
-- Added `test_eol_normalization` and `test_hash_stability` tests.
+- Fixed critical CRLF hash flip-flopping bug on Windows.
+- Fixed multi-patch verification logic.
+- Consolidated `compute_sha256()` with normalization.
 
 **v1.3.2: Patch Security & Stress Test Hardening.**
 - Fixed critical vulnerabilities: S03 (Null Byte in Path) and I01 (Sigil Injection).
-- Verified semantic matcher robustness (W06: Trailing Newline Fallback).
-- Strengthened protocol parser with specific prefix binding.
-- Systematic stress testing of Categories 1-9 completed.
-
-**v1.3.1: Doc Archival & Verification.**
-- Archived v1.3.0 feature proposals and stress tests.
-- Bumped version to v1.3.1.
-- Verified zero-violation state on the new topology.
+- Verified semantic matcher robustness.
 
 **v1.3.0: Locality v2 & Consolidation.**
 - **Locality v2:** Cycle detection, auto-hub detection, and layer inference.
-- Refactored analysis module to resolve file size and complexity violations.
-- Fixed self-violation: `src/apply/parser.rs` split into `parser.rs` + `blocks.rs`
-- Removed 4 commands: `trace`, `fix`, `prompt`, `dashboard`
-- Deleted ~2000 lines of unused code (`src/trace/`, `src/tui/`)
-- Prescriptive violations: errors now include ANALYSIS and SUGGESTION sections
-- Modularized analysis checks into `checks/naming.rs`, `checks/complexity.rs`, `checks/banned.rs`
-
-**v1.2.x: The Law of Locality was added.**
-- Stability Classifier computing fan-in, fan-out, Instability, and Skew
-- Node identity classification (StableHub, VolatileLeaf, IsolatedDeadwood, GodModule)
-- Universal Locality Algorithm validating dependency edges
-- CLI integration via `slopchop scan --locality`
+- Deleted ~2000 lines of unused code (TUI, trace).
+- Modularized analysis checks.
 
 ---
 
 ## 2) Present (Where we are right now)
 
-**Status:** STABLE - Patch workflow fully operational
+**Status:** STABLE - v1.3.4 Released
 
-SlopChop passes all its own checks. Hash computation is cross-platform stable. Multi-patch payloads work correctly.
+SlopChop is now feature-complete for the v1.3 cycle. The patching workflow is robust, configuration is interactive, and the "Paste-Back" loop is restored and verified.
 
 ### Core Commands
 
@@ -57,6 +43,7 @@ SlopChop passes all its own checks. Hash computation is cross-platform stable. M
 | `check` | Gate (external commands + scan) |
 | `apply` | Staged ingestion with XSC7XSC protocol |
 | `pack` | AI context generation |
+| `config` | Interactive settings editor |
 | `clean` | Remove artifacts |
 
 ### Experimental Commands
@@ -70,32 +57,27 @@ SlopChop passes all its own checks. Hash computation is cross-platform stable. M
 
 ### Known Issues
 
-1. **Paste-back packet broken**: When verification fails, the AI feedback message prints but is no longer auto-copied to clipboard. This broke during a refactor and was never restored.
-
-2. **No config UI**: After deleting the bloated TUI dashboard, there's no interactive way to configure SlopChop. Users must edit `slopchop.toml` manually.
+1. **Locality False Positives**: The directional coupling heuristic can sometimes flag legitimate dependency cycles in tightly coupled modules (e.g., `parser` <-> `ast`).
 
 ---
 
 ## 3) Future (What we do next)
 
-### v1.3.4: UX Polish (Immediate Next Action)
-
-| Feature | Description | Effort |
-|---------|-------------|--------|
-| **Fix paste-back** | Restore auto-copy of AI feedback to clipboard on verification failure | Small |
-| **`slopchop config`** | Minimal interactive config editor using crossterm directly (no ratatui) | Medium |
-| **Configurable output** | Option to write fix packet to file instead of clipboard | Small |
-
-See `docs/v1.3.4-ux-spec.md` for full technical specification.
-
-### After v1.3.4
+### v1.4.0: Distribution & Ecology (Next Cycle)
 
 | Feature | Description | Priority |
 |---------|-------------|----------|
-| Locality validation | Run on 3-5 external Rust repos to battle-test heuristics | Medium |
-| `mode = "error"` default | Switch locality to blocking mode once validated | Low |
-| TypeScript imports | Better path alias and index file resolution | Low |
-| Distribution | Scoop, Winget, Homebrew packages | Low |
+| **Installers** | Scoop (Windows), Homebrew (macOS), Shell script (Linux) | High |
+| **Locality Validation** | Run on 3-5 external Rust repos to battle-test heuristics | High |
+| **TypeScript Imports** | Better path alias and index file resolution | Medium |
+| **`mode = "error"`** | Switch locality to blocking mode default once validated | Medium |
+
+### Long Term
+
+| Feature | Description |
+|---------|-------------|
+| **LSP Server** | Real-time "Law" violation flagging in IDE |
+| **Pre-commit Hook** | Lightweight hook integration |
 
 ---
 
@@ -105,56 +87,16 @@ These were considered and deliberately rejected:
 
 | Feature | Reason |
 |---------|--------|
-| **History/generations** | Stage is ephemeral by design. Users wipe it immediately after promote. No value in tracking generations. |
-| **75% PATCH threshold** | Micromanaging. AI can decide when to use PATCH vs FILE. Automatic rejection adds friction without benefit. |
-| **META block** | Redundant. BASE_SHA256 per-patch already catches staleness. Belt-and-suspenders paranoia with no real-world failure mode. |
-| **Python support** | Not a real use case yet. |
-| **Test coverage enforcement** | Separate tooling (cargo-tarpaulin, etc). |
+| **History/generations** | Stage is ephemeral by design. Users wipe it immediately after promote. |
+| **75% PATCH threshold** | Micromanaging. AI can decide when to use PATCH vs FILE. |
+| **META block** | Redundant. BASE_SHA256 per-patch matches context requirements. |
+| **Python support (Deep)** | Basic parsing exists, but full type inference is out of scope. |
 | **Advanced visualization** | Dashboard was bloat. Deleted. |
-| **Method B (signatures)** | Frozen experiment. Context windows are large enough now. |
 
 ---
 
 ## 5) Architecture Notes
 
-### The Paste-Back Loop (Target State)
+### The Config Command
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  1. User runs: slopchop apply -c                            │
-│  2. SlopChop writes to stage, runs verification             │
-│  3. If verification FAILS:                                  │
-│     a. Generate AI feedback packet (violations + context)   │
-│     b. Auto-copy to clipboard (or write to file per config) │
-│     c. Print: "Paste this back to the AI"                   │
-│  4. User pastes to AI, gets fix                             │
-│  5. User copies AI response, runs slopchop apply -c again   │
-│  6. Repeat until green                                      │
-│  7. User runs: slopchop apply --promote                     │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### The Config Command (Target State)
-
-```
-$ slopchop config
-
-┌─ SlopChop Configuration ──────────────────┐
-│                                           │
-│  Rules                                    │
-│  ├─ Max file tokens    [2000]             │
-│  ├─ Max complexity     [8]                │
-│  ├─ Max nesting        [3]                │
-│  └─ Max args           [5]                │
-│                                           │
-│  Preferences                              │
-│  ├─ [x] Auto-copy to clipboard            │
-│  ├─ [ ] Write fix packet to file          │
-│  ├─ [x] Require PLAN block                │
-│  └─ [ ] Auto-promote on green             │
-│                                           │
-│  [Save]  [Cancel]                         │
-└───────────────────────────────────────────┘
-```
-
-Minimal TUI using only `crossterm` for input handling. No ratatui, no widgets, no state machine complexity. ~200 lines of code.
+The new `config` command uses a minimal `crossterm` implementation (~250 lines) instead of the heavy `ratatui` dependency used in previous versions. This aligns with the "Complexity <= 8" law by keeping the UI logic linear and shallow.

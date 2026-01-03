@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2026-01-03
+
+### Added
+- **Interactive Configuration**: Added `slopchop config` command for TUI-based setting management (using crossterm).
+- **Fix Packet Persistence**: Added option to write AI fix packets to file (`write_fix_packet = true`) instead of clipboard.
+- **Config Fields**: Added `auto_promote`, `write_fix_packet`, `fix_packet_path` to preferences.
+
+### Fixed
+- **Paste-Back UX**: Restored auto-copy of AI feedback to clipboard when verification fails.
+- **Auto-Copy Logic**: Fixed bug where `slopchop pack` ignored the `auto_copy` preference from config.
+- **Command Output**: Verification failure now generates a structured, copy-pasteable report for the AI.
+
 ## [1.3.3] - 2026-01-03
 
 ### Fixed
@@ -90,4 +102,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-*For older versions, see the git history.*
+*For older versions, see the git history.*
