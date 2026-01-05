@@ -127,4 +127,14 @@ pub fn format_report_string(report: &ScanReport) -> Result<String> {
     }
 
     Ok(out)
-}
+}
+
+/// Prints a serializable object as JSON to stdout.
+///
+/// # Errors
+/// Returns error if serialization fails.
+pub fn print_json<T: serde::Serialize>(data: &T) -> Result<()> {
+    let json = serde_json::to_string_pretty(data)?;
+    println!("{json}");
+    Ok(())
+}

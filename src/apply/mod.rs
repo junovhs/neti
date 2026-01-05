@@ -6,6 +6,7 @@ pub mod manifest;
 pub mod messages;
 pub mod parser;
 pub mod patch;
+pub mod process_runner;
 pub mod processor;
 pub mod types;
 pub mod validator;
@@ -73,4 +74,4 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
 /// Returns error if promotion fails.
 pub fn run_promote(ctx: &ApplyContext) -> Result<ApplyOutcome> {
     processor::run_promote_standalone(ctx)
-}
+}

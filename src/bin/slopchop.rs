@@ -26,16 +26,20 @@ fn run() -> Result<SlopChopExit> {
     let cli = Cli::parse();
 
     match cli.command {
-        None => handle_scan(false, false),
+        None => handle_scan(false, false, false),
         Some(cmd) => dispatch(cmd),
     }
 }
 
 fn dispatch(cmd: Commands) -> Result<SlopChopExit> {
     match cmd {
-        Commands::Check => handle_check(),
+        Commands::Check { json } => handle_check(json),
 
-        Commands::Scan { verbose, locality } => handle_scan(verbose, locality),
+        Commands::Scan {
+            verbose,
+            locality,
+            json,
+        } => handle_scan(verbose, locality, json),
 
         Commands::Apply {
             force,
@@ -124,5 +128,7 @@ fn dispatch(cmd: Commands) -> Result<SlopChopExit> {
         }
 
         Commands::Config => slopchop_core::cli::handlers::handle_config(),
+
+        Commands::Sabotage { file } => slopchop_core::cli::handlers::handle_sabotage(&file),
     }
 }

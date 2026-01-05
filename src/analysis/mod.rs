@@ -4,6 +4,7 @@
 pub mod ast;
 pub mod checks;
 pub mod metrics;
+pub mod sabotage;
 pub mod safety;
 
 use crate::config::Config;
@@ -170,4 +171,4 @@ impl RuleEngine {
     fn has_ignore_directive(source: &str) -> bool {
         source.lines().take(5).any(|line| line.contains("slopchop:ignore"))
     }
-}
+}

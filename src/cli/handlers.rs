@@ -38,7 +38,7 @@ pub struct PackArgs {
 ///
 /// # Errors
 /// Returns error if discovery or scanning fails.
-pub fn handle_scan(verbose: bool, locality: bool) -> Result<SlopChopExit> {
+pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChopExit> {
     if locality {
         return super::locality::handle_locality();
     }
@@ -50,7 +50,11 @@ pub fn handle_scan(verbose: bool, locality: bool) -> Result<SlopChopExit> {
     let engine = RuleEngine::new(config);
     let report = engine.scan(files);
 
-    reporting::print_report(&report)?;
+    if json {
+        reporting::print_json(&report)?;
+    } else {
+        reporting::print_report(&report)?;
+    }
 
     if report.has_errors() {
         Ok(SlopChopExit::CheckFailed)
@@ -63,17 +67,23 @@ pub fn handle_scan(verbose: bool, locality: bool) -> Result<SlopChopExit> {
 ///
 /// # Errors
 /// Returns error if verification pipeline fails to execute.
-pub fn handle_check() -> Result<SlopChopExit> {
+pub fn handle_check(json: bool) -> Result<SlopChopExit> {
     let config = Config::load();
     let repo_root = get_repo_root();
-    let ctx = ApplyContext::new(&config, repo_root.clone());
+    let mut ctx = ApplyContext::new(&config, repo_root.clone());
+    ctx.silent = json;
 
     let cwd = stage::effective_cwd(&repo_root);
 
-    let result = apply::verification::run_verification_pipeline(&ctx, &cwd)?;
+    let report = apply::verification::run_verification_pipeline(&ctx, &cwd)?;
 
-    if result.passed {
+    if json {
+        reporting::print_json(&report)?;
+    } else if report.passed {
         println!("{}", "[OK] All checks passed.".green().bold());
+    }
+
+    if report.passed {
         Ok(SlopChopExit::Success)
     } else {
         Ok(SlopChopExit::CheckFailed)
@@ -129,6 +139,43 @@ pub fn handle_config() -> Result<SlopChopExit> {
     Ok(SlopChopExit::Success)
 }
 
+/// Handles the sabotage command.
+///
+/// # Errors
+/// Returns error if sabotage fails.
+pub fn handle_sabotage(file: &std::path::Path) -> Result<SlopChopExit> {
+    let repo_root = get_repo_root();
+    let mut stage = stage::StageManager::new(&repo_root);
+    
+    if !stage.exists() {
+        // Auto-create stage if missing for convenience?
+        // The brief says "Must ONLY operate on .slopchop/stage/worktree".
+        // If stage doesn't exist, we can't operate on it.
+        println!("{}", "No stage found. Run 'slopchop apply' or create a stage first.".yellow());
+        return Ok(SlopChopExit::Error);
+    }
+    
+    // We might need to ensure the file exists in the stage.
+    // The user might pass a path relative to repo root, we need to map it.
+    // sabotage_file expects path relative to worktree root? 
+    // Actually sabotage_file takes "path" and joins it with worktree.
+    // So if user passes "src/main.rs", it looks for ".slopchop/stage/worktree/src/main.rs".
+    
+    let report = crate::analysis::sabotage::sabotage_file(file, &mut stage)?;
+    
+    if report.mutated {
+        println!("{}", "Sabotage successful!".green().bold());
+        println!("  File: {}", report.file.display());
+        println!("  Line: {}", report.line);
+        println!("  Mutation: '{}' -> '{}'", report.original_op.red(), report.new_op.green());
+        println!("\nRun 'slopchop check' to see if tests catch this bug!");
+        Ok(SlopChopExit::Success)
+    } else {
+        println!("{}", "No mutable logic found in file.".yellow());
+        Ok(SlopChopExit::Error)
+    }
+}
+
 /// Handles the apply command with CLI arguments.
 ///
 /// # Errors
@@ -157,6 +204,7 @@ pub fn handle_apply(args: &ApplyArgs) -> Result<SlopChopExit> {
         auto_promote: config.preferences.auto_promote,
         reset_stage: args.reset,
         sanitize,
+        silent: false,
     };
 
     let outcome = apply::run_apply(&ctx)?;

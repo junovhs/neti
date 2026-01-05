@@ -13,7 +13,11 @@ pub struct Cli {
 #[derive(Subcommand)]
 pub enum Commands {
     /// Run structural checks on the codebase
-    Check,
+    Check {
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+    },
 
     /// Scan for violations
     Scan {
@@ -22,6 +26,9 @@ pub enum Commands {
         /// Run topology/locality analysis [EXPERIMENTAL]
         #[arg(long, short)]
         locality: bool,
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
     },
 
     /// Apply AI-generated changes to staging area
@@ -111,6 +118,13 @@ pub enum Commands {
 
     /// Interactive configuration editor
     Config,
+
+    /// Intentionally break code in stage to verify tests [EXPERIMENTAL]
+    Sabotage {
+        /// File to sabotage
+        #[arg(value_name = "FILE")]
+        file: PathBuf,
+    },
 }
 
 #[allow(clippy::struct_excessive_bools)]

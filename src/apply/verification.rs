@@ -1,93 +1,120 @@
 // src/apply/verification.rs
-use crate::analysis::RuleEngine;
+use crate::apply::process_runner::CommandRunner;
 use crate::apply::types::ApplyContext;
 use crate::cli::locality;
-use crate::clipboard;
 use crate::config::Config;
 use crate::discovery;
+use crate::analysis::RuleEngine;
 use crate::events::{EventKind, EventLogger};
 use crate::reporting;
 use crate::spinner::Spinner;
-use crate::stage;
+use crate::types::{CheckReport, CommandResult, ScanReport};
 use anyhow::Result;
 use colored::Colorize;
 use std::env;
+use std::fmt::Write;
 use std::path::Path;
-use std::process::Command;
-
-pub struct VerificationResult {
-    pub passed: bool,
-    pub failed_checks: Vec<(String, String)>,
-}
+use std::time::Instant;
 
 /// Runs the full verification pipeline: External Commands -> Scan -> Locality.
 ///
 /// # Errors
 /// Returns error if command execution fails.
-pub fn run_verification_pipeline<P: AsRef<Path>>(ctx: &ApplyContext, cwd: P) -> Result<VerificationResult> {
+pub fn run_verification_pipeline<P: AsRef<Path>>(
+    ctx: &ApplyContext,
+    cwd: P,
+) -> Result<CheckReport> {
     let logger = EventLogger::new(&ctx.repo_root);
     logger.log(EventKind::CheckStarted);
 
-    println!("{}", "\n  Verifying changes...".blue().bold());
+    if !ctx.silent {
+        println!("{}", "\n  Verifying changes...".blue().bold());
+    }
 
     let working_dir = cwd.as_ref();
-    let mut failed_checks = Vec::new();
+    let runner = CommandRunner::new(ctx.silent);
+    
+    // 1. External Commands
+    let (mut command_results, mut passed) = run_external_checks(ctx, working_dir, &runner, &logger)?;
 
+    // 2. Internal Scan
+    let scan_report = run_internal_scan(working_dir, ctx.silent)?;
+    if scan_report.has_errors() {
+        passed = false;
+        logger.log(EventKind::CheckFailed { exit_code: 1 });
+    }
+
+    // 3. Locality Scan
+    let locality_result = run_locality_scan(working_dir, ctx.silent)?;
+    if locality_result.exit_code != 0 {
+        passed = false;
+        logger.log(EventKind::CheckFailed { exit_code: 1 });
+    }
+    command_results.push(locality_result);
+
+    if passed {
+        logger.log(EventKind::CheckPassed);
+    }
+
+    Ok(CheckReport {
+        scan: scan_report,
+        commands: command_results,
+        passed,
+    })
+}
+
+fn run_external_checks(
+    ctx: &ApplyContext, 
+    cwd: &Path, 
+    runner: &CommandRunner,
+    logger: &EventLogger
+) -> Result<(Vec<CommandResult>, bool)> {
+    let mut results = Vec::new();
+    let mut passed = true;
+    
     if let Some(commands) = ctx.config.commands.get("check") {
         for cmd in commands {
-            if let Some(error) = run_stage_in_dir(cmd, cmd, working_dir)? {
-                logger.log(EventKind::CheckFailed { exit_code: 1 });
-                failed_checks.push((cmd.clone(), error));
-                return Ok(VerificationResult { passed: false, failed_checks });
+            let result = runner.run(cmd, cwd)?;
+            if result.exit_code != 0 {
+                passed = false;
+                logger.log(EventKind::CheckFailed { exit_code: result.exit_code });
             }
+            results.push(result);
         }
     }
-
-    if let Some(error) = run_internal_scan(working_dir)? {
-        logger.log(EventKind::CheckFailed { exit_code: 1 });
-        failed_checks.push(("slopchop scan".to_string(), error));
-        return Ok(VerificationResult { passed: false, failed_checks });
-    }
-
-    if let Some(error) = run_locality_scan(working_dir)? {
-        logger.log(EventKind::CheckFailed { exit_code: 1 });
-        failed_checks.push(("slopchop scan --locality".to_string(), error));
-        return Ok(VerificationResult { passed: false, failed_checks });
-    }
-
-    logger.log(EventKind::CheckPassed);
-    Ok(VerificationResult { passed: true, failed_checks })
+    Ok((results, passed))
 }
 
 #[must_use]
-pub fn generate_ai_feedback(
-    failed_commands: &[(String, String)],
-    modified_files: &[String],
-) -> String {
-    use std::fmt::Write;
+pub fn generate_ai_feedback(report: &CheckReport, modified_files: &[String]) -> String {
     let mut msg = String::from("VERIFICATION FAILED\n\n");
-    
+
     msg.push_str("The following checks failed:\n\n");
-    for (cmd, stderr) in failed_commands {
-        let _ = writeln!(msg, "COMMAND: {cmd}");
+    
+    for cmd in report.commands.iter().filter(|c| c.exit_code != 0) {
+        let _ = writeln!(msg, "COMMAND: {}", cmd.command);
         msg.push_str("OUTPUT:\n");
-        // Truncate to ~1000 chars to avoid clipboard bloat
-        let truncated = if stderr.len() > 1000 {
-            format!("{}...\n[truncated]", &stderr[..1000])
+        let combined = format!("{}\n{}", cmd.stdout, cmd.stderr);
+        let truncated = if combined.len() > 1000 {
+            format!("{}...\n[truncated]", &combined[..1000])
         } else {
-            stderr.clone()
+            combined
         };
         msg.push_str(&truncated);
         msg.push_str("\n\n");
     }
     
+    if report.scan.has_errors() {
+        msg.push_str("COMMAND: slopchop scan\nOUTPUT:\nInternal violations found (see scan report).\n\n");
+    }
+
     if !modified_files.is_empty() {
         msg.push_str("FILES MODIFIED IN THIS APPLY:\n");
         for f in modified_files {
             let _ = writeln!(msg, "- {f}");
         }
     }
-    
+
     msg.push_str("\nPlease fix the issues and provide corrected files.");
     msg
 }
@@ -97,116 +124,88 @@ pub fn generate_ai_feedback(
 /// # Errors
 /// Returns error if command execution fails.
 pub fn run_verification_auto(ctx: &ApplyContext) -> Result<bool> {
-    let cwd = stage::effective_cwd(&ctx.repo_root);
-    let result = run_verification_pipeline(ctx, &cwd)?;
-    Ok(result.passed)
+    let cwd = crate::stage::effective_cwd(&ctx.repo_root);
+    let report = run_verification_pipeline(ctx, &cwd)?;
+    Ok(report.passed)
 }
 
-fn run_stage_in_dir(label: &str, cmd_str: &str, cwd: &Path) -> Result<Option<String>> {
-    let sp = Spinner::start(label);
+fn run_internal_scan(cwd: &Path, silent: bool) -> Result<ScanReport> {
+    let sp = if silent { None } else { Some(Spinner::start("slopchop scan")) };
+    let start = Instant::now();
 
-    let parts: Vec<&str> = cmd_str.split_whitespace().collect();
-    let Some((prog, args)) = parts.split_first() else {
-        sp.stop(true);
-        return Ok(None);
-    };
-
-    let output = Command::new(prog).args(args).current_dir(cwd).output()?;
-    let success = output.status.success();
-    sp.stop(success);
-
-    if !success {
-        let combined = collect_output(&output.stdout, &output.stderr);
-        let summary = summarize_output(&combined, cmd_str);
-        handle_failure(label, &summary);
-        return Ok(Some(combined));
-    }
-
-    Ok(None)
-}
-
-fn collect_output(stdout: &[u8], stderr: &[u8]) -> String {
-    let out = String::from_utf8_lossy(stdout);
-    let err = String::from_utf8_lossy(stderr);
-    format!("{out}\n{err}")
-}
-
-fn run_internal_scan(cwd: &Path) -> Result<Option<String>> {
-    let sp = Spinner::start("slopchop scan");
-    
     let original_cwd = env::current_dir()?;
     env::set_current_dir(cwd)?;
-    
+
     let config = Config::load();
     let files = discovery::discover(&config)?;
     let engine = RuleEngine::new(config);
-    let report = engine.scan(files);
-    
-    env::set_current_dir(original_cwd)?;
-    
-    let success = !report.has_errors();
-    sp.stop(success);
+    let mut report = engine.scan(files);
+    report.duration_ms = start.elapsed().as_millis();
 
-    if !success {
-        // We capture output by forcing the report to a string is tricky because print_report writes to stdout
-        // But for internal scan we can just say "Scan violations found"
+    env::set_current_dir(original_cwd)?;
+
+    let success = !report.has_errors();
+    if let Some(s) = sp { s.stop(success); }
+
+    if !success && !silent {
         reporting::print_report(&report)?;
-        return Ok(Some("SlopChop internal scan failed. See output above.".to_string()));
     }
 
-    Ok(None)
+    Ok(report)
 }
 
-fn run_locality_scan(cwd: &Path) -> Result<Option<String>> {
+fn run_locality_scan(cwd: &Path, silent: bool) -> Result<CommandResult> {
     let config = Config::load();
-    
+
     if !config.rules.locality.is_enabled() || !config.rules.locality.is_error_mode() {
-        return Ok(None);
+        return Ok(CommandResult {
+            command: "slopchop scan --locality".to_string(),
+            exit_code: 0,
+            stdout: String::new(),
+            stderr: String::new(),
+            duration_ms: 0,
+        });
     }
+
+    let start = Instant::now();
+    let sp = if silent { None } else { Some(Spinner::start("slopchop scan --locality")) };
+
+    let passed: bool;
+    let output: String;
     
-    let sp = Spinner::start("slopchop scan --locality");
-
-    let original_cwd = env::current_dir()?;
-    env::set_current_dir(cwd)?;
-
-    let result = locality::run_locality_check(cwd);
-
-    env::set_current_dir(original_cwd)?;
-
-    let success = result.as_ref().is_ok_and(|r| r.passed);
-    sp.stop(success);
-
-    if let Ok(ref res) = result {
-        if !res.passed {
-            println!("{} locality violations found", res.violations);
-            return Ok(Some(format!("Locality check failed: {} violations", res.violations)));
+    if silent {
+        let original_cwd = env::current_dir()?;
+        env::set_current_dir(cwd)?;
+        let (p, v) = locality::check_locality_silent(cwd)?;
+        env::set_current_dir(original_cwd)?;
+        passed = p;
+        if passed {
+            output = String::new();
+        } else {
+            output = format!("Locality check failed with {v} violations.");
+        }
+    } else {
+        let original_cwd = env::current_dir()?;
+        env::set_current_dir(cwd)?;
+        let res = locality::run_locality_check(cwd)?;
+        env::set_current_dir(original_cwd)?;
+        passed = res.passed;
+        if passed {
+            output = String::new();
+        } else {
+            output = format!("Locality check failed with {} violations.", res.violations);
         }
     }
-
-    Ok(None)
-}
-
-fn summarize_output(output: &str, cmd: &str) -> String {
-    let lines: Vec<&str> = output.lines().collect();
-    let max_lines = 20;
     
-    if lines.len() <= max_lines {
-        return output.to_string();
-    }
-    
-    let summary: String = lines.iter().take(max_lines).copied().collect::<Vec<_>>().join("\n");
-    format!("{summary}\n... ({} more lines, run '{cmd}' for full output)", lines.len() - max_lines)
-}
+    let duration = start.elapsed();
+    if let Some(s) = sp { s.stop(passed); }
 
-fn handle_failure(label: &str, summary: &str) {
-    println!("{}", "-".repeat(60));
-    println!("{} {label}", "[!] Failed:".red().bold());
-    println!("{summary}");
-    println!("{}", "-".repeat(60));
-
-    if let Err(e) = clipboard::copy_to_clipboard(summary) {
-        eprintln!("Could not copy to clipboard: {e}");
-    } else {
-        println!("{}", "[+] Text copied to clipboard".dimmed());
-    }
+    #[allow(clippy::cast_possible_truncation)]
+    Ok(CommandResult {
+        command: "slopchop scan --locality".to_string(),
+        exit_code: i32::from(!passed),
+        stdout: output,
+        stderr: String::new(),
+        duration_ms: duration.as_millis() as u64,
+    })
 }

@@ -148,7 +148,8 @@ fn run_post_apply_verification(
              Vec::new()
         };
         
-        let ai_msg = verification::generate_ai_feedback(&result.failed_checks, &modified_files);
+        
+        let ai_msg = verification::generate_ai_feedback(&result, &modified_files);
         crate::apply::messages::print_ai_feedback(&ai_msg);
         
         print_stage_info(stage);

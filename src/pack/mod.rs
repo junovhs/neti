@@ -1,4 +1,5 @@
 // src/pack/mod.rs
+pub mod docs;
 pub mod focus;
 pub mod formats;
 
@@ -24,6 +25,8 @@ pub enum OutputFormat {
     #[default]
     Text,
     Xml,
+    /// Markdown specification generated from doc comments
+    Spec,
 }
 
 #[allow(clippy::struct_excessive_bools)]
@@ -138,6 +141,17 @@ fn pack_files_to_output(files: &[PathBuf], ctx: &mut String, opts: &PackOptions,
     match opts.format {
         OutputFormat::Text => formats::pack_slopchop_focus(files, ctx, opts, focus),
         OutputFormat::Xml => formats::pack_xml_focus(files, ctx, opts, focus),
+        OutputFormat::Spec => {
+            // Spec format ignores focus context (prints all selected files) or should it respect focus?
+            // "Pack only the doc comments... into a single Markdown file."
+            // If focus is provided, `files` passed here is ALREADY filtered/expanded if we used `build_focus_context`?
+            // Actually `build_focus_context` returns `combined`.
+            // So `files` here is the list of files to pack.
+            // pack_spec expects `&[PathBuf]`.
+            let spec = formats::pack_spec(files)?;
+            ctx.push_str(&spec);
+            Ok(())
+        },
     }
 }
 
@@ -194,4 +208,4 @@ fn output_result(content: &str, tokens: usize, opts: &PackOptions, config: &Conf
     fs::write(&output_path, content)?;
     println!("? Generated 'context.txt'{info}");
     Ok(())
-}
+}

@@ -1,8 +1,9 @@
 // src/types.rs
+use serde::Serialize;
 use std::path::PathBuf;
 
 /// A single violation detected during analysis.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Violation {
     pub row: usize,
     pub message: String,
@@ -11,7 +12,7 @@ pub struct Violation {
 }
 
 /// Rich details for prescriptive violation reporting.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct ViolationDetails {
     pub function_name: Option<String>,
     pub analysis: Vec<String>,
@@ -38,7 +39,7 @@ impl Violation {
 }
 
 /// Analysis results for a single file.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct FileReport {
     pub path: PathBuf,
     pub token_count: usize,
@@ -61,7 +62,7 @@ impl FileReport {
 }
 
 /// Aggregated results from scanning multiple files.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct ScanReport {
     pub files: Vec<FileReport>,
     pub total_tokens: usize,
@@ -81,4 +82,22 @@ impl ScanReport {
     pub fn clean_file_count(&self) -> usize {
         self.files.iter().filter(|f| f.is_clean()).count()
     }
-}
+}
+
+/// Result of an external command execution.
+#[derive(Debug, Clone, Serialize)]
+pub struct CommandResult {
+    pub command: String,
+    pub exit_code: i32,
+    pub stdout: String,
+    pub stderr: String,
+    pub duration_ms: u64,
+}
+
+/// Aggregated results for a full check run.
+#[derive(Debug, Clone, Serialize)]
+pub struct CheckReport {
+    pub scan: ScanReport,
+    pub commands: Vec<CommandResult>,
+    pub passed: bool,
+}

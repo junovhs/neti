@@ -73,6 +73,7 @@ pub struct ApplyContext<'a> {
     pub auto_promote: bool,
     pub reset_stage: bool,
     pub sanitize: bool,
+    pub silent: bool,
 }
 
 impl<'a> ApplyContext<'a> {
@@ -88,6 +89,7 @@ impl<'a> ApplyContext<'a> {
             auto_promote: false,
             reset_stage: false,
             sanitize: true, // Default safe for clipboard
+            silent: false,
         }
     }
 }
