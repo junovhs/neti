@@ -1,4 +1,4 @@
-// src/apply/mod.rs
+pub mod advisory;
 pub mod backup;
 mod blocks;
 pub mod executor;
