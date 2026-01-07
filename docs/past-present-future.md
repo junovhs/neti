@@ -1,12 +1,24 @@
 # Past / Present / Future
 
-**Status:** STABLE - v1.4.0
-**Last updated:** 2026-01-05
+**Status:** STABLE - v1.4.0  
+**Last updated:** 2026-01-07  
 **Canonical policy:** This document states the current operational reality. All previous history is archived in `docs/archived/`.
 
 ---
 
 ## 1) Past (What changed recently)
+
+**v1.4.1: Mutation Testing Incident (Rolled Back)**
+
+An unsupervised overnight run of `cargo-mutants` corrupted the codebase:
+- Multiple files had operators mutated (`||` → `&&`, `>=` → `<`, etc.)
+- Discovery broke completely (returned 0 files)
+- One mutation caused infinite loop in tests
+- Corrupted state was accidentally committed to main
+
+**Resolution:** Hard reset to bf46c8e, force pushed. Lessons documented in `docs/MUTATION_TESTING_PLAN.md`.
+
+**Key Lesson:** Never run mutation testing unsupervised. Always verify with `git diff` before committing.
 
 **v1.4.0: Agentic Stage & Nuclear Sync (Completed)**
 - **Stage Management:** Added `slopchop stage` for explicit sandbox initialization.
@@ -28,34 +40,97 @@
 
 **Status:** STABLE (v1.4.0)
 
-The **"Agent-in-Stage"** protocol is now the primary workflow. Agents are expected to initialize a stage, perform edits directly in the sandbox, verify via `check`, and promote via `sync`.
+The custom stage system works but has proven problematic:
+- Discovery broke when running from stage directory
+- Antigravity couldn't access stage (blocked by .gitignore)
+- ~1700 lines of code duplicating what git already does
+- Custom bugs to maintain
 
 ### Operational State
 - SlopChop passes all internal 3-Law checks.
-- Nuclear Sync is hardened with critical path protections.
-- Heuristic Nag prevents split-brain scenarios by encouraging regular syncs.
+- Core functionality (scan, check, pack, map) is solid.
+- Stage exists but is slated for replacement.
 
 ---
 
 ## 3) Future (What we do next)
 
-### v1.4.0: The Agentic Stage
+### v1.5.0: Git Branch Migration (Planned)
 
-| Feature | Description | Priority |
-|---------|-------------|----------|
-| **`slopchop stage`** | Constructor command to initialize/reset the sandbox. | High |
-| **`apply --sync`** | Nuclear Promote: Mirror the stage to root and clear. | High |
-| **Heuristic Nag** | In-terminal warnings in `check` for high-volume edits. | Medium |
-| **Path Protection** | `slopchop.toml` rule to block edits to critical files. | Medium |
+**The Problem:** The custom stage system is 1700 lines of code that duplicates git branch functionality, with more bugs and less compatibility.
+
+**The Solution:** Replace `src/stage/` with `src/branch.rs` (~150 lines) wrapping git commands.
+
+| Delete (~1700 lines) | Replace with |
+|---------------------|--------------|
+| `src/stage/copy.rs` | — |
+| `src/stage/manager.rs` | — |
+| `src/stage/promote.rs` | — |
+| `src/stage/state.rs` | — |
+| `src/stage/sync.rs` | — |
+| `src/stage/mod.rs` | `src/branch.rs` (~150 lines) |
+
+**New Commands:**
+
+| Old Command | New Command | What it does |
+|-------------|-------------|--------------|
+| `slopchop stage --force` | `slopchop branch` | `git checkout -b slopchop-work` |
+| `slopchop apply --sync` | `slopchop promote` | Merge work branch to main |
+| `slopchop apply --reset` | `slopchop abort` | Delete work branch, return to main |
+
+**What stays the same:**
+- `slopchop check` — runs on current branch
+- `slopchop scan`, `pack`, `map` — unchanged
+- Advisory nag — reads from `git status` instead of `state.json`
+
+**Benefits:**
+- -1550 lines of code
+- No custom bugs (git is battle-tested)
+- Works with all tools (Antigravity, Claude Code, etc.)
+- Rollback is just `git checkout .`
+
+### v1.5.x: Mutation Testing (After Branch Migration)
+
+| Feature | Priority |
+|---------|----------|
+| Wire up `src/mutate/` to CLI | High |
+| Per-mutation timeout (30s) | High |
+| `--fail-fast` flag | High |
+| Git stash/restore safety | High |
+| Return value mutations | Medium |
+
+**Safety Protocol:** Mutation testing must run on a branch, never main.
 
 ---
 
 ## 4) Non-Goals
-- Complex 3-way merging (Use `--sync` + Git instead).
-- Manual manifest writing in Agent mode.
+
+- Complex 3-way merging (use git directly)
+- Working without git (git is infrastructure, not a dependency)
+- Parallel mutation testing (requires workspace copies, not worth complexity)
 
 ---
 
 ## 5) Architecture Notes
-### The Shadow Worktree
-The stage folder `.slopchop/stage/worktree/` is now considered the **Primary Working Directory** for AI Agents. The root directory is the **Source of Truth** managed by the human via `--sync` and `git commit`.
+
+### Git-Based Workflow (v1.5.0+)
+
+```
+main (source of truth)
+  │
+  └── slopchop-work (AI workspace)
+        │
+        ├── AI edits files
+        ├── slopchop check
+        └── slopchop promote → merges to main
+```
+
+### Why Git, Not GitHub
+
+Git is:
+- Open source, local-first
+- Installed everywhere
+- Not going anywhere
+- Infrastructure, not a third-party service
+
+GitHub is a service built on git. We depend on git (the tool), not GitHub (the company).

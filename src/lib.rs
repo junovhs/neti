@@ -1,6 +1,7 @@
-﻿pub mod analysis;
+pub mod analysis;
 pub mod apply;
 pub mod audit;
+pub mod branch;
 pub mod clean;
 pub mod cli;
 pub mod clipboard;
