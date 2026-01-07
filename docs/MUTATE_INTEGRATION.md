@@ -1,67 +1,99 @@
-# Integration Instructions for src/mutate/
+# Mutation Testing Integration Plan
 
-## 1. Copy the mutate/ folder
+**Status**: NOT INTEGRATED  
+**Last Updated**: 2026-01-07  
+**Baseline Commit**: bf46c8e
 
-Copy the entire `mutate/` folder to `src/mutate/` [THIS IS DONE, THE REST IS NOT]
+---
 
-## 2. Add to src/lib.rs
+## Lessons Learned (2026-01-07 Incident)
 
-Add this line with the other module declarations:
+An unsupervised overnight mutation testing run corrupted the codebase:
 
+| File | Mutation | Effect |
+|------|----------|--------|
+| `src/constants.rs` | `\|\|` → `&&` | Discovery returned 0 files |
+| `src/apply/patch/diagnostics.rs` | `>=` → `<` | Infinite loop in tests |
+| `src/lang.rs` | `==` → `!=` | Logic inversion |
+| `src/types.rs` | `==` → `<=` | Clippy error |
+
+**Root Cause**: `cargo-mutants` did not properly restore files after mutations. The corrupted state was committed without verification.
+
+**Prevention Rules**:
+1. NEVER run mutation testing unsupervised
+2. ALWAYS run on a branch, not main
+3. ALWAYS `git diff` before committing after mutation runs
+4. ALWAYS run `slopchop check` to verify integrity
+
+---
+
+## Current State
+
+The `src/mutate/` module EXISTS but is NOT wired to CLI.
+
+Files present:
+- `src/mutate/mod.rs` — Orchestration
+- `src/mutate/mutations.rs` — Mutation types
+- `src/mutate/discovery.rs` — AST scanning
+- `src/mutate/runner.rs` — Test execution
+- `src/mutate/report.rs` — Output formatting
+
+---
+
+## Integration Steps
+
+### Step 1: Add to lib.rs
+
+In `src/lib.rs`, add:
 ```rust
 pub mod mutate;
 ```
 
-## 3. Add CLI command to src/cli/args.rs
+### Step 2: Add CLI command
 
-Add this variant to the `Commands` enum (after `Stage`):
-
+In `src/cli/args.rs`, add to `Commands` enum:
 ```rust
-    /// Run mutation testing to find test gaps [EXPERIMENTAL]
-    Mutate {
-        /// Number of parallel workers (reserved for future use)
-        #[arg(long, short)]
-        workers: Option<usize>,
-        /// Test timeout in seconds
-        #[arg(long, default_value = "30")]
-        timeout: u64,
-        /// Output results as JSON
-        #[arg(long)]
-        json: bool,
-        /// Filter files by path pattern
-        #[arg(long, short)]
-        filter: Option<String>,
-    },
+/// Run mutation testing to find test gaps [EXPERIMENTAL]
+Mutate {
+    /// Test timeout in seconds
+    #[arg(long, default_value = "30")]
+    timeout: u64,
+    /// Output results as JSON
+    #[arg(long)]
+    json: bool,
+    /// Filter files by path pattern
+    #[arg(long, short)]
+    filter: Option<String>,
+    /// Stop on first surviving mutant
+    #[arg(long)]
+    fail_fast: bool,
+},
 ```
 
-## 4. Add import to src/cli/handlers.rs
+### Step 3: Add handler
 
-Add this to the use statements at the top:
-
+In `src/cli/handlers.rs`, add import:
 ```rust
 use crate::mutate::{self, MutateOptions};
 ```
 
-## 5. Add handler function to src/cli/handlers.rs
-
-Add this function (near the other handlers):
-
+Add handler function:
 ```rust
 /// Handles the mutate command.
 ///
 /// # Errors
 /// Returns error if mutation testing fails.
 pub fn handle_mutate(
-    workers: Option<usize>,
     timeout: u64,
     json: bool,
     filter: Option<String>,
+    fail_fast: bool,
 ) -> Result<SlopChopExit> {
     let opts = MutateOptions {
-        workers,
         timeout_secs: timeout,
         json,
         filter,
+        fail_fast,
     };
     
     let repo_root = get_repo_root();
@@ -75,23 +107,91 @@ pub fn handle_mutate(
 }
 ```
 
-## 6. Add command dispatch in src/bin/slopchop.rs
+### Step 4: Add dispatch
 
-Find where other commands are matched and add:
-
+In `src/cli/handlers.rs` main dispatch, add:
 ```rust
-Some(Commands::Mutate { workers, timeout, json, filter }) => {
-    handlers::handle_mutate(workers, timeout, json, filter)
+Some(Commands::Mutate { timeout, json, filter, fail_fast }) => {
+    handle_mutate(timeout, json, filter, fail_fast)
 }
 ```
 
-## Notes
+---
 
-- **v1 Limitation**: Mutations run serially because parallel execution 
-  requires separate workspace copies. The `--workers` flag is reserved
-  for future parallel implementation.
-  
-- **Recommended usage**: Use `--filter` to target specific files for faster runs:
-  ```bash
-  slopchop mutate --filter src/tokens.rs
-  ```
+## Safety Requirements Before Running
+
+### Pre-flight checklist
+```bash
+# 1. Create a branch
+git checkout -b mutation-test-run
+
+# 2. Verify clean state
+git status  # Should be clean
+slopchop check  # Should pass
+
+# 3. Run mutation testing
+slopchop mutate --filter src/tokens.rs --timeout 30
+
+# 4. Verify files restored
+git diff  # Should be empty
+
+# 5. If clean, return to main
+git checkout main
+git branch -d mutation-test-run
+```
+
+### If mutations are left behind
+```bash
+git checkout -- .
+```
+
+---
+
+## Comparison: slopchop mutate vs cargo-mutants
+
+| Aspect | slopchop mutate | cargo-mutants |
+|--------|-----------------|---------------|
+| Speed | ~11s | ~66s |
+| Cross-language | Rust, TS, Python | Rust only |
+| Mutation types | Operators, booleans | Operators, booleans, return values |
+| Integration | Native | External |
+| File restoration | Manual (needs fix) | Unreliable |
+
+---
+
+## Known Limitations (v1)
+
+1. **Serial execution** — No parallelism yet
+2. **No return value mutations** — Only operators and booleans
+3. **No automatic restoration** — Must verify with `git diff`
+4. **No timeout enforcement** — Can hang on infinite loops
+
+---
+
+## Future Improvements
+
+| Feature | Priority | Difficulty |
+|---------|----------|------------|
+| Timeout per mutation | HIGH | Easy |
+| `--fail-fast` flag | HIGH | Easy |
+| Return value mutations | MEDIUM | Medium |
+| Automatic git stash/restore | HIGH | Easy |
+| Parallel execution | LOW | Hard (needs workspace copies) |
+
+---
+
+## Usage (Once Integrated)
+
+```bash
+# Quick test on single file
+slopchop mutate --filter src/tokens.rs
+
+# Full codebase (takes a while)
+slopchop mutate
+
+# Stop on first survivor
+slopchop mutate --fail-fast
+
+# JSON output for CI
+slopchop mutate --json
+```
