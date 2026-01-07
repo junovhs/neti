@@ -16,9 +16,8 @@ use tree_sitter::{Node, Parser};
 /// Returns error if file cannot be read or parsed.
 pub fn discover_mutations(path: &Path) -> Result<Vec<MutationPoint>> {
     let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-    let lang = match Lang::from_ext(ext) {
-        Some(l) => l,
-        None => return Ok(Vec::new()), // Skip unsupported files
+    let Some(lang) = Lang::from_ext(ext) else {
+        return Ok(Vec::new()); // Skip unsupported files
     };
 
     let source = fs::read_to_string(path)

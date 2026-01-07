@@ -135,6 +135,22 @@ pub enum Commands {
         #[arg(long, short)]
         force: bool,
     },
+
+    /// Run mutation testing to find test gaps [EXPERIMENTAL]
+    Mutate {
+        /// Number of parallel workers (reserved for future use)
+        #[arg(long, short)]
+        workers: Option<usize>,
+        /// Test timeout in seconds
+        #[arg(long, default_value = "30")]
+        timeout: u64,
+        /// Output results as JSON
+        #[arg(long)]
+        json: bool,
+        /// Filter files by path pattern
+        #[arg(long, short)]
+        filter: Option<String>,
+    },
 }
 
 #[allow(clippy::struct_excessive_bools)]

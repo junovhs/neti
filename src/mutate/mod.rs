@@ -69,7 +69,7 @@ pub fn run(workdir: &Path, opts: &MutateOptions) -> Result<MutateReport> {
     let files = discover(&config)?;
 
     // Detect project type for test command
-    let project_type = crate::project::detect(workdir);
+    let project_type = crate::project::ProjectType::detect_in(workdir);
     let mut runner_config = config_for_project(project_type);
 
     // Apply options
@@ -86,7 +86,7 @@ pub fn run(workdir: &Path, opts: &MutateOptions) -> Result<MutateReport> {
     }
 
     // Discover mutation points
-    let points = discover_all_mutations(&target_files)?;
+    let points = discover_all_mutations(&target_files);
 
     if points.is_empty() {
         return Ok(MutateReport {
@@ -133,7 +133,7 @@ pub fn run(workdir: &Path, opts: &MutateOptions) -> Result<MutateReport> {
 fn config_for_project(project_type: ProjectType) -> RunnerConfig {
     match project_type {
         ProjectType::Rust => RunnerConfig::rust(),
-        ProjectType::TypeScript | ProjectType::JavaScript => RunnerConfig::typescript(),
+        ProjectType::Node => RunnerConfig::typescript(), // Node handles JS/TS
         ProjectType::Python => RunnerConfig::python(),
         _ => RunnerConfig::default(),
     }
@@ -142,11 +142,17 @@ fn config_for_project(project_type: ProjectType) -> RunnerConfig {
 /// Filters files by path pattern if specified.
 fn filter_files(files: &[PathBuf], filter: Option<&str>) -> Vec<PathBuf> {
     match filter {
-        Some(pattern) => files
-            .iter()
-            .filter(|f| f.to_string_lossy().contains(pattern))
-            .cloned()
-            .collect(),
+        Some(pattern) => {
+            let pattern = pattern.replace('\\', "/");
+            files
+                .iter()
+                .filter(|f| {
+                    let s = f.to_string_lossy().replace('\\', "/");
+                    s.contains(&pattern)
+                })
+                .cloned()
+                .collect()
+        }
         None => files.to_vec(),
     }
 }
@@ -154,7 +160,7 @@ fn filter_files(files: &[PathBuf], filter: Option<&str>) -> Vec<PathBuf> {
 /// Discovers mutations in all target files.
 fn discover_all_mutations(
     files: &[PathBuf],
-) -> Result<Vec<mutations::MutationPoint>> {
+) -> Vec<mutations::MutationPoint> {
     let mut all_points = Vec::new();
 
     for file in files {
@@ -166,7 +172,7 @@ fn discover_all_mutations(
         }
     }
 
-    Ok(all_points)
+    all_points
 }
 
 /// Prints the header before mutation testing begins.

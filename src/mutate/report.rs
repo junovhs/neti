@@ -1,7 +1,7 @@
 // src/mutate/report.rs
 //! Report formatting for mutation test results.
 
-use crate::mutate::mutations::MutationKind;
+
 use crate::mutate::runner::{MutationResult, MutationSummary};
 use colored::Colorize;
 use std::fmt::Write;
@@ -21,8 +21,7 @@ pub fn format_progress(current: usize, total: usize, result: &MutationResult) ->
     let mutated = &result.point.mutated;
 
     format!(
-        "[{}/{}] {}:{}  '{}' → '{}'  ... {}",
-        current, total, file, line, orig, mutated, status
+        "[{current}/{total}] {file}:{line}  '{orig}' → '{mutated}'  ... {status}"
     )
 }
 
@@ -49,10 +48,10 @@ pub fn format_summary(summary: &MutationSummary) -> String {
     } else {
         score_str.red().bold()
     };
-    let _ = writeln!(out, "  Mutation Score:   {}", score_colored);
+    let _ = writeln!(out, "  Mutation Score:   {score_colored}");
 
     let duration_secs = summary.total_duration_ms / 1000;
-    let _ = writeln!(out, "  Duration:         {}s", duration_secs);
+    let _ = writeln!(out, "  Duration:         {duration_secs}s");
     let _ = writeln!(out);
 
     out
@@ -79,7 +78,7 @@ pub fn format_survivors(results: &[MutationResult]) -> String {
     let _ = writeln!(out, "{}", "SURVIVING MUTANTS (test gaps)".yellow().bold());
     let _ = writeln!(out, "{}", "─".repeat(60));
 
-    for result in survivors {
+    for result in &survivors {
         let kind = result.point.kind.symbol();
         let file = result.point.file.display();
         let line = result.point.line;
@@ -98,11 +97,11 @@ pub fn format_survivors(results: &[MutationResult]) -> String {
     }
 
     let _ = writeln!(out);
+    let len = survivors.len();
     let _ = writeln!(
         out,
-        "{}: {} mutations not caught by tests",
-        "Action needed".yellow().bold(),
-        survivors.len()
+        "{}: {len} mutations not caught by tests",
+        "Action needed".yellow().bold()
     );
 
     out

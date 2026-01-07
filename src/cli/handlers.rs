@@ -9,12 +9,11 @@ use crate::exit::SlopChopExit;
 use crate::map;
 use crate::pack::{self, OutputFormat, PackOptions};
 use crate::reporting;
-use crate::signatures::{self, SignatureOptions};
 use crate::stage;
+use crate::signatures::{self, SignatureOptions};
 use anyhow::Result;
 use colored::Colorize;
 use std::path::PathBuf;
-
 #[must_use]
 pub fn get_repo_root() -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))

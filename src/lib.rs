@@ -14,6 +14,7 @@ pub mod exit;
 pub mod graph;
 pub mod lang;
 pub mod map;
+pub mod mutate;
 pub mod pack;
 pub mod project;
 pub mod prompt;

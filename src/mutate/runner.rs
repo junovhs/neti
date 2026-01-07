@@ -108,21 +108,19 @@ fn test_mutation(point: &MutationPoint, config: &RunnerConfig, workdir: &Path) -
 
     // Read original file
     let file_path = workdir.join(&point.file);
-    let original = match fs::read_to_string(&file_path) {
-        Ok(s) => s,
-        Err(_) => {
-            return MutationResult {
-                point: point.clone(),
-                survived: false,
-                duration_ms: 0,
-            };
-        }
+    let Ok(original) = fs::read_to_string(&file_path) else {
+        return MutationResult {
+            point: point.clone(),
+            survived: false,
+            duration_ms: 0,
+        };
     };
 
     // Apply mutation
     let mutated = apply_mutation(&original, point);
     if fs::write(&file_path, &mutated).is_err() {
         let _ = fs::write(&file_path, &original); // Restore
+        #[allow(clippy::cast_possible_truncation)]
         return MutationResult {
             point: point.clone(),
             survived: false,
@@ -136,6 +134,7 @@ fn test_mutation(point: &MutationPoint, config: &RunnerConfig, workdir: &Path) -
     // Restore original
     let _ = fs::write(&file_path, &original);
 
+    #[allow(clippy::cast_possible_truncation)]
     MutationResult {
         point: point.clone(),
         survived,
