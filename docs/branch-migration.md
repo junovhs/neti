@@ -1,4 +1,34 @@
-# Stage → Branch Migration Checklist
+# Stage → Branch Migration Checklist (some of this may be done but definitely not completely so just go through the steps)
+
+## Phase 0: Hotfix UTF-8 Panic (Do Immediately)
+
+In `src/apply/verification.rs`, fix the string truncation:
+
+**Find:**
+```rust
+let truncated = if combined.len() > 1000 {
+    format!("{}...\n[truncated]", &combined[..1000])
+```
+
+**Replace with:**
+```rust
+let truncated = if combined.len() > 1000 {
+    let safe_end = floor_char_boundary(&combined, 1000);
+    format!("{}...\n[truncated]", &combined[..safe_end])
+```
+
+**Add helper (or import from diagnostics.rs):**
+```rust
+fn floor_char_boundary(s: &str, mut idx: usize) -> usize {
+    if idx >= s.len() { return s.len(); }
+    while !s.is_char_boundary(idx) {
+        idx = idx.saturating_sub(1);
+    }
+    idx
+}
+```
+
+Commit as v1.4.1 hotfix.
 
 ## Phase 1: Add branch.rs
 
@@ -77,7 +107,7 @@ if modified_count > 3 {
 }
 ```
 
-## Phase 4: Delete stage
+## Phase 4: Delete stage AND sabotage
 
 Remove these files:
 ```
@@ -87,6 +117,7 @@ src/stage/mod.rs
 src/stage/promote.rs
 src/stage/state.rs
 src/stage/sync.rs
+src/analysis/sabotage.rs
 ```
 
 Remove from `src/lib.rs`:
@@ -94,7 +125,14 @@ Remove from `src/lib.rs`:
 pub mod stage;  // DELETE THIS LINE
 ```
 
-Remove any imports of `crate::stage::*` throughout codebase.
+Remove from `src/analysis/mod.rs`:
+```rust
+pub mod sabotage;  // DELETE THIS LINE
+```
+
+Remove any imports of `crate::stage::*` and `crate::analysis::sabotage` throughout codebase.
+
+Note: `sabotage` was the manual proof-of-concept for mutation testing. Now that `src/mutate/` exists, it's redundant.
 
 ## Phase 5: Update CLI dispatch
 
@@ -124,6 +162,7 @@ New: slopchop branch
 | Action | Lines |
 |--------|-------|
 | Delete stage/* | -1700 |
+| Delete sabotage.rs | -120 |
 | Add branch.rs | +150 |
 | Add handlers | +50 |
-| **Net** | **-1500** |
+| **Net** | **-1620** |

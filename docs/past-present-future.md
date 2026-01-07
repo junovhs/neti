@@ -38,7 +38,7 @@ An unsupervised overnight run of `cargo-mutants` corrupted the codebase:
 
 ## 2) Present (Where we are right now)
 
-**Status:** STABLE (v1.4.0)
+**Status:** STABLE (v1.4.0) but with known issues
 
 The custom stage system works but has proven problematic:
 - Discovery broke when running from stage directory
@@ -46,18 +46,40 @@ The custom stage system works but has proven problematic:
 - ~1700 lines of code duplicating what git already does
 - Custom bugs to maintain
 
+### Real-World Testing: TypeScript/Windows (2026-01-07)
+
+Testing on a TypeScript project with Biome exposed critical flaws:
+
+**1. Panic Bug:** `verification.rs` slices UTF-8 strings by byte index. Biome's Unicode box characters (`━`) caused: `byte index 1000 is not a char boundary`
+
+**2. Verification Deadlock:** Stage is binary (all checks pass OR revert). TypeScript linters fail on formatting, but you can't run `biome format --write` because the file was reverted. Infinite loop.
+
+**3. Config Catch-22:** Can't fix `biome.json` because fixing it requires verification to pass, which requires valid `biome.json`.
+
+**Root Cause:** Stage model assumes all checks are equal. In reality:
+- **Rust:** `cargo check` ignores whitespace
+- **TypeScript:** `biome check` fails on line endings, import order
+
+Git branches fix this because files persist even when checks fail. You can iterate.
+
 ### Operational State
 - SlopChop passes all internal 3-Law checks.
 - Core functionality (scan, check, pack, map) is solid.
-- Stage exists but is slated for replacement.
+- Stage is fundamentally flawed for TypeScript workflows.
 
 ---
 
 ## 3) Future (What we do next)
 
+### v1.4.1: Hotfix (Immediate)
+
+| Fix | Description |
+|-----|-------------|
+| **UTF-8 Panic** | Use `floor_char_boundary()` in verification.rs string truncation |
+
 ### v1.5.0: Git Branch Migration (Planned)
 
-**The Problem:** The custom stage system is 1700 lines of code that duplicates git branch functionality, with more bugs and less compatibility.
+**The Problem:** The custom stage system is 1700 lines of code that duplicates git branch functionality, with more bugs and less compatibility. The transactional model is too rigid for TypeScript linters.
 
 **The Solution:** Replace `src/stage/` with `src/branch.rs` (~150 lines) wrapping git commands.
 
@@ -100,6 +122,23 @@ The custom stage system works but has proven problematic:
 | Return value mutations | Medium |
 
 **Safety Protocol:** Mutation testing must run on a branch, never main.
+
+### v1.6.0: Configurable Check Severity (Future)
+
+Allow `slopchop.toml` to classify checks as blockers vs warnings:
+
+```toml
+[commands]
+check = [
+    { cmd = "cargo clippy", severity = "error" },
+    { cmd = "biome check", severity = "warn" },
+]
+```
+
+- **error:** Fails `slopchop check`, blocks promote
+- **warn:** Prints warning, allows promote
+
+This lets formatting failures be fixed iteratively without blocking the workflow.
 
 ---
 
