@@ -1,11 +1,18 @@
 # Past / Present / Future
 
-**Status:** STABLE - v1.4.0  
-**Last updated:** 2026-01-08  
+**Status:** STABLE - v1.5.0
+**Last updated:** 2026-01-08
 
 ---
 
 ## 1) Past
+
+**Branch Migration (v1.5.0)**
+
+Replaced the custom staging directory with a lightweight git branch workflow (`slopchop-work`).
+- Fixed UTF-8 panic in feedback generation.
+- Removed ~1700 lines of legacy stage code.
+- `apply` is now atomic and safe via git.
 
 **Mutation Testing Incident (v1.4.0)**
 
@@ -24,23 +31,17 @@ Exposed stage system flaws:
 
 ## 2) Present
 
-**v1.4.0 — Functional with critical issues**
+**v1.5.0 — Stable & Clean**
 
 ### Works
 - `scan`, `check`, `pack`, `map`
-- 3 Laws enforcement
+- `apply` (Branch-based)
+- `mutate` (CLI integrated, experimental)
 
-### Broken
+### Focus: Scan v2.0
+Cyclomatic complexity is a weak predictor. We are moving to **Cognitive Complexity** and **AST Pattern Matching**.
 
-| Issue | Severity |
-|-------|----------|
-| UTF-8 panic | Critical |
-| Mutate file restoration | Critical |
-| Stage system | Architectural |
-
-### Weak
-
-`scan` uses cyclomatic complexity (poor defect predictor) and misses entire bug categories.
+See `docs/SCAN_V2_SPEC.md` for the full specification.
 
 ---
 
@@ -48,14 +49,12 @@ Exposed stage system flaws:
 
 ### Work Order
 
-| # | Task | Doc |
-|---|------|-----|
-| 1 | UTF-8 panic fix | `docs/utf8-panic.md` |
-| 2 | Branch migration | `docs/branch-migration.md` |
-| 3 | Scan v2.0 | `docs/SCAN_V2_SPEC.md` |
-| 4 | Mutation testing fixed | `docs/MUTATE_INTEGRATION.md` |
+| # | Task | Doc | Status |
+|---|------|-----|--------|
+| 1 | Scan v2.0 | `docs/SCAN_V2_SPEC.md` | **Next** |
+| 2 | Mutate Safety | `docs/MUTATE_INTEGRATION.md` | Pending |
 
-One at a time. Full attention on each.
+**Immediate Next Step:** Begin implementation of Scan v2.0 infrastructure (LCOM4, Cognitive Complexity).
 
 ---
 

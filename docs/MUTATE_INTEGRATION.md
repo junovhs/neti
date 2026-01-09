@@ -1,7 +1,8 @@
 # Mutation Testing Integration Plan
 
-**Status**: NOT INTEGRATED  
-**Last Updated**: 2026-01-07  
+**Status**: INTEGRATED (Alpha)
+**Last Updated**: 2026-01-08
+**Version**: v1.5.0
 **Baseline Commit**: bf46c8e
 
 ---
@@ -29,7 +30,7 @@ An unsupervised overnight mutation testing run corrupted the codebase:
 
 ## Current State
 
-The `src/mutate/` module EXISTS but is NOT wired to CLI.
+The `src/mutate/` module is wired to the CLI as of v1.5.0.
 
 Files present:
 - `src/mutate/mod.rs` — Orchestration
@@ -40,90 +41,24 @@ Files present:
 
 ---
 
-## Integration Steps
+## Integration Steps (Completed)
 
-### Step 1: Add to lib.rs
-
-In `src/lib.rs`, add:
-```rust
-pub mod mutate;
-```
-
-### Step 2: Add CLI command
-
-In `src/cli/args.rs`, add to `Commands` enum:
-```rust
-/// Run mutation testing to find test gaps [EXPERIMENTAL]
-Mutate {
-    /// Test timeout in seconds
-    #[arg(long, default_value = "30")]
-    timeout: u64,
-    /// Output results as JSON
-    #[arg(long)]
-    json: bool,
-    /// Filter files by path pattern
-    #[arg(long, short)]
-    filter: Option<String>,
-    /// Stop on first surviving mutant
-    #[arg(long)]
-    fail_fast: bool,
-},
-```
-
-### Step 3: Add handler
-
-In `src/cli/handlers.rs`, add import:
-```rust
-use crate::mutate::{self, MutateOptions};
-```
-
-Add handler function:
-```rust
-/// Handles the mutate command.
-///
-/// # Errors
-/// Returns error if mutation testing fails.
-pub fn handle_mutate(
-    timeout: u64,
-    json: bool,
-    filter: Option<String>,
-    fail_fast: bool,
-) -> Result<SlopChopExit> {
-    let opts = MutateOptions {
-        timeout_secs: timeout,
-        json,
-        filter,
-        fail_fast,
-    };
-    
-    let repo_root = get_repo_root();
-    let report = mutate::run(&repo_root, &opts)?;
-    
-    if report.summary.survived > 0 {
-        Ok(SlopChopExit::CheckFailed)
-    } else {
-        Ok(SlopChopExit::Success)
-    }
-}
-```
-
-### Step 4: Add dispatch
-
-In `src/cli/handlers.rs` main dispatch, add:
-```rust
-Some(Commands::Mutate { timeout, json, filter, fail_fast }) => {
-    handle_mutate(timeout, json, filter, fail_fast)
-}
-```
+1. Added `pub mod mutate;` to `src/lib.rs`.
+2. Added `Mutate` command to `src/cli/args.rs`.
+3. Added handler to `src/cli/handlers.rs`.
+4. Wired dispatch in `src/bin/slopchop.rs`.
 
 ---
 
 ## Safety Requirements Before Running
 
+**Warning:** The mutation runner modifies files in place. It relies on internal restoration logic which has failed in the past.
+**Requirement:** Only run `slopchop mutate` on a clean `slopchop-work` branch.
+
 ### Pre-flight checklist
 ```bash
 # 1. Create a branch
-git checkout -b mutation-test-run
+slopchop branch
 
 # 2. Verify clean state
 git status  # Should be clean
@@ -136,8 +71,7 @@ slopchop mutate --filter src/tokens.rs --timeout 30
 git diff  # Should be empty
 
 # 5. If clean, return to main
-git checkout main
-git branch -d mutation-test-run
+slopchop abort
 ```
 
 ### If mutations are left behind
@@ -168,19 +102,14 @@ git checkout -- .
 
 ---
 
-## Future Improvements
+## Future Work
 
-| Feature | Priority | Difficulty |
-|---------|----------|------------|
-| Timeout per mutation | HIGH | Easy |
-| `--fail-fast` flag | HIGH | Easy |
-| Return value mutations | MEDIUM | Medium |
-| Automatic git stash/restore | HIGH | Easy |
-| Parallel execution | LOW | Hard (needs workspace copies) |
+1. **Branch Safety**: Modify `src/mutate/mod.rs` to assert that it is running on a disposable branch (using `src/branch.rs`).
+2. **Parallelism**: Implement workspace copying for parallel execution.
 
 ---
 
-## Usage (Once Integrated)
+## Usage
 
 ```bash
 # Quick test on single file
@@ -188,9 +117,6 @@ slopchop mutate --filter src/tokens.rs
 
 # Full codebase (takes a while)
 slopchop mutate
-
-# Stop on first survivor
-slopchop mutate --fail-fast
 
 # JSON output for CI
 slopchop mutate --json
