@@ -1,6 +1,6 @@
 // src/apply/validator.rs
 use crate::apply::messages::format_ai_rejection;
-use crate::apply::types::{ApplyOutcome, ExtractedFiles, FileContent, Manifest, ManifestEntry, Operation};
+use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, ManifestEntry, Operation};
 use crate::lang::Lang;
 use tree_sitter::Parser;
 use std::path::{Component, Path};

@@ -217,6 +217,7 @@ mod tests {
                 internal_calls: HashSet::new(),
                 external_calls: HashSet::new(),
                 cognitive_complexity: 0,
+                is_mutable: false,
             },
         );
 
@@ -228,6 +229,7 @@ mod tests {
                 internal_calls: HashSet::new(),
                 external_calls: HashSet::new(),
                 cognitive_complexity: 0,
+                is_mutable: false,
             },
         );
 

@@ -231,9 +231,7 @@ impl<'a> AstVisitor<'a> {
         // "share instance variables". Associated functions and constructors
         // don't access instance state and should be excluded.
         // Returns None if static, Some(is_mut) if instance.
-        let Some(is_mutable) = Self::get_self_mutability(node, self.source) else {
-            return None;
-        };
+        let is_mutable = Self::get_self_mutability(node, self.source)?;
 
         let name_node = node.child_by_field_name("name")?;
         let name = name_node

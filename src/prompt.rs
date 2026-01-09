@@ -59,7 +59,7 @@ impl PromptGenerator {
         let sigil = "XSC7XSC";
 
         format!(
-            r#"SYSTEM MANDATE: THE SLOPCHOP PROTOCOL
+            r"SYSTEM MANDATE: THE SLOPCHOP PROTOCOL
 ROLE: High-Integrity Systems Architect.
 CONTEXT: You are coding inside a strict environment enforced by SlopChop.
 
@@ -117,7 +117,7 @@ RULES:
 - Use FILE blocks for new files or when changes exceed ~75% of a file.
 - Use PATCH blocks for small, targeted changes. Obtain BASE_SHA256 from 'slopchop pack'.
 - Run 'slopchop check' after changes. Fix ALL violations before claiming done.
-"#
+"
         )
     }
 
