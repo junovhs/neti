@@ -6,7 +6,7 @@ use super::{
     audit::AuditCliOptions,
     handlers::{
         handle_abort, handle_apply, handle_branch, handle_check, handle_map, handle_pack,
-        handle_promote, handle_scan, handle_signatures, PackArgs,
+        handle_promote, handle_scan, PackArgs,
     },
 };
 use crate::exit::SlopChopExit;
@@ -26,9 +26,9 @@ pub fn execute(command: Commands) -> Result<SlopChopExit> {
         | Commands::Signatures { .. }
         | Commands::Mutate { .. } => handle_analysis(command),
 
-        Commands::Branch { .. }
-        | Commands::Promote { .. }
-        | Commands::Abort => handle_git_ops(&command),
+        Commands::Branch { .. } | Commands::Promote { .. } | Commands::Abort => {
+            handle_git_ops(&command)
+        }
 
         Commands::Apply { .. }
         | Commands::Clean { .. }
@@ -44,7 +44,12 @@ fn handle_analysis(command: Commands) -> Result<SlopChopExit> {
             verbose,
             locality,
             json,
-        } => handle_scan(verbose, locality, json),
+        } => {
+            if locality {
+                return super::locality::handle_locality();
+            }
+            handle_scan(verbose, false, json)
+        }
         Commands::Audit {
             format,
             no_dead,
@@ -69,7 +74,7 @@ fn handle_analysis(command: Commands) -> Result<SlopChopExit> {
         Commands::Map { deps } => handle_map(deps),
         Commands::Signatures { copy, stdout } => {
             let opts = SignatureOptions { copy, stdout };
-            handle_signatures(opts)
+            super::handlers::handle_signatures(opts)
         }
         Commands::Mutate {
             workers,

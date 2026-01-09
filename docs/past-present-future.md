@@ -1,66 +1,11 @@
-# Past / Present / Future
+Progress vs SCAN_V2_SPEC.md
+Metrics — 4/9 done
+MetricSpecStatusFile Tokens> 2000✅ Already existedCognitive Complexity> 15✅ ImplementedNesting Depth> 3✅ Already existedFunction Args> 5✅ Already existedLCOM4> 1✅ ImplementedAHF< 60%❌ Not startedCBO> 9✅ ImplementedSFOUT> 7✅ ImplementedAuthor Entropy> 0.8❌ Not started (requires git)
+AST Patterns — 0/35 done
+CategoryPatternsStatusState (S01-S05)5❌ Not startedConcurrency (C01-C05)5❌ Not startedResource (R01-R07)7❌ Not startedSecurity (X01-X05)5❌ Not startedPerformance (P01-P06)6❌ Not startedSemantic (M01-M05)5❌ Not startedLogic (L01-L03)3❌ Not started
+TypeScript Support — 0%
+Visitor only handles Rust. TypeScript path returns early.
 
-**Status:** STABLE - v1.5.0
-**Last updated:** 2026-01-08
+Summary: Core OO metrics (LCOM4, CBO, SFOUT, Cognitive Complexity) are done and producing real signal. The big remaining work is the 35 AST pattern checks and TypeScript parity.
 
----
-
-## 1) Past
-
-**Branch Migration (v1.5.0)**
-
-Replaced the custom staging directory with a lightweight git branch workflow (`slopchop-work`).
-- Fixed UTF-8 panic in feedback generation.
-- Removed ~1700 lines of legacy stage code.
-- `apply` is now atomic and safe via git.
-
-**Mutation Testing Incident (v1.4.0)**
-
-Unsupervised `slopchop mutate` run corrupted codebase. Operators mutated, discovery broke, infinite loops introduced. Hard reset to bf46c8e.
-
-**Root Cause:** File restoration is unreliable in both `slopchop mutate` and `cargo-mutants`.
-
-**TypeScript Testing (2026-01-07)**
-
-Exposed stage system flaws:
-1. UTF-8 panic on Unicode tool output
-2. Verification deadlock (can't fix files that get reverted)
-3. Config catch-22 (can't fix config that validation depends on)
-
----
-
-## 2) Present
-
-**v1.5.0 — Stable & Clean**
-
-### Works
-- `scan`, `check`, `pack`, `map`
-- `apply` (Branch-based)
-- `mutate` (CLI integrated, experimental)
-
-### Focus: Scan v2.0
-Cyclomatic complexity is a weak predictor. We are moving to **Cognitive Complexity** and **AST Pattern Matching**.
-
-See `docs/SCAN_V2_SPEC.md` for the full specification.
-
----
-
-## 3) Future
-
-### Work Order
-
-| # | Task | Doc | Status |
-|---|------|-----|--------|
-| 1 | Scan v2.0 | `docs/SCAN_V2_SPEC.md` | **Next** |
-| 2 | Mutate Safety | `docs/MUTATE_INTEGRATION.md` | Pending |
-
-**Immediate Next Step:** Begin implementation of Scan v2.0 infrastructure (LCOM4, Cognitive Complexity).
-
----
-
-## 4) Non-Goals
-
-- Replacing the compiler
-- Complex merging
-- Working without git
-- Being a linter (we're a constraint system)
+NEXT TOP PRIORITY - IMPLEMENT AHF (see state-02.md)

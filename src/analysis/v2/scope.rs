@@ -1,11 +1,12 @@
 // src/analysis/v2/scope.rs
 use std::collections::{HashMap, HashSet};
 
-/// Represents a cohesion and coupling scope (Class, Struct+Impl).
+/// Represents a cohesion and coupling scope (Class, Struct+Impl, Enum).
 #[derive(Debug, Clone)]
 pub struct Scope {
     pub name: String,
     pub row: usize,
+    pub is_enum: bool,
     pub fields: HashSet<String>,
     pub methods: HashMap<String, Method>,
 }
@@ -30,6 +31,18 @@ impl Scope {
         Self {
             name: name.to_string(),
             row,
+            is_enum: false,
+            fields: HashSet::new(),
+            methods: HashMap::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn new_enum(name: &str, row: usize) -> Self {
+        Self {
+            name: name.to_string(),
+            row,
+            is_enum: true,
             fields: HashSet::new(),
             methods: HashMap::new(),
         }

@@ -157,10 +157,9 @@ pub struct ApplyArgs {
     pub stdin: bool,
     pub check: bool,
     pub file: Option<PathBuf>,
-    // Removed reset and sync
-    pub reset: bool, // Kept for struct compat if needed, but not in clap
+    pub reset: bool,
     pub promote: bool,
-    pub sync: bool, // Kept for struct compat if needed, but not in clap
+    pub sync: bool,
     pub sanitize: bool,
     pub strict: bool,
 }

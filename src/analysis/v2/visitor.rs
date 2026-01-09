@@ -18,7 +18,7 @@ impl<'a> AstVisitor<'a> {
         Self { source, lang }
     }
 
-    /// Extracts all scopes (classes/structs) from the AST.
+    /// Extracts all scopes (classes/structs/enums) from the AST.
     #[must_use]
     pub fn extract_scopes(&self, root: Node) -> HashMap<String, Scope> {
         let mut scopes = HashMap::new();
@@ -29,24 +29,53 @@ impl<'a> AstVisitor<'a> {
     }
 
     fn extract_rust_scopes(&self, root: Node, out: &mut HashMap<String, Scope>) {
-        let q_str = "(struct_item name: (type_identifier) @name)";
-        let query = Query::new(self.lang.grammar(), q_str).expect("Valid Rust query");
+        // Extract struct definitions
+        self.extract_rust_type_defs(
+            root,
+            out,
+            "(struct_item name: (type_identifier) @name)",
+            false,
+        );
+
+        // Extract enum definitions
+        self.extract_rust_type_defs(root, out, "(enum_item name: (type_identifier) @name)", true);
+
+        // Extract impl blocks and attach methods to scopes
+        self.extract_rust_impls(root, out);
+    }
+
+    fn extract_rust_type_defs(
+        &self,
+        root: Node,
+        out: &mut HashMap<String, Scope>,
+        query_str: &str,
+        is_enum: bool,
+    ) {
+        let Ok(query) = Query::new(self.lang.grammar(), query_str) else {
+            return;
+        };
         let mut cursor = QueryCursor::new();
-        
+
         for m in cursor.matches(&query, root, self.source.as_bytes()) {
             if let Some(cap) = m.captures.first() {
                 if let Ok(name) = cap.node.utf8_text(self.source.as_bytes()) {
                     let row = cap.node.start_position().row + 1;
-                    out.insert(name.to_string(), Scope::new(name, row));
+                    let scope = if is_enum {
+                        Scope::new_enum(name, row)
+                    } else {
+                        Scope::new(name, row)
+                    };
+                    out.insert(name.to_string(), scope);
                 }
             }
         }
-        self.extract_rust_impls(root, out);
     }
 
     fn extract_rust_impls(&self, root: Node, out: &mut HashMap<String, Scope>) {
         let q_str = "(impl_item type: (type_identifier) @name body: (declaration_list) @body)";
-        let query = Query::new(self.lang.grammar(), q_str).expect("Valid Rust query");
+        let Ok(query) = Query::new(self.lang.grammar(), q_str) else {
+            return;
+        };
         let mut cursor = QueryCursor::new();
 
         for m in cursor.matches(&query, root, self.source.as_bytes()) {
@@ -57,18 +86,25 @@ impl<'a> AstVisitor<'a> {
     fn process_impl_match(&self, m: &tree_sitter::QueryMatch, out: &mut HashMap<String, Scope>) {
         let mut name = String::new();
         let mut body_node = None;
+        let mut name_row = 1;
 
         for cap in m.captures {
             if cap.index == 0 {
-                name = cap.node.utf8_text(self.source.as_bytes()).unwrap_or("").to_string();
+                name = cap
+                    .node
+                    .utf8_text(self.source.as_bytes())
+                    .unwrap_or("")
+                    .to_string();
+                name_row = cap.node.start_position().row + 1;
             } else if cap.index == 1 {
                 body_node = Some(cap.node);
             }
         }
 
         if let Some(body) = body_node {
-            // If the struct wasn't seen (e.g. external or just impl), use row 1
-            let scope = out.entry(name).or_insert_with(|| Scope::new("Unknown", 1));
+            let scope = out
+                .entry(name.clone())
+                .or_insert_with(|| Scope::new(&name, name_row));
             self.process_impl_body(body, scope);
         }
     }
@@ -85,8 +121,19 @@ impl<'a> AstVisitor<'a> {
     }
 
     fn extract_rust_method(&self, node: Node) -> Option<Method> {
+        // CRITICAL: Only include instance methods in LCOM4 calculation.
+        // Per Hitz & Montazeri (1995), LCOM4 measures cohesion of methods that
+        // "share instance variables". Associated functions and constructors
+        // don't access instance state and should be excluded.
+        if !self.has_self_parameter(node) {
+            return None;
+        }
+
         let name_node = node.child_by_field_name("name")?;
-        let name = name_node.utf8_text(self.source.as_bytes()).ok()?.to_string();
+        let name = name_node
+            .utf8_text(self.source.as_bytes())
+            .ok()?
+            .to_string();
 
         let mut method = Method {
             name,
@@ -104,13 +151,31 @@ impl<'a> AstVisitor<'a> {
         Some(method)
     }
 
+    /// Checks if a function has a self parameter (is an instance method).
+    fn has_self_parameter(&self, node: Node) -> bool {
+        let Some(params) = node.child_by_field_name("parameters") else {
+            return false;
+        };
+
+        let mut cursor = params.walk();
+        for child in params.children(&mut cursor) {
+            // self_parameter covers: self, &self, &mut self
+            if child.kind() == "self_parameter" {
+                return true;
+            }
+        }
+        false
+    }
+
     fn walk_body_recursive(&self, node: Node, cursor: &mut TreeCursor, method: &mut Method) {
         self.check_node_heuristics(node, method);
 
         if cursor.goto_first_child() {
             loop {
                 self.walk_body_recursive(cursor.node(), cursor, method);
-                if !cursor.goto_next_sibling() { break; }
+                if !cursor.goto_next_sibling() {
+                    break;
+                }
             }
             cursor.goto_parent();
         }
@@ -126,7 +191,9 @@ impl<'a> AstVisitor<'a> {
             "call_expression" => {
                 if let Some(call_target) = self.extract_rust_call(node) {
                     if call_target.starts_with("self.") {
-                        method.internal_calls.insert(call_target.replace("self.", ""));
+                        method
+                            .internal_calls
+                            .insert(call_target.replace("self.", ""));
                     } else {
                         method.external_calls.insert(call_target);
                     }
@@ -147,6 +214,9 @@ impl<'a> AstVisitor<'a> {
 
     fn extract_rust_call(&self, node: Node) -> Option<String> {
         let function = node.child_by_field_name("function")?;
-        function.utf8_text(self.source.as_bytes()).ok().map(String::from)
+        function
+            .utf8_text(self.source.as_bytes())
+            .ok()
+            .map(String::from)
     }
 }
