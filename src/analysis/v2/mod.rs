@@ -79,6 +79,7 @@ impl ScanEngineV2 {
             let sfout = scope.calculate_max_sfout();
 
             Self::check_scope_cohesion(scope, lcom4, &mut violations);
+            Self::check_scope_encapsulation(scope, &mut violations);
             Self::check_scope_coupling(scope, cbo, sfout, &mut violations);
 
             if !violations.is_empty() {
@@ -136,6 +137,43 @@ impl ScanEngineV2 {
         }
     }
 
+    fn check_scope_encapsulation(scope: &scope::Scope, out: &mut Vec<Violation>) {
+        if scope.is_enum {
+            return;
+        }
+
+        // Calculate AHF
+        let ahf = scope.calculate_ahf();
+        // Threshold: AHF < 60%
+        if ahf < 60.0 {
+            // Only report if there are actually fields
+            if scope.fields.is_empty() {
+                return;
+            }
+
+            // Create violation
+             out.push(Violation::with_details(
+                scope.row,
+                format!("Class '{}' exposes too much state (AHF: {:.1}%)", scope.name, ahf),
+                "AHF",
+                ViolationDetails {
+                    function_name: Some(scope.name.clone()),
+                    analysis: vec![
+                        format!("Attribute Hiding Factor (AHF) is {:.1}% (min 60%)", ahf),
+                        format!("{} of {} fields are private.",
+                            scope.fields.values().filter(|f| !f.is_public).count(),
+                            scope.fields.len()
+                        ),
+                        "Low AHF means state is leaking, increasing coupling risk.".into(),
+                    ],
+                    suggestion: Some(
+                        "Encapsulate fields: make them private and provide accessors if needed.".into(),
+                    ),
+                },
+            ));
+        }
+    }
+
     fn check_scope_coupling(
         scope: &scope::Scope,
         cbo: usize,
@@ -182,3 +220,5 @@ impl ScanEngineV2 {
         }
     }
 }
+
+

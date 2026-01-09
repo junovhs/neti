@@ -2,7 +2,7 @@
 //! AST Visitor for Scan v2.0. Extracts high-level structure (Scopes/Methods).
 
 use super::cognitive::CognitiveAnalyzer;
-use super::scope::{Method, Scope};
+use super::scope::{FieldInfo, Method, Scope};
 use crate::lang::Lang;
 use std::collections::{HashMap, HashSet};
 use tree_sitter::{Node, Query, QueryCursor, TreeCursor};
@@ -29,19 +29,76 @@ impl<'a> AstVisitor<'a> {
     }
 
     fn extract_rust_scopes(&self, root: Node, out: &mut HashMap<String, Scope>) {
-        // Extract struct definitions
-        self.extract_rust_type_defs(
-            root,
-            out,
-            "(struct_item name: (type_identifier) @name)",
-            false,
-        );
+        // Extract struct definitions with fields
+        self.extract_rust_structs_and_fields(root, out);
 
         // Extract enum definitions
         self.extract_rust_type_defs(root, out, "(enum_item name: (type_identifier) @name)", true);
 
         // Extract impl blocks and attach methods to scopes
         self.extract_rust_impls(root, out);
+    }
+
+    fn extract_rust_structs_and_fields(&self, root: Node, out: &mut HashMap<String, Scope>) {
+        // Query for all field declarations directly to avoid nested query fragility
+        let query_str = "(field_declaration) @field";
+        let Ok(query) = Query::new(self.lang.grammar(), query_str) else {
+            return;
+        };
+        let mut cursor = QueryCursor::new();
+
+        for m in cursor.matches(&query, root, self.source.as_bytes()) {
+            for cap in m.captures {
+                let field_node = cap.node;
+                self.process_field_node(field_node, out);
+            }
+        }
+    }
+
+    fn process_field_node(&self, field_node: Node, out: &mut HashMap<String, Scope>) {
+        // Traverse up to find struct definition
+        // field_declaration -> field_declaration_list -> struct_item
+        let Some(field_list) = field_node.parent() else { return };
+        let Some(struct_node) = field_list.parent() else { return };
+
+        if struct_node.kind() != "struct_item" {
+            return;
+        }
+
+        // Extract struct name
+        let Some(name_node) = struct_node.child_by_field_name("name") else { return };
+        let Ok(struct_name) = name_node.utf8_text(self.source.as_bytes()) else { return };
+        let struct_row = struct_node.start_position().row + 1;
+
+        // Get or create scope
+        let scope = out
+            .entry(struct_name.to_string())
+            .or_insert_with(|| Scope::new(struct_name, struct_row));
+
+        // Extract field info
+        let Some(field_name_node) = field_node.child_by_field_name("name") else { return };
+        let Ok(field_name) = field_name_node.utf8_text(self.source.as_bytes()) else { return };
+        
+        // Check visibility
+        let mut is_public = false;
+        // Visibility is an optional child of field_declaration
+        for child in field_node.children(&mut field_node.walk()) {
+            if child.kind() == "visibility_modifier" {
+                if let Ok(vis_text) = child.utf8_text(self.source.as_bytes()) {
+                    if vis_text.contains("pub") {
+                        is_public = true;
+                    }
+                }
+            }
+        }
+
+        scope.fields.insert(
+            field_name.to_string(),
+            FieldInfo {
+                name: field_name.to_string(),
+                is_public,
+            },
+        );
     }
 
     fn extract_rust_type_defs(

@@ -7,8 +7,14 @@ pub struct Scope {
     pub name: String,
     pub row: usize,
     pub is_enum: bool,
-    pub fields: HashSet<String>,
+    pub fields: HashMap<String, FieldInfo>,
     pub methods: HashMap<String, Method>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FieldInfo {
+    pub name: String,
+    pub is_public: bool,
 }
 
 /// Represents a method within a scope.
@@ -32,7 +38,7 @@ impl Scope {
             name: name.to_string(),
             row,
             is_enum: false,
-            fields: HashSet::new(),
+            fields: HashMap::new(),
             methods: HashMap::new(),
         }
     }
@@ -43,7 +49,7 @@ impl Scope {
             name: name.to_string(),
             row,
             is_enum: true,
-            fields: HashSet::new(),
+            fields: HashMap::new(),
             methods: HashMap::new(),
         }
     }
@@ -83,6 +89,22 @@ impl Scope {
             .map(|m| m.external_calls.len())
             .max()
             .unwrap_or(0)
+    }
+
+    /// Calculates AHF (Attribute Hiding Factor).
+    /// Percentage of fields that are private.
+    /// AHF = (sum(is_private) / total_fields) * 100
+    #[must_use]
+    pub fn calculate_ahf(&self) -> f64 {
+        if self.fields.is_empty() {
+            // If there are no fields, state leaking is impossible.
+            return 100.0;
+        }
+
+        let total_fields = self.fields.len() as f64;
+        let private_fields = self.fields.values().filter(|f| !f.is_public).count() as f64;
+
+        (private_fields / total_fields) * 100.0
     }
 
     fn build_adjacency_graph<'a>(
@@ -164,7 +186,13 @@ mod tests {
     #[test]
     fn test_lcom4_cohesive() {
         let mut scope = Scope::new("Cohesive", 1);
-        scope.fields.insert("x".into());
+        scope.fields.insert(
+            "x".into(),
+            FieldInfo {
+                name: "x".into(),
+                is_public: false,
+            },
+        );
 
         scope.methods.insert(
             "get_x".into(),
@@ -189,5 +217,43 @@ mod tests {
         );
 
         assert_eq!(scope.calculate_lcom4(), 1);
+    }
+
+    #[test]
+    fn test_ahf_calculation() {
+        let mut scope = Scope::new("TestAhf", 1);
+
+        // 3 private fields, 1 public field
+        // AHF = 3/4 = 75%
+        scope.fields.insert(
+            "p1".into(),
+            FieldInfo {
+                name: "p1".into(),
+                is_public: false,
+            },
+        );
+        scope.fields.insert(
+            "p2".into(),
+            FieldInfo {
+                name: "p2".into(),
+                is_public: false,
+            },
+        );
+        scope.fields.insert(
+            "p3".into(),
+            FieldInfo {
+                name: "p3".into(),
+                is_public: false,
+            },
+        );
+        scope.fields.insert(
+            "pub1".into(),
+            FieldInfo {
+                name: "pub1".into(),
+                is_public: true,
+            },
+        );
+
+        assert_eq!(scope.calculate_ahf(), 75.0);
     }
 }
