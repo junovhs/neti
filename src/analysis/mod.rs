@@ -124,6 +124,7 @@ impl RuleEngine {
 
         Self::check_naming(lang, &ctx, report);
         Self::check_v2_complexity(lang, &ctx, report);
+        checks::check_syntax(&ctx, &mut report.violations);
 
         if lang == Lang::Rust {
             Self::check_rust_specifics(lang, &ctx, report);
