@@ -5,22 +5,3 @@ node_modules
 .git
 Cargo.lock
 context.txt
-
-# License files (not needed for coding)
-LICENCE-APACHE
-LICENSE-MIT
-
-# Archived docs (115k+ tokens of old specs)
-docs/archived
-
-# Experimental commands (frozen, ~42k tokens)
-src/audit
-src/graph
-src/signatures
-src/map.rs
-
-# Test files
-tests
-src/stage/tests_manager.rs
-src/stage/tests_promote.rs
-src/apply/patch/tests.rs
