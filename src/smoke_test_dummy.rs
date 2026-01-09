@@ -1,0 +1,1 @@
+pub fn smoke() { println!("Smoke test"); }
