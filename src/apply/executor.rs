@@ -147,7 +147,7 @@ fn run_verification_and_maybe_promote(
             _ => Vec::new(),
         };
 
-        let ai_msg = verification::generate_ai_feedback(&result, &modified_files);
+        let ai_msg = crate::apply::messages::generate_ai_feedback(&result, &modified_files);
         crate::apply::messages::print_ai_feedback(&ai_msg);
 
         println!("\n{}", "Fix the issues and run 'slopchop apply' again, or 'slopchop abort' to abandon.".cyan());

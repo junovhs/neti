@@ -1,29 +1,16 @@
-# Fix: UTF-8 Safe String Truncation
+# UTF-8 Panic Bug
 
-## File: src/apply/verification.rs
+**Status: RESOLVED** ✓
 
-**Find this pattern (around line 104):**
+## Problem
+`generate_ai_feedback` in `src/apply/verification.rs` panics on multi-byte UTF-8 characters when truncating output at 1000 chars.
+
+## Root Cause
+Direct string slicing `&combined[..1000]` can split a multi-byte character.
+
+## Solution (Implemented)
+Added `floor_char_boundary` helper that finds the largest valid char boundary ≤ the target index:
 ```rust
-let truncated = if combined.len() > 1000 {
-    format!("{}...\n[truncated]", &combined[..1000])
-} else {
-    combined.clone()
-};
-```
-
-**Replace with:**
-```rust
-let truncated = if combined.len() > 1000 {
-    let safe_end = floor_char_boundary(&combined, 1000);
-    format!("{}...\n[truncated]", &combined[..safe_end])
-} else {
-    combined.clone()
-};
-```
-
-**Add this helper function (or import from existing):**
-```rust
-/// Finds the largest valid char boundary <= idx.
 fn floor_char_boundary(s: &str, mut idx: usize) -> usize {
     if idx >= s.len() {
         return s.len();
@@ -35,4 +22,8 @@ fn floor_char_boundary(s: &str, mut idx: usize) -> usize {
 }
 ```
 
-**Note:** You already have `floor_char_boundary` in `src/apply/patch/diagnostics.rs` — consider moving it to a shared `src/utils.rs` and importing it.
+Then used it in truncation:
+```rust
+let safe_end = floor_char_boundary(&combined, 1000);
+format!("{}...\n[truncated]", &combined[..safe_end])
+```

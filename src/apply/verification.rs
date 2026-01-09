@@ -12,7 +12,6 @@ use crate::types::{CheckReport, CommandResult, ScanReport};
 use anyhow::Result;
 use colored::Colorize;
 use std::env;
-use std::fmt::Write;
 use std::path::Path;
 use std::time::Instant;
 
@@ -88,52 +87,6 @@ fn run_external_checks(
         }
     }
     Ok((results, passed))
-}
-
-/// Finds the largest valid char boundary <= idx.
-fn floor_char_boundary(s: &str, mut idx: usize) -> usize {
-    if idx >= s.len() {
-        return s.len();
-    }
-    while !s.is_char_boundary(idx) {
-        idx = idx.saturating_sub(1);
-    }
-    idx
-}
-
-#[must_use]
-pub fn generate_ai_feedback(report: &CheckReport, modified_files: &[String]) -> String {
-    let mut msg = String::from("VERIFICATION FAILED\n\n");
-
-    msg.push_str("The following checks failed:\n\n");
-
-    for cmd in report.commands.iter().filter(|c| c.exit_code != 0) {
-        let _ = writeln!(msg, "COMMAND: {}", cmd.command);
-        msg.push_str("OUTPUT:\n");
-        let combined = format!("{}\n{}", cmd.stdout, cmd.stderr);
-        let truncated = if combined.len() > 1000 {
-            let safe_end = floor_char_boundary(&combined, 1000);
-            format!("{}...\n[truncated]", &combined[..safe_end])
-        } else {
-            combined
-        };
-        msg.push_str(&truncated);
-        msg.push_str("\n\n");
-    }
-
-    if report.scan.has_errors() {
-        msg.push_str("COMMAND: slopchop scan\nOUTPUT:\nInternal violations found (see scan report).\n\n");
-    }
-
-    if !modified_files.is_empty() {
-        msg.push_str("FILES MODIFIED IN THIS APPLY:\n");
-        for f in modified_files {
-            let _ = writeln!(msg, "- {f}");
-        }
-    }
-
-    msg.push_str("\nPlease fix the issues and provide corrected files.");
-    msg
 }
 
 /// Runs verification using the repo root.
