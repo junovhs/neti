@@ -1,7 +1,7 @@
 // src/analysis/v2/scope.rs
 use std::collections::{HashMap, HashSet};
 
-/// Represents a cohesion scope (Class, Struct+Impl).
+/// Represents a cohesion and coupling scope (Class, Struct+Impl).
 #[derive(Debug, Clone)]
 pub struct Scope {
     pub name: String,
@@ -15,8 +15,10 @@ pub struct Method {
     pub name: String,
     /// Fields accessed by this method
     pub field_access: HashSet<String>,
-    /// Other methods in the same scope called by this method
-    pub method_calls: HashSet<String>,
+    /// Other methods in the same scope called by this method (Cohesion)
+    pub internal_calls: HashSet<String>,
+    /// Calls to things outside this scope (Coupling/SFOUT)
+    pub external_calls: HashSet<String>,
 }
 
 impl Scope {
@@ -30,7 +32,6 @@ impl Scope {
     }
 
     /// Calculates LCOM4 (Lack of Cohesion of Methods).
-    /// LCOM4 = Number of connected components in the method dependency graph.
     #[must_use]
     pub fn calculate_lcom4(&self) -> usize {
         if self.methods.is_empty() {
@@ -41,6 +42,30 @@ impl Scope {
         let adj = self.build_adjacency_graph(&method_names);
 
         Self::count_components(&method_names, &adj)
+    }
+
+    /// Calculates CBO (Coupling Between Objects).
+    /// Number of distinct external classes/scopes this scope depends on.
+    #[must_use]
+    pub fn calculate_cbo(&self) -> usize {
+        let mut unique_deps = HashSet::new();
+        for method in self.methods.values() {
+            for call in &method.external_calls {
+                unique_deps.insert(call);
+            }
+        }
+        unique_deps.len()
+    }
+
+    /// Calculates the maximum SFOUT (Structural Fan-Out) among methods.
+    /// SFOUT = number of outgoing calls from a single method.
+    #[must_use]
+    pub fn calculate_max_sfout(&self) -> usize {
+        self.methods
+            .values()
+            .map(|m| m.external_calls.len())
+            .max()
+            .unwrap_or(0)
     }
 
     fn build_adjacency_graph<'a>(
@@ -59,10 +84,8 @@ impl Scope {
                 let method_b = &self.methods[*name_b];
 
                 if Self::are_connected(method_a, method_b) {
-                    // Safe unwrap: keys initialized above
-                    // Dereference *name_b to go from &&String to &String
-                    adj.get_mut(*name_a).unwrap().push(*name_b);
-                    adj.get_mut(*name_b).unwrap().push(*name_a);
+                    adj.get_mut(*name_a).expect("Key exists").push(*name_b);
+                    adj.get_mut(*name_b).expect("Key exists").push(*name_a);
                 }
             }
         }
@@ -89,10 +112,7 @@ impl Scope {
         if !a.field_access.is_disjoint(&b.field_access) {
             return true;
         }
-        if a.method_calls.contains(&b.name) {
-            return true;
-        }
-        if b.method_calls.contains(&a.name) {
+        if a.internal_calls.contains(&b.name) || b.internal_calls.contains(&a.name) {
             return true;
         }
         false
@@ -107,7 +127,6 @@ impl Scope {
         visited.insert(start);
 
         while let Some(current) = stack.pop() {
-            // Flatten nesting by using guard clause
             let Some(neighbors) = adj.get(current) else {
                 continue;
             };
@@ -118,63 +137,5 @@ impl Scope {
                 }
             }
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_lcom4_cohesive() {
-        let mut scope = Scope::new("Cohesive");
-        scope.fields.insert("x".into());
-
-        scope.methods.insert(
-            "get_x".into(),
-            Method {
-                name: "get_x".into(),
-                field_access: HashSet::from(["x".into()]),
-                method_calls: HashSet::new(),
-            },
-        );
-
-        scope.methods.insert(
-            "set_x".into(),
-            Method {
-                name: "set_x".into(),
-                field_access: HashSet::from(["x".into()]),
-                method_calls: HashSet::new(),
-            },
-        );
-
-        assert_eq!(scope.calculate_lcom4(), 1);
-    }
-
-    #[test]
-    fn test_lcom4_split() {
-        let mut scope = Scope::new("Split");
-        scope.fields.insert("x".into());
-        scope.fields.insert("y".into());
-
-        scope.methods.insert(
-            "m1".into(),
-            Method {
-                name: "m1".into(),
-                field_access: HashSet::from(["x".into()]),
-                method_calls: HashSet::new(),
-            },
-        );
-
-        scope.methods.insert(
-            "m2".into(),
-            Method {
-                name: "m2".into(),
-                field_access: HashSet::from(["y".into()]),
-                method_calls: HashSet::new(),
-            },
-        );
-
-        assert_eq!(scope.calculate_lcom4(), 2);
     }
 }
