@@ -1,12 +1,5 @@
 // src/apply/executor.rs
 //! Handles the execution of apply actions with automatic branch management.
-//!
-//! Workflow:
-//! 1. Create/switch to slopchop-work branch
-//! 2. Apply changes
-//! 3. Run verification
-//! 4. If passes: promote to main (or prompt based on config)
-//! 5. If fails: stay on branch, show errors
 
 use crate::apply::types::{ApplyContext, ApplyOutcome, ExtractedFiles, Manifest};
 use crate::apply::verification;
@@ -25,6 +18,7 @@ pub fn apply_to_stage_transaction(
     manifest: &Manifest,
     extracted: &ExtractedFiles,
     ctx: &ApplyContext,
+    commit_msg: &str,
 ) -> Result<ApplyOutcome> {
     let logger = EventLogger::new(&ctx.repo_root);
     logger.log(EventKind::ApplyStarted);
@@ -50,9 +44,12 @@ pub fn apply_to_stage_transaction(
 
     // Step 3: Run verification if requested
     if ctx.check_after {
-        return run_verification_and_maybe_promote(ctx, outcome);
+        return run_verification_and_maybe_promote(ctx, outcome, commit_msg);
     }
 
+    // Even if no check requested, we still commit the changes to the work branch
+    // to preserve the transaction.
+    commit_work_branch_changes(commit_msg)?;
     print_work_branch_status();
     Ok(outcome)
 }
@@ -72,8 +69,6 @@ fn ensure_work_branch() -> Result<()> {
             println!("{}", "→ Reset work branch".blue());
         }
         Err(e) => {
-            // Branch might already exist but we're not on it
-            // Try to switch to it
             if e.to_string().contains("already exists") {
                 switch_to_work_branch()?;
             } else {
@@ -119,6 +114,7 @@ fn log_outcome(logger: &EventLogger, outcome: &ApplyOutcome) {
 fn run_verification_and_maybe_promote(
     ctx: &ApplyContext,
     outcome: ApplyOutcome,
+    commit_msg: &str,
 ) -> Result<ApplyOutcome> {
     let result = verification::run_verification_pipeline(ctx, &ctx.repo_root)?;
 
@@ -126,7 +122,7 @@ fn run_verification_and_maybe_promote(
         println!("{}", "✓ All checks passed!".green().bold());
 
         // Commit changes on work branch first
-        commit_work_branch_changes()?;
+        commit_work_branch_changes(commit_msg)?;
 
         // Auto-promote or prompt
         if ctx.auto_promote {
@@ -155,7 +151,7 @@ fn run_verification_and_maybe_promote(
     }
 }
 
-fn commit_work_branch_changes() -> Result<()> {
+fn commit_work_branch_changes(msg: &str) -> Result<()> {
     use std::process::Command;
 
     // Stage all changes
@@ -178,7 +174,7 @@ fn commit_work_branch_changes() -> Result<()> {
 
     // Commit
     let commit = Command::new("git")
-        .args(["commit", "-m", "chore: apply slopchop changes"])
+        .args(["commit", "-m", msg])
         .output()?;
 
     if !commit.status.success() {

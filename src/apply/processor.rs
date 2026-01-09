@@ -16,18 +16,14 @@ use std::path::Path;
 /// # Errors
 /// Returns error if extraction, confirmation or writing fails.
 pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> {
-    if content.trim().is_empty() {
-        return Ok(ApplyOutcome::ParseError("Input is empty".to_string()));
-    }
+    let blocks = match parse_content(content)? {
+        Ok(b) => b,
+        Err(outcome) => return Ok(outcome),
+    };
 
-    let blocks = parser::parse(content).map_err(|e| anyhow!("Parser Error: {e}"))?;
-    if blocks.is_empty() {
-        return Ok(ApplyOutcome::ParseError(
-            "No valid blocks found.".to_string(),
-        ));
-    }
+    let plan_text = get_plan_text(&blocks);
 
-    if let Some(outcome) = check_plan(&blocks, ctx)? {
+    if let Some(outcome) = check_plan_requirement(plan_text, ctx)? {
         return Ok(outcome);
     }
 
@@ -47,7 +43,42 @@ pub fn process_input(content: &str, ctx: &ApplyContext) -> Result<ApplyOutcome> 
         return Ok(validation);
     }
 
-    executor::apply_to_stage_transaction(&manifest, &extracted, ctx)
+    let commit_msg = extract_commit_message(plan_text);
+    executor::apply_to_stage_transaction(&manifest, &extracted, ctx, &commit_msg)
+}
+
+fn parse_content(content: &str) -> Result<Result<Vec<Block>, ApplyOutcome>> {
+    if content.trim().is_empty() {
+        return Ok(Err(ApplyOutcome::ParseError("Input is empty".to_string())));
+    }
+    let blocks = parser::parse(content).map_err(|e| anyhow!("Parser Error: {e}"))?;
+    if blocks.is_empty() {
+        return Ok(Err(ApplyOutcome::ParseError(
+            "No valid blocks found.".to_string(),
+        )));
+    }
+    Ok(Ok(blocks))
+}
+
+fn get_plan_text(blocks: &[Block]) -> Option<&str> {
+    blocks.iter().find_map(|b| match b {
+        Block::Plan(s) => Some(s.as_str()),
+        _ => None,
+    })
+}
+
+fn extract_commit_message(plan: Option<&str>) -> String {
+    plan.and_then(|text| {
+        text.lines().find_map(|line| {
+            let clean = line.trim().strip_prefix("GOAL:")?.trim();
+            if clean.is_empty() {
+                None
+            } else {
+                Some(format!("ai: {clean}"))
+            }
+        })
+    })
+    .unwrap_or_else(|| "chore: apply slopchop changes".to_string())
 }
 
 fn perform_sanitization(extracted: &mut types::ExtractedFiles, ctx: &ApplyContext) {
@@ -82,8 +113,6 @@ fn perform_sanitization(extracted: &mut types::ExtractedFiles, ctx: &ApplyContex
 
             let new_text = sanitized.join("\n");
 
-            // Rejoin with original newlines is hard without more logic,
-            // but we usually just want standard \n for code.
             content.content = new_text;
             if !content.content.is_empty() {
                 content.content.push('\n');
@@ -131,39 +160,38 @@ fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::Extracte
     Ok((manifest, extracted))
 }
 
-fn check_plan(blocks: &[Block], ctx: &ApplyContext) -> Result<Option<ApplyOutcome>> {
-    let plan = blocks.iter().find_map(|b| match b {
-        Block::Plan(s) => Some(s.as_str()),
-        _ => None,
-    });
-
-    if check_plan_requirement(plan, ctx)? {
-        Ok(None)
-    } else {
-        Ok(Some(ApplyOutcome::ParseError(
-            "Operation cancelled.".to_string(),
-        )))
-    }
-}
-
-fn check_plan_requirement(plan: Option<&str>, ctx: &ApplyContext) -> Result<bool> {
+fn check_plan_requirement(plan: Option<&str>, ctx: &ApplyContext) -> Result<Option<ApplyOutcome>> {
     if let Some(p) = plan {
         println!("{}", "[PLAN]:".cyan().bold());
         println!("{}", p.trim());
-        if !ctx.force && !ctx.dry_run {
-            return executor::confirm("Apply these changes?");
+        if check_interactive_abort(ctx, "Apply these changes?")? {
+            return Ok(Some(ApplyOutcome::ParseError(
+                "Operation cancelled.".to_string(),
+            )));
         }
-        return Ok(true);
+        return Ok(None);
     }
+
     if ctx.config.preferences.require_plan {
         println!("{}", "[X] REJECTED: Missing PLAN block.".red());
-        Ok(false)
-    } else {
-        if !ctx.force && !ctx.dry_run {
-            return executor::confirm("Apply without a plan?");
-        }
-        Ok(true)
+        return Ok(Some(ApplyOutcome::ParseError(
+            "Missing PLAN block (required by config).".to_string(),
+        )));
     }
+
+    if check_interactive_abort(ctx, "Apply without a plan?")? {
+        return Ok(Some(ApplyOutcome::ParseError(
+            "Operation cancelled.".to_string(),
+        )));
+    }
+    Ok(None)
+}
+
+fn check_interactive_abort(ctx: &ApplyContext, prompt: &str) -> Result<bool> {
+    if ctx.force || ctx.dry_run {
+        return Ok(false);
+    }
+    Ok(!executor::confirm(prompt)?)
 }
 
 fn apply_patches(
