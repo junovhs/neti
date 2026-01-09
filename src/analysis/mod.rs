@@ -5,6 +5,7 @@ pub mod ast;
 pub mod checks;
 pub mod metrics;
 pub mod safety;
+pub mod v2;
 
 use crate::config::Config;
 use crate::lang::{Lang, QueryKind};
