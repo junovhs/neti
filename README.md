@@ -109,11 +109,6 @@ Applies a protocol payload from clipboard, stdin, or file.
     *   `--sanitize`: Strip UI/Markdown artifacts (Default for Clipboard).
     *   `--strict`: Disable sanitization (use for raw file pipes).
 
-### `slopchop stage` (The Sandbox) [v1.4.0]
-Explicitly manages the staging area.
-*   **Stage:** `slopchop stage` initializes or wipes/recreates the sandbox.
-*   **Safe:** Always copies based on `.slopchopignore` and critical path exclusions.
-
 ### `slopchop config` (Interactive Setup)
 Opens a TUI editor to configure rules and preferences.
 *   **Interactive:** Navigate with arrow keys, toggle with Enter.
