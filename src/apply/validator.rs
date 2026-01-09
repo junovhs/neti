@@ -1,6 +1,8 @@
 // src/apply/validator.rs
 use crate::apply::messages::format_ai_rejection;
-use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, ManifestEntry, Operation};
+use crate::apply::types::{ApplyOutcome, ExtractedFiles, FileContent, Manifest, ManifestEntry, Operation};
+use crate::lang::Lang;
+use tree_sitter::Parser;
 use std::path::{Component, Path};
 
 const PROTECTED_FILES: &[&str] = &[
@@ -172,7 +174,46 @@ fn validate_content(path: &str, content: &str) -> Result<(), String> {
     }
     check_markdown_fences(path, content)?;
     check_truncation(path, content)?;
+    check_ast_syntax(path, content)?;
     Ok(())
+}
+
+fn check_ast_syntax(path: &str, content: &str) -> Result<(), String> {
+    let Some(ext) = Path::new(path).extension().and_then(|s| s.to_str()) else {
+        return Ok(());
+    };
+
+    let Some(lang) = Lang::from_ext(ext) else {
+        return Ok(());
+    };
+
+    let mut parser = Parser::new();
+    if parser.set_language(lang.grammar()).is_err() {
+        return Ok(()); // Grammar not available, skip
+    }
+
+    let Some(tree) = parser.parse(content, None) else {
+        return Ok(());
+    };
+
+    if has_syntax_errors(tree.root_node()) {
+        return Err(format!("Syntax error detected in {path}. Please fix it before applying."));
+    }
+
+    Ok(())
+}
+
+fn has_syntax_errors(node: tree_sitter::Node) -> bool {
+    if node.is_error() || node.is_missing() {
+        return true;
+    }
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
+        if has_syntax_errors(child) {
+            return true;
+        }
+    }
+    false
 }
 
 fn check_markdown_fences(path: &str, content: &str) -> Result<(), String> {
