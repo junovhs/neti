@@ -58,19 +58,31 @@ impl ScanEngineV2 {
 
     fn analyze_metrics(scopes: &HashMap<String, scope::Scope>) -> MetricsV2 {
         let mut metrics = MetricsV2::default();
-
         for scope in scopes.values() {
-            if scope.calculate_lcom4() > 1 {
-                metrics.lcom4_violations += 1;
-            }
-            if scope.calculate_cbo() > 9 {
-                metrics.high_cbo_count += 1;
-            }
-            if scope.calculate_max_sfout() > 7 {
-                metrics.high_sfout_count += 1;
-            }
+            Self::update_metrics_from_scope(scope, &mut metrics);
         }
-
         metrics
+    }
+
+    fn update_metrics_from_scope(scope: &scope::Scope, metrics: &mut MetricsV2) {
+        Self::update_coupling_metrics(scope, metrics);
+        
+        if scope.calculate_lcom4() > 1 {
+            metrics.lcom4_violations += 1;
+        }
+        
+        let max_cog = scope.methods.values().map(|m| m.cognitive_complexity).max().unwrap_or(0);
+        if max_cog > metrics.max_cognitive {
+            metrics.max_cognitive = max_cog;
+        }
+    }
+
+    fn update_coupling_metrics(scope: &scope::Scope, metrics: &mut MetricsV2) {
+        if scope.calculate_cbo() > 9 {
+            metrics.high_cbo_count += 1;
+        }
+        if scope.calculate_max_sfout() > 7 {
+            metrics.high_sfout_count += 1;
+        }
     }
 }

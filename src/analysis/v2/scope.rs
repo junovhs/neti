@@ -19,6 +19,8 @@ pub struct Method {
     pub internal_calls: HashSet<String>,
     /// Calls to things outside this scope (Coupling/SFOUT)
     pub external_calls: HashSet<String>,
+    /// Human-understandability score
+    pub cognitive_complexity: usize,
 }
 
 impl Scope {
@@ -45,7 +47,6 @@ impl Scope {
     }
 
     /// Calculates CBO (Coupling Between Objects).
-    /// Number of distinct external classes/scopes this scope depends on.
     #[must_use]
     pub fn calculate_cbo(&self) -> usize {
         let mut unique_deps = HashSet::new();
@@ -58,7 +59,6 @@ impl Scope {
     }
 
     /// Calculates the maximum SFOUT (Structural Fan-Out) among methods.
-    /// SFOUT = number of outgoing calls from a single method.
     #[must_use]
     pub fn calculate_max_sfout(&self) -> usize {
         self.methods
@@ -137,5 +137,40 @@ impl Scope {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_lcom4_cohesive() {
+        let mut scope = Scope::new("Cohesive");
+        scope.fields.insert("x".into());
+
+        scope.methods.insert(
+            "get_x".into(),
+            Method {
+                name: "get_x".into(),
+                field_access: HashSet::from(["x".into()]),
+                internal_calls: HashSet::new(),
+                external_calls: HashSet::new(),
+                cognitive_complexity: 0,
+            },
+        );
+
+        scope.methods.insert(
+            "set_x".into(),
+            Method {
+                name: "set_x".into(),
+                field_access: HashSet::from(["x".into()]),
+                internal_calls: HashSet::new(),
+                external_calls: HashSet::new(),
+                cognitive_complexity: 0,
+            },
+        );
+
+        assert_eq!(scope.calculate_lcom4(), 1);
     }
 }

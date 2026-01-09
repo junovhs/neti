@@ -1,6 +1,7 @@
 // src/analysis/v2/visitor.rs
 //! AST Visitor for Scan v2.0. Extracts high-level structure (Scopes/Methods).
 
+use super::cognitive::CognitiveAnalyzer;
 use super::scope::{Method, Scope};
 use crate::lang::Lang;
 use std::collections::{HashMap, HashSet};
@@ -90,6 +91,7 @@ impl<'a> AstVisitor<'a> {
             field_access: HashSet::new(),
             internal_calls: HashSet::new(),
             external_calls: HashSet::new(),
+            cognitive_complexity: CognitiveAnalyzer::calculate(node, self.source),
         };
 
         if let Some(body) = node.child_by_field_name("body") {

@@ -8,8 +8,8 @@ pub mod safety;
 pub mod v2;
 
 use crate::config::Config;
-use crate::lang::{Lang, QueryKind};
-use crate::types::{FileReport, Violation};
+use crate::lang::Lang;
+use crate::types::{FileReport, Violation, ViolationDetails};
 use rayon::prelude::*;
 use std::path::PathBuf;
 use tree_sitter::{Parser, Query};
@@ -104,7 +104,7 @@ impl RuleEngine {
         };
 
         Self::check_naming(lang, &ctx, report);
-        Self::check_complexity(lang, &ctx, report);
+        Self::check_v2_complexity(lang, &ctx, report);
 
         if lang == Lang::Rust {
             Self::check_rust_specifics(lang, &ctx, report);
@@ -112,26 +112,58 @@ impl RuleEngine {
     }
 
     fn check_naming(lang: Lang, ctx: &checks::CheckContext, report: &mut FileReport) {
-        if let Some(q_str) = Self::get_query(lang, QueryKind::Naming) {
-            if let Ok(q) = Query::new(lang.grammar(), q_str) {
-                checks::check_naming(ctx, &q, &mut report.violations);
-            }
+        if let Ok(q) = Query::new(lang.grammar(), lang.q_naming()) {
+            checks::check_naming(ctx, &q, &mut report.violations);
         }
     }
 
-    fn check_complexity(lang: Lang, ctx: &checks::CheckContext, report: &mut FileReport) {
-        let defs_str = Self::get_query(lang, QueryKind::Defs);
-        let comp_str = Self::get_query(lang, QueryKind::Complexity);
+    /// Replaced Cyclomatic Complexity with Scan v2 Cognitive Complexity.
+    fn check_v2_complexity(lang: Lang, ctx: &checks::CheckContext, report: &mut FileReport) {
+        let Ok(q_defs) = Query::new(lang.grammar(), lang.q_defs()) else { return; };
+        let mut cursor = tree_sitter::QueryCursor::new();
+        let matches = cursor.matches(&q_defs, ctx.root, ctx.source.as_bytes());
 
-        if let (Some(d_str), Some(c_str)) = (defs_str, comp_str) {
-            if let (Ok(d), Ok(c)) = (
-                Query::new(lang.grammar(), d_str),
-                Query::new(lang.grammar(), c_str),
-            ) {
-                let score = checks::check_metrics(ctx, &d, &c, &mut report.violations);
-                report.complexity_score = score;
+        let mut max_complexity = 0;
+
+        for m in matches {
+            for cap in m.captures {
+                let score = Self::process_function_node(cap.node, ctx, report);
+                if score > max_complexity {
+                    max_complexity = score;
+                }
             }
         }
+        report.complexity_score = max_complexity;
+    }
+
+    fn process_function_node(node: tree_sitter::Node, ctx: &checks::CheckContext, report: &mut FileReport) -> usize {
+        if !Self::is_function_node(node.kind()) {
+            return 0;
+        }
+        
+        let score = v2::cognitive::CognitiveAnalyzer::calculate(node, ctx.source);
+
+        if score > 15 { // V2 Spec threshold
+            let name = node.child_by_field_name("name")
+                .and_then(|n| n.utf8_text(ctx.source.as_bytes()).ok())
+                .unwrap_or("<anonymous>");
+
+            report.violations.push(Violation::with_details(
+                node.start_position().row + 1,
+                format!("Function '{name}' has cognitive complexity {score} (Max: 15)"),
+                "LAW OF COMPLEXITY",
+                ViolationDetails {
+                    function_name: Some(name.to_string()),
+                    analysis: vec![format!("Cognitive score: {score}")],
+                    suggestion: Some("Break logic into smaller, linear functions.".into()),
+                }
+            ));
+        }
+        score
+    }
+
+    fn is_function_node(kind: &str) -> bool {
+        matches!(kind, "function_item" | "function_definition" | "method_definition" | "function_declaration")
     }
 
     fn check_rust_specifics(
@@ -157,11 +189,6 @@ impl RuleEngine {
         if let Ok(q) = Query::new(lang.grammar(), "") {
             safety::check_safety(&safety_ctx, &q, &mut report.violations);
         }
-    }
-
-    fn get_query(lang: Lang, kind: QueryKind) -> Option<&'static str> {
-        let q = lang.query(kind);
-        if q.is_empty() { None } else { Some(q) }
     }
 
     fn is_ignored(path: &std::path::Path, patterns: &[String]) -> bool {
