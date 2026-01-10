@@ -12,7 +12,7 @@ use crate::graph::imports;
 pub struct GraphData {
     pub tags: Vec<Tag>,
     pub defines: HashMap<String, HashSet<PathBuf>>,
-    pub references: HashMap<String, Vec<PathBuf>>,
+    pub references: HashMap<String, HashSet<PathBuf>>,
     pub edges: HashMap<PathBuf, HashMap<PathBuf, usize>>,
     pub all_files: HashSet<PathBuf>,
 }
@@ -39,7 +39,7 @@ pub fn build_data(files: &[(PathBuf, String)]) -> GraphData {
 #[allow(clippy::implicit_hasher)]
 pub fn rebuild_topology(
     defines: &HashMap<String, HashSet<PathBuf>>,
-    references: &HashMap<String, Vec<PathBuf>>,
+    references: &HashMap<String, HashSet<PathBuf>>,
 ) -> (HashMap<PathBuf, HashMap<PathBuf, usize>>, HashSet<PathBuf>) {
     let edges = build_edges(defines, references);
     let all_files = collect_all_files(&edges);
@@ -49,13 +49,13 @@ pub fn rebuild_topology(
 struct ExtractedTags {
     tags: Vec<Tag>,
     defines: HashMap<String, HashSet<PathBuf>>,
-    references: HashMap<String, Vec<PathBuf>>,
+    references: HashMap<String, HashSet<PathBuf>>,
 }
 
 fn extract_all_tags(files: &[(PathBuf, String)]) -> ExtractedTags {
     let mut tags = Vec::new();
     let mut defines: HashMap<String, HashSet<PathBuf>> = HashMap::new();
-    let mut references: HashMap<String, Vec<PathBuf>> = HashMap::new();
+    let mut references: HashMap<String, HashSet<PathBuf>> = HashMap::new();
 
     for (path, content) in files {
         extract_defs(path, content, &mut tags, &mut defines);
@@ -94,7 +94,7 @@ fn extract_refs(
     path: &Path,
     content: &str,
     tags: &mut Vec<Tag>,
-    references: &mut HashMap<String, Vec<PathBuf>>,
+    references: &mut HashMap<String, HashSet<PathBuf>>,
 ) {
     for ref_name in imports::extract(path, content) {
         let symbol = ref_name
@@ -102,10 +102,12 @@ fn extract_refs(
             .last()
             .unwrap_or(&ref_name)
             .to_string();
+        
         references
             .entry(symbol.clone())
             .or_default()
-            .push(path.to_path_buf());
+            .insert(path.to_path_buf());
+            
         tags.push(Tag {
             file: path.to_path_buf(),
             name: symbol,
@@ -118,7 +120,7 @@ fn extract_refs(
 
 fn build_edges(
     defines: &HashMap<String, HashSet<PathBuf>>,
-    references: &HashMap<String, Vec<PathBuf>>,
+    references: &HashMap<String, HashSet<PathBuf>>,
 ) -> HashMap<PathBuf, HashMap<PathBuf, usize>> {
     let mut edges: HashMap<PathBuf, HashMap<PathBuf, usize>> = HashMap::new();
 
@@ -134,7 +136,7 @@ fn build_edges(
 fn add_symbol_edges(
     symbol: &str,
     def_map: &HashMap<String, HashSet<PathBuf>>,
-    ref_map: &HashMap<String, Vec<PathBuf>>,
+    ref_map: &HashMap<String, HashSet<PathBuf>>,
     edges: &mut HashMap<PathBuf, HashMap<PathBuf, usize>>,
 ) {
     let Some(def_files) = def_map.get(symbol) else {
@@ -164,4 +166,4 @@ fn collect_all_files(edges: &HashMap<PathBuf, HashMap<PathBuf, usize>>) -> HashS
         files.extend(targets.keys().cloned());
     }
     files
-}
+}

@@ -46,7 +46,7 @@ pub fn get_graph_tags(graph: &RepoGraph) -> Vec<Tag> {
 #[allow(clippy::implicit_hasher)]
 pub fn collect_dependents(
     def_map: &HashMap<String, HashSet<PathBuf>>,
-    ref_map: &HashMap<String, Vec<PathBuf>>,
+    ref_map: &HashMap<String, HashSet<PathBuf>>,
     anchor: &PathBuf,
     result: &mut HashSet<PathBuf>,
 ) {
@@ -60,7 +60,7 @@ pub fn collect_dependents(
 #[allow(clippy::implicit_hasher)]
 pub fn collect_dependencies(
     def_map: &HashMap<String, HashSet<PathBuf>>,
-    ref_map: &HashMap<String, Vec<PathBuf>>,
+    ref_map: &HashMap<String, HashSet<PathBuf>>,
     anchor: &PathBuf,
     result: &mut HashSet<PathBuf>,
 ) {
@@ -73,7 +73,7 @@ pub fn collect_dependencies(
 
 fn add_refs_to_result(
     symbol: &str,
-    ref_map: &HashMap<String, Vec<PathBuf>>,
+    ref_map: &HashMap<String, HashSet<PathBuf>>,
     anchor: &PathBuf,
     result: &mut HashSet<PathBuf>,
 ) {

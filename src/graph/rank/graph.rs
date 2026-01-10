@@ -9,7 +9,9 @@ use std::path::{Path, PathBuf};
 pub struct RepoGraph {
     pub(crate) tags: Vec<crate::graph::rank::tags::Tag>,
     pub(crate) defines: HashMap<String, HashSet<PathBuf>>,
-    pub(crate) references: HashMap<String, Vec<PathBuf>>,
+    /// References map: Symbol -> Set of files that reference it.
+    /// Changed from `Vec` to `HashSet` to ensure O(1) lookups and fix P06 violations.
+    pub(crate) references: HashMap<String, HashSet<PathBuf>>,
     pub(crate) ranks: HashMap<PathBuf, f64>,
 }
 
@@ -20,7 +22,7 @@ impl RepoGraph {
     pub fn new(
         tags: Vec<crate::graph::rank::tags::Tag>,
         defines: HashMap<String, HashSet<PathBuf>>,
-        references: HashMap<String, Vec<PathBuf>>,
+        references: HashMap<String, HashSet<PathBuf>>,
         ranks: HashMap<PathBuf, f64>,
     ) -> Self {
         Self { tags, defines, references, ranks }
