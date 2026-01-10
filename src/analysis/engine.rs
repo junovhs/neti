@@ -16,7 +16,7 @@ impl RuleEngine {
 
     /// Entry point for scanning files.
     #[must_use]
-    pub fn scan(&self, files: Vec<PathBuf>) -> ScanReport {
-        crate::analysis::logic::run_scan(&self.config, &files)
+    pub fn scan(&self, files: &[PathBuf]) -> ScanReport {
+        crate::analysis::logic::run_scan(&self.config, files)
     }
 }

@@ -48,7 +48,7 @@ pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChop
 
     let files = discovery::discover(&config)?;
     let engine = RuleEngine::new(config);
-    let report = engine.scan(files);
+    let report = engine.scan(&files);
 
     if json {
         reporting::print_json(&report)?;

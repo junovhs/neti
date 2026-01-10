@@ -35,7 +35,7 @@ pub fn analyze(
 
     for edge in report.failed() {
         let kind = categorize_violation(edge, couplings, report.layers());
-        let fan_in = couplings.get(&edge.to).map_or(0, |c| c.afferent());
+        let fan_in = couplings.get(&edge.to).map_or(0, Coupling::afferent);
         let suggestion = kind.suggest(edge, fan_in);
         analysis.violations.push(CategorizedViolation {
             edge: edge.clone(),

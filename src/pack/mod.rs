@@ -135,7 +135,7 @@ fn pack_files_to_output(files: &[PathBuf], ctx: &mut String, opts: &PackOptions,
 
 fn inject_violations(ctx: &mut String, files: &[PathBuf], config: &Config) -> Result<()> {
     let engine = RuleEngine::new(config.clone());
-    let report = engine.scan(files.to_vec());
+    let report = engine.scan(files);
     if !report.has_errors() { return Ok(()); }
 
     writeln!(ctx, "{}\n⚠ ACTIVE VIOLATIONS\n{}\n", "=".repeat(67), "=".repeat(67))?;

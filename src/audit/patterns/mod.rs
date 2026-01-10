@@ -40,7 +40,7 @@ pub struct CustomPattern {
 }
 
 impl CustomPattern {
-    /// Creates a new custom pattern.
+    /// Creates a new custom pattern with given name and query.
     #[must_use]
     pub fn new(name: &str, query: &str) -> Self {
         Self {
@@ -51,29 +51,51 @@ impl CustomPattern {
         }
     }
 
-    /// Sets the minimum occurrences threshold.
+    /// Sets the minimum occurrences threshold. Returns self for chaining.
     #[must_use]
     pub fn min_occurrences(mut self, n: usize) -> Self {
         self.min_occurrences = n;
         self
     }
 
-    /// Sets the description.
+    /// Sets the description. Returns self for chaining.
     #[must_use]
     pub fn description(mut self, desc: &str) -> Self {
         self.description = desc.to_string();
         self
     }
 
-    #[must_use] pub fn name(&self) -> &str { &self.name }
-    #[must_use] pub fn query(&self) -> &str { &self.query }
-    #[must_use] pub fn get_description(&self) -> &str { &self.description }
-    #[must_use] pub fn get_min_occurrences(&self) -> usize { self.min_occurrences }
-
-    /// Internal cohesion check to satisfy structural requirements.
+    /// Returns the pattern name.
     #[must_use]
-    pub fn check_cohesion(&self) -> bool {
-        !self.name.is_empty() && !self.query.is_empty() && self.min_occurrences > 0
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// Returns the query string.
+    #[must_use]
+    pub fn query(&self) -> &str {
+        &self.query
+    }
+
+    /// Returns the description.
+    #[must_use]
+    pub fn get_description(&self) -> &str {
+        &self.description
+    }
+
+    /// Returns the minimum occurrences threshold.
+    #[must_use]
+    pub fn get_min_occurrences(&self) -> usize {
+        self.min_occurrences
+    }
+
+    /// Validates pattern configuration and ensures cohesion across all fields.
+    #[must_use]
+    pub fn is_valid(&self) -> bool {
+        !self.name.is_empty() 
+            && !self.query.is_empty() 
+            && !self.description.is_empty()
+            && self.min_occurrences > 0
     }
 }
 

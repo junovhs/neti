@@ -6,6 +6,7 @@ use crate::analysis::file_analysis;
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
 use std::path::PathBuf;
 
+#[must_use]
 pub fn run_scan(config: &Config, files: &[PathBuf]) -> ScanReport {
     let start = std::time::Instant::now();
     

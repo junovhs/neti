@@ -9,7 +9,7 @@ const ITERATIONS: usize = 20;
 
 /// Computes `PageRank` scores for files in a graph.
 #[must_use]
-#[allow(clippy::cast_precision_loss)]
+#[allow(clippy::cast_precision_loss, clippy::implicit_hasher)]
 pub fn compute(
     edges: &HashMap<PathBuf, HashMap<PathBuf, usize>>,
     all_files: &HashSet<PathBuf>,
@@ -99,4 +99,3 @@ fn normalize(ranks: &mut HashMap<PathBuf, f64>) {
         }
     }
 }
-

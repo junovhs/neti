@@ -61,7 +61,7 @@ pub fn find_hub_candidates(
         .into_iter()
         .filter(|(_, importers)| importers.len() >= 2)
         .map(|(path, importers)| {
-            let fan_in = couplings.get(&path).map_or(0, |c| c.afferent());
+            let fan_in = couplings.get(&path).map_or(0, Coupling::afferent);
             HubCandidate { path, fan_in, importers }
         })
         .collect()

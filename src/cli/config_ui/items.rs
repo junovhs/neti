@@ -91,6 +91,7 @@ impl ConfigItem {
         format!("[{val}]")
     }
 
+    #[must_use]
     pub fn get_number(self, config: &Config) -> usize {
         match self {
             Self::MaxTokens => config.rules.max_file_tokens,

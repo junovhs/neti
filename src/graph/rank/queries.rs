@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use crate::graph::rank::graph::RepoGraph;
 use crate::graph::rank::tags::{Tag, TagKind};
 
+#[must_use]
 pub fn get_neighbors(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
     let mut result = HashSet::new();
     let anchor_path = anchor.to_path_buf();
@@ -12,12 +13,14 @@ pub fn get_neighbors(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
     result.into_iter().collect()
 }
 
+#[must_use]
 pub fn get_ranked_files(graph: &RepoGraph) -> Vec<(PathBuf, f64)> {
     let mut ranked: Vec<_> = graph.ranks.iter().map(|(p, r)| (p.clone(), *r)).collect();
     ranked.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
     ranked
 }
 
+#[must_use]
 pub fn get_dependencies(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
     let mut result = HashSet::new();
     collect_dependencies(&graph.defines, &graph.references, &anchor.to_path_buf(), &mut result);
@@ -26,6 +29,7 @@ pub fn get_dependencies(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
     deps
 }
 
+#[must_use]
 pub fn get_dependents(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
     let mut result = HashSet::new();
     collect_dependents(&graph.defines, &graph.references, &anchor.to_path_buf(), &mut result);
@@ -34,10 +38,12 @@ pub fn get_dependents(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
     deps
 }
 
+#[must_use]
 pub fn get_graph_tags(graph: &RepoGraph) -> Vec<Tag> {
     graph.tags.iter().filter(|t| t.kind == TagKind::Def).cloned().collect()
 }
 
+#[allow(clippy::implicit_hasher)]
 pub fn collect_dependents(
     def_map: &HashMap<String, HashSet<PathBuf>>,
     ref_map: &HashMap<String, Vec<PathBuf>>,
@@ -51,6 +57,7 @@ pub fn collect_dependents(
     }
 }
 
+#[allow(clippy::implicit_hasher)]
 pub fn collect_dependencies(
     def_map: &HashMap<String, HashSet<PathBuf>>,
     ref_map: &HashMap<String, Vec<PathBuf>>,

@@ -29,7 +29,7 @@ impl CallGraph {
         &self.symbols
     }
 
-    /// Accessor for called_by (for analysis).
+    /// Accessor for `called_by` (for analysis).
     #[must_use]
     pub fn called_by(&self) -> &HashMap<Symbol, HashSet<Symbol>> {
         &self.called_by
@@ -47,13 +47,13 @@ impl CallGraph {
         &self.calls
     }
 
-    /// Accessor for entry_points (for analysis).
+    /// Accessor for `entry_points` (for analysis).
     #[must_use]
     pub fn entry_points(&self) -> &HashSet<Symbol> {
         &self.entry_points
     }
 
-    /// Accessor for public_symbols (for analysis).
+    /// Accessor for `public_symbols` (for analysis).
     #[must_use]
     pub fn public_symbols(&self) -> &HashSet<Symbol> {
         &self.public_symbols

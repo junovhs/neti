@@ -12,7 +12,10 @@ use crossterm::{
 use std::io::{stdout, Write};
 use super::editor::{ConfigEditor, EventResult, EditResult};
 
-#[must_use]
+/// Runs the editor event loop.
+///
+/// # Errors
+/// Returns error if terminal setup or event reading fails.
 pub fn run_editor(editor: &mut ConfigEditor) -> Result<Option<Config>> {
     terminal::enable_raw_mode()?;
     let result = event_loop(editor);
@@ -20,7 +23,6 @@ pub fn run_editor(editor: &mut ConfigEditor) -> Result<Option<Config>> {
     result
 }
 
-#[must_use]
 fn event_loop(editor: &mut ConfigEditor) -> Result<Option<Config>> {
      loop {
         render::draw(editor.items(), editor.selected(), editor.config())?;
@@ -39,7 +41,6 @@ fn event_loop(editor: &mut ConfigEditor) -> Result<Option<Config>> {
     }
 }
 
-#[must_use]
 fn handle_key_event(editor: &mut ConfigEditor, code: KeyCode) -> Result<EventResult> {
      match code {
         KeyCode::Up => {
@@ -61,17 +62,20 @@ fn handle_key_event(editor: &mut ConfigEditor, code: KeyCode) -> Result<EventRes
 }
 
 pub fn move_selection(editor: &mut ConfigEditor, delta: isize) {
-    let len = editor.items().len() as isize;
-    let new_pos = editor.selected() as isize + delta;
-    if new_pos >= 0 && new_pos < len {
-        #[allow(clippy::cast_sign_loss)]
-        {
-            editor.set_selected(new_pos as usize);
-        }
+    let len = editor.items().len();
+    let current = editor.selected();
+    
+    let new_pos = if delta < 0 {
+        current.saturating_sub(delta.unsigned_abs())
+    } else {
+        current.saturating_add(delta.unsigned_abs())
+    };
+    
+    if new_pos < len {
+        editor.set_selected(new_pos);
     }
 }
 
-#[must_use]
 fn edit_current(editor: &mut ConfigEditor) -> Result<()> {
      let selected = editor.selected();
     let item = editor.items()[selected];
@@ -89,7 +93,6 @@ fn edit_current(editor: &mut ConfigEditor) -> Result<()> {
     Ok(())
 }
 
-#[must_use]
 fn edit_number(editor: &ConfigEditor, item: ConfigItem) -> Result<Option<usize>> {
      let mut value = item.get_number(editor.config());
     
@@ -104,11 +107,11 @@ fn edit_number(editor: &ConfigEditor, item: ConfigItem) -> Result<Option<usize>>
     }
 }
 
-#[must_use]
 fn render_number_editor(selected: usize, value: usize) -> Result<()> {
-     execute!(
+    let row = u16::try_from(selected).unwrap_or(0) + 1;
+    execute!(
         stdout(),
-        cursor::MoveTo(40, u16::try_from(selected).unwrap_or(0) + 1),
+        cursor::MoveTo(40, row),
         Clear(ClearType::UntilNewLine),
         Print(format!("[{value}] \u{2190}\u{2192}"))
     )?;
@@ -116,7 +119,6 @@ fn render_number_editor(selected: usize, value: usize) -> Result<()> {
     Ok(())
 }
 
-#[must_use]
 fn handle_number_input(value: &mut usize) -> Result<EditResult> {
       let Event::Key(key) = event::read()? else {
         return Ok(EditResult::Continue);

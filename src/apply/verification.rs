@@ -108,7 +108,7 @@ fn run_internal_scan(cwd: &Path, silent: bool) -> Result<ScanReport> {
     let config = Config::load();
     let files = discovery::discover(&config)?;
     let engine = RuleEngine::new(config);
-    let mut report = engine.scan(files);
+    let mut report = engine.scan(&files);
     report.duration_ms = start.elapsed().as_millis();
 
     env::set_current_dir(original_cwd)?;
