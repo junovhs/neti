@@ -1,21 +1,24 @@
 # SlopChop Scan v2.0 Specification
 
 **Status:** Implementation In Progress
-**Date:** 2026-01-09  
+**Date:** 2026-01-09
 **Philosophy:** Do the hard thing first. No shortcuts. Real solutions.
 
 ---
 
 ## What We're Replacing
 
-Current `slopchop scan` checks:
-- File tokens (Atomicity Law)
-- Cyclomatic complexity
-- Nesting depth
-- Function arguments
-- `.unwrap()` / `.expect()` (Paranoia Law)
+1.  **Legacy `slopchop scan` checks:**
+    - File tokens (Atomicity Law)
+    - Cyclomatic complexity (Replacing with Cognitive)
+    - Nesting depth
+    - Function arguments
+    - `.unwrap()` / `.expect()` (Paranoia Law)
 
-**Problem:** Cyclomatic complexity is a weak predictor. Research shows Cognitive Complexity correlates more strongly with defect density and developer comprehension time. We're also missing entire bug categories.
+2.  **Legacy `slopchop audit` pattern registry:**
+    - We are deprecating the separate pattern engine in `audit` and moving high-signal idiom detection into `Scan v2`.
+
+**Problem:** Cyclomatic complexity is a weak predictor. Research shows Cognitive Complexity correlates more strongly with defect density. Furthermore, "Audit" patterns belonged in the safety/linting pipeline (Scan), not the deduplication pipeline.
 
 ---
 
@@ -27,12 +30,13 @@ Current `slopchop scan` checks:
 | Type | N/A (compiler) | N/A |
 | Logic | ❌ None | Pattern flags + mutation testing |
 | Off-by-one | ❌ None | Boundary pattern detection |
-| State | ❌ None | Metrics + AST patterns |
-| Concurrency | ❌ None | Async race patterns |
+| State | ✅ Partial | Metrics + AST patterns |
+| Concurrency | ✅ Partial | Async race patterns |
 | Resource | ❌ None | Leak patterns |
 | Security | ❌ None | Injection + secrets |
 | Performance | ❌ None | Loop anti-patterns |
 | Semantic | ❌ None | Name/behavior alignment |
+| Idiomatic | ❌ None | Rust-specific best practices (migrated from Audit) |
 
 ---
 
@@ -50,18 +54,6 @@ These are computed values with thresholds.
 | **AHF** | < 60% | State | [DONE] State is leaking |
 | **CBO** | > 9 | State | [DONE] Defect predictor |
 | **SFOUT** | > 7 | Performance | [DONE] Architectural bottleneck |
-
-### Metric Definitions
-
-**Cognitive Complexity:** Measures mental effort to understand code. Penalizes nesting more heavily than sequential branches. Shorthand notation (ternary) penalized less than full if/else.
-
-**LCOM4:** Model class as undirected graph. Nodes = methods. Edge exists if methods share a field or one calls the other. LCOM4 = number of connected components. Value > 1 means the class is doing multiple unrelated things.
-
-**AHF (Attribute Hiding Factor):** Percentage of fields that are private. `AHF = private_fields / total_fields × 100`. Low AHF means state is accessible from outside, increasing coupling.
-
-**CBO (Coupling Between Objects):** Count of distinct classes/modules this class depends on or is depended upon by. High CBO predicts defects.
-
-**SFOUT (Structural Fan-Out):** Number of outgoing calls/dependencies from a function or module. High fan-out = bottleneck, ripple effects on change.
 
 ---
 
@@ -121,6 +113,7 @@ Boolean checks. Either the pattern exists or it doesn't.
 | P04 | Nested iteration | `for x { for y { if x == y } }` | Same |
 | P05 | Repeated linear search | Multiple `.find()` same collection | Same |
 | P06 | Linear search in loop | `.contains()` in loop | `.includes()` in loop |
+| P07 | String abuse | `.to_string()` on literal/primitive | N/A |
 
 ### Semantic
 
@@ -132,6 +125,15 @@ Boolean checks. Either the pattern exists or it doesn't.
 | M04 | Name/return mismatch | `is_*` returns non-bool | Same |
 | M05 | Side-effecting calculation | `calculate_*` / `compute_*` that writes state | Same |
 
+### Idiomatic (Merged from Audit)
+
+| ID | Pattern | Rust | TypeScript |
+|----|---------|------|------------|
+| I01 | Manual From impl | `impl From` manually (use `thiserror`/`derive`) | N/A |
+| I02 | Match duplication | Identical bodies in `match` arms | Same |
+| I03 | If-Let Pattern | `if let Some(x) = y` (use `map`/`?` if simple) | N/A |
+| I04 | Manual Display | `impl Display` manually (use `thiserror`/`derive`) | N/A |
+
 ### Logic & Off-by-One
 
 | ID | Pattern | Rust | TypeScript |
@@ -139,117 +141,6 @@ Boolean checks. Either the pattern exists or it doesn't.
 | L01 | Untested public | `pub fn` without `#[test]` nearby | `export` without `.test.ts` |
 | L02 | Boundary ambiguity | `..` vs `..=` near loop | `<` vs `<=` with `.length` |
 | L03 | Unchecked first access | `.first()` / `[0]` without len check | Same |
-
----
-
-## Work Breakdown
-
-Ordered by difficulty. Hardest first.
-
-### Cross-File Analysis
-
-**LCOM4**
-- Build method-field graph per class/struct/impl
-- Requires: parsing all methods, tracking field access, building adjacency
-- Count connected components
-- Challenge: Rust's impl blocks separate from struct definition
-
-**AHF**
-- Track visibility of all fields across codebase
-- Requires: full project scan, visibility modifiers
-- Calculate percentage private
-
-**CBO**
-- Build dependency graph between modules
-- Count edges per node
-- Requires: import/use resolution, cross-file
-
-**N+1 Detection**
-- Must know what constitutes a "database call"
-- Requires: configurable sink list or heuristics (function names, return types)
-- Track if called inside loop with iterator-derived param
-
-### Async Analysis
-
-**Async Race Gap (C01)**
-- Parse async function body
-- Track variable reads before await
-- Check if same variable written after await
-- Challenge: control flow branches
-
-**Floating Promise (C02)**
-- Find async call expressions
-- Check if result is awaited, assigned, or returned
-- Relatively straightforward AST check
-
-**Check-Then-Act (C05)**
-- Find if-statement checking variable
-- Scan body for await
-- Check if same variable mutated after await
-
-**Lock Across Await (C03)**
-- Track MutexGuard bindings
-- Check if binding scope spans an await
-- Requires: lifetime-like analysis
-
-### Listener/Subscription Tracking
-
-**Unbalanced Listener (R01)**
-- Find addEventListener calls
-- Track the handler reference
-- Scan for removeEventListener with same handler
-- Challenge: handler might be inline vs named
-
-**Floating Subscription (R02)**
-- Find .subscribe() calls
-- Check for takeUntil pipe or stored return value
-- Angular/RxJS specific patterns
-
-### Single-File Metrics
-
-**Cognitive Complexity**
-- Traverse AST
-- Increment for: if, else, switch, for, while, catch, &&, ||, nested breaks
-- Apply nesting multiplier
-- Well-documented algorithm (SonarSource paper)
-
-**SFOUT**
-- Count distinct call targets in function
-- Count distinct imports/uses in module
-- Straightforward counting
-
-### Pattern Matching
-
-**State Patterns (S01-S05)**
-- S01/S02: Check declaration scope + mutability modifier
-- S03: Check type annotation for container types
-- S04: Build scope, check identifier resolution
-- S05: Check assignment target is parameter access
-
-**Security Patterns (X01-X05)**
-- X01/X02: Pattern match dangerous function + string interpolation
-- X03: Regex on const declarations with high-entropy strings
-- X04: Find JSON.parse not in try block
-- X05: Find bracket notation with non-literal key
-
-**Performance Patterns (P01-P06)**
-- Find loop constructs
-- Check body for specific patterns (clone, new, etc.)
-- Mostly straightforward AST queries
-
-**Semantic Patterns (M01-M05)**
-- M01: Check for doc comment before pub/export
-- M02: Collect params, scan body for reads
-- M03-M05: Parse function name, check body/return type
-
-**Resource Patterns (R03-R07)**
-- Loop body checks similar to performance
-- R07: Track BufWriter binding, check for flush before scope end
-
-**Logic Patterns (L01-L03)**
-- L01: Scan for test attributes/files
-- L02: Flag comparison operators near loop bounds
-- L03: Check for length/is_empty guard before index
 
 ---
 
@@ -276,57 +167,15 @@ security = true
 performance = true
 semantic = true
 logic = true
+idiomatic = true
 
 # Per-pattern overrides
 [scan.patterns]
 S01 = "error"    # Global mutable
 S02 = "warn"     # Exported mutable
 C02 = "error"    # Floating promise
-X03 = "error"    # Hardcoded secret
-M01 = "warn"     # Missing doc
+I01 = "warn"     # Manual From impl
 ```
-
----
-
-## Output Format
-
-```
-$ slopchop scan
-
-src/lib.rs
-  ├─ [S01] Global mutable state: `static mut COUNTER` (line 42)
-  ├─ [P01] Clone in loop: `.clone()` inside `for` (line 87)
-  └─ [M01] Missing doc: `pub fn process_data` (line 112)
-
-src/handlers.rs
-  ├─ [LCOM4] Class cohesion: 3 connected components (should be 1)
-  ├─ [CC] Cognitive complexity: 23 (max 15) in `handle_request`
-  └─ [X01] SQL concatenation: `format!("SELECT...")` (line 56)
-
-src/utils.ts
-  ├─ [C02] Floating promise: async call without await (line 34)
-  ├─ [R01] Unbalanced listener: addEventListener without remove (line 78)
-  └─ [S04] Impure function: reads `config` not passed as param (line 91)
-
-Summary:
-  Errors: 4
-  Warnings: 5
-  Files scanned: 23
-```
-
----
-
-## What This Replaces
-
-| Old | New |
-|-----|-----|
-| Cyclomatic complexity | Cognitive complexity |
-| Just counting metrics | Metrics + 35 AST patterns |
-| Rust-focused | Rust + TypeScript parity |
-| Single-file only | Cross-file analysis for coupling |
-| No security checks | Injection, secrets, pollution |
-| No concurrency checks | Async race patterns |
-| No semantic checks | Name/behavior alignment |
 
 ---
 

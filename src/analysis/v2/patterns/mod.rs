@@ -5,6 +5,7 @@ pub mod state;
 pub mod concurrency;
 pub mod concurrency_lock;
 pub mod concurrency_sync;
+pub mod idiomatic;
 
 use crate::types::Violation;
 use crate::lang::Lang;
@@ -27,6 +28,7 @@ pub fn detect_all(path: &Path, source: &str) -> Vec<Violation> {
 
     violations.extend(state::detect(source, root));
     violations.extend(concurrency::detect(source, root));
+    violations.extend(idiomatic::detect(source, root));
 
     violations
 }
