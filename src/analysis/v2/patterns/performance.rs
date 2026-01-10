@@ -30,17 +30,14 @@ fn should_skip_perf(path: &Path) -> bool {
     
     // 2. Skip Self-Scanning Meta-Noise
     // The analysis engine allocates strings to report violations.
-    if s.contains("analysis/") || s.contains("apply/") {
+    // This is "Business Logic" for a linter, not a performance bug.
+    if s.contains("analysis/") {
         return true;
     }
 
-    // 3. Skip Graph Engine (Known Tech Debt - TODO: Fix later)
-    // These are hot paths but fixing them requires architectural changes.
-    if s.contains("graph/rank/") || s.contains("graph/locality/") {
-        return true;
-    }
-
-    // 4. Skip Audit/Pack (Batch processing tools)
+    // 3. Skip Batch Tools
+    // Audit/Pack/Signatures are one-off batch processes.
+    // We prioritize the Core (Graph/Apply) and Discovery.
     if s.contains("audit/") || s.contains("pack/") || s.contains("signatures/") {
         return true;
     }
@@ -48,6 +45,9 @@ fn should_skip_perf(path: &Path) -> bool {
     if s.ends_with("main.rs") {
         return true;
     }
+
+    // NOTE: `graph/` and `apply/` are NOT skipped. 
+    // They are the Core Runtime. Hotspots there matter.
 
     false
 }
