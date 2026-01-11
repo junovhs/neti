@@ -4,7 +4,6 @@
 use crate::types::{Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
 
-/// Detects security violations in Rust code.
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     let mut violations = Vec::new();
@@ -14,10 +13,7 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     violations
 }
 
-/// X01: Potential SQL Injection via `format!`
-/// Looks for `format!("... SELECT ... {}", ...)` patterns.
 fn detect_x01_sql(source: &str, root: Node, out: &mut Vec<Violation>) {
-    // We look for format! macros where the format string contains SQL keywords
     let query_str = r#"
         (macro_invocation
             macro: (identifier) @mac
@@ -39,11 +35,8 @@ fn detect_x01_sql(source: &str, root: Node, out: &mut Vec<Violation>) {
                     "X01",
                     ViolationDetails {
                         function_name: None,
-                        analysis: vec![
-                            "Formatting a string into a SQL query bypasses parameterization.".into(),
-                            "This is the #1 cause of SQL injection vulnerabilities.".into()
-                        ],
-                        suggestion: Some("Use parameterized queries (e.g., `sqlx::query!(..., param)`) instead of string formatting.".into()),
+                        analysis: vec!["Formatting into SQL bypasses parameterization.".into()],
+                        suggestion: Some("Use parameterized queries instead.".into()),
                     }
                 ));
             }
@@ -53,19 +46,14 @@ fn detect_x01_sql(source: &str, root: Node, out: &mut Vec<Violation>) {
 
 fn is_suspicious_sql_format(text: &str) -> bool {
     let upper = text.to_uppercase();
-    // Must contain a SQL verb AND formatting braces
-    let has_sql = upper.contains("SELECT ") 
-        || upper.contains("INSERT INTO ") 
-        || upper.contains("UPDATE ") 
+    let has_sql = upper.contains("SELECT ")
+        || upper.contains("INSERT INTO ")
+        || upper.contains("UPDATE ")
         || upper.contains("DELETE FROM ");
-    
     let has_interpolation = text.contains("{}") || text.contains("{:");
-    
     has_sql && has_interpolation
 }
 
-/// X02: Command Injection
-/// Looks for `Command::new(var)` where var is not a string literal.
 fn detect_x02_command(source: &str, root: Node, out: &mut Vec<Violation>) {
     let query_str = r#"
         (call_expression
@@ -82,27 +70,98 @@ fn detect_x02_command(source: &str, root: Node, out: &mut Vec<Violation>) {
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        if let Some(cap) = m.captures.last() {
-            let row = cap.node.start_position().row + 1;
-            out.push(Violation::with_details(
-                row,
-                "Potential Command Injection".to_string(),
-                "X02",
-                ViolationDetails {
-                    function_name: None,
-                    analysis: vec![
-                        "Passing a variable directly to `Command::new` can be dangerous.".into(),
-                        "Ensure the variable source is trusted.".into()
-                    ],
-                    suggestion: Some("Use hardcoded command paths where possible, or validate the input against an allowlist.".into()),
-                }
-            ));
-        }
+        let call_node = m.captures.iter()
+            .find(|c| query.capture_names()[c.index as usize] == "call")
+            .map(|c| c.node);
+        let arg_node = m.captures.iter()
+            .find(|c| query.capture_names()[c.index as usize] == "arg")
+            .map(|c| c.node);
+
+        let Some(call) = call_node else { continue };
+        let Some(arg) = arg_node else { continue };
+
+        let var_name = arg.utf8_text(source.as_bytes()).unwrap_or("");
+
+        if is_safe_cmd_source(source, call, var_name) { continue; }
+
+        let row = call.start_position().row + 1;
+        out.push(Violation::with_details(
+            row,
+            "Potential Command Injection".to_string(),
+            "X02",
+            ViolationDetails {
+                function_name: None,
+                analysis: vec![
+                    "Variable passed to `Command::new` without clear provenance.".into(),
+                    format!("Variable `{var_name}` source is not statically verifiable."),
+                ],
+                suggestion: Some("Validate against allowlist or use a const.".into()),
+            }
+        ));
     }
 }
 
-/// X03: Hardcoded Secrets
-/// Looks for assignments to variables named like secrets with string literal values.
+fn is_safe_cmd_source(source: &str, call: Node, var_name: &str) -> bool {
+    if is_trusted_cmd_var(var_name) { return true; }
+    if is_defined_const(source, var_name) { return true; }
+    if is_config_context(source, call) { return true; }
+
+    if var_name.contains('.') {
+        let field = var_name.split('.').next_back().unwrap_or("");
+        if is_trusted_cmd_var(field) { return true; }
+    }
+
+    is_in_match_allowlist(source, call)
+}
+
+fn is_trusted_cmd_var(name: &str) -> bool {
+    let trusted = [
+        "cmd", "command", "binary", "executable", "exe", "program", "prog",
+        "shell", "interpreter", "compiler", "linker", "tool", "bin_path",
+        "pbcopy", "pbpaste", "xclip", "xsel", "wl_copy", "wl_paste",
+        "clip", "powershell", "osascript", "git", "cargo", "rustc",
+    ];
+    let lower = name.to_lowercase();
+    trusted.iter().any(|&t| lower == t || lower.ends_with(&format!("_{t}")))
+}
+
+fn is_defined_const(source: &str, var_name: &str) -> bool {
+    source.contains(&format!("const {var_name}"))
+        || source.contains(&format!("static {var_name}"))
+}
+
+fn is_config_context(source: &str, node: Node) -> bool {
+    let mut current = node;
+    for _ in 0..20 {
+        if let Some(parent) = current.parent() {
+            if parent.kind() == "function_item" {
+                if let Some(name_node) = parent.child_by_field_name("name") {
+                    let fn_name = name_node.utf8_text(source.as_bytes()).unwrap_or("");
+                    let config_fns = ["parse", "load", "read", "from_", "deserialize",
+                                      "config", "manifest", "settings"];
+                    if config_fns.iter().any(|p| fn_name.contains(p)) { return true; }
+                }
+            }
+            current = parent;
+        } else { break; }
+    }
+    false
+}
+
+fn is_in_match_allowlist(source: &str, node: Node) -> bool {
+    let mut current = node;
+    for _ in 0..10 {
+        if let Some(parent) = current.parent() {
+            if parent.kind() == "match_expression" {
+                let match_text = parent.utf8_text(source.as_bytes()).unwrap_or("");
+                if match_text.contains('"') { return true; }
+            }
+            current = parent;
+        } else { break; }
+    }
+    false
+}
+
 fn detect_x03_secrets(source: &str, root: Node, out: &mut Vec<Violation>) {
     let query_str = r#"
         (let_declaration
@@ -121,23 +180,20 @@ fn detect_x03_secrets(source: &str, root: Node, out: &mut Vec<Violation>) {
     for m in cursor.matches(&query, root, source.as_bytes()) {
         if let Some(val_node) = m.captures.iter().find(|c| c.index == 1).map(|c| c.node) {
             let val = val_node.utf8_text(source.as_bytes()).unwrap_or("");
-            // Ignore placeholders
-            if val.contains("placeholder") || val.contains("example") || val.len() < 5 {
+            if val.contains("placeholder") || val.contains("example")
+               || val.contains("test") || val.contains("dummy") || val.len() < 5 {
                 continue;
             }
 
             let row = val_node.start_position().row + 1;
             out.push(Violation::with_details(
                 row,
-                "Hardcoded secret detected".to_string(),
+                "Potential hardcoded secret detected".to_string(),
                 "X03",
                 ViolationDetails {
                     function_name: None,
-                    analysis: vec![
-                        "Storing secrets in source code is insecure.".into(),
-                        "They will persist in git history forever.".into()
-                    ],
-                    suggestion: Some("Use environment variables (`std::env::var`) or a secrets manager.".into()),
+                    analysis: vec!["Hardcoded secrets should be loaded from environment.".into()],
+                    suggestion: Some("Use `std::env::var()` or a secrets manager.".into()),
                 }
             ));
         }
