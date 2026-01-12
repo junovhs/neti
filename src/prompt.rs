@@ -48,7 +48,8 @@ impl PromptGenerator {
 
 fn build_system_prompt(config: &RuleConfig) -> String {
     let tokens = config.max_file_tokens;
-    let complexity = config.max_cyclomatic_complexity;
+    // UPDATED: Renamed field
+    let complexity = config.max_cognitive_complexity;
     let depth = config.max_nesting_depth;
     let args = config.max_function_args;
     let sigil = "XSC7XSC";
@@ -62,13 +63,13 @@ THE LAWS:
 | Metric | Limit | Catches |
 |--------|-------|---------|
 | File Tokens | < {tokens} | God files |
-| Cognitive Complexity | ≤ {complexity} | Tangled logic |
-| Nesting Depth | ≤ {depth} | Deep conditionals |
-| Function Args | ≤ {args} | Bloated signatures |
+| Cognitive Complexity | � {complexity} | Tangled logic |
+| Nesting Depth | � {depth} | Deep conditionals |
+| Function Args | � {args} | Bloated signatures |
 | LCOM4 | = 1 | Incohesive classes (split if > 1) |
-| AHF | ≥ 60% | Leaking state (make fields private) |
-| CBO | ≤ 9 | Tight coupling (reduce dependencies) |
-| SFOUT | ≤ 7 | High fan-out (delegate to helpers) |
+| AHF | � 60% | Leaking state (make fields private) |
+| CBO | � 9 | Tight coupling (reduce dependencies) |
+| SFOUT | � 7 | High fan-out (delegate to helpers) |
 
 LAW OF PARANOIA: No .unwrap() or .expect(). Use Result types.
 
@@ -120,12 +121,12 @@ fn build_reminder(config: &RuleConfig) -> String {
     let sigil = "XSC7XSC";
     format!(
         r"SLOPCHOP v{PROTOCOL_VERSION} CONSTRAINTS:
-- Tokens < {}, CC ≤ {}, Depth ≤ {}, Args ≤ {}
-- LCOM4 = 1, AHF ≥ 60%, CBO ≤ 9, SFOUT ≤ 7
+- Tokens < {}, CC � {}, Depth � {}, Args � {}
+- LCOM4 = 1, AHF � 60%, CBO � 9, SFOUT � 7
 - Use {sigil} Sigil Protocol (PLAN, MANIFEST, FILE, PATCH)
 - Run 'slopchop check' and fix all violations",
         config.max_file_tokens,
-        config.max_cyclomatic_complexity,
+        config.max_cognitive_complexity, // UPDATED
         config.max_nesting_depth,
         config.max_function_args,
     )
@@ -136,8 +137,8 @@ fn generate_short_text(config: &RuleConfig) -> String {
         "SlopChop v{}: <{}tok, CC{}, D{}, A{}> Use XSC7XSC protocol.",
         PROTOCOL_VERSION,
         config.max_file_tokens,
-        config.max_cyclomatic_complexity,
+        config.max_cognitive_complexity, // UPDATED
         config.max_nesting_depth,
         config.max_function_args,
     )
-}
+}

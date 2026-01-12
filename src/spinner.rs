@@ -12,6 +12,7 @@ const INTERVAL: u64 = 80; // Speed up animation
 #[derive(Clone)]
 pub struct Spinner {
     running: Arc<AtomicBool>,
+    /// Thread-safe label for the spinner animation.
     label: Arc<Mutex<String>>,
     // Use Arc<Mutex<Option>> for handle to allow Clone, though only the creator can join
     handle: Arc<Mutex<Option<thread::JoinHandle<()>>>>,

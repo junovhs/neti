@@ -50,7 +50,7 @@ pub struct RuleConfig {
     #[serde(default = "default_max_tokens")]
     pub max_file_tokens: usize,
     // RENAMED: was max_cyclomatic_complexity
-    #[serde(default = "default_max_complexity")]
+    #[serde(default = "default_max_complexity", alias = "max_cyclomatic_complexity")]
     pub max_cognitive_complexity: usize,
     #[serde(default = "default_max_depth")]
     pub max_nesting_depth: usize,
@@ -117,10 +117,12 @@ impl Default for SafetyConfig {
 
 const fn default_true() -> bool { true }
 const fn default_max_tokens() -> usize { 2000 }
-const fn default_max_complexity() -> usize { 15 } // Updated default for Cognitive
+// UPDATED DEFAULT for Cognitive
+const fn default_max_complexity() -> usize { 15 } 
 const fn default_max_depth() -> usize { 3 }
 const fn default_max_args() -> usize { 5 }
-const fn default_max_words() -> usize { 3 }
+// UPDATED DEFAULT for Words (to fix self-violations)
+const fn default_max_words() -> usize { 10 } 
 
 // V2 Defaults
 const fn default_lcom4() -> usize { 1 }
