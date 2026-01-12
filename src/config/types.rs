@@ -57,6 +57,17 @@ pub struct RuleConfig {
     pub max_function_args: usize,
     #[serde(default = "default_max_words")]
     pub max_function_words: usize,
+
+    // Scan v2 Metrics
+    #[serde(default = "default_lcom4")]
+    pub max_lcom4: usize,
+    #[serde(default = "default_ahf")]
+    pub min_ahf: f64,
+    #[serde(default = "default_cbo")]
+    pub max_cbo: usize,
+    #[serde(default = "default_sfout")]
+    pub max_sfout: usize,
+
     #[serde(default)]
     pub ignore_naming_on: Vec<String>,
     #[serde(default = "default_ignore_tokens")]
@@ -75,6 +86,12 @@ impl Default for RuleConfig {
             max_nesting_depth: default_max_depth(),
             max_function_args: default_max_args(),
             max_function_words: default_max_words(),
+
+            max_lcom4: default_lcom4(),
+            min_ahf: default_ahf(),
+            max_cbo: default_cbo(),
+            max_sfout: default_sfout(),
+
             ignore_naming_on: Vec::new(),
             ignore_tokens_on: default_ignore_tokens(),
             safety: SafetyConfig::default(),
@@ -103,6 +120,12 @@ const fn default_max_complexity() -> usize { 8 }
 const fn default_max_depth() -> usize { 3 }
 const fn default_max_args() -> usize { 5 }
 const fn default_max_words() -> usize { 3 }
+
+// V2 Defaults
+const fn default_lcom4() -> usize { 1 }
+const fn default_ahf() -> f64 { 60.0 }
+const fn default_cbo() -> usize { 9 }
+const fn default_sfout() -> usize { 7 }
 
 fn default_ignore_tokens() -> Vec<String> {
     vec!["Cargo.lock".into(), "package-lock.json".into(), "README.md".into()]

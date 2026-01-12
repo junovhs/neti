@@ -109,7 +109,7 @@ fn edit_number(editor: &ConfigEditor, item: ConfigItem) -> Result<Option<usize>>
 }
 
 fn render_number_editor(selected: usize, value: usize) -> Result<()> {
-    let row = u16::try_from(selected).unwrap_or(0) + 1;
+    let row = u16::try_from(selected).unwrap_or(0) + 2; // +2 to account for header offset
     execute!(
         stdout(),
         cursor::MoveTo(40, row),
@@ -134,7 +134,7 @@ fn handle_number_input(value: &mut usize) -> Result<EditResult> {
 
 fn process_number_key(code: KeyCode, value: &mut usize) -> EditResult {
     match code {
-        KeyCode::Left if *value > 1 => {
+        KeyCode::Left if *value > 0 => { // Allow 0 for some metrics
             *value -= 1;
             EditResult::Continue
         }

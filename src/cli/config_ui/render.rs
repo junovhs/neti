@@ -14,14 +14,20 @@ use std::io::{stdout, Write};
 /// Returns error if terminal manipulation fails.
 pub fn draw(items: &[ConfigItem], selected: usize, config: &Config) -> Result<()> {
     let mut stdout = stdout();
+    
+    // Ensure we start at top-left and clear screen
     execute!(stdout, Clear(ClearType::All), cursor::MoveTo(0, 0))?;
     
     draw_header(&mut stdout)?;
     
     for (i, item) in items.iter().enumerate() {
+        let row = u16::try_from(i + 2).unwrap_or(u16::MAX);
+        execute!(stdout, cursor::MoveTo(0, row))?;
         draw_item(&mut stdout, *item, i == selected, config)?;
     }
     
+    let footer_row = u16::try_from(items.len() + 3).unwrap_or(u16::MAX);
+    execute!(stdout, cursor::MoveTo(0, footer_row))?;
     draw_footer(&mut stdout)?;
     
     stdout.flush()?;
@@ -32,7 +38,7 @@ fn draw_header(stdout: &mut std::io::Stdout) -> Result<()> {
     execute!(
         stdout,
         SetForegroundColor(Color::Cyan),
-        Print("┌─ SlopChop Configuration ──────────────────┐\n"),
+        Print("┌─ SlopChop Configuration ──────────────────"),
         ResetColor
     )?;
     Ok(())
@@ -47,7 +53,10 @@ fn draw_item(stdout: &mut std::io::Stdout, item: ConfigItem, is_selected: bool, 
         execute!(stdout, SetForegroundColor(Color::Yellow))?;
     }
     
-    writeln!(stdout, "{prefix} {label:<25} {value}")?;
+    // Explicit \r\n to ensure cursor returns to start of line if wrapped
+    // But since we use MoveTo, just print is enough.
+    // However, explicit `\r` is safer in raw mode.
+    write!(stdout, "{prefix} {label:<25} {value}")?;
     
     if is_selected {
         execute!(stdout, ResetColor)?;
@@ -58,10 +67,10 @@ fn draw_item(stdout: &mut std::io::Stdout, item: ConfigItem, is_selected: bool, 
 fn draw_footer(stdout: &mut std::io::Stdout) -> Result<()> {
     execute!(
         stdout,
-        Print("│                                           │\n"),
-        Print("│  [S]ave  [Esc] Cancel                     │\n"),
+        Print("│\r\n"),
+        Print("│  [S]ave  [Esc] Cancel\r\n"),
         SetForegroundColor(Color::Cyan),
-        Print("└───────────────────────────────────────────┘\n"),
+        Print("└───────────────────────────────────────────"),
         ResetColor
     )?;
     Ok(())

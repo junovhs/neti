@@ -7,6 +7,11 @@ pub enum ConfigItem {
     MaxComplexity,
     MaxNesting,
     MaxArgs,
+    MaxWords,
+    MaxLcom4,
+    MinAhf,
+    MaxCbo,
+    MaxSfout,
     AutoCopy,
     WriteFixPacket,
     RequirePlan,
@@ -17,12 +22,17 @@ pub enum ConfigItem {
 
 impl ConfigItem {
     #[must_use]
-    pub const fn all() -> [Self; 10] {
-        [
+    pub fn all() -> Vec<Self> {
+        vec![
             Self::MaxTokens,
             Self::MaxComplexity,
             Self::MaxNesting,
             Self::MaxArgs,
+            Self::MaxWords,
+            Self::MaxLcom4,
+            Self::MinAhf,
+            Self::MaxCbo,
+            Self::MaxSfout,
             Self::AutoCopy,
             Self::WriteFixPacket,
             Self::RequirePlan,
@@ -33,21 +43,31 @@ impl ConfigItem {
     }
     
     #[must_use]
-    #[allow(clippy::indexing_slicing)] // Safe: LABELS array matches enum variant count
-    pub const fn label(self) -> &'static str {
-        const LABELS: [&str; 10] = [
-            "Max file tokens",
-            "Max complexity",
-            "Max nesting",
-            "Max args",
-            "Auto-copy to clipboard",
-            "Write fix packet to file",
-            "Require PLAN block",
-            "Auto-promote on green",
-            "Locality mode",
-            "Locality max distance",
-        ];
-        LABELS[self as usize]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::MaxTokens => "Max file tokens",
+            Self::MaxComplexity => "Max cognitive complexity",
+            Self::MaxNesting => "Max nesting depth",
+            Self::MaxArgs => "Max function args",
+            Self::MaxWords => "Max function words",
+            Self::MaxLcom4 => "Max LCOM4",
+            Self::MinAhf => "Min AHF (%)",
+            Self::MaxCbo => "Max CBO",
+            Self::MaxSfout => "Max SFOUT",
+            _ => self.label_toggles(),
+        }
+    }
+
+    fn label_toggles(self) -> &'static str {
+        match self {
+            Self::AutoCopy => "Auto-copy to clipboard",
+            Self::WriteFixPacket => "Write fix packet to file",
+            Self::RequirePlan => "Require PLAN block",
+            Self::AutoPromote => "Auto-promote on green",
+            Self::LocalityMode => "Locality mode",
+            Self::LocalityMaxDistance => "Locality max distance",
+            _ => "Unknown",
+        }
     }
 
     #[must_use]
@@ -93,23 +113,36 @@ impl ConfigItem {
     }
 
     #[must_use]
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     pub fn get_number(self, config: &Config) -> usize {
         match self {
             Self::MaxTokens => config.rules.max_file_tokens,
             Self::MaxComplexity => config.rules.max_cyclomatic_complexity,
             Self::MaxNesting => config.rules.max_nesting_depth,
             Self::MaxArgs => config.rules.max_function_args,
+            Self::MaxWords => config.rules.max_function_words,
+            Self::MaxLcom4 => config.rules.max_lcom4,
+            // AHF is f64 percentage 0-100. Casting to usize for simple editing is acceptable for TUI.
+            Self::MinAhf => config.rules.min_ahf as usize,
+            Self::MaxCbo => config.rules.max_cbo,
+            Self::MaxSfout => config.rules.max_sfout,
             Self::LocalityMaxDistance => config.rules.locality.max_distance,
             _ => 0,
         }
     }
 
+    #[allow(clippy::cast_precision_loss)]
     pub fn set_number(self, config: &mut Config, value: usize) {
         match self {
             Self::MaxTokens => config.rules.max_file_tokens = value,
             Self::MaxComplexity => config.rules.max_cyclomatic_complexity = value,
             Self::MaxNesting => config.rules.max_nesting_depth = value,
             Self::MaxArgs => config.rules.max_function_args = value,
+            Self::MaxWords => config.rules.max_function_words = value,
+            Self::MaxLcom4 => config.rules.max_lcom4 = value,
+            Self::MinAhf => config.rules.min_ahf = value as f64,
+            Self::MaxCbo => config.rules.max_cbo = value,
+            Self::MaxSfout => config.rules.max_sfout = value,
             Self::LocalityMaxDistance => config.rules.locality.max_distance = value,
             _ => {}
         }
