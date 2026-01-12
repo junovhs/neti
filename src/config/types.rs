@@ -49,8 +49,9 @@ fn default_fix_packet_path() -> String { "slopchop-fixme.txt".to_string() }
 pub struct RuleConfig {
     #[serde(default = "default_max_tokens")]
     pub max_file_tokens: usize,
+    // RENAMED: was max_cyclomatic_complexity
     #[serde(default = "default_max_complexity")]
-    pub max_cyclomatic_complexity: usize,
+    pub max_cognitive_complexity: usize,
     #[serde(default = "default_max_depth")]
     pub max_nesting_depth: usize,
     #[serde(default = "default_max_args")]
@@ -82,7 +83,7 @@ impl Default for RuleConfig {
     fn default() -> Self {
         Self {
             max_file_tokens: default_max_tokens(),
-            max_cyclomatic_complexity: default_max_complexity(),
+            max_cognitive_complexity: default_max_complexity(),
             max_nesting_depth: default_max_depth(),
             max_function_args: default_max_args(),
             max_function_words: default_max_words(),
@@ -116,7 +117,7 @@ impl Default for SafetyConfig {
 
 const fn default_true() -> bool { true }
 const fn default_max_tokens() -> usize { 2000 }
-const fn default_max_complexity() -> usize { 8 }
+const fn default_max_complexity() -> usize { 15 } // Updated default for Cognitive
 const fn default_max_depth() -> usize { 3 }
 const fn default_max_args() -> usize { 5 }
 const fn default_max_words() -> usize { 3 }
@@ -167,4 +168,4 @@ pub struct Config {
     pub rules: RuleConfig,
     pub preferences: Preferences,
     pub commands: HashMap<String, Vec<String>>,
-}
+}

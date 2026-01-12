@@ -6,7 +6,7 @@ use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEventKind},
     execute,
-    style::Print,
+    style::{Print, Color, SetForegroundColor, ResetColor},
     terminal::{self, Clear, ClearType},
 };
 use std::io::{stdout, Write};
@@ -76,7 +76,7 @@ pub fn move_selection(editor: &mut ConfigEditor, delta: isize) {
     }
 }
 
-#[allow(clippy::indexing_slicing)] // Guarded: selected is always < items.len() via move_selection bounds
+#[allow(clippy::indexing_slicing)] // Guarded: selected is always < items.len()
 fn edit_current(editor: &mut ConfigEditor) -> Result<()> {
      let selected = editor.selected();
     let item = editor.items()[selected];
@@ -110,13 +110,18 @@ fn edit_number(editor: &ConfigEditor, item: ConfigItem) -> Result<Option<usize>>
 
 fn render_number_editor(selected: usize, value: usize) -> Result<()> {
     let row = u16::try_from(selected).unwrap_or(0) + 2; // +2 to account for header offset
+    let mut stdout = stdout();
+    
     execute!(
-        stdout(),
+        stdout,
         cursor::MoveTo(40, row),
         Clear(ClearType::UntilNewLine),
-        Print(format!("[{value}] \u{2190}\u{2192}"))
+        SetForegroundColor(Color::Green),
+        Print(format!("[{value}]")),
+        ResetColor,
+        Print(" \u{2190}\u{2192} (adj) \u{2191}\u{2193} (jump)")
     )?;
-    stdout().flush()?;
+    stdout.flush()?;
     Ok(())
 }
 
@@ -132,18 +137,34 @@ fn handle_number_input(value: &mut usize) -> Result<EditResult> {
     Ok(process_number_key(key.code, value))
 }
 
+// ADAPTIVE STEPPING LOGIC
 fn process_number_key(code: KeyCode, value: &mut usize) -> EditResult {
+    let small_step = 1;
+    let big_step = if *value >= 1000 { 500 } else if *value >= 100 { 100 } else { 10 };
+
     match code {
-        KeyCode::Left if *value > 0 => { // Allow 0 for some metrics
-            *value -= 1;
+        // Fine adjustment
+        KeyCode::Left => {
+            *value = value.saturating_sub(small_step);
             EditResult::Continue
         }
         KeyCode::Right => {
-            *value += 1;
+            *value = value.saturating_add(small_step);
             EditResult::Continue
         }
+        
+        // Coarse adjustment
+        KeyCode::Down => {
+            *value = value.saturating_sub(big_step);
+            EditResult::Continue
+        }
+        KeyCode::Up => {
+            *value = value.saturating_add(big_step);
+            EditResult::Continue
+        }
+        
         KeyCode::Enter => EditResult::Commit(*value),
         KeyCode::Esc => EditResult::Cancel,
         _ => EditResult::Continue
     }
-}
+}

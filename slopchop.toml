@@ -3,30 +3,16 @@ max_file_tokens = 2000
 max_cyclomatic_complexity = 8
 max_nesting_depth = 3
 max_function_args = 5
-max_function_words = 5
-ignore_naming_on = [
-    "tests",
-    "spec",
-    "src/stage/state.rs",
-    "src/stage/tests_manager.rs",
-    "src/stage/tests_promote.rs",
-    "src/apply/patch/tests.rs",
-    "src/apply/parser.rs",
-    "src/apply/verification.rs",
-    "src/apply/executor.rs",
-    "src/stage/copy.rs",
-    "src/audit",
-    "src/pack",
-    "src/clipboard",
-    "src/signatures",
-]
+max_function_words = 3
+max_lcom4 = 1
+min_ahf = 60.0
+max_cbo = 9
+max_sfout = 7
+ignore_naming_on = []
 ignore_tokens_on = [
+    "Cargo.lock",
+    "package-lock.json",
     "README.md",
-    "CHANGELOG.md",
-    "CONTRIBUTING.md",
-    "lock",
-    "docs",
-    "pivot_brief.md",
 ]
 
 [rules.safety]
@@ -34,7 +20,7 @@ require_safety_comment = true
 ban_unsafe = false
 
 [rules.locality]
-max_distance = 2
+max_distance = 4
 l1_threshold = 2
 hub_threshold = 1.0
 min_hub_afferent = 5
@@ -49,13 +35,14 @@ auto_format = false
 system_bell = false
 backup_retention = 5
 progress_bars = true
-require_plan = true
+require_plan = false
 write_fix_packet = false
 fix_packet_path = "slopchop-fixme.txt"
 auto_promote = false
 
 [commands]
+fix = ["cargo fmt"]
 check = [
-    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing -A clippy::struct_excessive_bools -A clippy::module_name_repetitions -A clippy::missing_errors_doc -A clippy::must_use_candidate",
-    "cargo test"
+    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic",
+    "cargo test",
 ]

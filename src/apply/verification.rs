@@ -12,7 +12,8 @@ use crate::types::{CheckReport, CommandResult, ScanReport};
 use anyhow::Result;
 use colored::Colorize;
 use std::env;
-use std::path::Path;
+use std::fmt::Write;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 /// Runs the full verification pipeline: External Commands -> Scan -> Locality.
@@ -60,6 +61,9 @@ pub fn run_verification_pipeline<P: AsRef<Path>>(
         logger.log(EventKind::CheckPassed);
     }
 
+    // GENERATE FULL REPORT
+    write_check_report(&scan_report, &command_results, passed, &ctx.repo_root)?;
+
     Ok(CheckReport {
         scan: scan_report,
         commands: command_results,
@@ -87,15 +91,6 @@ fn run_external_checks(
         }
     }
     Ok((results, passed))
-}
-
-/// Runs verification using the repo root.
-///
-/// # Errors
-/// Returns error if command execution fails.
-pub fn run_verification_auto(ctx: &ApplyContext) -> Result<bool> {
-    let report = run_verification_pipeline(ctx, &ctx.repo_root)?;
-    Ok(report.passed)
 }
 
 fn run_internal_scan(cwd: &Path, silent: bool) -> Result<ScanReport> {
@@ -178,3 +173,68 @@ fn run_locality_scan(cwd: &Path, silent: bool) -> Result<CommandResult> {
         duration_ms: duration.as_millis() as u64,
     })
 }
+
+// REPORT GENERATION
+fn write_check_report(scan: &ScanReport, cmds: &[CommandResult], passed: bool, root: &Path) -> Result<()> {
+    let mut out = String::with_capacity(10000);
+    
+    // Header
+    writeln!(out, "SLOPCHOP CHECK REPORT")?;
+    writeln!(out, "Generated: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"))?;
+    writeln!(out, "Status: {}\n", if passed { "PASSED" } else { "FAILED" })?;
+
+    // Dashboard
+    writeln!(out, "=== DASHBOARD ===")?;
+    let mut files_sorted = scan.files.clone();
+    
+    // Top Complexity
+    writeln!(out, "Top 5 Cognitive Complexity:")?;
+    files_sorted.sort_by(|a, b| b.complexity_score.cmp(&a.complexity_score));
+    for f in files_sorted.iter().take(5) {
+        writeln!(out, "  {:<4} {}", f.complexity_score, f.path.display())?;
+    }
+    
+    // Top Size
+    writeln!(out, "\nTop 5 Largest Files (Tokens):")?;
+    files_sorted.sort_by(|a, b| b.token_count.cmp(&a.token_count));
+    for f in files_sorted.iter().take(5) {
+        writeln!(out, "  {:<5} {}", f.token_count, f.path.display())?;
+    }
+
+    // Violations
+    if !passed {
+        writeln!(out, "\n=== VIOLATIONS ===")?;
+        // Internal
+        if scan.has_errors() {
+            writeln!(out, "[SlopChop Internal Rules]")?;
+            for file in scan.files.iter().filter(|f| !f.is_clean()) {
+                for v in &file.violations {
+                    writeln!(out, "{}:{} | {} | {}", file.path.display(), v.row, v.law, v.message)?;
+                }
+            }
+        }
+        
+        // External
+        writeln!(out, "\n[External Tools]")?;
+        for cmd in cmds {
+            if cmd.exit_code != 0 {
+                writeln!(out, "FAILED: {} (Exit Code: {})", cmd.command, cmd.exit_code)?;
+                writeln!(out, "-- STDOUT --\n{}", cmd.stdout)?;
+                writeln!(out, "-- STDERR --\n{}", cmd.stderr)?;
+            }
+        }
+    } else {
+        writeln!(out, "\n=== VIOLATIONS ===\nNone. Codebase is clean.")?;
+    }
+
+    // Full Output Dump (for Agent reference)
+    writeln!(out, "\n=== FULL OUTPUT LOGS ===")?;
+    for cmd in cmds {
+        writeln!(out, "\n>>> COMMAND: {}", cmd.command)?;
+        if !cmd.stdout.is_empty() { writeln!(out, "{}", cmd.stdout)?; }
+        if !cmd.stderr.is_empty() { writeln!(out, "{}", cmd.stderr)?; }
+    }
+
+    std::fs::write(root.join("slopchop-report.txt"), out)?;
+    Ok(())
+}

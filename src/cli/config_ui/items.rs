@@ -46,6 +46,7 @@ impl ConfigItem {
     pub fn label(self) -> &'static str {
         match self {
             Self::MaxTokens => "Max file tokens",
+            // UPDATED LABEL
             Self::MaxComplexity => "Max cognitive complexity",
             Self::MaxNesting => "Max nesting depth",
             Self::MaxArgs => "Max function args",
@@ -117,12 +118,12 @@ impl ConfigItem {
     pub fn get_number(self, config: &Config) -> usize {
         match self {
             Self::MaxTokens => config.rules.max_file_tokens,
-            Self::MaxComplexity => config.rules.max_cyclomatic_complexity,
+            // UPDATED FIELD NAME
+            Self::MaxComplexity => config.rules.max_cognitive_complexity,
             Self::MaxNesting => config.rules.max_nesting_depth,
             Self::MaxArgs => config.rules.max_function_args,
             Self::MaxWords => config.rules.max_function_words,
             Self::MaxLcom4 => config.rules.max_lcom4,
-            // AHF is f64 percentage 0-100. Casting to usize for simple editing is acceptable for TUI.
             Self::MinAhf => config.rules.min_ahf as usize,
             Self::MaxCbo => config.rules.max_cbo,
             Self::MaxSfout => config.rules.max_sfout,
@@ -135,7 +136,8 @@ impl ConfigItem {
     pub fn set_number(self, config: &mut Config, value: usize) {
         match self {
             Self::MaxTokens => config.rules.max_file_tokens = value,
-            Self::MaxComplexity => config.rules.max_cyclomatic_complexity = value,
+            // UPDATED FIELD NAME
+            Self::MaxComplexity => config.rules.max_cognitive_complexity = value,
             Self::MaxNesting => config.rules.max_nesting_depth = value,
             Self::MaxArgs => config.rules.max_function_args = value,
             Self::MaxWords => config.rules.max_function_words = value,
@@ -171,4 +173,4 @@ impl ConfigItem {
 
 fn checkbox(checked: bool) -> String {
     if checked { "[x]".to_string() } else { "[ ]".to_string() }
-}
+}

@@ -2,10 +2,13 @@
 use crate::clipboard;
 use crate::spinner::Spinner;
 use crate::types::CommandResult;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use colored::Colorize;
+use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
+use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Instant;
 
 pub struct CommandRunner {
@@ -18,27 +21,21 @@ impl CommandRunner {
         Self { silent }
     }
 
-    /// Runs a command in the specified directory.
-    ///
-    /// # Errors
-    /// Returns error if command execution fails.
     pub fn run(&self, cmd_str: &str, cwd: &Path) -> Result<CommandResult> {
-        run_stage_in_dir(cmd_str, cmd_str, cwd, self.silent)
+        run_stage_streaming(cmd_str, cwd, self.silent)
     }
 }
 
-fn run_stage_in_dir(
-    label: &str,
+fn run_stage_streaming(
     cmd_str: &str,
     cwd: &Path,
     silent: bool,
 ) -> Result<CommandResult> {
-    let sp = if silent { None } else { Some(Spinner::start(label)) };
     let start = Instant::now();
-
+    
+    // Split command
     let parts: Vec<&str> = cmd_str.split_whitespace().collect();
     let Some((prog, args)) = parts.split_first() else {
-        if let Some(s) = sp { s.stop(true); }
         return Ok(CommandResult {
             command: cmd_str.to_string(),
             exit_code: 0,
@@ -48,25 +45,78 @@ fn run_stage_in_dir(
         });
     };
 
-    let output = Command::new(prog).args(args).current_dir(cwd).output()?;
-    let duration = start.elapsed();
-    let success = output.status.success();
+    let spinner = if silent { None } else { Some(Spinner::start(cmd_str)) };
 
-    if let Some(s) = sp { s.stop(success); }
+    let mut child = Command::new(prog)
+        .args(args)
+        .current_dir(cwd)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .with_context(|| format!("Failed to spawn {cmd_str}"))?;
+
+    let stdout = child.stdout.take().expect("Failed to open stdout");
+    let stderr = child.stderr.take().expect("Failed to open stderr");
+
+    // We need to capture output while updating the spinner.
+    // Use threads to drain the pipes to avoid deadlocks.
+    let stdout_acc = Arc::new(Mutex::new(String::new()));
+    let stderr_acc = Arc::new(Mutex::new(String::new()));
+    
+    let out_clone = stdout_acc.clone();
+    let sp_clone = spinner.clone();
+    let out_thread = thread::spawn(move || {
+        let reader = BufReader::new(stdout);
+        for line in reader.lines().map_while(Result::ok) {
+            if let Some(sp) = &sp_clone {
+                // Update spinner with truncated line
+                let trunc = if line.len() > 60 { &line[..60] } else { &line };
+                sp.set_message(format!("Running... {trunc}")); 
+            }
+            let mut acc = out_clone.lock().unwrap();
+            acc.push_str(&line);
+            acc.push('\n');
+        }
+    });
+
+    let err_clone = stderr_acc.clone();
+    let sp_clone_err = spinner.clone();
+    let err_thread = thread::spawn(move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines().map_while(Result::ok) {
+            if let Some(sp) = &sp_clone_err {
+                let trunc = if line.len() > 60 { &line[..60] } else { &line };
+                sp.set_message(format!("Running... {trunc}"));
+            }
+            let mut acc = err_clone.lock().unwrap();
+            acc.push_str(&line);
+            acc.push('\n');
+        }
+    });
+
+    let status = child.wait()?;
+    let _ = out_thread.join();
+    let _ = err_thread.join();
+
+    let success = status.success();
+    if let Some(s) = spinner { s.stop(success); }
+
+    let stdout_str = Arc::try_unwrap(stdout_acc).unwrap().into_inner().unwrap();
+    let stderr_str = Arc::try_unwrap(stderr_acc).unwrap().into_inner().unwrap();
 
     #[allow(clippy::cast_possible_truncation)]
     let result = CommandResult {
         command: cmd_str.to_string(),
-        exit_code: output.status.code().unwrap_or(1),
-        stdout: String::from_utf8_lossy(&output.stdout).to_string(),
-        stderr: String::from_utf8_lossy(&output.stderr).to_string(),
-        duration_ms: duration.as_millis() as u64,
+        exit_code: status.code().unwrap_or(1),
+        stdout: stdout_str.clone(),
+        stderr: stderr_str.clone(),
+        duration_ms: start.elapsed().as_millis() as u64,
     };
 
     if !success && !silent {
         let combined = format!("{}\n{}", result.stdout, result.stderr);
         let summary = summarize_output(&combined, cmd_str);
-        handle_failure(label, &summary);
+        handle_failure(cmd_str, &summary);
     }
 
     Ok(result)
@@ -98,4 +148,4 @@ fn handle_failure(label: &str, summary: &str) {
     } else {
         println!("{}", "[+] Text copied to clipboard".dimmed());
     }
-}
+}

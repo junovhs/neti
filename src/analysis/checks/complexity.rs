@@ -8,39 +8,35 @@ use crate::types::{Violation, ViolationDetails};
 
 use super::CheckContext;
 
-/// Checks for complexity metrics (arity, depth, cyclomatic complexity).
+/// Checks for complexity metrics (arity, depth).
+/// Note: Cognitive Complexity is calculated in `ast.rs` using `v2/cognitive.rs`.
+/// This module now focuses on Arity and Nesting Depth.
 pub fn check_metrics(
     ctx: &CheckContext,
     func_query: &Query,
-    complexity_query: &Query,
+    _complexity_query: &Query, // Unused now
     out: &mut Vec<Violation>,
 ) -> usize {
     let mut cursor = QueryCursor::new();
     let matches = cursor.matches(func_query, ctx.root, ctx.source.as_bytes());
 
-    let mut max_complexity = 0;
     for m in matches {
-        let comp = process_match(&m, ctx, complexity_query, out);
-        if comp > max_complexity {
-            max_complexity = comp;
-        }
+        process_match(&m, ctx, out);
     }
-    max_complexity
+    0 // Return 0 as max complexity is now tracked via cognitive score in AST analyzer
 }
 
 fn process_match(
     m: &QueryMatch,
     ctx: &CheckContext,
-    complexity_query: &Query,
     out: &mut Vec<Violation>,
-) -> usize {
+) {
     for capture in m.captures {
         let node = capture.node;
         if is_function_kind(node.kind()) {
-            return analyze_function(node, ctx, complexity_query, out);
+            analyze_function(node, ctx, out);
         }
     }
-    0
 }
 
 fn is_function_kind(kind: &str) -> bool {
@@ -57,19 +53,15 @@ fn is_function_kind(kind: &str) -> bool {
 fn analyze_function(
     node: Node,
     ctx: &CheckContext,
-    complexity_query: &Query,
     out: &mut Vec<Violation>,
-) -> usize {
+) {
     let row = node.start_position().row + 1;
 
-    // Check Arity first (cheap)
+    // Check Arity
     check_arity(node, ctx.config, ctx.source, row, out);
     
     // Check Nesting
     check_nesting(node, ctx.config, ctx.source, row, out);
-    
-    // Check Complexity
-    check_cyclomatic(node, ctx, complexity_query, out)
 }
 
 // Return &str to avoid allocation (P02 fix)
@@ -168,66 +160,4 @@ fn is_nesting_node(kind: &str) -> bool {
             | "for_in_statement" | "while_expression" | "while_statement"
             | "loop_expression" | "match_expression" | "switch_statement" | "try_statement"
     )
-}
-
-fn check_cyclomatic(
-    node: Node,
-    ctx: &CheckContext,
-    query: &Query,
-    out: &mut Vec<Violation>,
-) -> usize {
-    let (complexity, branch_lines) = measure_complexity(node, ctx.source, query);
-
-    if complexity > ctx.config.max_cyclomatic_complexity {
-        let func_name = extract_function_name(node, ctx.source);
-        let row = node.start_position().row + 1;
-        
-        let analysis: Vec<String> = branch_lines
-            .iter()
-            .take(5)
-            .map(|(line, kind)| format!("Branch at line {line}: {kind}"))
-            .collect();
-
-        let suggestion = if complexity > 12 {
-            "Very complex. Break into smaller functions."
-        } else {
-            "Extract conditionals into helpers or use lookup tables."
-        };
-
-        let details = ViolationDetails {
-            function_name: Some(func_name.to_string()),
-            analysis,
-            suggestion: Some(suggestion.to_string()),
-        };
-
-        out.push(Violation::with_details(
-            row,
-            format!(
-                "Function '{func_name}' has cyclomatic complexity {complexity} (Max: {})",
-                ctx.config.max_cyclomatic_complexity
-            ),
-            "LAW OF COMPLEXITY",
-            details,
-        ));
-    }
-    complexity
-}
-
-fn measure_complexity(node: Node, source: &str, query: &Query) -> (usize, Vec<(usize, String)>) {
-    let mut cursor = QueryCursor::new();
-    let matches = cursor.matches(query, node, source.as_bytes());
-
-    let mut count = 1;
-    let mut branches = Vec::new();
-
-    for m in matches {
-        for capture in m.captures {
-            let line = capture.node.start_position().row + 1;
-            let kind = capture.node.kind().to_string();
-            branches.push((line, kind));
-            count += 1;
-        }
-    }
-
-    (count, branches)
 }

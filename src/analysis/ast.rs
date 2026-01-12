@@ -105,14 +105,15 @@ impl Analyzer {
         
         let score = CognitiveAnalyzer::calculate(node, ctx.source);
 
-        if score > 15 {
+        // UPDATED: Use max_cognitive_complexity from config
+        if score > ctx.config.max_cognitive_complexity {
             let name = node.child_by_field_name("name")
                 .and_then(|n| n.utf8_text(ctx.source.as_bytes()).ok())
                 .unwrap_or("<anonymous>");
 
             out.push(Violation::with_details(
                 node.start_position().row + 1,
-                format!("Function '{name}' has cognitive complexity {score} (Max: 15)"),
+                format!("Function '{name}' has cognitive complexity {score} (Max: {})", ctx.config.max_cognitive_complexity),
                 "LAW OF COMPLEXITY",
                 ViolationDetails {
                     function_name: Some(name.to_string()),
@@ -143,4 +144,4 @@ impl Analyzer {
 
 fn compile_query(lang: Language, pattern: &str) -> Result<Query> {
     Query::new(lang, pattern).map_err(|e| anyhow!("Invalid tree-sitter query: {e}"))
-}
+}

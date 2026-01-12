@@ -40,6 +40,7 @@ serde = { version = "1.0", features = ["derive", "rc"] }
 serde_json = "1.0"
 toml = "0.8"
 sha2 = "0.10"
+chrono = "0.4" # Added for report timestamps
 
 # THE BRAINS - Tokenization
 tiktoken-rs = "0.5"
@@ -71,3 +72,4 @@ debug = true
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
+
