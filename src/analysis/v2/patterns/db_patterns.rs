@@ -51,8 +51,9 @@ fn check_db_calls(source: &str, body: Node, loop_var: &str, out: &mut Vec<Violat
         r#"(call_expression function: (field_expression field: (field_identifier) @m)
             (#match? @m "^(fetch_one|fetch_all|fetch_optional|execute|query|query_as|execute_many)$")) @call"#,
         // diesel specific
+        // Removed 'first' because it conflicts with Slice::first / Iterator::first too often
         r#"(call_expression function: (field_expression field: (field_identifier) @m)
-            (#match? @m "^(load|get_result|get_results|first)$")) @call"#,
+            (#match? @m "^(load|get_result|get_results)$")) @call"#,
         // Active Record style
         r#"(call_expression function: (field_expression field: (field_identifier) @m)
             (#match? @m "^(find_by|save|delete|update)$")) @call"#,

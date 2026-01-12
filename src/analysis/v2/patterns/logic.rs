@@ -26,8 +26,8 @@ fn detect_l02(source: &str, root: Node, out: &mut Vec<Violation>) {
         if !text.contains(".len()") { continue }
         if !text.contains("<=") && !text.contains(">=") { continue }
 
-        // Ignore simple threshold checks (e.g. `len >= 3`, `len <= 100`)
-        if is_threshold_check(cmp, source) { continue }
+        // Ignore threshold checks (len >= 5) vs index checks (i <= len)
+        if is_safe_threshold_check(cmp, source) { continue }
 
         out.push(Violation::with_details(
             cmp.start_position().row + 1,
@@ -42,15 +42,41 @@ fn detect_l02(source: &str, root: Node, out: &mut Vec<Violation>) {
     }
 }
 
-fn is_threshold_check(node: Node, _source: &str) -> bool {
-    // Check if one side is a literal integer
-    if let Some(left) = node.child_by_field_name("left") {
-        if left.kind() == "integer_literal" { return true; }
+fn is_safe_threshold_check(node: Node, source: &str) -> bool {
+    let left = node.child_by_field_name("left");
+    let right = node.child_by_field_name("right");
+
+    // 1. Literal checks are always safe (len >= 5)
+    if is_literal(left) || is_literal(right) {
+        return true;
     }
-    if let Some(right) = node.child_by_field_name("right") {
-        if right.kind() == "integer_literal" { return true; }
+
+    // 2. Identify variables. If neither side looks like an index variable, assume it's a threshold.
+    let left_text = left.and_then(|n| n.utf8_text(source.as_bytes()).ok()).unwrap_or("");
+    let right_text = right.and_then(|n| n.utf8_text(source.as_bytes()).ok()).unwrap_or("");
+
+    // If one side is len(), check the other side.
+    if left_text.contains(".len()") {
+        return !is_index_variable(right_text);
     }
-    false
+    if right_text.contains(".len()") {
+        return !is_index_variable(left_text);
+    }
+
+    // If we can't tell, err on side of silence.
+    true
+}
+
+fn is_literal(node: Option<Node>) -> bool {
+    node.is_some_and(|n| n.kind() == "integer_literal")
+}
+
+fn is_index_variable(name: &str) -> bool {
+    let n = name.trim();
+    // Common index names
+    n == "i" || n == "j" || n == "k" || n == "n" || n == "idx"
+    || n.contains("index") || n.contains("pos") || n.contains("ptr") 
+    || n.contains("offset") || n.contains("cursor")
 }
 
 /// L03: Unchecked `[0]` or `.first().unwrap()`
@@ -151,6 +177,12 @@ mod tests {
     #[test]
     fn l02_skip_threshold() {
         let code = "fn f(v: &[i32]) -> bool { v.len() >= 5 }";
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "L02"));
+    }
+
+    #[test]
+    fn l02_skip_max_var() {
+        let code = "fn f(v: &[i32], max: usize) -> bool { v.len() <= max }";
         assert!(parse_and_detect(code).iter().all(|v| v.law != "L02"));
     }
 
