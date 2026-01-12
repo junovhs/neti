@@ -110,6 +110,7 @@ fn verify_hash(content: &str, expected: &str) -> Result<()> {
     Ok(())
 }
 
+#[allow(clippy::indexing_slicing)] // Guarded: we check matches.len() == 1 before access
 fn apply_single_instruction(content: &str, instr: &PatchInstruction) -> Result<String> {
     let eol = detect_eol(content);
     let norm_search = normalize_newlines(&instr.search, eol);
@@ -138,6 +139,7 @@ fn apply_single_instruction(content: &str, instr: &PatchInstruction) -> Result<S
     try_match_trimmed(content, &norm_search, &norm_replace, eol, instr)
 }
 
+#[allow(clippy::indexing_slicing)] // Guarded: match arm `1 =>` ensures single element
 fn try_match_trimmed(
     content: &str,
     search: &str,

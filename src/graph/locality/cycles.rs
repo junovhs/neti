@@ -94,6 +94,7 @@ fn visit_neighbor(
     }
 }
 
+#[allow(clippy::indexing_slicing)] // Guarded: pos is from position() returning Some
 fn record_cycle(
     neighbor: PathBuf,
     state: &mut DfsState,
@@ -108,6 +109,7 @@ fn record_cycle(
 
 
 #[cfg(test)]
+#[allow(clippy::indexing_slicing)]
 mod tests {
     use super::*;
 

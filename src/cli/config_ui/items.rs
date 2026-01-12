@@ -33,6 +33,7 @@ impl ConfigItem {
     }
     
     #[must_use]
+    #[allow(clippy::indexing_slicing)] // Safe: LABELS array matches enum variant count
     pub const fn label(self) -> &'static str {
         const LABELS: [&str; 10] = [
             "Max file tokens",

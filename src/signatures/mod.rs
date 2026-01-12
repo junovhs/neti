@@ -158,6 +158,7 @@ fn extract_exports(lang: Lang, content: &str) -> Result<Option<String>> {
     Ok(Some(merge_and_extract(content, ranges)))
 }
 
+#[allow(clippy::indexing_slicing)] // Guarded: ranges.is_empty() early return before ranges[0]
 fn merge_and_extract(source: &str, mut ranges: Vec<Range<usize>>) -> String {
     if ranges.is_empty() {
         return String::new();

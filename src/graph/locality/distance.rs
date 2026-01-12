@@ -16,6 +16,7 @@ pub fn compute_distance(from: &Path, to: &Path) -> usize {
     (from_depth - lca_depth) + (to_depth - lca_depth)
 }
 
+#[allow(clippy::indexing_slicing)] // Guarded: loop bound is min(a.len(), b.len())
 fn find_lca_depth<T: PartialEq>(a: &[T], b: &[T]) -> usize {
     let mut depth = 0;
     let min_len = a.len().min(b.len());

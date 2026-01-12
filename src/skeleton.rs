@@ -56,6 +56,7 @@ fn apply_skeleton(source: &str, lang: Language, query: &Query, replacement: &str
     replace_ranges(source, &root_ranges, replacement)
 }
 
+#[allow(clippy::indexing_slicing)] // Guarded: while loop bound `i < ranges.len()` ensures valid index
 fn filter_nested_ranges(mut ranges: Vec<std::ops::Range<usize>>) -> Vec<std::ops::Range<usize>> {
     // Sort by start position
     ranges.sort_by_key(|r| r.start);

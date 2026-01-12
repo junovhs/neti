@@ -75,6 +75,7 @@ fn parse_single_block(
 
 
 #[cfg(test)]
+#[allow(clippy::indexing_slicing, clippy::unwrap_used)]
 mod tests {
     use super::*;
 

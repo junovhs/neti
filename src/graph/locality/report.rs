@@ -147,6 +147,7 @@ fn print_entropy(report: &ValidationReport) {
     println!("\n  Topological Entropy: {colored}");
 }
 
+#[allow(clippy::indexing_slicing)] // Guarded: mods.len() > 10 check before slice
 fn print_layers(report: &ValidationReport) {
     if report.layers().is_empty() {
         return;

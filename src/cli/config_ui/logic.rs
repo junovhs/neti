@@ -76,6 +76,7 @@ pub fn move_selection(editor: &mut ConfigEditor, delta: isize) {
     }
 }
 
+#[allow(clippy::indexing_slicing)] // Guarded: selected is always < items.len() via move_selection bounds
 fn edit_current(editor: &mut ConfigEditor) -> Result<()> {
      let selected = editor.selected();
     let item = editor.items()[selected];

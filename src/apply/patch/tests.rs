@@ -1,4 +1,6 @@
 // src/apply/patch/tests.rs
+#![allow(clippy::indexing_slicing, clippy::unwrap_used)]
+
 use super::*;
 
 #[test]

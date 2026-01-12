@@ -72,6 +72,7 @@ fn collect_near_clusters(
 
 /// Analyzes a cluster to produce a human-readable description.
 #[must_use]
+#[allow(clippy::indexing_slicing)] // Guarded: unique_files.len() == 1 check before files[0]
 pub fn describe_cluster(cluster: &SimilarityCluster) -> String {
     let count = cluster.units.len();
     let kind = cluster.units.first().map_or("unit", |u| u.kind.label());
@@ -94,4 +95,4 @@ pub fn describe_cluster(cluster: &SimilarityCluster) -> String {
             unique_files.len()
         )
     }
-}
+}

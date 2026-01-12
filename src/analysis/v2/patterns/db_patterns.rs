@@ -69,6 +69,12 @@ fn check_pattern(source: &str, body: Node, pattern: &str, loop_var: &str, out: &
         let call_text = call.utf8_text(source.as_bytes()).unwrap_or("");
         if !call_text.contains(loop_var) { continue }
 
+        // Skip iterator patterns: .iter().find(), .captures.iter().find(), etc.
+        // These are false positives - iterator .find() takes a closure, not a DB query
+        if is_iterator_pattern(call_text) {
+            continue;
+        }
+
         let method = call_text.split('.').next_back()
             .and_then(|s| s.split('(').next())
             .unwrap_or("query");
@@ -87,6 +93,60 @@ fn check_pattern(source: &str, body: Node, pattern: &str, loop_var: &str, out: &
             }
         ));
     }
+}
+
+/// Detects iterator patterns that are false positives for P03.
+/// Iterator methods take closures (|x| ...) while DB methods take values.
+fn is_iterator_pattern(call_text: &str) -> bool {
+    // Pattern 1: .iter().find(), .iter().get(), etc.
+    if call_text.contains(".iter().") || call_text.contains(".into_iter().") {
+        return true;
+    }
+    
+    // Pattern 2: Method takes a closure argument (|...| or |...|)
+    // DB calls like db.find(id) don't use closures
+    if call_text.contains('|') {
+        return true;
+    }
+    
+    // Pattern 3: Called on known iterator-producing methods
+    let iterator_chains = [".captures.", ".matches(", ".values()", ".keys()", ".chars()", ".lines()"];
+    for chain in iterator_chains {
+        if call_text.contains(chain) {
+            return true;
+        }
+    }
+    
+    // Pattern 4: index == N patterns (tree-sitter capture index checks)
+    if call_text.contains(".index ==") || call_text.contains(".index !=") {
+        return true;
+    }
+    
+    // Pattern 5: Collection .get() with fallback methods (HashMap/Vec lookups)
+    // DB .get() doesn't chain with .unwrap_or, .copied(), .cloned(), etc.
+    let collection_chains = [
+        ".get(", // Followed by common collection patterns:
+    ];
+    let collection_suffixes = [
+        ").unwrap_or(",
+        ").copied(",
+        ").cloned(",
+        ").map_or(",
+        ").unwrap_or_default(",
+        ").ok_or(",
+    ];
+    
+    for prefix in collection_chains {
+        if call_text.contains(prefix) {
+            for suffix in collection_suffixes {
+                if call_text.contains(suffix) {
+                    return true;
+                }
+            }
+        }
+    }
+    
+    false
 }
 
 #[cfg(test)]
@@ -123,6 +183,20 @@ mod tests {
     #[test]
     fn p03_skip_no_loop_var() {
         let code = "async fn f(items: Vec<Item>) { let cfg = db.fetch_one(1).await; for item in items { process(item); } }";
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "P03"));
+    }
+
+    #[test]
+    fn p03_skip_iterator_find() {
+        // This should NOT be flagged - it's iter().find(closure), not a DB call
+        let code = "fn f(items: &[Item]) { for item in items { let x = item.children.iter().find(|c| c.id == item.id); } }";
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "P03"));
+    }
+
+    #[test]
+    fn p03_skip_closure_find() {
+        // .find() with closure argument should be skipped
+        let code = "fn f(captures: Vec<Cap>) { for m in captures { m.vals.iter().find(|v| v.index == m.id); } }";
         assert!(parse_and_detect(code).iter().all(|v| v.law != "P03"));
     }
 }
