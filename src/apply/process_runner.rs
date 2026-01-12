@@ -2,7 +2,7 @@
 use crate::clipboard;
 use crate::spinner::Spinner;
 use crate::types::CommandResult;
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use colored::Colorize;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -55,8 +55,8 @@ fn run_stage_streaming(
         .spawn()
         .with_context(|| format!("Failed to spawn {cmd_str}"))?;
 
-    let stdout = child.stdout.take().expect("Failed to open stdout");
-    let stderr = child.stderr.take().expect("Failed to open stderr");
+    let stdout = child.stdout.take().ok_or_else(|| anyhow!("Failed to open stdout"))?;
+    let stderr = child.stderr.take().ok_or_else(|| anyhow!("Failed to open stderr"))?;
 
     // We need to capture output while updating the spinner.
     // Use threads to drain the pipes to avoid deadlocks.
@@ -73,6 +73,8 @@ fn run_stage_streaming(
                 let trunc = if line.len() > 60 { &line[..60] } else { &line };
                 sp.set_message(format!("Running... {trunc}")); 
             }
+            // Allow unwrap in helper thread; poisoning is fatal
+            #[allow(clippy::unwrap_used)]
             let mut acc = out_clone.lock().unwrap();
             acc.push_str(&line);
             acc.push('\n');
@@ -88,6 +90,8 @@ fn run_stage_streaming(
                 let trunc = if line.len() > 60 { &line[..60] } else { &line };
                 sp.set_message(format!("Running... {trunc}"));
             }
+            // Allow unwrap in helper thread; poisoning is fatal
+            #[allow(clippy::unwrap_used)]
             let mut acc = err_clone.lock().unwrap();
             acc.push_str(&line);
             acc.push('\n');
@@ -101,15 +105,18 @@ fn run_stage_streaming(
     let success = status.success();
     if let Some(s) = spinner { s.stop(success); }
 
-    let stdout_str = Arc::try_unwrap(stdout_acc).unwrap().into_inner().unwrap();
-    let stderr_str = Arc::try_unwrap(stderr_acc).unwrap().into_inner().unwrap();
+    // Use lock().unwrap().clone() instead of Arc::try_unwrap
+    #[allow(clippy::unwrap_used)]
+    let stdout_str = stdout_acc.lock().unwrap().clone();
+    #[allow(clippy::unwrap_used)]
+    let stderr_str = stderr_acc.lock().unwrap().clone();
 
     #[allow(clippy::cast_possible_truncation)]
     let result = CommandResult {
         command: cmd_str.to_string(),
         exit_code: status.code().unwrap_or(1),
-        stdout: stdout_str.clone(),
-        stderr: stderr_str.clone(),
+        stdout: stdout_str,
+        stderr: stderr_str,
         duration_ms: start.elapsed().as_millis() as u64,
     };
 

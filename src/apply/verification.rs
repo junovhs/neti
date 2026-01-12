@@ -13,7 +13,7 @@ use anyhow::Result;
 use colored::Colorize;
 use std::env;
 use std::fmt::Write;
-use std::path::{Path, PathBuf};
+use std::path::Path; // Removed PathBuf
 use std::time::Instant;
 
 /// Runs the full verification pipeline: External Commands -> Scan -> Locality.
@@ -202,7 +202,10 @@ fn write_check_report(scan: &ScanReport, cmds: &[CommandResult], passed: bool, r
     }
 
     // Violations
-    if !passed {
+    // Refactored to avoid `if !passed { ... } else { ... }` (clippy::if-not-else)
+    if passed {
+        writeln!(out, "\n=== VIOLATIONS ===\nNone. Codebase is clean.")?;
+    } else {
         writeln!(out, "\n=== VIOLATIONS ===")?;
         // Internal
         if scan.has_errors() {
@@ -223,8 +226,6 @@ fn write_check_report(scan: &ScanReport, cmds: &[CommandResult], passed: bool, r
                 writeln!(out, "-- STDERR --\n{}", cmd.stderr)?;
             }
         }
-    } else {
-        writeln!(out, "\n=== VIOLATIONS ===\nNone. Codebase is clean.")?;
     }
 
     // Full Output Dump (for Agent reference)

@@ -29,10 +29,11 @@ impl Spinner {
         let handle = thread::spawn(move || {
             let mut i = 0;
             while r_clone.load(Ordering::Relaxed) {
-                let frame = FRAMES[i % FRAMES.len()];
+                // Use .get() to be safe, though modulo guarantees bounds
+                let frame = FRAMES.get(i % FRAMES.len()).unwrap_or(&"+");
                 
                 // Get label safely
-                let text = l_clone.lock().unwrap_or_else(|p| p.into_inner());
+                let text = l_clone.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
                 
                 // Truncate if too long to prevent wrapping weirdness
                 let display_text = if text.len() > 60 { &text[..60] } else { &text };
@@ -70,7 +71,7 @@ impl Spinner {
         }
 
         let icon = if success { "ok".green().bold() } else { "err".red().bold() };
-        let text = self.label.lock().unwrap_or_else(|p| p.into_inner());
+        let text = self.label.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
         println!("\r\x1B[2K   {} {}", icon, text.dimmed());
     }
 }
