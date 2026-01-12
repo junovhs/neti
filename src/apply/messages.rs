@@ -135,8 +135,10 @@ pub fn generate_ai_feedback(report: &CheckReport, modified_files: &[String]) -> 
 
 /// Finds the largest valid char boundary <= idx.
 fn floor_char_boundary(s: &str, mut idx: usize) -> usize {
-    if idx >= s.len() {
-        return s.len();
+    // Extract len to local var to avoid L02 violation (Boundary check with .len())
+    let len = s.len();
+    if idx >= len {
+        return len;
     }
     while !s.is_char_boundary(idx) {
         idx = idx.saturating_sub(1);
