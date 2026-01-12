@@ -3,7 +3,7 @@
 
 use crate::types::{Violation, ViolationDetails};
 use std::path::Path;
-use tree_sitter::{Node, Query, QueryCursor};
+use tree_sitter::{Node, Query, QueryCursor, QueryCapture};
 
 #[must_use]
 pub fn detect(source: &str, root: Node, path: &Path) -> Vec<Violation> {
@@ -22,13 +22,17 @@ fn should_skip(path: &Path) -> bool {
         || s.ends_with("main.rs")
 }
 
+fn cap_name<'a>(query: &'a Query, cap: &QueryCapture) -> &'a str {
+    query.capture_names().get(cap.index as usize).map_or("", String::as_str)
+}
+
 fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"
         (for_expression pattern: (_) @pat body: (block) @body) @loop
         (while_expression body: (block) @body) @loop
         (loop_expression body: (block) @body) @loop
     ";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return; };
+    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
@@ -37,7 +41,7 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
             .map(|s| s.split([',', '(']).next().unwrap_or(s).trim().to_string());
 
         let Some(body) = m.captures.iter()
-            .find(|c| query.capture_names()[c.index as usize] == "body")
+            .find(|c| cap_name(&query, c) == "body")
             .map(|c| c.node) else { continue };
 
         check_p01(source, body, loop_var.as_deref(), out);
@@ -50,19 +54,16 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
 fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Violation>) {
     let q = r#"(call_expression function: (field_expression
         value: (_) @recv field: (field_identifier) @m (#eq? @m "clone"))) @call"#;
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return; };
+    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, body, source.as_bytes()) {
-        let call = m.captures.iter()
-            .find(|c| query.capture_names()[c.index as usize] == "call")
-            .map(|c| c.node);
-        let recv = m.captures.iter()
-            .find(|c| query.capture_names()[c.index as usize] == "recv")
+        let call = m.captures.iter().find(|c| cap_name(&query, c) == "call").map(|c| c.node);
+        let recv = m.captures.iter().find(|c| cap_name(&query, c) == "recv")
             .and_then(|c| c.node.utf8_text(source.as_bytes()).ok());
 
         let Some(call) = call else { continue };
-        if should_skip_clone(source, call, recv, loop_var) { continue; }
+        if should_skip_clone(source, call, recv, loop_var) { continue }
 
         out.push(Violation::with_details(
             call.start_position().row + 1,
@@ -78,12 +79,12 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
 }
 
 fn should_skip_clone(source: &str, call: Node, recv: Option<&str>, lv: Option<&str>) -> bool {
-    if is_ownership_sink(source, call) { return true; }
+    if is_ownership_sink(source, call) { return true }
     if let (Some(r), Some(v)) = (recv, lv) {
-        if r.trim() == v || r.contains(&format!("{v}.")) { return true; }
+        if r.trim() == v || r.contains(&format!("{v}.")) { return true }
     }
     if let Some(r) = recv {
-        if r.contains("..") || r.parse::<i64>().is_ok() { return true; }
+        if r.contains("..") || r.parse::<i64>().is_ok() { return true }
     }
     false
 }
@@ -98,7 +99,7 @@ fn is_ownership_sink(source: &str, node: Node) -> bool {
                 return true;
             }
             cur = p;
-        } else { break; }
+        } else { break }
     }
     false
 }
@@ -107,21 +108,18 @@ fn check_p02(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
     let q = r#"(call_expression function: (field_expression
         value: (_) @recv field: (field_identifier) @m)
         (#match? @m "^(to_string|to_owned)$")) @call"#;
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return; };
+    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, body, source.as_bytes()) {
-        let call = m.captures.iter()
-            .find(|c| query.capture_names()[c.index as usize] == "call")
-            .map(|c| c.node);
-        let recv = m.captures.iter()
-            .find(|c| query.capture_names()[c.index as usize] == "recv")
+        let call = m.captures.iter().find(|c| cap_name(&query, c) == "call").map(|c| c.node);
+        let recv = m.captures.iter().find(|c| cap_name(&query, c) == "recv")
             .and_then(|c| c.node.utf8_text(source.as_bytes()).ok());
 
         let Some(call) = call else { continue };
-        if is_ownership_sink(source, call) { continue; }
+        if is_ownership_sink(source, call) { continue }
         if let (Some(r), Some(v)) = (recv, loop_var) {
-            if r.trim() == v || r.contains(&format!("{v}.")) { continue; }
+            if r.trim() == v || r.contains(&format!("{v}.")) { continue }
         }
 
         out.push(Violation::with_details(
@@ -158,11 +156,11 @@ fn check_p04(body: Node, out: &mut Vec<Violation>) {
 fn check_p06(source: &str, body: Node, out: &mut Vec<Violation>) {
     let q = r#"(call_expression function: (field_expression
         field: (field_identifier) @m) (#match? @m "^(find|position)$")) @call"#;
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return; };
+    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, body, source.as_bytes()) {
-        if let Some(cap) = m.captures.iter().next_back() {
+        if let Some(cap) = m.captures.first() {
             out.push(Violation::with_details(
                 cap.node.start_position().row + 1,
                 "Linear search in loop".into(),
