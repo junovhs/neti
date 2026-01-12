@@ -98,35 +98,35 @@ fn check_pattern(source: &str, body: Node, pattern: &str, loop_var: &str, out: &
 /// Detects iterator patterns that are false positives for P03.
 /// Iterator methods take closures (|x| ...) while DB methods take values.
 fn is_iterator_pattern(call_text: &str) -> bool {
-    // Pattern 1: .iter().find(), .iter().get(), etc.
-    if call_text.contains(".iter().") || call_text.contains(".into_iter().") {
-        return true;
-    }
-    
-    // Pattern 2: Method takes a closure argument (|...| or |...|)
-    // DB calls like db.find(id) don't use closures
-    if call_text.contains('|') {
-        return true;
-    }
-    
-    // Pattern 3: Called on known iterator-producing methods
+    is_common_iterator_method(call_text)
+        || is_closure_based(call_text)
+        || is_iterator_producer(call_text)
+        || is_tree_sitter_check(call_text)
+        || is_collection_lookup(call_text)
+}
+
+fn is_common_iterator_method(text: &str) -> bool {
+    text.contains(".iter().") || text.contains(".into_iter().")
+}
+
+fn is_closure_based(text: &str) -> bool {
+    // DB calls like db.find(id) don't use closures (|...|)
+    text.contains('|')
+}
+
+fn is_iterator_producer(text: &str) -> bool {
     let iterator_chains = [".captures.", ".matches(", ".values()", ".keys()", ".chars()", ".lines()"];
-    for chain in iterator_chains {
-        if call_text.contains(chain) {
-            return true;
-        }
-    }
-    
-    // Pattern 4: index == N patterns (tree-sitter capture index checks)
-    if call_text.contains(".index ==") || call_text.contains(".index !=") {
-        return true;
-    }
-    
-    // Pattern 5: Collection .get() with fallback methods (HashMap/Vec lookups)
-    // DB .get() doesn't chain with .unwrap_or, .copied(), .cloned(), etc.
-    let collection_chains = [
-        ".get(", // Followed by common collection patterns:
-    ];
+    iterator_chains.iter().any(|chain| text.contains(chain))
+}
+
+fn is_tree_sitter_check(text: &str) -> bool {
+    text.contains(".index ==") || text.contains(".index !=")
+}
+
+fn is_collection_lookup(text: &str) -> bool {
+    // Collection .get() calls often chain with fallback methods (HashMap/Vec lookups)
+    // whereas DB .get() usually returns a Result/Future directly or is awaited.
+    let collection_chains = [".get("];
     let collection_suffixes = [
         ").unwrap_or(",
         ").copied(",
@@ -135,18 +135,10 @@ fn is_iterator_pattern(call_text: &str) -> bool {
         ").unwrap_or_default(",
         ").ok_or(",
     ];
-    
-    for prefix in collection_chains {
-        if call_text.contains(prefix) {
-            for suffix in collection_suffixes {
-                if call_text.contains(suffix) {
-                    return true;
-                }
-            }
-        }
-    }
-    
-    false
+
+    collection_chains.iter().any(|prefix| {
+        text.contains(prefix) && collection_suffixes.iter().any(|suffix| text.contains(suffix))
+    })
 }
 
 #[cfg(test)]

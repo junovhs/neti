@@ -49,7 +49,7 @@ impl ValidationReport {
     }
 
     #[allow(clippy::cast_precision_loss)]
-    fn compute_entropy(&mut self) {
+    fn update_entropy(&mut self) {
         if self.total_edges == 0 {
             self.entropy = 0.0;
             return;
@@ -213,6 +213,6 @@ where
         }
     }
 
-    report.compute_entropy();
+    report.update_entropy();
     report
 }
