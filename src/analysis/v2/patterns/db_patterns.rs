@@ -3,6 +3,7 @@
 
 use crate::types::{Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
+use super::get_capture_node;
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
@@ -25,28 +26,20 @@ fn detect_p03(source: &str, root: Node, out: &mut Vec<Violation>) {
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let loop_var = get_capture_text(source, &m, idx_pat).map(extract_loop_var);
+        let loop_var_node = get_capture_node(&m, idx_pat);
         let body_node = get_capture_node(&m, idx_body);
 
-        let (Some(loop_var), Some(body)) = (loop_var, body_node) else { continue };
-        check_db_calls(source, body, &loop_var, out);
+        let (Some(var_node), Some(body)) = (loop_var_node, body_node) else { continue };
+        
+        if let Ok(var_text) = var_node.utf8_text(source.as_bytes()) {
+            let loop_var = extract_loop_var(var_text);
+            check_db_calls(source, body, &loop_var, out);
+        }
     }
 }
 
-fn get_capture_node(m: &tree_sitter::QueryMatch, idx: Option<u32>) -> Option<Node> {
-    let i = idx?;
-    for c in m.captures {
-        if c.index == i { return Some(c.node); }
-    }
-    None
-}
-
-fn get_capture_text(source: &str, m: &tree_sitter::QueryMatch, idx: Option<u32>) -> Option<String> {
-    get_capture_node(m, idx).and_then(|n| n.utf8_text(source.as_bytes()).ok().map(String::from))
-}
-
-fn extract_loop_var(pattern: String) -> String {
-    pattern.trim().trim_start_matches('(').split(',').next().unwrap_or(&pattern).trim().to_string()
+fn extract_loop_var(pattern: &str) -> String {
+    pattern.trim().trim_start_matches('(').split(',').next().unwrap_or(pattern).trim().to_string()
 }
 
 fn check_db_calls(source: &str, body: Node, loop_var: &str, out: &mut Vec<Violation>) {

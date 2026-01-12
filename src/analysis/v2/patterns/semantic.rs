@@ -3,6 +3,7 @@
 
 use crate::types::{Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
+use super::get_capture_node;
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
@@ -11,14 +12,6 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     detect_m04(source, root, &mut out);
     detect_m05(source, root, &mut out);
     out
-}
-
-fn get_capture_node(m: &tree_sitter::QueryMatch, idx: Option<u32>) -> Option<Node> {
-    let i = idx?;
-    for c in m.captures {
-        if c.index == i { return Some(c.node); }
-    }
-    None
 }
 
 /// M03: Getter with mutation - `get_*`/`is_*` that takes `&mut self`

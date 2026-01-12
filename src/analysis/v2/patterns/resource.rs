@@ -3,20 +3,13 @@
 
 use crate::types::{Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
+use super::get_capture_node;
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     let mut out = Vec::new();
     detect_r07(source, root, &mut out);
     out
-}
-
-fn get_capture_node(m: &tree_sitter::QueryMatch, idx: Option<u32>) -> Option<Node> {
-    let i = idx?;
-    for c in m.captures {
-        if c.index == i { return Some(c.node); }
-    }
-    None
 }
 
 /// R07: `BufWriter` created without `flush()` call

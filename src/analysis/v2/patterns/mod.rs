@@ -53,3 +53,18 @@ fn parse_source(source: &str, lang: Lang) -> Option<tree_sitter::Tree> {
     parser.set_language(lang.grammar()).ok()?;
     parser.parse(source, None)
 }
+
+/// Helper to get a node from a capture by index.
+/// Centralized to reduce duplication and fix lifetime issues.
+pub fn get_capture_node<'a>(
+    m: &tree_sitter::QueryMatch<'_, 'a>,
+    idx: Option<u32>,
+) -> Option<tree_sitter::Node<'a>> {
+    let i = idx?;
+    for c in m.captures {
+        if c.index == i {
+            return Some(c.node);
+        }
+    }
+    None
+}

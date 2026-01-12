@@ -3,6 +3,7 @@
 
 use crate::types::{Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
+use super::get_capture_node;
 
 /// Detects state-related violations in Rust code.
 #[must_use]
@@ -12,14 +13,6 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     detect_s02(source, root, &mut violations);
     detect_s03(source, root, &mut violations);
     violations
-}
-
-fn get_capture_node(m: &tree_sitter::QueryMatch, idx: Option<u32>) -> Option<Node> {
-    let i = idx?;
-    for c in m.captures {
-        if c.index == i { return Some(c.node); }
-    }
-    None
 }
 
 /// S01: Global mutable declaration - `static mut`
