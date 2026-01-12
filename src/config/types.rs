@@ -117,11 +117,10 @@ impl Default for SafetyConfig {
 
 const fn default_true() -> bool { true }
 const fn default_max_tokens() -> usize { 2000 }
-// UPDATED DEFAULT for Cognitive
-const fn default_max_complexity() -> usize { 15 } 
+// UPDATED DEFAULT: 25 provides breathing room for complex reporting logic without being totally loose
+const fn default_max_complexity() -> usize { 25 } 
 const fn default_max_depth() -> usize { 3 }
 const fn default_max_args() -> usize { 5 }
-// UPDATED DEFAULT for Words (to fix self-violations)
 const fn default_max_words() -> usize { 10 } 
 
 // V2 Defaults

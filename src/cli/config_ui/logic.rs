@@ -7,7 +7,7 @@ use crossterm::{
     event::{self, Event, KeyCode, KeyEventKind},
     execute,
     style::{Print, Color, SetForegroundColor, ResetColor},
-    terminal::{self, Clear, ClearType},
+    terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::io::{stdout, Write};
 use super::editor::{ConfigEditor, EventResult, EditResult};
@@ -17,9 +17,14 @@ use super::editor::{ConfigEditor, EventResult, EditResult};
 /// # Errors
 /// Returns error if terminal setup or event reading fails.
 pub fn run_editor(editor: &mut ConfigEditor) -> Result<Option<Config>> {
+    let mut stdout = stdout();
+    execute!(stdout, EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
+    
     let result = event_loop(editor);
+    
     terminal::disable_raw_mode()?;
+    execute!(stdout, LeaveAlternateScreen)?;
     result
 }
 

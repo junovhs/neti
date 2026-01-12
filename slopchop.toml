@@ -1,6 +1,6 @@
 [rules]
-max_file_tokens = 2100
-max_cognitive_complexity = 50
+max_file_tokens = 2000
+max_cognitive_complexity = 25
 max_nesting_depth = 3
 max_function_args = 5
 max_function_words = 10
@@ -41,8 +41,8 @@ fix_packet_path = "slopchop-fixme.txt"
 auto_promote = false
 
 [commands]
-fix = ["cargo fmt"]
 check = [
     "cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing -A clippy::struct_excessive_bools -A clippy::module_name_repetitions -A clippy::missing_errors_doc -A clippy::must_use_candidate",
     "cargo test",
 ]
+fix = ["cargo fmt"]
