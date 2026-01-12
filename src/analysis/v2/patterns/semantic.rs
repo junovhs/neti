@@ -14,7 +14,7 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
 }
 
 fn cap_name<'a>(query: &'a Query, cap: &QueryCapture) -> &'a str {
-    query.capture_names().get(cap.index as usize).map(String::as_str).unwrap_or("")
+    query.capture_names().get(cap.index as usize).map_or("", String::as_str)
 }
 
 /// M03: Getter with mutation - `get_*`/`is_*` that takes `&mut self`

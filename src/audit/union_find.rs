@@ -6,6 +6,9 @@ pub struct UnionFind {
     rank: Vec<usize>,
 }
 
+// Indexing is safe here: all indices passed to find/union must be < n (from new()).
+// This is a classic data structure where indices are guaranteed valid by construction.
+#[allow(clippy::indexing_slicing)]
 impl UnionFind {
     #[must_use]
     pub fn new(n: usize) -> Self {
@@ -39,4 +42,4 @@ impl UnionFind {
             }
         }
     }
-}
+}

@@ -47,6 +47,8 @@ fn filter_candidates<'a, S: BuildHasher>(
         .collect()
 }
 
+// Indices i,j are guaranteed valid by loop bounds: i < len, j < len
+#[allow(clippy::indexing_slicing)]
 fn cluster_candidates(candidates: &[&CodeUnit], uf: &mut UnionFind) {
     for i in 0..candidates.len() {
         for j in (i + 1)..candidates.len() {
@@ -69,6 +71,8 @@ fn extract_groups(candidates: &[&CodeUnit], uf: &mut UnionFind) -> Vec<NearGroup
         .collect()
 }
 
+// Indices come from extract_groups which only stores valid indices
+#[allow(clippy::indexing_slicing)]
 fn build_near_group(candidates: &[&CodeUnit], idxs: &[usize]) -> NearGroup {
     let units: Vec<CodeUnit> = idxs.iter().map(|&i| candidates[i].clone()).collect();
     let avg_similarity = compute_avg_similarity(&units);
@@ -104,7 +108,7 @@ fn compute_avg_similarity(units: &[CodeUnit]) -> f64 {
 fn sum_pairs(u1: &CodeUnit, units: &[CodeUnit], start_idx: usize) -> (f64, usize) {
     let mut total = 0.0;
     let mut count = 0;
-    
+
     for u2 in units.iter().skip(start_idx) {
         let fp_sim = similarity_math::calculate_fingerprint_similarity(
             &u1.fingerprint,
@@ -113,7 +117,7 @@ fn sum_pairs(u1: &CodeUnit, units: &[CodeUnit], start_idx: usize) -> (f64, usize
         total += similarity_math::calculate_unit_similarity(u1, u2, fp_sim);
         count += 1;
     }
-    
+
     (total, count)
 }
 
@@ -132,4 +136,4 @@ pub fn create_cluster(units: Vec<CodeUnit>, similarity: f64) -> Option<Similarit
         similarity,
         potential_savings,
     })
-}
+}

@@ -56,14 +56,13 @@ pub fn collect_until_keyword(lines: &[&str], start: usize, keywords: &[&str]) ->
     let mut collected = Vec::new();
     let mut i = start;
 
-    while i < lines.len() {
-        let line = lines[i];
+    while let Some(line) = lines.get(i) {
         let trimmed = line.trim();
 
         if keywords.iter().any(|k| trimmed.starts_with(k)) {
             break;
         }
-        collected.push(line);
+        collected.push(*line);
         i += 1;
     }
 
@@ -90,14 +89,13 @@ pub fn collect_section(
     let mut collected = Vec::new();
     let mut found = false;
 
-    while i < lines.len() {
-        let line = lines[i];
+    while let Some(line) = lines.get(i) {
         if line.trim() == terminator {
             found = true;
             i += 1;
             break;
         }
-        collected.push(line);
+        collected.push(*line);
         i += 1;
     }
 

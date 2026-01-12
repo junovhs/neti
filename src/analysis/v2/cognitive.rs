@@ -109,6 +109,7 @@ impl<'a> Scorer<'a> {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod tests {
     use super::*;
     use tree_sitter::Parser;

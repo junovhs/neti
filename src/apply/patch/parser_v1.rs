@@ -14,7 +14,7 @@ pub fn parse(content: &str) -> Result<(Vec<PatchInstruction>, Option<String>)> {
     let mut ctx = ParseContext {
         base_sha256: None,
         instructions: Vec::new(),
-        
+
         left_ctx: None,
         old: None,
         right_ctx: None,
@@ -24,8 +24,8 @@ pub fn parse(content: &str) -> Result<(Vec<PatchInstruction>, Option<String>)> {
     let lines: Vec<&str> = content.lines().collect();
     let mut i = 0;
 
-    while i < lines.len() {
-        i = process_line(lines[i], &lines, i, &mut ctx)?;
+    while let Some(line) = lines.get(i) {
+        i = process_line(line, &lines, i, &mut ctx)?;
     }
 
     // Check if we have leftover partial blocks (error state)
@@ -40,7 +40,7 @@ pub fn parse(content: &str) -> Result<(Vec<PatchInstruction>, Option<String>)> {
 struct ParseContext {
     base_sha256: Option<String>,
     instructions: Vec<PatchInstruction>,
-    
+
     left_ctx: Option<String>,
     old: Option<String>,
     right_ctx: Option<String>,
@@ -60,7 +60,7 @@ fn process_line(
         ctx.base_sha256 = Some(val.trim().to_string());
         return Ok(idx + 1);
     }
-    
+
     if let Some(val) = trimmed.strip_prefix("MAX_MATCHES:") {
         validate_max_matches(val.trim())?;
         return Ok(idx + 1);
@@ -107,10 +107,10 @@ fn parse_block_content(
 
 fn try_build_instruction(ctx: &mut ParseContext) {
     // Only build if we have all four components.
-    if ctx.left_ctx.is_none() 
-        || ctx.old.is_none() 
-        || ctx.right_ctx.is_none() 
-        || ctx.new_val.is_none() 
+    if ctx.left_ctx.is_none()
+        || ctx.old.is_none()
+        || ctx.right_ctx.is_none()
+        || ctx.new_val.is_none()
     {
         return;
     }

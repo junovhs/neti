@@ -27,6 +27,7 @@ fn report_error(node: Node, _source: &str, out: &mut Vec<Violation>, msg: impl I
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::lang::Lang;

@@ -45,6 +45,8 @@ struct RefactorContext<'a> {
     unit_b: &'a CodeUnit,
 }
 
+// Indexing is safe: we check len() >= 2 before accessing [0] and [1]
+#[allow(clippy::indexing_slicing)]
 fn build_refactoring_plan(opportunity: &Opportunity) -> Option<String> {
     if opportunity.units.len() < 2 {
         return None;
@@ -131,22 +133,14 @@ fn find_node_recursive<'a>(
     if is_matching_node(node, source, start, end, name) {
         return Some(node);
     }
-    search_children(node, source, start, end, name)
-}
 
-fn search_children<'a>(
-    node: tree_sitter::Node<'a>,
-    source: &[u8],
-    start: usize,
-    end: usize,
-    name: &str,
-) -> Option<tree_sitter::Node<'a>> {
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
         if let Some(found) = find_node_recursive(child, source, start, end, name) {
             return Some(found);
         }
     }
+
     None
 }
 
@@ -157,22 +151,15 @@ fn is_matching_node(
     end: usize,
     name: &str,
 ) -> bool {
-    let row_start = node.start_position().row + 1;
-    let row_end = node.end_position().row + 1;
+    let node_start = node.start_position().row + 1;
+    let node_end = node.end_position().row + 1;
 
-    if row_start != start || row_end != end {
+    if node_start != start || node_end != end {
         return false;
     }
 
-    if !node.is_named() {
-        return false;
-    }
-
-    check_node_name(node, source, name)
+    // Check if the node contains the expected name
+    node.utf8_text(source)
+        .map(|text| text.contains(name))
+        .unwrap_or(false)
 }
-
-fn check_node_name(node: tree_sitter::Node, source: &[u8], name: &str) -> bool {
-    node.child_by_field_name("name")
-        .and_then(|n| n.utf8_text(source).ok())
-        .is_some_and(|n| n == name)
-}

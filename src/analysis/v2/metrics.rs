@@ -75,8 +75,12 @@ impl ScopeMetrics {
                 let method_b = &methods[*name_b];
 
                 if Self::are_connected(method_a, method_b) {
-                    adj.get_mut(*name_a).expect("Key exists").push(*name_b);
-                    adj.get_mut(*name_b).expect("Key exists").push(*name_a);
+                    if let Some(vec_a) = adj.get_mut(*name_a) {
+                        vec_a.push(*name_b);
+                    }
+                    if let Some(vec_b) = adj.get_mut(*name_b) {
+                        vec_b.push(*name_a);
+                    }
                 }
             }
         }

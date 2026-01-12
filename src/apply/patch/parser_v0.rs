@@ -15,9 +15,7 @@ pub fn parse(content: &str) -> Result<(Vec<PatchInstruction>, Option<String>)> {
     let lines: Vec<&str> = content.lines().collect();
     let mut i = 0;
 
-    while i < lines.len() {
-        let line = lines[i];
-        
+    while let Some(line) = lines.get(i) {
         if let Some(stripped) = line.strip_prefix("BASE_SHA256:") {
             base_sha256 = Some(stripped.trim().to_string());
             i += 1;

@@ -37,7 +37,10 @@ impl Lang {
         }
     }
 
+    // Indexing is safe: lang_idx and query_idx are bounded by enum variant count
+    // which matches the QUERIES array dimensions exactly
     #[must_use]
+    #[allow(clippy::indexing_slicing)]
     pub fn query(self, kind: QueryKind) -> &'static str {
         let lang_idx = self as usize;
         let query_idx = kind as usize;

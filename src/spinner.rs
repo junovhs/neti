@@ -18,6 +18,8 @@ pub struct Spinner {
 }
 
 impl Spinner {
+    // Indexing is safe: i % FRAMES.len() is always < FRAMES.len()
+    #[allow(clippy::indexing_slicing)]
     pub fn start(label: impl Into<String>) -> Self {
         let label = label.into();
         let running = Arc::new(AtomicBool::new(true));
