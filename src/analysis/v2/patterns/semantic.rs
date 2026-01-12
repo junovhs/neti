@@ -35,12 +35,12 @@ fn detect_m03(source: &str, root: Node, out: &mut Vec<Violation>) {
 
         let (Some(fn_cap), Some(name_cap), Some(self_cap)) = (fn_cap, name_cap, self_cap) else { continue };
 
-        let self_text = self_cap.node.utf8_text(source.as_bytes()).unwrap_or("");
+        let self_text = self_cap.utf8_text(source.as_bytes()).unwrap_or("");
         if !self_text.contains("mut") { continue }
 
-        let name = name_cap.node.utf8_text(source.as_bytes()).unwrap_or("");
+        let name = name_cap.utf8_text(source.as_bytes()).unwrap_or("");
         out.push(Violation::with_details(
-            fn_cap.node.start_position().row + 1,
+            fn_cap.start_position().row + 1,
             format!("Getter `{name}` takes &mut self"),
             "M03",
             ViolationDetails {
@@ -73,12 +73,12 @@ fn detect_m04(source: &str, root: Node, out: &mut Vec<Violation>) {
 
         let (Some(fn_cap), Some(name_cap), Some(ret_cap)) = (fn_cap, name_cap, ret_cap) else { continue };
 
-        let ret = ret_cap.node.utf8_text(source.as_bytes()).unwrap_or("");
+        let ret = ret_cap.utf8_text(source.as_bytes()).unwrap_or("");
         if ret == "bool" { continue }
 
-        let name = name_cap.node.utf8_text(source.as_bytes()).unwrap_or("");
+        let name = name_cap.utf8_text(source.as_bytes()).unwrap_or("");
         out.push(Violation::with_details(
-            fn_cap.node.start_position().row + 1,
+            fn_cap.start_position().row + 1,
             format!("`{name}` returns `{ret}` not bool"),
             "M04",
             ViolationDetails {
@@ -111,12 +111,12 @@ fn detect_m05(source: &str, root: Node, out: &mut Vec<Violation>) {
 
         let (Some(fn_cap), Some(name_cap), Some(self_cap)) = (fn_cap, name_cap, self_cap) else { continue };
 
-        let self_text = self_cap.node.utf8_text(source.as_bytes()).unwrap_or("");
+        let self_text = self_cap.utf8_text(source.as_bytes()).unwrap_or("");
         if !self_text.contains("mut") { continue }
 
-        let name = name_cap.node.utf8_text(source.as_bytes()).unwrap_or("");
+        let name = name_cap.utf8_text(source.as_bytes()).unwrap_or("");
         out.push(Violation::with_details(
-            fn_cap.node.start_position().row + 1,
+            fn_cap.start_position().row + 1,
             format!("Calculator `{name}` takes &mut self"),
             "M05",
             ViolationDetails {
