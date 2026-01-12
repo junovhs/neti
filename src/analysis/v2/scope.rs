@@ -96,8 +96,9 @@ impl Scope {
         self.fields.insert(name, info);
     }
 
-    pub fn add_method(&mut self, name: String, method: Method) {
-        self.methods.insert(name, method);
+    // UPDATED: Now takes Method by value, handles key cloning internally
+    pub fn add_method(&mut self, method: Method) {
+        self.methods.insert(method.name.clone(), method);
     }
 
     pub fn add_derive(&mut self, derive: String) {
@@ -117,4 +118,4 @@ impl Scope {
         !self.name.is_empty() && (self.row > 0 || self.is_enum) 
             && self.fields.len() + self.methods.len() + self.derives.len() < usize::MAX
     }
-}
+}

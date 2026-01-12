@@ -30,13 +30,14 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
         (loop_expression body: (block) @body) @loop
     ";
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let idx_pat = query.capture_index_for_name("pat");
     let idx_body = query.capture_index_for_name("body");
     
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let loop_var = m.captures.iter().find(|c| c.index == 0)
-            .and_then(|c| c.node.utf8_text(source.as_bytes()).ok())
+        let loop_var = get_capture_node(&m, idx_pat)
+            .and_then(|n| n.utf8_text(source.as_bytes()).ok())
             .map(|s| s.split([',', '(']).next().unwrap_or(s).trim().to_string());
 
         let Some(body) = get_capture_node(&m, idx_body) else { continue };

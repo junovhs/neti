@@ -5,6 +5,7 @@ pub mod inspector;
 pub mod metrics;
 pub mod patterns;
 pub mod rust;
+pub mod rust_impl;
 pub mod scope;
 pub mod visitor;
 pub(crate) mod worker;
