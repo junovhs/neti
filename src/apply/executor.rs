@@ -8,6 +8,7 @@ use crate::branch;
 use crate::events::{EventKind, EventLogger};
 use anyhow::Result;
 use colored::Colorize;
+use std::fs;
 use std::io::{self, Write};
 
 /// Executes the full apply transaction with automatic branch management.
@@ -50,8 +51,22 @@ pub fn apply_to_stage_transaction(
     // Even if no check requested, we still commit the changes to the work branch
     // to preserve the transaction.
     commit_work_branch_changes(commit_msg)?;
+    
+    // Save goal for promotion
+    save_pending_goal(ctx, commit_msg);
+    
     print_work_branch_status();
     Ok(outcome)
+}
+
+fn save_pending_goal(ctx: &ApplyContext, msg: &str) {
+    let goal_path = ctx.repo_root.join(".slopchop").join("pending_goal");
+    if let Some(p) = goal_path.parent() {
+        let _ = fs::create_dir_all(p);
+    }
+    // Clean up "ai: " prefix if present
+    let clean_msg = msg.strip_prefix("ai: ").unwrap_or(msg);
+    let _ = fs::write(goal_path, clean_msg);
 }
 
 /// Ensures we're on the work branch, creating it if needed.
@@ -62,11 +77,11 @@ fn ensure_work_branch() -> Result<()> {
 
     match branch::init_branch(false) {
         Ok(branch::BranchResult::Created) => {
-            println!("{}", "→ Created work branch 'slopchop-work'".blue());
+            println!("{}", " Created work branch 'slopchop-work'".blue());
         }
         Ok(branch::BranchResult::AlreadyOnBranch) => {}
         Ok(branch::BranchResult::Reset) => {
-            println!("{}", "→ Reset work branch".blue());
+            println!("{}", " Reset work branch".blue());
         }
         Err(e) => {
             if e.to_string().contains("already exists") {
@@ -88,7 +103,7 @@ fn switch_to_work_branch() -> Result<()> {
     if !output.status.success() {
         anyhow::bail!("Failed to switch to work branch");
     }
-    println!("{}", "→ Switched to work branch 'slopchop-work'".blue());
+    println!("{}", " Switched to work branch 'slopchop-work'".blue());
     Ok(())
 }
 
@@ -119,24 +134,25 @@ fn run_verification_and_maybe_promote(
     let result = verification::run_verification_pipeline(ctx, &ctx.repo_root)?;
 
     if result.passed {
-        println!("{}", "✓ All checks passed!".green().bold());
+        println!("{}", "� All checks passed!".green().bold());
 
         // Commit changes on work branch first
         commit_work_branch_changes(commit_msg)?;
+        save_pending_goal(ctx, commit_msg);
 
         // Auto-promote or prompt
         if ctx.auto_promote {
-            return promote_to_main();
+            return promote_to_main(Some(commit_msg.to_string()));
         }
 
         if confirm("Promote to main?")? {
-            return promote_to_main();
+            return promote_to_main(Some(commit_msg.to_string()));
         }
 
         println!("{}", "Changes committed on 'slopchop-work'. Run 'slopchop promote' when ready.".cyan());
         Ok(outcome)
     } else {
-        println!("{}", "✗ Verification failed. Changes are on work branch.".yellow());
+        println!("{}", "? Verification failed. Changes are on work branch.".yellow());
 
         let modified_files: Vec<String> = match &outcome {
             ApplyOutcome::Success { written, .. } => written.clone(),
@@ -185,10 +201,10 @@ fn commit_work_branch_changes(msg: &str) -> Result<()> {
     Ok(())
 }
 
-fn promote_to_main() -> Result<ApplyOutcome> {
-    match branch::promote(false)? {
+fn promote_to_main(msg: Option<String>) -> Result<ApplyOutcome> {
+    match branch::promote(false, msg)? {
         branch::PromoteResult::Merged => {
-            println!("{}", "✓ Promoted to main. Work branch cleaned up.".green().bold());
+            println!("{}", "� Promoted to main. Work branch cleaned up.".green().bold());
             Ok(ApplyOutcome::Promoted {
                 written: vec![],
                 deleted: vec![],
@@ -227,11 +243,14 @@ pub fn confirm(prompt: &str) -> Result<bool> {
 ///
 /// # Errors
 /// Returns error if promotion fails.
-pub fn run_promote_standalone(_ctx: &ApplyContext) -> Result<ApplyOutcome> {
+pub fn run_promote_standalone(ctx: &ApplyContext) -> Result<ApplyOutcome> {
     if !branch::on_work_branch() {
         println!("{}", "Not on work branch. Nothing to promote.".yellow());
         return Ok(ApplyOutcome::ParseError("Not on work branch.".to_string()));
     }
 
-    promote_to_main()
-}
+    let goal_path = ctx.repo_root.join(".slopchop").join("pending_goal");
+    let msg = fs::read_to_string(goal_path).ok().map(|s| format!("feat: {} (promoted)", s.trim()));
+
+    promote_to_main(msg)
+}

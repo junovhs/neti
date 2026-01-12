@@ -1,8 +1,5 @@
 // src/branch.rs
 //! Git branch workflow for AI agents.
-//!
-//! Replaces the custom stage system with thin wrappers around git.
-//! Git is local-first, battle-tested, and already installed everywhere.
 
 use anyhow::{Context, Result};
 use std::process::Command;
@@ -99,7 +96,7 @@ pub fn init_branch(force: bool) -> Result<BranchResult> {
 ///
 /// # Errors
 /// Returns error if git commands fail or checks don't pass.
-pub fn promote(dry_run: bool) -> Result<PromoteResult> {
+pub fn promote(dry_run: bool, custom_msg: Option<String>) -> Result<PromoteResult> {
     if !in_git_repo() {
         anyhow::bail!("Not a git repository.");
     }
@@ -119,6 +116,8 @@ pub fn promote(dry_run: bool) -> Result<PromoteResult> {
         return Ok(PromoteResult::DryRun);
     }
 
+    let msg = custom_msg.unwrap_or_else(|| "chore: promote slopchop-work".to_string());
+
     // Merge into main
     run_git(&["checkout", "main"])?;
     run_git(&[
@@ -126,7 +125,7 @@ pub fn promote(dry_run: bool) -> Result<PromoteResult> {
         WORK_BRANCH,
         "--no-ff",
         "-m",
-        "chore: promote slopchop-work",
+        &msg,
     ])?;
     run_git(&["branch", "-d", WORK_BRANCH])?;
 
@@ -202,4 +201,4 @@ mod tests {
     fn test_work_branch_name() {
         assert_eq!(work_branch_name(), "slopchop-work");
     }
-}
+}

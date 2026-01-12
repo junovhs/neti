@@ -12,6 +12,7 @@ use crate::reporting;
 use crate::signatures::{self, SignatureOptions};
 use anyhow::Result;
 use colored::Colorize;
+use std::fs;
 use std::path::PathBuf;
 
 #[must_use]
@@ -144,13 +145,13 @@ pub fn handle_config() -> Result<SlopChopExit> {
 pub fn handle_branch(force: bool) -> Result<SlopChopExit> {
     match crate::branch::init_branch(force)? {
         crate::branch::BranchResult::Created => {
-            println!("{}", "→ Created work branch 'slopchop-work'".blue());
+            println!("{}", " Created work branch 'slopchop-work'".blue());
         }
         crate::branch::BranchResult::Reset => {
-            println!("{}", "→ Reset work branch 'slopchop-work'".blue());
+            println!("{}", " Reset work branch 'slopchop-work'".blue());
         }
         crate::branch::BranchResult::AlreadyOnBranch => {
-            println!("{}", "✓ Already on 'slopchop-work'".green());
+            println!("{}", "� Already on 'slopchop-work'".green());
         }
     }
     Ok(SlopChopExit::Success)
@@ -161,12 +162,20 @@ pub fn handle_branch(force: bool) -> Result<SlopChopExit> {
 /// # Errors
 /// Returns error if promotion fails.
 pub fn handle_promote(dry_run: bool) -> Result<SlopChopExit> {
-    match crate::branch::promote(dry_run)? {
+    let root = get_repo_root();
+    let goal_path = root.join(".slopchop").join("pending_goal");
+    let msg = fs::read_to_string(&goal_path)
+        .ok()
+        .map(|s| format!("feat: {} (promoted)", s.trim()));
+
+    match crate::branch::promote(dry_run, msg)? {
         crate::branch::PromoteResult::DryRun => {
             println!("{}", "[DRY RUN] Would merge 'slopchop-work' into main.".yellow());
         }
         crate::branch::PromoteResult::Merged => {
-            println!("{}", "✓ Merged 'slopchop-work' into main.".green().bold());
+            println!("{}", "� Merged 'slopchop-work' into main.".green().bold());
+            // Clean up pending goal
+            let _ = fs::remove_file(goal_path);
         }
     }
     Ok(SlopChopExit::Success)
@@ -178,7 +187,7 @@ pub fn handle_promote(dry_run: bool) -> Result<SlopChopExit> {
 /// Returns error if abort fails.
 pub fn handle_abort() -> Result<SlopChopExit> {
     crate::branch::abort()?;
-    println!("{}", "✓ Aborted. Work branch deleted.".yellow());
+    println!("{}", "� Aborted. Work branch deleted.".yellow());
     Ok(SlopChopExit::Success)
 }
 
@@ -262,4 +271,4 @@ fn determine_input(args: &ApplyArgs) -> apply::types::ApplyInput {
     } else {
         apply::types::ApplyInput::Clipboard
     }
-}
+}
