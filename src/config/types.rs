@@ -40,17 +40,27 @@ impl Default for Preferences {
     }
 }
 
-fn default_auto_copy() -> bool { true }
-fn default_progress_bars() -> bool { true }
-fn default_backup_retention() -> usize { 5 }
-fn default_fix_packet_path() -> String { "slopchop-fixme.txt".to_string() }
+fn default_auto_copy() -> bool {
+    true
+}
+fn default_progress_bars() -> bool {
+    true
+}
+fn default_backup_retention() -> usize {
+    5
+}
+fn default_fix_packet_path() -> String {
+    "slopchop-fixme.txt".to_string()
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuleConfig {
     #[serde(default = "default_max_tokens")]
     pub max_file_tokens: usize,
-    // RENAMED: was max_cyclomatic_complexity
-    #[serde(default = "default_max_complexity", alias = "max_cyclomatic_complexity")]
+    #[serde(
+        default = "default_max_complexity",
+        alias = "max_cyclomatic_complexity"
+    )]
     pub max_cognitive_complexity: usize,
     #[serde(default = "default_max_depth")]
     pub max_nesting_depth: usize,
@@ -111,26 +121,55 @@ pub struct SafetyConfig {
 
 impl Default for SafetyConfig {
     fn default() -> Self {
-        Self { require_safety_comment: true, ban_unsafe: false }
+        Self {
+            require_safety_comment: true,
+            ban_unsafe: false,
+        }
     }
 }
 
-const fn default_true() -> bool { true }
-const fn default_max_tokens() -> usize { 2000 }
-// UPDATED DEFAULT: 25 provides breathing room for complex reporting logic without being totally loose
-const fn default_max_complexity() -> usize { 25 } 
-const fn default_max_depth() -> usize { 3 }
-const fn default_max_args() -> usize { 5 }
-const fn default_max_words() -> usize { 10 } 
+const fn default_true() -> bool {
+    true
+}
+const fn default_max_tokens() -> usize {
+    2000
+}
+const fn default_max_complexity() -> usize {
+    25
+}
+const fn default_max_depth() -> usize {
+    3
+}
+const fn default_max_args() -> usize {
+    5
+}
+const fn default_max_words() -> usize {
+    10
+}
 
 // V2 Defaults
-const fn default_lcom4() -> usize { 1 }
-const fn default_ahf() -> f64 { 60.0 }
-const fn default_cbo() -> usize { 9 }
-const fn default_sfout() -> usize { 7 }
+const fn default_lcom4() -> usize {
+    1
+}
+const fn default_ahf() -> f64 {
+    60.0
+}
+const fn default_cbo() -> usize {
+    9
+}
+const fn default_sfout() -> usize {
+    7
+}
 
 fn default_ignore_tokens() -> Vec<String> {
-    vec!["Cargo.lock".into(), "package-lock.json".into(), "README.md".into()]
+    vec![
+        "Cargo.lock".into(),
+        "package-lock.json".into(),
+        "README.md".into(),
+        "docs".into(),   // ADDED: Common doc folder
+        "target".into(), // ADDED: Common build folder
+        "vendor".into(), // ADDED: Common dependency folder
+    ]
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -169,4 +208,4 @@ pub struct Config {
     pub rules: RuleConfig,
     pub preferences: Preferences,
     pub commands: HashMap<String, Vec<String>>,
-}
+}

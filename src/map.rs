@@ -1,14 +1,11 @@
 // src/map.rs
 //! Repository map generation with tree-style visualization.
-//!
-//! Generates a visual tree representation of the repository structure,
-//! similar to the `tree` command but with token counts and size info.
 
 use crate::config::Config;
 use crate::discovery::discover;
 use crate::tokens::Tokenizer;
 use anyhow::Result;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::fmt::Write;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -23,6 +20,7 @@ struct TreeNode {
 /// Metadata for a file entry.
 #[derive(Debug)]
 struct FileInfo {
+    path: PathBuf,
     size: u64,
     tokens: usize,
 }
@@ -32,17 +30,31 @@ struct RenderCtx<'a> {
     prefix: &'a str,
     connector: &'a str,
     child_prefix: String,
+    deps: Option<&'a HashMap<PathBuf, Vec<PathBuf>>>,
 }
 
 /// Generates the repository map output.
 ///
 /// # Errors
 /// Returns error if file discovery or reading fails.
-pub fn generate(_deps: bool) -> Result<String> {
+pub fn generate(deps: bool) -> Result<String> {
     let config = Config::load();
     let files = discover(&config)?;
     let tree = build_tree(&files);
-    let output = render_tree(&tree);
+
+    let dep_map = if deps {
+        let root = std::env::current_dir()?;
+        let edges = crate::graph::locality::collect_edges(&root, &files)?;
+        let mut m = HashMap::new();
+        for (from, to) in edges {
+            m.entry(from).or_insert_with(Vec::new).push(to);
+        }
+        Some(m)
+    } else {
+        None
+    };
+
+    let output = render_tree(&tree, dep_map.as_ref());
     Ok(output)
 }
 
@@ -82,20 +94,26 @@ fn read_file_info(path: &Path) -> Option<FileInfo> {
     let tokens = Tokenizer::count(&content);
 
     Some(FileInfo {
+        path: path.to_path_buf(),
         size: metadata.len(),
         tokens,
     })
 }
 
 /// Renders the tree to a string with box-drawing characters.
-fn render_tree(root: &TreeNode) -> String {
+fn render_tree(root: &TreeNode, dep_map: Option<&HashMap<PathBuf, Vec<PathBuf>>>) -> String {
     let mut output = String::from("# Repository Map\n\n");
-    render_node(&mut output, root, "");
+    render_node(&mut output, root, "", dep_map);
     output
 }
 
 /// Recursively renders a tree node with proper indentation.
-fn render_node(output: &mut String, node: &TreeNode, prefix: &str) {
+fn render_node(
+    output: &mut String,
+    node: &TreeNode,
+    prefix: &str,
+    dep_map: Option<&HashMap<PathBuf, Vec<PathBuf>>>,
+) {
     let entries: Vec<_> = node.children.iter().collect();
     let count = entries.len();
 
@@ -105,6 +123,7 @@ fn render_node(output: &mut String, node: &TreeNode, prefix: &str) {
             prefix,
             connector: select_connector(is_last),
             child_prefix: build_child_prefix(prefix, is_last),
+            deps: dep_map,
         };
         render_entry(output, name, child, &ctx);
     }
@@ -134,23 +153,41 @@ fn render_entry(output: &mut String, name: &str, node: &TreeNode, ctx: &RenderCt
 
     if is_dir {
         let _ = writeln!(output, "{}{}{name}/", ctx.prefix, ctx.connector);
-        render_node(output, node, &ctx.child_prefix);
+        render_node(output, node, &ctx.child_prefix, ctx.deps);
     } else if let Some(info) = &node.file_info {
-        write_file_line(output, ctx.prefix, ctx.connector, name, info);
+        write_file_line(output, ctx, name, info);
     } else {
         let _ = writeln!(output, "{}{}{name}/", ctx.prefix, ctx.connector);
     }
 }
 
-/// Writes a file line with size and token info.
-fn write_file_line(output: &mut String, prefix: &str, conn: &str, name: &str, info: &FileInfo) {
+/// Writes a file line with size, token info, and optionally dependencies.
+fn write_file_line(output: &mut String, ctx: &RenderCtx, name: &str, info: &FileInfo) {
     let size_str = format_size(info.size);
     let tok_str = format_tokens(info.tokens);
-    let _ = writeln!(output, "{prefix}{conn}{name} ({size_str}, {tok_str})");
+    let _ = write!(
+        output,
+        "{}{}{name} ({size_str}, {tok_str})",
+        ctx.prefix, ctx.connector
+    );
+
+    if let Some(map) = ctx.deps {
+        if let Some(imports) = map.get(&info.path) {
+            let names: Vec<_> = imports
+                .iter()
+                .filter_map(|p| p.file_name())
+                .map(|os| os.to_string_lossy())
+                .collect();
+            if !names.is_empty() {
+                let _ = write!(output, " → [{}]", names.join(", "));
+            }
+        }
+    }
+    let _ = writeln!(output);
 }
 
 /// Formats byte size in human-readable form.
-#[allow(clippy::cast_precision_loss)] // Acceptable for display purposes
+#[allow(clippy::cast_precision_loss)]
 fn format_size(bytes: u64) -> String {
     if bytes >= 1024 * 1024 {
         format!("{:.1} MB", bytes as f64 / (1024.0 * 1024.0))
@@ -162,7 +199,7 @@ fn format_size(bytes: u64) -> String {
 }
 
 /// Formats token count with suffix.
-#[allow(clippy::cast_precision_loss)] // Acceptable for display purposes
+#[allow(clippy::cast_precision_loss)]
 fn format_tokens(tokens: usize) -> String {
     if tokens >= 1000 {
         format!("{:.1}k toks", tokens as f64 / 1000.0)
