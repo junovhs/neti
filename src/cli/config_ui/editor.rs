@@ -29,7 +29,7 @@ impl ConfigEditor {
         Self {
             config,
             selected: 0,
-            items: ConfigItem::all().to_vec(),
+            items: ConfigItem::all(), // all() now returns Vec directly
             modified: false,
         }
     }
