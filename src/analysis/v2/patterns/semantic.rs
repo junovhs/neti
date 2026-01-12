@@ -2,7 +2,7 @@
 //! Semantic patterns: M03, M04, M05
 
 use crate::types::{Violation, ViolationDetails};
-use tree_sitter::{Node, Query, QueryCursor, QueryCapture};
+use tree_sitter::{Node, Query, QueryCursor};
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
@@ -13,8 +13,12 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     out
 }
 
-fn cap_name<'a>(query: &'a Query, cap: &QueryCapture) -> &'a str {
-    query.capture_names().get(cap.index as usize).map_or("", String::as_str)
+fn get_capture_node(m: &tree_sitter::QueryMatch, idx: Option<u32>) -> Option<Node> {
+    let i = idx?;
+    for c in m.captures {
+        if c.index == i { return Some(c.node); }
+    }
+    None
 }
 
 /// M03: Getter with mutation - `get_*`/`is_*` that takes `&mut self`
@@ -25,12 +29,16 @@ fn detect_m03(source: &str, root: Node, out: &mut Vec<Violation>) {
         (#match? @name "^(get_|is_|has_)")) @fn"#;
 
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let idx_fn = query.capture_index_for_name("fn");
+    let idx_name = query.capture_index_for_name("name");
+    let idx_self = query.capture_index_for_name("self");
+    
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let fn_cap = m.captures.iter().find(|c| cap_name(&query, c) == "fn");
-        let name_cap = m.captures.iter().find(|c| cap_name(&query, c) == "name");
-        let self_cap = m.captures.iter().find(|c| cap_name(&query, c) == "self");
+        let fn_cap = get_capture_node(&m, idx_fn);
+        let name_cap = get_capture_node(&m, idx_name);
+        let self_cap = get_capture_node(&m, idx_self);
 
         let (Some(fn_cap), Some(name_cap), Some(self_cap)) = (fn_cap, name_cap, self_cap) else { continue };
 
@@ -59,12 +67,16 @@ fn detect_m04(source: &str, root: Node, out: &mut Vec<Violation>) {
         (#match? @name "^(is_|has_|can_|should_)")) @fn"#;
 
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let idx_fn = query.capture_index_for_name("fn");
+    let idx_name = query.capture_index_for_name("name");
+    let idx_ret = query.capture_index_for_name("ret");
+    
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let fn_cap = m.captures.iter().find(|c| cap_name(&query, c) == "fn");
-        let name_cap = m.captures.iter().find(|c| cap_name(&query, c) == "name");
-        let ret_cap = m.captures.iter().find(|c| cap_name(&query, c) == "ret");
+        let fn_cap = get_capture_node(&m, idx_fn);
+        let name_cap = get_capture_node(&m, idx_name);
+        let ret_cap = get_capture_node(&m, idx_ret);
 
         let (Some(fn_cap), Some(name_cap), Some(ret_cap)) = (fn_cap, name_cap, ret_cap) else { continue };
 
@@ -93,12 +105,16 @@ fn detect_m05(source: &str, root: Node, out: &mut Vec<Violation>) {
         (#match? @name "^(calculate_|compute_|count_|sum_)")) @fn"#;
 
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let idx_fn = query.capture_index_for_name("fn");
+    let idx_name = query.capture_index_for_name("name");
+    let idx_self = query.capture_index_for_name("self");
+    
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let fn_cap = m.captures.iter().find(|c| cap_name(&query, c) == "fn");
-        let name_cap = m.captures.iter().find(|c| cap_name(&query, c) == "name");
-        let self_cap = m.captures.iter().find(|c| cap_name(&query, c) == "self");
+        let fn_cap = get_capture_node(&m, idx_fn);
+        let name_cap = get_capture_node(&m, idx_name);
+        let self_cap = get_capture_node(&m, idx_self);
 
         let (Some(fn_cap), Some(name_cap), Some(self_cap)) = (fn_cap, name_cap, self_cap) else { continue };
 
@@ -161,4 +177,4 @@ mod tests {
         let code = "impl X { fn calculate_avg(&mut self) -> f64 { 0.0 } }";
         assert!(parse_and_detect(code).iter().any(|v| v.law == "M05"));
     }
-}
+}

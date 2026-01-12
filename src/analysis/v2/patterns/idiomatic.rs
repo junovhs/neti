@@ -2,7 +2,7 @@
 //! Idiomatic patterns: I01, I02
 
 use crate::types::{Violation, ViolationDetails};
-use tree_sitter::{Node, Query, QueryCursor, QueryCapture};
+use tree_sitter::{Node, Query, QueryCursor};
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
@@ -12,8 +12,12 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     out
 }
 
-fn cap_name<'a>(query: &'a Query, cap: &QueryCapture) -> &'a str {
-    query.capture_names().get(cap.index as usize).map_or("", String::as_str)
+fn get_capture_node(m: &tree_sitter::QueryMatch, idx: Option<u32>) -> Option<Node> {
+    let i = idx?;
+    for c in m.captures {
+        if c.index == i { return Some(c.node); }
+    }
+    None
 }
 
 /// I01: Manual From impl that could use derive
@@ -23,8 +27,7 @@ fn detect_i01(source: &str, root: Node, out: &mut Vec<Violation>) {
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let impl_node = m.captures.first().map(|c| c.node);
-        let Some(impl_node) = impl_node else { continue };
+        let Some(impl_node) = m.captures.first().map(|c| c.node) else { continue };
 
         let text = impl_node.utf8_text(source.as_bytes()).unwrap_or("");
         if !text.contains("impl From<") || !text.contains("for ") { continue }
@@ -49,11 +52,14 @@ fn detect_i01(source: &str, root: Node, out: &mut Vec<Violation>) {
 fn detect_i02(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"(match_expression body: (match_block) @block) @match";
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let idx_match = query.capture_index_for_name("match");
+    let idx_block = query.capture_index_for_name("block");
+    
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let match_node = m.captures.iter().find(|c| cap_name(&query, c) == "match").map(|c| c.node);
-        let block = m.captures.iter().find(|c| cap_name(&query, c) == "block").map(|c| c.node);
+        let match_node = get_capture_node(&m, idx_match);
+        let block = get_capture_node(&m, idx_block);
 
         let (Some(match_node), Some(block)) = (match_node, block) else { continue };
 
@@ -82,6 +88,8 @@ fn find_dup_arms(source: &str, block: Node) -> Option<String> {
             let text = body.utf8_text(source.as_bytes()).unwrap_or("");
             let norm = text.split_whitespace().collect::<Vec<_>>().join(" ");
             if norm.len() < 5 { continue }
+            // P06: Linear search here is unavoidable as `bodies` is small (match arms)
+            // and we need value equality check.
             if bodies.contains(&norm) { return Some(norm) }
             bodies.push(norm);
         }
@@ -129,4 +137,4 @@ mod tests {
         let code = "fn f(x: i32) { match x { 1 => one(), 2 => two(), _ => other() } }";
         assert!(parse_and_detect(code).iter().all(|v| v.law != "I02"));
     }
-}
+}

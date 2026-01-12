@@ -60,14 +60,32 @@ fn analyze_function(
     complexity_query: &Query,
     out: &mut Vec<Violation>,
 ) -> usize {
-    let func_name = extract_function_name(node, ctx.source);
+    // P02 FIX: Hoist the allocation. `extract_function_name` returns a String.
+    // We can change `extract_function_name` to return Cow or &str if possible, 
+    // but lifetime management with tree-sitter across functions is tricky.
+    // Instead, since this function IS the loop body (called by process_match loop), 
+    // the allocation here is unavoidable per function.
+    // P02 complains about allocation *in a loop*. 
+    // `process_match` is called in a loop. `analyze_function` is called in that loop.
+    // So `extract_function_name`'s allocation is inside the loop.
+    // But we need the name for the report.
+    // We can defer extraction until we know there's a violation?
+    // We need name for arity/nesting checks too.
+    // Let's defer extraction.
+    
     let row = node.start_position().row + 1;
 
-    check_arity(node, ctx.config, &func_name, row, out);
-    check_nesting(node, ctx.config, &func_name, row, out);
+    // Check Arity first (cheap)
+    check_arity(node, ctx.config, ctx.source, row, out);
+    
+    // Check Nesting
+    check_nesting(node, ctx.config, ctx.source, row, out);
+    
+    // Check Complexity
     check_cyclomatic(node, ctx, complexity_query, out)
 }
 
+// Changed to get name only if needed
 fn extract_function_name(node: Node, source: &str) -> String {
     for child in node.children(&mut node.walk()) {
         if child.kind() == "identifier" || child.kind() == "property_identifier" {
@@ -82,14 +100,15 @@ fn extract_function_name(node: Node, source: &str) -> String {
 fn check_arity(
     node: Node,
     config: &RuleConfig,
-    func_name: &str,
+    source: &str,
     row: usize,
     out: &mut Vec<Violation>,
 ) {
     let params = count_parameters(node);
     if params > config.max_function_args {
+        let func_name = extract_function_name(node, source);
         let details = ViolationDetails {
-            function_name: Some(func_name.to_string()),
+            function_name: Some(func_name.clone()),
             analysis: vec![format!("Function accepts {params} parameters")],
             suggestion: Some("Group related parameters into a struct or options object".into()),
         };
@@ -114,14 +133,15 @@ fn count_parameters(node: Node) -> usize {
 fn check_nesting(
     node: Node,
     config: &RuleConfig,
-    func_name: &str,
+    source: &str,
     row: usize,
     out: &mut Vec<Violation>,
 ) {
     let (depth, deepest_line) = measure_nesting(node, 0, row);
     if depth > config.max_nesting_depth {
+        let func_name = extract_function_name(node, source);
         let details = ViolationDetails {
-            function_name: Some(func_name.to_string()),
+            function_name: Some(func_name.clone()),
             analysis: vec![format!("Deepest nesting at line {deepest_line}")],
             suggestion: Some("Extract nested logic or use early returns".into()),
         };
@@ -166,11 +186,12 @@ fn check_cyclomatic(
     query: &Query,
     out: &mut Vec<Violation>,
 ) -> usize {
-    let func_name = extract_function_name(node, ctx.source);
-    let row = node.start_position().row + 1;
     let (complexity, branch_lines) = measure_complexity(node, ctx.source, query);
 
     if complexity > ctx.config.max_cyclomatic_complexity {
+        let func_name = extract_function_name(node, ctx.source);
+        let row = node.start_position().row + 1;
+        
         let analysis: Vec<String> = branch_lines
             .iter()
             .take(5)
@@ -219,4 +240,4 @@ fn measure_complexity(node: Node, source: &str, query: &Query) -> (usize, Vec<(u
     }
 
     (count, branches)
-}
+}

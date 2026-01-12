@@ -2,7 +2,7 @@
 //! Security patterns: X01, X02, X03
 
 use crate::types::{Violation, ViolationDetails};
-use tree_sitter::{Node, Query, QueryCursor, QueryCapture};
+use tree_sitter::{Node, Query, QueryCursor};
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
@@ -13,17 +13,22 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     out
 }
 
-fn cap_name<'a>(query: &'a Query, cap: &QueryCapture) -> &'a str {
-    query.capture_names().get(cap.index as usize).map_or("", String::as_str)
+fn get_capture_node(m: &tree_sitter::QueryMatch, idx: Option<u32>) -> Option<Node> {
+    let i = idx?;
+    for c in m.captures {
+        if c.index == i { return Some(c.node); }
+    }
+    None
 }
 
 fn detect_x01_sql(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r#"(macro_invocation macro: (identifier) @mac (token_tree) @args (#eq? @mac "format")) @fmt"#;
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let idx_args = query.capture_index_for_name("args");
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        if let Some(arg_node) = m.captures.iter().find(|c| c.index == 1).map(|c| c.node) {
+        if let Some(arg_node) = get_capture_node(&m, idx_args) {
             let args = arg_node.utf8_text(source.as_bytes()).unwrap_or("");
             if is_suspicious_sql(args) {
                 out.push(Violation::with_details(
@@ -56,11 +61,13 @@ fn detect_x02_command(source: &str, root: Node, out: &mut Vec<Violation>) {
         (#eq? @struct "Command") (#eq? @method "new")) @call"#;
 
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let idx_call = query.capture_index_for_name("call");
+    let idx_arg = query.capture_index_for_name("arg");
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let call = m.captures.iter().find(|c| cap_name(&query, c) == "call").map(|c| c.node);
-        let arg = m.captures.iter().find(|c| cap_name(&query, c) == "arg").map(|c| c.node);
+        let call = get_capture_node(&m, idx_call);
+        let arg = get_capture_node(&m, idx_arg);
 
         let (Some(call), Some(arg)) = (call, arg) else { continue };
         let var_name = arg.utf8_text(source.as_bytes()).unwrap_or("");
@@ -149,10 +156,11 @@ fn detect_x03_secrets(source: &str, root: Node, out: &mut Vec<Violation>) {
     "#;
 
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let idx_value = query.capture_index_for_name("value");
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        if let Some(val) = m.captures.iter().find(|c| c.index == 1).map(|c| c.node) {
+        if let Some(val) = get_capture_node(&m, idx_value) {
             let text = val.utf8_text(source.as_bytes()).unwrap_or("");
             if text.contains("placeholder") || text.contains("example")
                || text.contains("test") || text.contains("dummy") || text.len() < 5 {
@@ -170,4 +178,4 @@ fn detect_x03_secrets(source: &str, root: Node, out: &mut Vec<Violation>) {
             ));
         }
     }
-}
+}

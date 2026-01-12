@@ -14,18 +14,27 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     violations
 }
 
+fn get_capture_node(m: &tree_sitter::QueryMatch, idx: Option<u32>) -> Option<Node> {
+    let i = idx?;
+    for c in m.captures {
+        if c.index == i { return Some(c.node); }
+    }
+    None
+}
+
 /// S01: Global mutable declaration - `static mut`
 fn detect_s01(source: &str, root: Node, out: &mut Vec<Violation>) {
     let query_str = r"(static_item (mutable_specifier) @mut) @item";
     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
         return;
     };
+    let idx_mut = query.capture_index_for_name("mut");
     
     let mut cursor = QueryCursor::new();
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        if let Some(cap) = m.captures.iter().find(|c| c.index == 1) {
-            let row = cap.node.start_position().row;
-            let text = extract_first_line(source, cap.node);
+        if let Some(cap) = get_capture_node(&m, idx_mut) {
+            let row = cap.start_position().row;
+            let text = extract_first_line(source, cap);
             out.push(build_s01_violation(row, &text));
         }
     }
@@ -53,37 +62,43 @@ fn detect_s02(source: &str, root: Node, out: &mut Vec<Violation>) {
     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
         return;
     };
+    let idx_vis = query.capture_index_for_name("vis");
+    let idx_name = query.capture_index_for_name("name");
+    let idx_item = query.capture_index_for_name("item");
     
     let mut cursor = QueryCursor::new();
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        if let Some(v) = process_s02_match(source, &m) {
-            out.push(v);
+        let vis = get_capture_node(&m, idx_vis);
+        let name = get_capture_node(&m, idx_name);
+        let item = get_capture_node(&m, idx_item);
+        
+        if let (Some(vis), Some(name), Some(item)) = (vis, name, item) {
+             if process_s02_check(source, vis, name, item, out) {
+                 // violation added
+             }
         }
     }
 }
 
-fn process_s02_match(source: &str, m: &tree_sitter::QueryMatch) -> Option<Violation> {
-    let vis_cap = m.captures.iter().find(|c| c.index == 0)?;
-    let name_cap = m.captures.iter().find(|c| c.index == 1)?;
-    let item_cap = m.captures.iter().find(|c| c.index == 2)?;
-    
-    let vis = vis_cap.node.utf8_text(source.as_bytes()).ok()?;
-    if !vis.contains("pub") {
-        return None;
+fn process_s02_check(source: &str, vis: Node, name: Node, item: Node, out: &mut Vec<Violation>) -> bool {
+    let vis_text = vis.utf8_text(source.as_bytes()).unwrap_or("");
+    if !vis_text.contains("pub") {
+        return false;
     }
     
-    let name = name_cap.node.utf8_text(source.as_bytes()).ok()?;
-    let item_text = item_cap.node.utf8_text(source.as_bytes()).ok()?;
+    let name_text = name.utf8_text(source.as_bytes()).unwrap_or("");
+    let item_text = item.utf8_text(source.as_bytes()).unwrap_or("");
     
     if item_text.contains("static mut") {
-        return None; // Already caught by S01
+        return false; // Already caught by S01
     }
     
-    if name.chars().all(|c| c.is_uppercase() || c == '_') {
-        return None; // Const-like naming
+    if name_text.chars().all(|c| c.is_uppercase() || c == '_') {
+        return false; // Const-like naming
     }
     
-    Some(build_s02_violation(item_cap.node.start_position().row, name))
+    out.push(build_s02_violation(item.start_position().row, name_text));
+    true
 }
 
 fn build_s02_violation(row: usize, name: &str) -> Violation {
@@ -108,11 +123,12 @@ fn detect_s03(source: &str, root: Node, out: &mut Vec<Violation>) {
     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
         return;
     };
+    let idx_item = query.capture_index_for_name("item");
     
     let mut cursor = QueryCursor::new();
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        if let Some(cap) = m.captures.iter().find(|c| c.index == 1) {
-            if let Some(v) = check_s03_container(source, cap.node) {
+        if let Some(item) = get_capture_node(&m, idx_item) {
+            if let Some(v) = check_s03_container(source, item) {
                 out.push(v);
             }
         }
@@ -157,4 +173,4 @@ fn extract_first_line(source: &str, node: Node) -> String {
 
 fn truncate(s: &str, max: usize) -> String {
     if s.len() <= max { s.to_string() } else { format!("{}...", &s[..max]) }
-}
+}

@@ -2,7 +2,7 @@
 //! Resource patterns: R07 (missing flush)
 
 use crate::types::{Violation, ViolationDetails};
-use tree_sitter::{Node, Query, QueryCursor, QueryCapture};
+use tree_sitter::{Node, Query, QueryCursor};
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
@@ -11,8 +11,12 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     out
 }
 
-fn cap_name<'a>(query: &'a Query, cap: &QueryCapture) -> &'a str {
-    query.capture_names().get(cap.index as usize).map_or("", String::as_str)
+fn get_capture_node(m: &tree_sitter::QueryMatch, idx: Option<u32>) -> Option<Node> {
+    let i = idx?;
+    for c in m.captures {
+        if c.index == i { return Some(c.node); }
+    }
+    None
 }
 
 /// R07: `BufWriter` created without `flush()` call
@@ -22,11 +26,11 @@ fn detect_r07(source: &str, root: Node, out: &mut Vec<Violation>) {
         (#eq? @type "BufWriter") (#eq? @method "new")) @call"#;
 
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let idx_call = query.capture_index_for_name("call");
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let call = m.captures.iter().find(|c| cap_name(&query, c) == "call").map(|c| c.node);
-        let Some(call) = call else { continue };
+        let Some(call) = get_capture_node(&m, idx_call) else { continue };
         let Some(fn_node) = find_containing_fn(call) else { continue };
 
         let fn_text = fn_node.utf8_text(source.as_bytes()).unwrap_or("");
@@ -85,4 +89,4 @@ mod tests {
         let code = "fn make() -> BufWriter<File> { Ok(BufWriter::new(f)) }";
         assert!(parse_and_detect(code).iter().all(|v| v.law != "R07"));
     }
-}
+}

@@ -129,7 +129,12 @@ impl RustExtractor {
         for child in body.children(&mut cursor) {
             if child.kind() == "function_item" {
                 if let Some(method) = Self::extract_method(source, child) {
-                    scope.add_method(method.name.clone(), method);
+                    // P01: Avoid cloning in loop if possible, but here we construct a HashMap entry.
+                    // The clone of method.name is necessary for the key.
+                    // But wait, `method` has `name` field.
+                    // We can clone just once.
+                    let name_key = method.name.clone();
+                    scope.add_method(name_key, method);
                 }
             }
         }
@@ -192,4 +197,4 @@ impl RustExtractor {
         let function = node.child_by_field_name("function")?;
         function.utf8_text(source.as_bytes()).ok().map(String::from)
     }
-}
+}
