@@ -1,50 +1,88 @@
-# SlopChop Scan v2: Past, Present, Future
+# SlopChop: Past, Present, Future
 
-**Date:** 2026-01-12
-**Version:** v1.7.0 (The "Context-Aware" Release)
-
----
-
-## What Was Done Today (v1.7.0)
-
-### Phase 3: The Systems Stress Test (Subject: `thubo`)
-- **Stress Test Findings:** Ran SlopChop against a high-performance network pipeline. Discovered a 95% noise rate due to the "Web App" bias of the default ruleset.
-- **Architectural Pivot:** Introduced **Governance Profiles** (`application` vs. `systems`).
-    - **Systems Mode:** Relaxes architectural metrics (File Size, LCOM4, Complexity) to allow for hardware-level optimization.
-    - **Safety Escalation:** Tightens semantic checks (Safety comments, `transmute` warnings) to manage the risk of relaxed structures.
-- **Heuristic Auto-Detection:** Implemented a weighted scoring system to detect systems code. Files scoring $\ge 3$ (based on `unsafe`, `Atomic`, `repr(C)`, `no_std`) automatically switch to relaxed structural limits.
-- **P03 Semantic Disambiguation:** Tightened N+1 detection to allowlist CPU-level instructions like `Atomic::load` and `Arc::clone`, preventing "I/O hallucinations."
-
-### Phase 4: UX & Agent Ergonomics
-- **The "Flight Recorder":** Implemented `slopchop-report.txt`. A persistent, untruncated log file that stores the full results of the last `slopchop check`, specifically designed for AI Agents to read context without terminal pollution.
-- **Rich Snippets:** Overhauled violation reporting to include `rustc`-style snippets with line numbers, gutters, and red underlines for immediate context.
-- **Live Spinner:** Upgraded the spinner to stream real-time stdout/stderr from child processes (clippy/tests), providing immediate feedback on progress.
-- **Adaptive TUI:** Added "Coarse/Fine" stepping to the configuration editor.
-    - `Left/Right`: $\pm 1$ step.
-    - `Up/Down`: $\pm 10/100/500$ based on value magnitude.
-    - Added `EnterAlternateScreen` support to fix terminal stacking glitches.
-
-### Phase 5: Transactional Integrity
-- **Meaningful Merges:** Fixed the "useless commit message" issue.
-    - The `GOAL:` from the `apply` PLAN block is now persisted in `.slopchop/pending_goal`.
-    - `slopchop promote` reads this goal to generate a descriptive merge commit: `feat: [Goal] (promoted)`.
+**Date:** 2026-01-14  
+**Version:** v1.8.0 (The "Pack Pivot" Release)
 
 ---
 
-## Current Pattern Coverage (Rust)
+## What Was Done Previously (v1.7.0)
 
-| Category | IDs | Status |
-|----------|-----|--------|
-| **State** | S01, S02, S03 | [OK] Stable |
-| **Concurrency** | C03, C04 | [OK] High Signal |
-| **Security** | X01, X02, X03, **X06**, **X07** | [OK] Production Ready |
-| **Performance** | P01, P02, **P03 (Tuned)**, P04, P06 | [OK] Type-Aware |
-| **Semantic** | M03, M04, M05 | [OK] Stable |
-| **Resource** | R07 | [OK] Stable |
-| **Idiomatic** | I01, I02, I05 | [OK] Stable |
-| **Logic** | L02, L03 | [OK] Low Noise |
+### Governance Profiles
+- Introduced `application` vs `systems` profiles after stress-testing against `thubo` (high-performance network pipeline)
+- Systems mode relaxes structural metrics while tightening safety checks (the "Inversion Principle")
+- Implemented per-file heuristic detection based on `unsafe`, `Atomic`, `repr(C)`, `no_std`
 
-**Total: 23 active patterns**
+### UX & Agent Ergonomics
+- **Flight Recorder:** `slopchop-report.txt` persists full scan results for AI agent consumption
+- **Rich Snippets:** rustc-style violation reporting with line numbers and underlines
+- **Adaptive TUI:** Coarse/fine stepping in configuration editor
+
+### Transactional Workflow
+- Goal-aware commits: `GOAL:` from PLAN blocks persists through to merge commit messages
+- Clean `apply` → `check` → `promote` pipeline
+
+---
+
+## What Was Decided Today (v1.8.0 Direction)
+
+### The Pack Pivot
+
+**Discovery:** Testing showed that a minimal context payload (repo map + dependency arrows + semantic descriptions) at ~3k tokens enables AI to request exactly the files needed for a task. An AI correctly identified 4 specific files for a feature implementation with 9/10 confidence.
+
+**Conclusion:** The existing pack system (PageRank ranking, signature extraction, skeletonization) is unnecessary complexity. A simpler approach works better.
+
+**Decision:** Delete the old pack system. Replace with semantic descriptions.
+
+| Delete | Tokens | Rationale |
+|--------|--------|-----------|
+| `src/signatures/` | ~2.2k | Replaced by semantic descriptions |
+| `src/graph/rank/` | ~3.5k | PageRank not needed for file selection |
+| `src/pack/` | ~4k | Complete replacement |
+| `src/skeleton.rs` | ~800 | AI can request full files directly |
+| **Total** | **~10.5k** | |
+
+| Add | Tokens | Description |
+|-----|--------|-------------|
+| `semantics.toml` loader | ~200 | Read one-line descriptions from config |
+| `slopchop map --semantic` | ~150 | Include descriptions in map output |
+| D01 pattern | ~150 | Flag files missing descriptions |
+| **Total** | **~500** | |
+
+**Net result:** Delete 10k tokens, add 500. Codebase shrinks AND feature improves.
+
+See `pack-pivot.md` for full rationale and implementation plan.
+
+### Structural Metrics: Keep, Don't Cut
+
+Initial instinct was to cut LCOM4, AHF, CBO, SFOUT because case studies showed noise. Deeper analysis revealed:
+
+- The noise was a **calibration problem**, not a fundamental flaw
+- Structural metrics catch drift that accumulates across AI coding sessions
+- Each session is a "rotating consultant" who doesn't see the whole arc
+
+**Decision:** Keep structural metrics. Add small-codebase gate:
+```
+if total_files < 10 OR total_tokens < 5000:
+    skip LCOM4, AHF, CBO, SFOUT
+```
+
+### TypeScript: Deferred
+
+Tree-sitter infrastructure exists for TypeScript, but all tuning work has been Rust-focused. 
+
+**Decision:** Ship Rust-first. TypeScript support follows once Rust governance is rock-solid. This aligns with the philosophy of doing one thing well before expanding scope.
+
+### Positioning Clarity
+
+**Tagline:** "The architectural compiler for AI-assisted Rust development"
+
+SlopChop is a verification layer, not a generation tool:
+- Rust's compiler rejects type-unsafe code
+- Clippy rejects unidiomatic code
+- Tests reject functionally incorrect code
+- **SlopChop rejects structurally-unsound code**
+
+Code bounces off until it passes. Then it enters the codebase.
 
 ---
 
@@ -52,67 +90,87 @@
 
 | Category | Status | Notes |
 |----------|--------|-------|
-| **Architecture** | [OK] Clean | Engine is modular (Worker/Aggregator/Deep). |
-| **Profiles** | [OK] Active | Per-file systems detection working. |
-| **UX** | [OK] Rich | Code snippets and persistent reports active. |
-| **Tests** | [OK] Pass | 68 unit tests passing. |
-| **Self-Scan** | [OK] 0 Violations | Passing at `Cognitive Complexity = 15`. |
+| **Governance Engine** | [OK] Stable | 23 patterns, 6 metrics |
+| **Profiles** | [OK] Active | `application` / `systems` working |
+| **Transactional Workflow** | [OK] Complete | apply → check → promote |
+| **Flight Recorder** | [OK] Live | Agent-readable reports |
+| **Tests** | [OK] Pass | 68 unit tests |
+| **Self-Scan** | [OK] Clean | 0 violations at CC=15 |
 
 ---
 
-## Future Roadmap: Methodical Audit Phase
+## v1.8.0 Implementation Plan
 
-### 1. The GitHub Stress Test (Upcoming)
-The next major phase involves methodically scanning top-tier Rust repositories to build a "Knowledge Base" of architectural patterns:
-- **Targets:** `tokio`, `polars`, `ripgrep`, `axum`. (and maybe some shitty ones too)
-- **Goal:** Identify where SlopChop fails to understand idiomatic high-performance patterns and refine the **Systems Profile** thresholds.
-- **Output:** A comprehensive findings report for each repo to inform v1.8 logic.
+### Phase 1: Add Semantic System
+- [ ] Add `[semantics]` section to config parser
+- [ ] Generate initial `semantics.toml` for SlopChop codebase
+- [ ] Implement `--semantic` flag for `slopchop map`
+- [ ] Implement D01 pattern (missing descriptions)
 
-### 2. TypeScript/JS Support
-- Map existing "Deferred" patterns (Async races, Event listener leaks) to `tree-sitter-typescript`.
-- Implement `tsconfig.json` path resolution for global coupling metrics.
+### Phase 2: Delete Old Pack System
+- [ ] Remove `src/signatures/`
+- [ ] Remove `src/graph/rank/`
+- [ ] Remove `src/pack/`
+- [ ] Remove `src/skeleton.rs`
+- [ ] Remove CLI commands: `pack`, `signatures`
 
-### 3. Semantic Cost Analysis (Research)
-- Develop techniques to infer the "Cost" of a function call based on its call tree (e.g., does it eventually hit a syscall or a mutex?).
-- Use this to automatically flag high-frequency functions that aren't marked `#[inline]`.
+### Phase 3: Calibration
+- [ ] Implement small-codebase detection for structural metrics
+- [ ] Test against variety of repo sizes to validate threshold
+
+### Phase 4: Documentation
+- [ ] Update README.md (new version drafted)
+- [ ] Update AGENT-README.md with new workflow
+- [ ] Archive old pack documentation
 
 ---
 
-## Key Files (The Core)
+## Future Roadmap
+
+### v1.9: Stress Testing
+- Scan top-tier Rust repositories: `tokio`, `polars`, `ripgrep`, `axum`
+- Identify where SlopChop fails on idiomatic high-performance patterns
+- Refine systems profile thresholds based on findings
+
+### v2.0: TypeScript Support
+- Map deferred patterns (async races, event listener leaks) to tree-sitter-typescript
+- Implement `tsconfig.json` path resolution
+- Full pattern coverage parity with Rust
+
+### Research Track
+- Semantic cost analysis: infer function call cost from call tree
+- Auto-flag high-frequency functions missing `#[inline]`
+
+---
+
+## Key Files
 
 ```
 src/
-|-- analysis/
-|   |-- file_analysis.rs  # Heuristic scoring & profile overrides
-|   `-- v2/
-|       |-- cognitive.rs  # Cognitive Complexity engine
-|       `-- patterns/     # AST logic (P03 Type-Aware)
-|-- apply/
-|   |-- executor.rs       # Goal persistence
-|   `-- verification.rs   # Report generation (Flight Recorder)
-`-- cli/
-    |-- config_ui/        # Adaptive stepping TUI
-    `-- handlers.rs       # Goal-aware promotion
+├── analysis/
+│   ├── file_analysis.rs    # Systems detection heuristics
+│   └── v2/
+│       ├── cognitive.rs    # Cognitive complexity engine
+│       └── patterns/       # All 23 AST patterns
+├── apply/
+│   ├── executor.rs         # Goal persistence
+│   └── verification.rs     # Flight recorder
+├── cli/
+│   ├── handlers.rs         # Command implementations
+│   └── config_ui/          # TUI configuration
+├── config/
+│   └── types.rs            # Will add semantics support
+└── map.rs                  # Will add --semantic flag
 ```
 
-"but is the   AGENT-README.md presently accurate or aspirational?"
+---
 
-It is **presently accurate.**
+## Reference Documents
 
-As of the code we just finished writing and you just installed, every claim in that `AGENT-README.md` is backed by logic in your current binary.
-
-Here is the "receipt" for the features in your source code:
-
-| Feature | Logic Location (Source Code) | Status |
-| :--- | :--- | :--- |
-| **`slopchop-report.txt`** | `src/apply/verification.rs` -> `write_check_report` | **Live.** It writes the dashboard and full logs to disk on every check. |
-| **Systems Detection** | `src/analysis/file_analysis.rs` -> `calculate_systems_score` | **Live.** It uses the weighted score (unsafe=1, no_std=5, etc.) to relax rules per-file. |
-| **Descriptive Merges** | `src/apply/executor.rs` -> `save_pending_goal` | **Live.** It saves your PLAN goal to `.slopchop/pending_goal`. |
-| **Goal Promotion** | `src/cli/handlers.rs` -> `handle_promote` | **Live.** It reads that goal and uses it for the `git merge` message. |
-| **Cognitive Complexity** | `src/analysis/ast.rs` -> `process_function_node` | **Live.** It uses the v2 cognitive engine we established earlier. |
-| **Rich Snippets** | `src/reporting.rs` -> `print_snippet` | **Live.** It reads the file and draws the gutter/underline. |
-
-### The "Heuristic" Reality
-The only thing that is "imperfect" (but still live) is the **Systems Detection**. It relies on `source.contains("unsafe {")` rather than a full AST symbol resolution. It is a highly effective heuristic, but as we discussed in the "Research Questions," making it "Perfectly Reliable" is the future goal. 
-
-For v1.7.0, **it is functional and truthful.** You can verify it by running `slopchop check` on a file with `unsafe` and seeing the complexity limit jump.
+| Document | Purpose |
+|----------|---------|
+| `SCAN_V2_SPEC.md` | Authoritative specification for governance engine |
+| `pack-pivot.md` | Full rationale for the pack system replacement |
+| `context-research.md` | Academic research backing progressive disclosure |
+| `case-study-thubo.md` | Systems profile origin story |
+| `personal-philosophy.md` | Development principles and tech stack |
