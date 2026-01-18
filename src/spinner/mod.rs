@@ -4,19 +4,21 @@
 pub mod render;
 pub mod state;
 
-use std::sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}};
-use std::thread;
 use state::HudState;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
+use std::thread;
 
 /// A multi-level Head-Up Display for process execution.
 #[derive(Clone)]
 pub struct Spinner {
+    /// Flag indicating whether the render loop should continue running.
     running: Arc<AtomicBool>,
-    /// Shared state for the HUD (title, status, log buffer).
-    /// Protected by Mutex to allow safe updates from the main thread while the render thread reads it.
+    /// Shared HUD state protected by mutex for thread-safe updates.
     state: Arc<Mutex<HudState>>,
-    /// Handle to the rendering thread.
-    /// Wrapped in Mutex<Option<_>> to allow `stop` to take ownership and join it.
+    /// Handle to the background rendering thread.
     handle: Arc<Mutex<Option<thread::JoinHandle<()>>>>,
 }
 
@@ -60,6 +62,12 @@ impl Spinner {
     pub fn push_log(&self, line: &str) {
         if let Ok(mut guard) = self.state.lock() {
             guard.push_log(line);
+        }
+    }
+
+    pub fn tick(&self) {
+        if let Ok(mut guard) = self.state.lock() {
+            guard.tick();
         }
     }
 

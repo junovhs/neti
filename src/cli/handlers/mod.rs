@@ -1,5 +1,5 @@
 // src/cli/handlers.rs
-//! Core analysis command handlers (scan, check, pack, map, signatures).
+//! Core analysis command handlers.
 
 use crate::analysis::RuleEngine;
 use crate::apply;
@@ -17,12 +17,13 @@ use colored::Colorize;
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+pub mod scan_report;
+
 #[must_use]
 pub fn get_repo_root() -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
-#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub struct PackArgs {
     pub stdout: bool,
@@ -38,9 +39,6 @@ pub struct PackArgs {
 }
 
 /// Handles the scan command.
-///
-/// # Errors
-/// Returns error if discovery or scanning fails.
 pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChopExit> {
     if locality {
         return super::locality::handle_locality();
@@ -54,14 +52,18 @@ pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChop
         let engine = RuleEngine::new(config);
         let report = engine.scan(&files);
         reporting::print_json(&report)?;
-        return Ok(if report.has_errors() { SlopChopExit::CheckFailed } else { SlopChopExit::Success });
+        return Ok(if report.has_errors() {
+            SlopChopExit::CheckFailed
+        } else {
+            SlopChopExit::Success
+        });
     }
 
-    let spinner = Spinner::start("Structural Scan");
+    let spinner = Spinner::start("slopchop scan");
     spinner.set_micro_status("Discovering files...");
 
     let files = discovery::discover(&config)?;
-    let total_files = files.len();
+    let total = files.len();
     let engine = RuleEngine::new(config);
     let counter = AtomicUsize::new(0);
 
@@ -69,30 +71,31 @@ pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChop
         &files,
         &|path| {
             let i = counter.fetch_add(1, Ordering::Relaxed) + 1;
-            spinner.step_micro_progress(i, total_files, format!("Scanning {}", path.display()));
-            spinner.push_log(&format!("Analyzing: {}", path.display()));
+            let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
+            spinner.step_micro_progress(i, total, format!("Scanning {name}"));
+            spinner.push_log(&format!("{}", path.display()));
         },
         &|status| {
             spinner.set_micro_status(status);
-        }
+        },
     );
 
     let has_errors = report.has_errors();
     spinner.stop(!has_errors);
 
-    reporting::print_report(&report)?;
-
+    scan_report::print(&report);
     if has_errors {
-        Ok(SlopChopExit::CheckFailed)
-    } else {
-        Ok(SlopChopExit::Success)
+        reporting::print_report(&report)?;
     }
+
+    Ok(if has_errors {
+        SlopChopExit::CheckFailed
+    } else {
+        SlopChopExit::Success
+    })
 }
 
 /// Handles the check command.
-///
-/// # Errors
-/// Returns error if verification pipeline fails to execute.
 pub fn handle_check(json: bool) -> Result<SlopChopExit> {
     let config = Config::load();
     let repo_root = get_repo_root();
@@ -104,20 +107,17 @@ pub fn handle_check(json: bool) -> Result<SlopChopExit> {
     if json {
         reporting::print_json(&report)?;
     } else if report.passed {
-        println!("{}", "[OK] All checks passed.".green().bold());
+        println!("{}", "✓ All checks passed.".green().bold());
     }
 
-    if report.passed {
-        Ok(SlopChopExit::Success)
+    Ok(if report.passed {
+        SlopChopExit::Success
     } else {
-        Ok(SlopChopExit::CheckFailed)
-    }
+        SlopChopExit::CheckFailed
+    })
 }
 
 /// Handles the pack command.
-///
-/// # Errors
-/// Returns error if packing fails.
 pub fn handle_pack(args: PackArgs) -> Result<SlopChopExit> {
     let opts = PackOptions {
         stdout: args.stdout,
@@ -137,13 +137,13 @@ pub fn handle_pack(args: PackArgs) -> Result<SlopChopExit> {
         return Ok(SlopChopExit::Success);
     }
 
-    let spinner = Spinner::start("Packing Context");
+    let spinner = Spinner::start("slopchop pack");
     spinner.set_micro_status("Discovering files...");
 
     let res = pack::run_with_progress(&opts, |done, total, msg| {
         spinner.step_micro_progress(done, total, msg.to_string());
-        if !msg.is_empty() && msg.starts_with("Packing") {
-             spinner.push_log(msg);
+        if msg.starts_with("Packing") {
+            spinner.push_log(msg);
         }
     });
 
@@ -160,9 +160,6 @@ pub fn handle_pack(args: PackArgs) -> Result<SlopChopExit> {
 }
 
 /// Handles the map command.
-///
-/// # Errors
-/// Returns error if mapping fails.
 pub fn handle_map(deps: bool) -> Result<SlopChopExit> {
     let output = map::generate(deps)?;
     println!("{output}");
@@ -170,9 +167,6 @@ pub fn handle_map(deps: bool) -> Result<SlopChopExit> {
 }
 
 /// Handles the signatures command.
-///
-/// # Errors
-/// Returns error if signature extraction fails.
 pub fn handle_signatures(opts: SignatureOptions) -> Result<SlopChopExit> {
     signatures::run(&opts)?;
     Ok(SlopChopExit::Success)

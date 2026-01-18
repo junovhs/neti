@@ -1,4 +1,6 @@
 // src/apply/process_runner.rs
+//! External command execution with streaming output.
+
 use crate::clipboard;
 use crate::spinner::Spinner;
 use crate::types::CommandResult;
@@ -7,9 +9,12 @@ use colored::Colorize;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, AtomicUsize, Ordering},
+    Arc, Mutex,
+};
 use std::thread;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 pub struct CommandRunner {
     silent: bool,
@@ -21,23 +26,22 @@ impl CommandRunner {
         Self { silent }
     }
 
-    pub fn run(&self, cmd_str: &str, cwd: &Path, external_spinner: Option<&Spinner>) -> Result<CommandResult> {
-        run_stage_streaming(cmd_str, cwd, self.silent, external_spinner)
+    pub fn run(&self, cmd: &str, cwd: &Path, spinner: Option<&Spinner>) -> Result<CommandResult> {
+        run_streaming(cmd, cwd, self.silent, spinner)
     }
 }
 
-fn run_stage_streaming(
-    cmd_str: &str,
+fn run_streaming(
+    cmd: &str,
     cwd: &Path,
     silent: bool,
-    external_spinner: Option<&Spinner>,
+    ext_spinner: Option<&Spinner>,
 ) -> Result<CommandResult> {
     let start = Instant::now();
-    
-    let parts: Vec<&str> = cmd_str.split_whitespace().collect();
+    let parts: Vec<&str> = cmd.split_whitespace().collect();
     let Some((prog, args)) = parts.split_first() else {
         return Ok(CommandResult {
-            command: cmd_str.to_string(),
+            command: cmd.to_string(),
             exit_code: 0,
             stdout: String::new(),
             stderr: String::new(),
@@ -45,21 +49,17 @@ fn run_stage_streaming(
         });
     };
 
-    let display_cmd = if cmd_str.len() > 50 {
-        format!("{}...", &cmd_str[..47])
-    } else {
-        cmd_str.to_string()
-    };
-
-    // Use external spinner if provided, otherwise create local one (if not silent)
-    let local_spinner = if external_spinner.is_none() && !silent {
-        Some(Spinner::start(display_cmd))
+    let label = extract_label(cmd);
+    let local_spinner = if ext_spinner.is_none() && !silent {
+        Some(Spinner::start(label.clone()))
     } else {
         None
     };
+    let spinner = ext_spinner.or(local_spinner.as_ref());
 
-    // The spinner we will actually feed logs to
-    let active_spinner = external_spinner.or(local_spinner.as_ref());
+    if let Some(s) = spinner {
+        s.set_micro_status(format!("Running {label}..."));
+    }
 
     let mut child = Command::new(prog)
         .args(args)
@@ -67,90 +67,139 @@ fn run_stage_streaming(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .with_context(|| format!("Failed to spawn {cmd_str}"))?;
+        .with_context(|| format!("Failed to spawn {cmd}"))?;
 
-    let stdout = child.stdout.take().ok_or_else(|| anyhow!("Failed to open stdout"))?;
-    let stderr = child.stderr.take().ok_or_else(|| anyhow!("Failed to open stderr"))?;
+    let stdout = child.stdout.take().ok_or_else(|| anyhow!("No stdout"))?;
+    let stderr = child.stderr.take().ok_or_else(|| anyhow!("No stderr"))?;
 
-    let stdout_acc = Arc::new(Mutex::new(String::new()));
-    let stderr_acc = Arc::new(Mutex::new(String::new()));
+    let out_acc = Arc::new(Mutex::new(String::new()));
+    let err_acc = Arc::new(Mutex::new(String::new()));
+    let line_count = Arc::new(AtomicUsize::new(0));
 
-    // IO Threads push directly to the HUD
-    let out_thread = spawn_stream_reader(stdout, stdout_acc.clone(), active_spinner.cloned());
-    let err_thread = spawn_stream_reader(stderr, stderr_acc.clone(), active_spinner.cloned());
+    let out_thread = spawn_reader(
+        stdout,
+        out_acc.clone(),
+        spinner.cloned(),
+        line_count.clone(),
+    );
+    let err_thread = spawn_reader(
+        stderr,
+        err_acc.clone(),
+        spinner.cloned(),
+        line_count.clone(),
+    );
 
+    let heartbeat = spawn_heartbeat(spinner.cloned(), line_count.clone());
     let status = child.wait()?;
+    stop_heartbeat(heartbeat);
+
     let _ = out_thread.join();
     let _ = err_thread.join();
-
-    if let Some(s) = local_spinner { s.stop(status.success()); }
-
-    #[allow(clippy::cast_possible_truncation)]
-    let duration = start.elapsed().as_millis() as u64;
+    if let Some(s) = local_spinner {
+        s.stop(status.success());
+    }
 
     #[allow(clippy::unwrap_used)]
     let result = CommandResult {
-        command: cmd_str.to_string(),
+        command: cmd.to_string(),
         exit_code: status.code().unwrap_or(1),
-        stdout: stdout_acc.lock().unwrap().clone(),
-        stderr: stderr_acc.lock().unwrap().clone(),
-        duration_ms: duration,
+        stdout: out_acc.lock().unwrap().clone(),
+        stderr: err_acc.lock().unwrap().clone(),
+        #[allow(clippy::cast_possible_truncation)]
+        duration_ms: start.elapsed().as_millis() as u64,
     };
 
     if !status.success() && !silent {
         report_failure(&result);
     }
-
     Ok(result)
 }
 
-fn spawn_stream_reader<R: std::io::Read + Send + 'static>(
+fn extract_label(cmd: &str) -> String {
+    match cmd.split_whitespace().collect::<Vec<_>>().as_slice() {
+        ["cargo", sub, ..] => format!("cargo {sub}"),
+        ["npm", "run", s, ..] => format!("npm {s}"),
+        [p, s, ..] => format!("{p} {s}"),
+        [p] => (*p).to_string(),
+        [] => "command".to_string(),
+    }
+}
+
+fn spawn_reader<R: std::io::Read + Send + 'static>(
     input: R,
     acc: Arc<Mutex<String>>,
     spinner: Option<Spinner>,
+    count: Arc<AtomicUsize>,
 ) -> thread::JoinHandle<()> {
     thread::spawn(move || {
-        let reader = BufReader::new(input);
-        for line in reader.lines().map_while(Result::ok) {
-            if let Some(sp) = &spinner {
-                sp.push_log(&line);
+        for line in BufReader::new(input).lines().map_while(Result::ok) {
+            count.fetch_add(1, Ordering::Relaxed);
+            if let Some(s) = &spinner {
+                s.push_log(&line);
             }
             #[allow(clippy::unwrap_used)]
-            let mut guard = acc.lock().unwrap();
-            guard.push_str(&line);
-            guard.push('\n');
+            {
+                let mut g = acc.lock().unwrap();
+                g.push_str(&line);
+                g.push('\n');
+            }
         }
     })
 }
 
-fn report_failure(result: &CommandResult) {
-    let combined = format!("{}\n{}", result.stdout, result.stderr);
-    let summary = summarize_output(&combined, &result.command);
-    
-    println!("{}", "-".repeat(60));
-    println!("{} {}", "[!] Failed:".red().bold(), result.command);
-    println!("{summary}");
-    println!("{}", "-".repeat(60));
+fn spawn_heartbeat(
+    spinner: Option<Spinner>,
+    count: Arc<AtomicUsize>,
+) -> Option<(Arc<AtomicBool>, thread::JoinHandle<()>)> {
+    let s = spinner?;
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+    let handle = thread::spawn(move || {
+        let mut last = 0;
+        while r.load(Ordering::Relaxed) {
+            thread::sleep(Duration::from_millis(200));
+            let curr = count.load(Ordering::Relaxed);
+            if curr == last {
+                s.tick();
+            }
+            last = curr;
+        }
+    });
+    Some((running, handle))
+}
 
-    if let Err(e) = clipboard::copy_to_clipboard(&summary) {
-        eprintln!("Could not copy to clipboard: {e}");
-    } else {
-        println!("{}", "[+] Text copied to clipboard".dimmed());
+fn stop_heartbeat(hb: Option<(Arc<AtomicBool>, thread::JoinHandle<()>)>) {
+    if let Some((running, handle)) = hb {
+        running.store(false, Ordering::Relaxed);
+        let _ = handle.join();
     }
 }
 
-fn summarize_output(output: &str, cmd: &str) -> String {
-    let lines: Vec<&str> = output.lines().collect();
-    let max_lines = 30; 
+fn report_failure(result: &CommandResult) {
+    let combined = format!("{}\n{}", result.stdout, result.stderr);
+    let summary = summarize(&combined);
+    let label = extract_label(&result.command);
 
-    if lines.len() <= max_lines {
+    println!();
+    println!("{}", "─".repeat(60).dimmed());
+    println!("{} {}", "FAILED:".red().bold(), label);
+    println!("{}", "─".repeat(60).dimmed());
+    println!("{summary}");
+    println!("{}", "─".repeat(60).dimmed());
+
+    if clipboard::copy_to_clipboard(&summary).is_ok() {
+        println!("{}", "Error output copied to clipboard".dimmed());
+    }
+}
+
+fn summarize(output: &str) -> String {
+    let lines: Vec<&str> = output.lines().collect();
+    if lines.len() <= 30 {
         return output.to_string();
     }
-
-    let start_idx = lines.len().saturating_sub(max_lines);
-    let summary = lines.get(start_idx..).unwrap_or(&[]).join("\n");
-    
+    let start = lines.len().saturating_sub(30);
     format!(
-        "... ({start_idx} lines hidden, run '{cmd}' for full output)\n{summary}"
+        "... ({start} lines hidden)\n{}",
+        lines.get(start..).unwrap_or(&[]).join("\n")
     )
 }
