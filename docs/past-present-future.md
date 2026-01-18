@@ -1,176 +1,163 @@
 # SlopChop: Past, Present, Future
-
-**Date:** 2026-01-14  
-**Version:** v1.8.0 (The "Pack Pivot" Release)
+**Date:** 2026-01-18
 
 ---
 
-## What Was Done Previously (v1.7.0)
+## What Was Done This Session
 
-### Governance Profiles
-- Introduced `application` vs `systems` profiles after stress-testing against `thubo` (high-performance network pipeline)
-- Systems mode relaxes structural metrics while tightening safety checks (the "Inversion Principle")
-- Implemented per-file heuristic detection based on `unsafe`, `Atomic`, `repr(C)`, `no_std`
+### Phase 1: CLI Feedback Overhaul
 
-### UX & Agent Ergonomics
-- **Flight Recorder:** `slopchop-report.txt` persists full scan results for AI agent consumption
-- **Rich Snippets:** rustc-style violation reporting with line numbers and underlines
-- **Adaptive TUI:** Coarse/fine stepping in configuration editor
+Fixed 4 reported issues with `slopchop check` output:
 
-### Transactional Workflow
-- Goal-aware commits: `GOAL:` from PLAN blocks persists through to merge commit messages
-- Clean `apply` → `check` → `promote` pipeline
+| Issue | Fix |
+|-------|-----|
+| Two "CARGO CHECK" labels | `extract_label()` now parses commands properly → "CARGO CLIPPY", "CARGO TEST" |
+| Confusing final status | Separated `pipeline_title` (constant) from `step_name` (per-step) |
+| Start-stop feeling | Added heartbeat thread that calls `spinner.tick()` every 200ms during idle |
+| No analysis report | Added `print_report()` with tokens, complexity, violations by type, top offenders |
 
----
+### Phase 2: Module Restructuring (Token Compliance)
 
-## What Was Decided Today (v1.8.0 Direction)
-
-### The Pack Pivot
-
-**Discovery:** Testing showed that a minimal context payload (repo map + dependency arrows + semantic descriptions) at ~3k tokens enables AI to request exactly the files needed for a task. An AI correctly identified 4 specific files for a feature implementation with 9/10 confidence.
-
-**Conclusion:** The existing pack system (PageRank ranking, signature extraction, skeletonization) is unnecessary complexity. A simpler approach works better.
-
-**Decision:** Delete the old pack system. Replace with semantic descriptions.
-
-| Delete | Tokens | Rationale |
-|--------|--------|-----------|
-| `src/signatures/` | ~2.2k | Replaced by semantic descriptions |
-| `src/graph/rank/` | ~3.5k | PageRank not needed for file selection |
-| `src/pack/` | ~4k | Complete replacement |
-| `src/skeleton.rs` | ~800 | AI can request full files directly |
-| **Total** | **~10.5k** | |
-
-| Add | Tokens | Description |
-|-----|--------|-------------|
-| `semantics.toml` loader | ~200 | Read one-line descriptions from config |
-| `slopchop map --semantic` | ~150 | Include descriptions in map output |
-| D01 pattern | ~150 | Flag files missing descriptions |
-| **Total** | **~500** | |
-
-**Net result:** Delete 10k tokens, add 500. Codebase shrinks AND feature improves.
-
-See `pack-pivot.md` for full rationale and implementation plan.
-
-### Structural Metrics: Keep, Don't Cut
-
-Initial instinct was to cut LCOM4, AHF, CBO, SFOUT because case studies showed noise. Deeper analysis revealed:
-
-- The noise was a **calibration problem**, not a fundamental flaw
-- Structural metrics catch drift that accumulates across AI coding sessions
-- Each session is a "rotating consultant" who doesn't see the whole arc
-
-**Decision:** Keep structural metrics. Add small-codebase gate:
-```
-if total_files < 10 OR total_tokens < 5000:
-    skip LCOM4, AHF, CBO, SFOUT
-```
-
-### TypeScript: Deferred
-
-Tree-sitter infrastructure exists for TypeScript, but all tuning work has been Rust-focused. 
-
-**Decision:** Ship Rust-first. TypeScript support follows once Rust governance is rock-solid. This aligns with the philosophy of doing one thing well before expanding scope.
-
-### Positioning Clarity
-
-**Tagline:** "The architectural compiler for AI-assisted Rust development"
-
-SlopChop is a verification layer, not a generation tool:
-- Rust's compiler rejects type-unsafe code
-- Clippy rejects unidiomatic code
-- Tests reject functionally incorrect code
-- **SlopChop rejects structurally-unsound code**
-
-Code bounces off until it passes. Then it enters the codebase.
-
----
-
-## Current Status
-
-| Category | Status | Notes |
-|----------|--------|-------|
-| **Governance Engine** | [OK] Stable | 23 patterns, 6 metrics |
-| **Profiles** | [OK] Active | `application` / `systems` working |
-| **Transactional Workflow** | [OK] Complete | apply → check → promote |
-| **Flight Recorder** | [OK] Live | Agent-readable reports |
-| **Tests** | [OK] Pass | 68 unit tests |
-| **Self-Scan** | [OK] Clean | 0 violations at CC=15 |
-
----
-
-## v1.8.0 Implementation Plan
-
-### Phase 1: Add Semantic System
-- [ ] Add `[semantics]` section to config parser
-- [ ] Generate initial `semantics.toml` for SlopChop codebase
-- [ ] Implement `--semantic` flag for `slopchop map`
-- [ ] Implement D01 pattern (missing descriptions)
-
-### Phase 2: Delete Old Pack System
-- [ ] Remove `src/signatures/`
-- [ ] Remove `src/graph/rank/`
-- [ ] Remove `src/pack/`
-- [ ] Remove `src/skeleton.rs`
-- [ ] Remove CLI commands: `pack`, `signatures`
-
-### Phase 3: Calibration
-- [ ] Implement small-codebase detection for structural metrics
-- [ ] Test against variety of repo sizes to validate threshold
-
-### Phase 4: Documentation
-- [ ] Update README.md (new version drafted)
-- [ ] Update AGENT-README.md with new workflow
-- [ ] Archive old pack documentation
-
----
-
-## Future Roadmap
-
-### v1.9: Stress Testing
-- Scan top-tier Rust repositories: `tokio`, `polars`, `ripgrep`, `axum`
-- Identify where SlopChop fails on idiomatic high-performance patterns
-- Refine systems profile thresholds based on findings
-
-### v2.0: TypeScript Support
-- Map deferred patterns (async races, event listener leaks) to tree-sitter-typescript
-- Implement `tsconfig.json` path resolution
-- Full pattern coverage parity with Rust
-
-### Research Track
-- Semantic cost analysis: infer function call cost from call tree
-- Auto-flag high-frequency functions missing `#[inline]`
-
----
-
-## Key Files
+Split oversized files into directory modules:
 
 ```
-src/
-├── analysis/
-│   ├── file_analysis.rs    # Systems detection heuristics
-│   └── v2/
-│       ├── cognitive.rs    # Cognitive complexity engine
-│       └── patterns/       # All 23 AST patterns
-├── apply/
-│   ├── executor.rs         # Goal persistence
-│   └── verification.rs     # Flight recorder
-├── cli/
-│   ├── handlers.rs         # Command implementations
-│   └── config_ui/          # TUI configuration
-├── config/
-│   └── types.rs            # Will add semantics support
-└── map.rs                  # Will add --semantic flag
+BEFORE                          AFTER
+src/apply/verification.rs  →    src/apply/verification/mod.rs
+                                src/apply/verification/report_display.rs
+
+src/cli/handlers.rs        →    src/cli/handlers/mod.rs
+                                src/cli/handlers/scan_report.rs
 ```
+
+### Phase 3: Locality Integration Tests
+
+Added 8 mutation-resistant tests in `src/graph/locality/tests.rs`:
+
+| Test | What It Catches |
+|------|-----------------|
+| `encapsulation_breach_detects_internal_import` | Importing `foo/bar.rs` instead of `foo/mod.rs` |
+| `encapsulation_allows_mod_rs_import` | False positives on API imports |
+| `distance_boundary_condition` | Off-by-one in max_distance check |
+| `hub_exemption_ignores_distance` | Removing hub check |
+| `upward_dep_categorization_with_manual_layers` | Layer violation detection |
+| `cycle_detection_three_node` | A→B→C→A cycle detection |
+| `lib_rs_exempt_from_all_rules` | Crate root exemption |
+| `vertical_routing_same_module` | Same-module import exemption |
+
+### Phase 4: Clippy Compliance
+
+Fixed ~15 clippy errors across new code:
+- `cast_precision_loss` → Added `#[allow]` on formatting functions
+- `indexing_slicing` → Used `.get()` or module-level allow in tests
+- `useless_vec` → Allowed in tests for clarity
+- `unnecessary_sort_by` → Changed to `sort_by_key(|f| Reverse(...))`
 
 ---
 
-## Reference Documents
+## Current State
 
-| Document | Purpose |
-|----------|---------|
-| `SCAN_V2_SPEC.md` | Authoritative specification for governance engine |
-| `pack-pivot.md` | Full rationale for the pack system replacement |
-| `context-research.md` | Academic research backing progressive disclosure |
-| `case-study-thubo.md` | Systems profile origin story |
-| `personal-philosophy.md` | Development principles and tech stack |
+### Passing
+- ✅ 76 tests (including 8 new locality integration tests)
+- ✅ Clippy clean
+- ✅ CLI feedback working (labels, spinner, reports)
+
+### Pre-existing Violations (Not Addressed)
+| File | Issue | Notes |
+|------|-------|-------|
+| `src/spinner/mod.rs` | CBO: 10 (limit 9) | Thread-safety requires Arc/Mutex coupling |
+| `src/pack/formats.rs` | 2118 tokens (limit 2100) | 18 tokens over |
+
+### Known Issues
+| Issue | Status |
+|-------|--------|
+| Duplicate commits on `slopchop promote` | **Needs investigation** |
+| Locality output unclear | **Needs improvement** |
+| `verification → cli::locality` encapsulation breach | Design question |
+
+---
+
+## Next Session Priorities
+
+### 1. Fix Duplicate Commits on Promote (HIGH)
+
+When promoting `slopchop-work` → `main`, commits appear twice on GitHub.
+
+**Investigate:**
+```bash
+grep -n "promote\|merge\|push" src/branch.rs
+```
+
+**Proposed fix:** Clear feedback after promote:
+```
+✓ Merged to main
+✓ Pushed to origin/main
+No need to run 'git push' — already synced.
+```
+
+### 2. Improve Locality Report Output (HIGH)
+
+Current output is cryptic. Replace with:
+
+```
+TOPOLOGICAL HEALTH
+  Health Score: 99.4%  (170 clean / 171 edges)
+  Violations:   1
+
+LAYER ARCHITECTURE
+  L0 (leaf)     ████████████████  77 files
+  L1 (utility)  ████████          25 files
+  L2-L8         ███                9 files
+  
+  55% of files are self-contained leaves.
+  This indicates good modularity.
+
+MODULE COUPLING
+  apply → cli: 1 edge (encapsulation breach)
+```
+
+**Files to modify:**
+- `src/graph/locality/report.rs`
+- `src/cli/locality.rs`
+
+### 3. Fix Remaining Violations (LOW)
+
+- `formats.rs`: Extract helper to drop 18 tokens
+- `spinner/mod.rs`: Accept CBO or restructure thread management
+
+---
+
+## Architecture Notes
+
+### Locality System Explained
+
+**Layer Inference:** Topological sort of dependency graph
+- L0 = files that import nothing internal (leaves)
+- Higher layers = more dependencies
+- `lib.rs` is always top layer
+
+**Topological Entropy:** `failed_edges / total_edges`
+- 0% = perfect (no violations)
+- 100% = chaos (every import violates)
+- 0.6% = excellent (1/171)
+
+**UpwardDep is unreachable with auto-inferred layers** because layer assignment is derived from the dependency graph itself. Would need manual layer specification to trigger.
+
+---
+
+## Files Modified This Session
+
+```
+src/spinner/mod.rs          # Added tick(), doc comments
+src/spinner/render.rs       # Header/progress formatting, DOTS array
+src/spinner/state.rs        # pipeline_title vs step_name separation
+
+src/apply/verification/mod.rs           # Core pipeline (split from verification.rs)
+src/apply/verification/report_display.rs # Report formatting (NEW)
+src/apply/process_runner.rs             # extract_label(), heartbeat thread
+
+src/cli/handlers/mod.rs      # Core handlers (split from handlers.rs)
+src/cli/handlers/scan_report.rs # Scan report formatting (NEW)
+
+src/graph/locality/tests.rs  # 8 integration tests (NEW)
+src/graph/locality/mod.rs    # Added `mod tests;`
+```
