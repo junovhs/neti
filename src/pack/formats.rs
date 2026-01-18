@@ -1,3 +1,4 @@
+// src/pack/formats.rs
 use std::fmt::Write;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -10,58 +11,70 @@ use crate::skeleton;
 
 const SIGIL: &str = "XSC7XSC";
 
-/// Packs files into the `SlopChop` format.
-///
-/// # Errors
-/// Returns an error if file reading fails.
-pub fn pack_slopchop(files: &[PathBuf], out: &mut String, opts: &PackOptions) -> Result<()> {
-    for path in files {
-        write_slopchop_file(out, path, should_skeletonize(path, opts))?;
-    }
-    Ok(())
-}
-
 /// Packs files into the `SlopChop` format with focus awareness.
 ///
 /// # Errors
 /// Returns an error if file reading fails.
-pub fn pack_slopchop_focus(
+pub fn pack_slopchop_focus<F>(
     files: &[PathBuf],
     out: &mut String,
     opts: &PackOptions,
     focus: &FocusContext,
-) -> Result<()> {
+    on_progress: &F,
+) -> Result<()>
+where
+    F: Fn(usize, usize, &str) + Sync,
+{
+    let total = files.len();
     if focus.foveal.is_empty() && focus.peripheral.is_empty() {
-        return pack_slopchop(files, out, opts);
+        for (i, path) in files.iter().enumerate() {
+            on_progress(i + 1, total, &format!("Packing {}", path.display()));
+            write_slopchop_file(out, path, should_skeletonize(path, opts))?;
+        }
+        return Ok(());
     }
 
-    write_foveal_section(out, files, focus)?;
-    write_peripheral_section(out, files, focus)?;
+    write_foveal_section(out, files, focus, on_progress)?;
+    write_peripheral_section(out, files, focus, on_progress)?;
 
     Ok(())
 }
 
-fn write_foveal_section(out: &mut String, files: &[PathBuf], focus: &FocusContext) -> Result<()> {
+fn write_foveal_section<F>(
+    out: &mut String,
+    files: &[PathBuf],
+    focus: &FocusContext,
+    on_progress: &F,
+) -> Result<()>
+where
+    F: Fn(usize, usize, &str) + Sync,
+{
     let foveal: Vec<_> = files.iter().filter(|f| focus.foveal.contains(*f)).collect();
     if foveal.is_empty() { return Ok(()); }
 
     writeln!(out, "\n{SIGIL} FOVEAL {SIGIL} (Full Content)\n")?;
-    for path in foveal {
+    for (i, path) in foveal.iter().enumerate() {
+        on_progress(i + 1, foveal.len(), &format!("Packing Foveal: {}", path.display()));
         write_slopchop_file(out, path, false)?;
     }
     Ok(())
 }
 
-fn write_peripheral_section(
+fn write_peripheral_section<F>(
     out: &mut String,
     files: &[PathBuf],
     focus: &FocusContext,
-) -> Result<()> {
+    on_progress: &F,
+) -> Result<()>
+where
+    F: Fn(usize, usize, &str) + Sync,
+{
     let peripheral: Vec<_> = files.iter().filter(|f| focus.peripheral.contains(*f)).collect();
     if peripheral.is_empty() { return Ok(()); }
 
     writeln!(out, "\n{SIGIL} PERIPHERAL {SIGIL} (Signatures Only)\n")?;
-    for path in peripheral {
+    for (i, path) in peripheral.iter().enumerate() {
+        on_progress(i + 1, peripheral.len(), &format!("Packing Peripheral: {}", path.display()));
         write_slopchop_file_skeleton(out, path)?;
     }
     Ok(())
@@ -110,50 +123,68 @@ fn write_slopchop_file_skeleton(out: &mut String, path: &Path) -> Result<()> {
     Ok(())
 }
 
-/// Packs files into an XML format.
-///
-/// # Errors
-/// Returns an error if file reading fails.
-pub fn pack_xml(files: &[PathBuf], out: &mut String, opts: &PackOptions) -> Result<()> {
-    writeln!(out, "<documents>")?;
-    for path in files {
-        write_xml_doc(out, path, should_skeletonize(path, opts), None)?;
-    }
-    writeln!(out, "</documents>")?;
-    Ok(())
-}
-
 /// Packs files into XML format with focus awareness.
 ///
 /// # Errors
 /// Returns an error if file reading fails.
-pub fn pack_xml_focus(
+pub fn pack_xml_focus<F>(
     files: &[PathBuf],
     out: &mut String,
     opts: &PackOptions,
     focus: &FocusContext,
-) -> Result<()> {
+    on_progress: &F,
+) -> Result<()>
+where
+    F: Fn(usize, usize, &str) + Sync,
+{
+    let total = files.len();
     if focus.foveal.is_empty() && focus.peripheral.is_empty() {
-        return pack_xml(files, out, opts);
+        writeln!(out, "<documents>")?;
+        for (i, path) in files.iter().enumerate() {
+            on_progress(i + 1, total, &format!("Packing {}", path.display()));
+            write_xml_doc(out, path, should_skeletonize(path, opts), None)?;
+        }
+        writeln!(out, "</documents>")?;
+        return Ok(());
     }
 
     writeln!(out, "<documents>")?;
-    write_xml_foveal(out, files, focus)?;
-    write_xml_peripheral(out, files, focus)?;
+    write_xml_foveal(out, files, focus, on_progress)?;
+    write_xml_peripheral(out, files, focus, on_progress)?;
     writeln!(out, "</documents>")?;
 
     Ok(())
 }
 
-fn write_xml_foveal(out: &mut String, files: &[PathBuf], focus: &FocusContext) -> Result<()> {
-    for path in files.iter().filter(|f| focus.foveal.contains(*f)) {
+fn write_xml_foveal<F>(
+    out: &mut String,
+    files: &[PathBuf],
+    focus: &FocusContext,
+    on_progress: &F,
+) -> Result<()>
+where
+    F: Fn(usize, usize, &str) + Sync,
+{
+    let foveal: Vec<_> = files.iter().filter(|f| focus.foveal.contains(*f)).collect();
+    for (i, path) in foveal.iter().enumerate() {
+        on_progress(i + 1, foveal.len(), &format!("Packing Foveal: {}", path.display()));
         write_xml_doc(out, path, false, Some("foveal"))?;
     }
     Ok(())
 }
 
-fn write_xml_peripheral(out: &mut String, files: &[PathBuf], focus: &FocusContext) -> Result<()> {
-    for path in files.iter().filter(|f| focus.peripheral.contains(*f)) {
+fn write_xml_peripheral<F>(
+    out: &mut String,
+    files: &[PathBuf],
+    focus: &FocusContext,
+    on_progress: &F,
+) -> Result<()>
+where
+    F: Fn(usize, usize, &str) + Sync,
+{
+    let peripheral: Vec<_> = files.iter().filter(|f| focus.peripheral.contains(*f)).collect();
+    for (i, path) in peripheral.iter().enumerate() {
+        on_progress(i + 1, peripheral.len(), &format!("Packing Peripheral: {}", path.display()));
         write_xml_doc(out, path, true, Some("peripheral"))?;
     }
     Ok(())

@@ -9,6 +9,7 @@ use crate::events::{EventKind, EventLogger};
 use crate::spinner::Spinner;
 use crate::types::{CheckReport, CommandResult, ScanReport};
 use anyhow::Result;
+use colored::Colorize;
 use std::env;
 use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -69,6 +70,10 @@ pub fn run_verification_pipeline<P: AsRef<Path>>(
 
     finalize_pipeline(ctx, passed, &logger, hud.as_ref());
 
+    if !ctx.silent {
+        print_pipeline_stats(&command_results, &scan_report);
+    }
+
     crate::apply::report_writer::write_check_report(&scan_report, &command_results, passed, &ctx.repo_root)?;
 
     Ok(CheckReport {
@@ -117,7 +122,6 @@ fn run_external_commands(
 }
 
 fn finalize_pipeline(ctx: &ApplyContext, passed: bool, logger: &EventLogger, hud: Option<&Spinner>) {
-    // Stop the spinner first to ensure UI is clear before printing logs
     if let Some(h) = hud {
         h.stop(passed);
     }
@@ -148,6 +152,8 @@ fn run_internal_scan(cwd: &Path, hud: Option<&Spinner>) -> Result<ScanReport> {
             if let Some(h) = hud {
                 let i = counter.fetch_add(1, Ordering::Relaxed) + 1;
                 h.step_micro_progress(i, total_files, format!("Scanning {}", path.display()));
+                // Push log to create high-activity visualization
+                h.push_log(&format!("Analyzing: {}", path.display()));
             }
         },
         &|status| {
@@ -171,10 +177,15 @@ fn run_locality_scan(cwd: &Path, hud: Option<&Spinner>) -> Result<CommandResult>
 
     if let Some(h) = hud {
         h.set_micro_status("Building dependency graph...");
+        h.push_log("Graph construction started...");
     }
 
     let (passed, violations) = locality::check_locality_silent(cwd)?;
     
+    if let Some(h) = hud {
+        h.push_log(&format!("Graph analysis complete. Violations: {violations}"));
+    }
+
     env::set_current_dir(original_cwd)?;
 
     let output = if passed {
@@ -191,4 +202,49 @@ fn run_locality_scan(cwd: &Path, hud: Option<&Spinner>) -> Result<CommandResult>
         stderr: String::new(),
         duration_ms: start.elapsed().as_millis() as u64,
     })
+}
+
+fn print_pipeline_stats(commands: &[CommandResult], scan: &ScanReport) {
+    println!();
+    
+    // External Commands Stats
+    for cmd in commands {
+        if cmd.command.contains("slopchop scan --locality") { continue; } // Handled separately
+        let status = if cmd.exit_code == 0 { "passed".green() } else { "failed".red() };
+        let name = cmd.command.split_whitespace().next().unwrap_or(&cmd.command);
+        
+        #[allow(clippy::cast_precision_loss)]
+        let duration = format!("{:.1}s", cmd.duration_ms as f64 / 1000.0).dimmed();
+        
+        println!(
+            "{} {} | {} | {}",
+            name.to_uppercase().cyan(),
+            "CHECK".cyan(),
+            status,
+            duration
+        );
+    }
+
+    // Scan Stats
+    let scan_status = if scan.has_errors() { "failed".red() } else { "passed".green() };
+    println!(
+        "{} {} files | {} | {} violations",
+        "STRUCTURAL SCAN".cyan(),
+        scan.files.len(),
+        scan_status,
+        scan.total_violations
+    );
+
+    // Locality Stats (if present in commands)
+    if let Some(loc) = commands.iter().find(|c| c.command.contains("--locality")) {
+        let passed = loc.exit_code == 0;
+        let status = if passed { "passed".green() } else { "failed".red() };
+        let msg = if passed { "0 violations" } else { "violations found" };
+        println!(
+            "{} {} | {}",
+            "LOCALITY SCAN".cyan(),
+            status,
+            msg
+        );
+    }
 }

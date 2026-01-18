@@ -2,10 +2,11 @@
 //! Command dispatch logic extracted from binary to reduce main function size.
 
 use super::{
+    apply_handler::handle_apply,
     args::{ApplyArgs, Commands},
+    git_ops::{handle_abort, handle_branch, handle_promote},
     handlers::{
-        handle_abort, handle_apply, handle_branch, handle_check, handle_map, handle_pack,
-        handle_promote, handle_scan, PackArgs,
+        handle_check, handle_map, handle_pack, handle_scan, handle_signatures, PackArgs,
     },
 };
 use crate::exit::SlopChopExit;
@@ -51,7 +52,7 @@ fn handle_analysis(command: Commands) -> Result<SlopChopExit> {
         Commands::Map { deps } => handle_map(deps),
         Commands::Signatures { copy, stdout } => {
             let opts = SignatureOptions { copy, stdout };
-            super::handlers::handle_signatures(opts)
+            handle_signatures(opts)
         }
         Commands::Mutate {
             workers,

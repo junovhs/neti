@@ -53,17 +53,28 @@ pub struct FocusContext {
 /// # Errors
 /// Returns an error if configuration loading, directory detection, or file writing fails.
 pub fn run(options: &PackOptions) -> Result<()> {
+    run_with_progress(options, |_, _, _| {})
+}
+
+/// Runs the pack command with progress reporting.
+pub fn run_with_progress<F>(options: &PackOptions, on_progress: F) -> Result<()>
+where
+    F: Fn(usize, usize, &str) + Sync,
+{
     let config = setup_config(options)?;
 
     print_start_message(options, &config);
 
+    on_progress(0, 0, "Discovering files...");
     let files = discovery::discover(&config)?;
     if options.verbose {
         eprintln!("📂 Discovered {} files in workspace...", files.len());
     }
 
-    let content = generate_content(&files, options, &config)?;
+    on_progress(0, files.len(), "Generating content...");
+    let content = generate_content(&files, options, &config, &on_progress)?;
 
+    on_progress(files.len(), files.len(), "Counting tokens...");
     let token_count = Tokenizer::count(&content);
     output_result(&content, token_count, options, &config)
 }
@@ -92,7 +103,15 @@ fn setup_config(opts: &PackOptions) -> Result<Config> {
 ///
 /// # Errors
 /// Returns an error if generating prompt headers or writing file blocks fails.
-pub fn generate_content(files: &[PathBuf], opts: &PackOptions, config: &Config) -> Result<String> {
+pub fn generate_content<F>(
+    files: &[PathBuf],
+    opts: &PackOptions,
+    config: &Config,
+    on_progress: &F,
+) -> Result<String>
+where
+    F: Fn(usize, usize, &str) + Sync,
+{
     let mut ctx = String::with_capacity(100_000);
     let (focus_ctx, pack_files) = build_focus_context(files, opts);
 
@@ -101,7 +120,7 @@ pub fn generate_content(files: &[PathBuf], opts: &PackOptions, config: &Config) 
         inject_violations(&mut ctx, files, config)?;
     }
 
-    pack_files_to_output(&pack_files, &mut ctx, opts, &focus_ctx)?;
+    pack_files_to_output(&pack_files, &mut ctx, opts, &focus_ctx, on_progress)?;
 
     if opts.prompt {
         write_footer(&mut ctx, config)?;
@@ -121,10 +140,19 @@ fn build_focus_context(files: &[PathBuf], opts: &PackOptions) -> (FocusContext, 
     (FocusContext { foveal, peripheral }, combined)
 }
 
-fn pack_files_to_output(files: &[PathBuf], ctx: &mut String, opts: &PackOptions, focus: &FocusContext) -> Result<()> {
+fn pack_files_to_output<F>(
+    files: &[PathBuf],
+    ctx: &mut String,
+    opts: &PackOptions,
+    focus: &FocusContext,
+    on_progress: &F,
+) -> Result<()>
+where
+    F: Fn(usize, usize, &str) + Sync,
+{
     match opts.format {
-        OutputFormat::Text => formats::pack_slopchop_focus(files, ctx, opts, focus),
-        OutputFormat::Xml => formats::pack_xml_focus(files, ctx, opts, focus),
+        OutputFormat::Text => formats::pack_slopchop_focus(files, ctx, opts, focus, on_progress),
+        OutputFormat::Xml => formats::pack_xml_focus(files, ctx, opts, focus, on_progress),
         OutputFormat::Spec => {
             let spec = formats::pack_spec(files)?;
             ctx.push_str(&spec);
