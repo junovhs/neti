@@ -129,7 +129,7 @@ fn run_hud_loop(running: &Arc<AtomicBool>, state: &Arc<Mutex<HudState>>) {
     let _ = execute!(stdout, cursor::MoveUp(height));
 
     while running.load(Ordering::Relaxed) {
-        // Snapshot Pattern: Minimize lock time
+        // Snapshot Pattern: Minimize lock time to prevent IO blocking from stalling the build
         let snapshot = if let Ok(guard) = state.lock() {
             Some(guard.snapshot())
         } else {
@@ -186,11 +186,13 @@ fn render_frame(
     // 3. ATOMIC VIEW
     for i in 0..ATOMIC_LINES {
         let _ = execute!(stdout, Clear(ClearType::CurrentLine));
+        // Use map_or and simpler closure
         let content = atomic.get(i).map_or("", String::as_str);
         
         // Truncate safely
         let trunc_len = 80;
         let safe_content = if content.len() > trunc_len {
+            // Find char boundary to avoid panic
             let mut end = trunc_len;
             while !content.is_char_boundary(end) {
                 end = end.saturating_sub(1);
@@ -227,6 +229,7 @@ fn print_final_status(success: bool, title: &str, duration: Duration) {
 fn extract_micro_status(line: &str) -> Option<String> {
     let trimmed = line.trim();
     
+    // Cargo / Rust / Trunk patterns
     if trimmed.starts_with("Compiling") 
         || trimmed.starts_with("Checking")
         || trimmed.starts_with("Downloading")
@@ -240,7 +243,12 @@ fn extract_micro_status(line: &str) -> Option<String> {
         return Some(trimmed.to_string());
     }
 
+    if trimmed.starts_with("Scanning") {
+        return Some(trimmed.to_string());
+    }
+
     if trimmed.contains("| LAW:") {
+        // Use char pattern for split
         if let Some(path) = trimmed.split('|').next() {
             return Some(format!("Scanning {}", path.replace("FILE:", "").trim()));
         }

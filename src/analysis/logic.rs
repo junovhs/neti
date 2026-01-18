@@ -4,14 +4,22 @@ use crate::types::{FileReport, Violation, ScanReport};
 use crate::analysis::v2;
 use crate::analysis::file_analysis;
 use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[must_use]
-pub fn run_scan(config: &Config, files: &[PathBuf]) -> ScanReport {
+pub fn run_scan<F>(config: &Config, files: &[PathBuf], on_progress: Option<&F>) -> ScanReport
+where
+    F: Fn(&Path) + Sync,
+{
     let start = std::time::Instant::now();
     
     let mut results: Vec<FileReport> = files
         .par_iter()
+        .inspect(|path| {
+            if let Some(cb) = on_progress {
+                cb(path);
+            }
+        })
         .map(|path| file_analysis::analyze_file(path, config))
         .collect();
 

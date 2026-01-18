@@ -14,6 +14,7 @@ use colored::Colorize;
 use std::env;
 use std::fmt::Write;
 use std::path::Path;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Instant;
 
 /// Runs the full verification pipeline: External Commands -> Scan -> Locality.
@@ -95,19 +96,33 @@ fn run_internal_scan(cwd: &Path, silent: bool) -> Result<ScanReport> {
     let config = Config::load();
     let files = discovery::discover(&config)?;
     let engine = RuleEngine::new(config);
-    let mut report = engine.scan(&files);
-    report.duration_ms = start.elapsed().as_millis();
+
+    // Progress throttling: update spinner every 5 files to avoid lock contention
+    let counter = AtomicUsize::new(0);
+    
+    let report = engine.scan_with_progress(&files, &|path| {
+        if let Some(s) = &sp {
+            let i = counter.fetch_add(1, Ordering::Relaxed);
+            if i % 5 == 0 {
+                s.push_log(&format!("Scanning {}", path.display()));
+            }
+        }
+    });
+    
+    // Explicitly set duration since engine doesn't track wall time of its internal phases
+    let mut final_report = report;
+    final_report.duration_ms = start.elapsed().as_millis();
 
     env::set_current_dir(original_cwd)?;
 
-    let success = !report.has_errors();
+    let success = !final_report.has_errors();
     if let Some(s) = sp { s.stop(success); }
 
     if !success && !silent {
-        reporting::print_report(&report)?;
+        reporting::print_report(&final_report)?;
     }
 
-    Ok(report)
+    Ok(final_report)
 }
 
 fn run_locality_scan(cwd: &Path, silent: bool) -> Result<CommandResult> {
@@ -239,4 +254,4 @@ fn write_full_logs(out: &mut String, cmds: &[CommandResult]) -> Result<()> {
         if !cmd.stderr.is_empty() { writeln!(out, "{}", cmd.stderr)?; }
     }
     Ok(())
-}
+}
