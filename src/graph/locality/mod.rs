@@ -23,3 +23,6 @@ pub use edges::collect as collect_edges;
 pub use exemptions::is_structural_pattern;
 pub use types::{Coupling, EdgeVerdict, LocalityEdge, NodeIdentity, PassReason};
 pub use validator::{validate_edge, validate_graph, ValidationReport, ValidatorConfig};
+
+#[cfg(test)]
+mod tests;
