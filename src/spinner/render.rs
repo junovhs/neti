@@ -1,6 +1,6 @@
 // src/spinner/render.rs
 use super::state::{HudSnapshot, ATOMIC_LINES};
-use crossterm::{cursor, execute, terminal::{Clear, ClearType}};
+use crossterm::{cursor, execute, terminal::{self, Clear, ClearType}};
 use std::{
     io::{self, Write},
     sync::{Arc, Mutex, atomic::{AtomicBool, Ordering}},
@@ -74,6 +74,10 @@ fn render_hud(stdout: &mut io::Stdout, snap: &HudSnapshot, frame_idx: usize) {
     let spinner = FRAMES.get(frame_idx % FRAMES.len()).unwrap_or(&"+");
     let elapsed = snap.start_time.elapsed().as_secs();
     
+    // Get terminal width to prevent wrapping
+    let (term_width, _) = terminal::size().unwrap_or((80, 24));
+    let max_width = (term_width as usize).saturating_sub(1);
+
     let _ = execute!(stdout, Clear(ClearType::CurrentLine));
     
     let macro_text = if let Some((step, total)) = snap.pipeline_step {
@@ -88,16 +92,24 @@ fn render_hud(stdout: &mut io::Stdout, snap: &HudSnapshot, frame_idx: usize) {
         
         let bar = format!("{}{}", "━".repeat(filled_len).blue().bold(), "━".repeat(empty_len).dimmed());
         
+        let prefix_len = 55; // Approx length of prefix chars
+        let avail = max_width.saturating_sub(prefix_len).max(10);
+        let safe_name = truncate_safe(&snap.pipeline_name, avail);
+
         format!(
             "{} [{bar}] Step {step}/{total}: {}",
             "SLOPCHOP".blue().bold(),
-            snap.pipeline_name.bold()
+            safe_name.bold()
         )
     } else {
+        let prefix_len = 25;
+        let avail = max_width.saturating_sub(prefix_len).max(10);
+        let safe_name = truncate_safe(&snap.pipeline_name, avail);
+
         format!(
             "{} {spinner} {} ({elapsed}s)",
             "SLOPCHOP".blue().bold(),
-            snap.pipeline_name
+            safe_name
         )
     };
     let _ = writeln!(stdout, "{macro_text}");
@@ -118,12 +130,22 @@ fn render_hud(stdout: &mut io::Stdout, snap: &HudSnapshot, frame_idx: usize) {
             let empty_len = bar_width.saturating_sub(filled_len);
             
             let bar = format!("{}{}", "█".repeat(filled_len).yellow(), "░".repeat(empty_len).dimmed());
-            format!("  └─ {bar} {pct}%  {}", snap.micro_status)
+            
+            let prefix_len = 55;
+            let avail = max_width.saturating_sub(prefix_len).max(10);
+            let safe_status = truncate_safe(&snap.micro_status, avail);
+
+            // Fix clippy::uninlined_format_args
+            format!("  └─ {bar} {pct}%  {safe_status}")
         } else {
-            format!("  └─ {} {}", spinner.yellow(), snap.micro_status)
+            let avail = max_width.saturating_sub(10).max(10);
+            let safe_status = truncate_safe(&snap.micro_status, avail);
+            format!("  └─ {} {safe_status}", spinner.yellow())
         }
     } else {
-        format!("  └─ {} {}", spinner.yellow(), snap.micro_status)
+        let avail = max_width.saturating_sub(10).max(10);
+        let safe_status = truncate_safe(&snap.micro_status, avail);
+        format!("  └─ {} {safe_status}", spinner.yellow())
     };
     let _ = writeln!(stdout, "{micro_display}");
 
@@ -145,7 +167,7 @@ fn render_hud(stdout: &mut io::Stdout, snap: &HudSnapshot, frame_idx: usize) {
 
         if let Some(idx) = idx_in_buf {
             let content = snap.atomic_buffer.get(idx).map_or("", String::as_str);
-            let safe_content = truncate_safe(content, 90);
+            let safe_content = truncate_safe(content, max_width.saturating_sub(6));
             let _ = writeln!(stdout, "     {}", safe_content.dimmed());
         } else {
             let _ = writeln!(stdout);

@@ -117,16 +117,17 @@ fn run_external_commands(
 }
 
 fn finalize_pipeline(ctx: &ApplyContext, passed: bool, logger: &EventLogger, hud: Option<&Spinner>) {
+    // Stop the spinner first to ensure UI is clear before printing logs
+    if let Some(h) = hud {
+        h.stop(passed);
+    }
+
     if !ctx.silent {
         crate::apply::advisory::maybe_print_edit_advisory(&ctx.repo_root);
     }
 
     if passed {
         logger.log(EventKind::CheckPassed);
-    }
-
-    if let Some(h) = hud {
-        h.stop(passed);
     }
 }
 
