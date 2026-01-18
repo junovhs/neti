@@ -63,13 +63,13 @@ THE LAWS:
 | Metric | Limit | Catches |
 |--------|-------|---------|
 | File Tokens | < {tokens} | God files |
-| Cognitive Complexity | � {complexity} | Tangled logic |
-| Nesting Depth | � {depth} | Deep conditionals |
-| Function Args | � {args} | Bloated signatures |
+| Cognitive Complexity |  {complexity} | Tangled logic |
+| Nesting Depth |  {depth} | Deep conditionals |
+| Function Args |  {args} | Bloated signatures |
 | LCOM4 | = 1 | Incohesive classes (split if > 1) |
-| AHF | � 60% | Leaking state (make fields private) |
-| CBO | � 9 | Tight coupling (reduce dependencies) |
-| SFOUT | � 7 | High fan-out (delegate to helpers) |
+| AHF |  60% | Leaking state (make fields private) |
+| CBO |  9 | Tight coupling (reduce dependencies) |
+| SFOUT |  7 | High fan-out (delegate to helpers) |
 
 LAW OF PARANOIA: No .unwrap() or .expect(). Use Result types.
 
@@ -93,25 +93,10 @@ path/to/new_file.rs [NEW]
 <raw code content>
 {sigil} END {sigil}
 
-4. Surgical Patch (for small, targeted changes to existing files):
-{sigil} PATCH {sigil} path/to/file.rs
-BASE_SHA256: <sha256 of current staged file bytes>
-MAX_MATCHES: 1
-LEFT_CTX:
-<literal text: code context before OLD>
-OLD:
-<literal text: the exact code to be replaced>
-RIGHT_CTX:
-<literal text: code context after OLD>
-NEW:
-<literal text: the new code to insert>
-{sigil} END {sigil}
-
 RULES:
-- No truncation. Provide full file contents or complete patch blocks.
+- No truncation. Provide full file contents.
 - No markdown fences. The {sigil} markers are the fences.
-- Use FILE blocks for new files or when changes exceed ~75% of a file.
-- Use PATCH blocks for small, targeted changes. Obtain BASE_SHA256 from 'slopchop pack'.
+- Use FILE blocks for ALL changes. Surgical patches are deprecated.
 - Run 'slopchop check' after changes. Fix ALL violations before claiming done.
 "
     )
@@ -121,9 +106,9 @@ fn build_reminder(config: &RuleConfig) -> String {
     let sigil = "XSC7XSC";
     format!(
         r"SLOPCHOP v{PROTOCOL_VERSION} CONSTRAINTS:
-- Tokens < {}, CC � {}, Depth � {}, Args � {}
-- LCOM4 = 1, AHF � 60%, CBO � 9, SFOUT � 7
-- Use {sigil} Sigil Protocol (PLAN, MANIFEST, FILE, PATCH)
+- Tokens < {}, CC  {}, Depth  {}, Args  {}
+- LCOM4 = 1, AHF  60%, CBO  9, SFOUT  7
+- Use {sigil} Sigil Protocol (PLAN, MANIFEST, FILE)
 - Run 'slopchop check' and fix all violations",
         config.max_file_tokens,
         config.max_cognitive_complexity, // UPDATED
@@ -134,11 +119,11 @@ fn build_reminder(config: &RuleConfig) -> String {
 
 fn generate_short_text(config: &RuleConfig) -> String {
     format!(
-        "SlopChop v{}: <{}tok, CC{}, D{}, A{}> Use XSC7XSC protocol.",
+        "SlopChop v{}: <{}tok, CC{}, D{}, A{}> Use XSC7XSC protocol (FILE blocks only).",
         PROTOCOL_VERSION,
         config.max_file_tokens,
         config.max_cognitive_complexity, // UPDATED
         config.max_nesting_depth,
         config.max_function_args,
     )
-}
+}

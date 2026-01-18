@@ -1,21 +1,21 @@
 SLOPCHOP CHECK REPORT
-Generated: 2026-01-14 11:25:32
+Generated: 2026-01-17 19:41:40
 Status: PASSED
 
 === DASHBOARD ===
 Top 5 Cognitive Complexity:
-  15   src\analysis\v2\metrics.rs
-  15   src\analysis\v2\patterns\security.rs
-  13   src\analysis\ast.rs
-  13   src\analysis\safety.rs
-  12   src\analysis\v2\patterns\logic.rs
+  15   src/analysis/v2/metrics.rs
+  15   src/analysis/v2/patterns/security.rs
+  13   src/analysis/ast.rs
+  13   src/analysis/safety.rs
+  12   src/cli/config_ui/items.rs
 
 Top 5 Largest Files (Tokens):
-  2007  src\apply\verification.rs
-  1945  src\analysis\v2\patterns\logic.rs
-  1903  src\cli\handlers.rs
-  1861  src\apply\validator.rs
-  1851  src\apply\executor.rs
+  2007  src/apply/verification.rs
+  1937  src/analysis/v2/patterns/logic.rs
+  1903  src/cli/handlers.rs
+  1879  src/spinner.rs
+  1851  src/apply/executor.rs
 
 === VIOLATIONS ===
 None. Codebase is clean.
@@ -23,82 +23,83 @@ None. Codebase is clean.
 === FULL OUTPUT LOGS ===
 
 >>> COMMAND: cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing -A clippy::struct_excessive_bools -A clippy::module_name_repetitions -A clippy::missing_errors_doc -A clippy::must_use_candidate
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.19s
+    Checking slopchop v1.6.0 (/home/juno/slopchop)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.35s
 
 
 >>> COMMAND: cargo test
 
 running 68 tests
 test analysis::v2::cognitive::tests::test_else_if_flattening ... ok
-test analysis::checks::syntax::tests::test_rust_error ... ok
+test analysis::v2::cognitive::tests::test_boolean_ops ... ok
 test analysis::checks::syntax::tests::test_valid_rust ... ok
 test analysis::v2::cognitive::tests::test_if_statement ... ok
+test analysis::checks::syntax::tests::test_rust_error ... ok
 test analysis::v2::cognitive::tests::test_linear_flow ... ok
-test analysis::v2::cognitive::tests::test_boolean_ops ... ok
 test analysis::v2::cognitive::tests::test_nested_if ... ok
-test apply::blocks::tests::test_clean_empty_prefix ... ok
 test apply::blocks::tests::test_clean_line_fallback ... ok
-test apply::blocks::tests::test_create_file_block ... ok
 test apply::blocks::tests::test_clean_with_prefix ... ok
+test apply::blocks::tests::test_create_file_block ... ok
 test apply::blocks::tests::test_create_plan_block ... ok
 test apply::blocks::tests::test_rejects_keyword_paths ... ok
-test apply::messages::tests::test_feedback_truncation_utf8 ... ok
 test apply::messages::tests::test_floor_char_boundary ... ok
-test analysis::v2::patterns::idiomatic::tests::i02_flag_duplicate_arms ... ok
-test analysis::v2::patterns::resource::tests::r07_skip_returned_writer ... ok
-test analysis::v2::patterns::idiomatic::tests::i01_flag_simple_from ... ok
-test analysis::v2::patterns::idiomatic::tests::i02_skip_unique_arms ... ok
-test analysis::v2::patterns::idiomatic::tests::i01_skip_error_from ... ok
+test apply::messages::tests::test_feedback_truncation_utf8 ... ok
+test apply::blocks::tests::test_clean_empty_prefix ... ok
 test branch::tests::test_work_branch_name ... ok
-test analysis::v2::patterns::resource::tests::r07_flag_missing_flush ... ok
+test apply::parser::tests::test_parse_plan_and_manifest ... ok
+test analysis::v2::patterns::resource::tests::r07_skip_returned_writer ... ok
 test analysis::v2::patterns::resource::tests::r07_skip_with_flush ... ok
+test apply::parser::tests::test_tolerant_parsing ... ok
 test graph::locality::classifier::tests::test_deadwood ... ok
-test analysis::v2::patterns::logic::tests::l02_skip_max_var ... ok
 test graph::locality::classifier::tests::test_god_module ... ok
 test graph::locality::classifier::tests::test_stable_hub ... ok
 test graph::locality::classifier::tests::test_volatile_leaf ... ok
-test apply::parser::tests::test_inconsistent_prefix_parsing ... ok
-test analysis::v2::patterns::logic::tests::l02_flag_lte_len ... ok
 test graph::locality::coupling::tests::test_compute_coupling ... ok
 test graph::locality::cycles::tests::test_diamond_dag_no_cycle ... ok
-test analysis::v2::patterns::logic::tests::l02_skip_threshold ... ok
 test graph::locality::cycles::tests::test_no_cycles ... ok
 test graph::locality::cycles::tests::test_simple_cycle ... ok
 test graph::locality::distance::tests::test_deep_hierarchy ... ok
+test graph::locality::distance::tests::test_same_directory ... ok
 test graph::locality::distance::tests::test_sibling_directories ... ok
 test graph::locality::exemptions::tests::test_crate_root ... ok
-test graph::locality::distance::tests::test_same_directory ... ok
 test graph::locality::exemptions::tests::test_parent_reexport ... ok
-test graph::locality::exemptions::tests::test_shared_infrastructure ... ok
 test graph::locality::exemptions::tests::test_vertical_routing ... ok
+test graph::locality::exemptions::tests::test_shared_infrastructure ... ok
 test graph::tsconfig::tests::test_match_pattern ... ok
 test graph::tsconfig::tests::test_strip_comments ... ok
 test lang::tests::test_from_ext ... ok
-test graph::defs::extract::tests::test_python_defs ... ok
+test analysis::v2::patterns::idiomatic::tests::i01_flag_simple_from ... ok
 test map::tests::test_format_size ... ok
 test map::tests::test_format_tokens ... ok
 test mutate::mutations::tests::test_boolean_mutations ... ok
 test mutate::discovery::tests::test_discover_finds_operators ... ok
-test mutate::mutations::tests::test_logical_mutations ... ok
-test apply::parser::tests::test_rejects_keyword_path ... ok
+test apply::parser::tests::test_inconsistent_prefix_parsing ... ok
+test analysis::v2::patterns::idiomatic::tests::i02_skip_unique_arms ... ok
+test analysis::v2::patterns::idiomatic::tests::i02_flag_duplicate_arms ... ok
 test mutate::mutations::tests::test_comparison_mutations ... ok
+test mutate::mutations::tests::test_logical_mutations ... ok
 test mutate::mutations::tests::test_no_mutation ... ok
+test apply::parser::tests::test_rejects_keyword_path ... ok
 test analysis::v2::patterns::logic::tests::l03_skip_with_empty_check ... ok
-test analysis::v2::patterns::logic::tests::l03_flag_first_unwrap ... ok
-test analysis::v2::patterns::logic::tests::l03_flag_index_zero ... ok
-test apply::parser::tests::test_parse_file_and_patch ... ok
+test analysis::v2::patterns::logic::tests::l02_flag_lte_len ... ok
+test analysis::v2::patterns::resource::tests::r07_flag_missing_flush ... ok
 test graph::defs::extract::tests::test_rust_defs ... ok
-test apply::parser::tests::test_parse_plan_and_manifest ... ok
-test apply::parser::tests::test_tolerant_parsing ... ok
-test analysis::v2::patterns::semantic::tests::m05_flag_calculate_with_mut ... ok
-test analysis::v2::patterns::semantic::tests::m03_flag_getter_with_mut ... ok
-test analysis::v2::patterns::semantic::tests::m03_skip_getter_without_mut ... ok
+test graph::defs::extract::tests::test_python_defs ... ok
+test analysis::v2::patterns::logic::tests::l02_skip_max_var ... ok
+test apply::parser::tests::test_parse_file_and_patch ... ok
+test analysis::v2::patterns::idiomatic::tests::i01_skip_error_from ... ok
+test analysis::v2::patterns::logic::tests::l03_flag_index_zero ... ok
+test analysis::v2::patterns::logic::tests::l03_flag_first_unwrap ... ok
 test analysis::v2::patterns::semantic::tests::m04_skip_is_returning_bool ... ok
+test analysis::v2::patterns::semantic::tests::m03_skip_getter_without_mut ... ok
+test analysis::v2::patterns::semantic::tests::m05_flag_calculate_with_mut ... ok
 test analysis::v2::patterns::semantic::tests::m04_flag_is_returning_string ... ok
+test analysis::v2::patterns::logic::tests::l02_skip_threshold ... ok
+test analysis::v2::patterns::semantic::tests::m03_flag_getter_with_mut ... ok
 test graph::imports::tests::test_extract_imports ... ok
 test map::tests::test_build_tree_structure ... ok
 
-test result: ok. 68 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.26s
+test result: ok. 68 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
 
 
 running 0 tests
@@ -107,14 +108,15 @@ test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; fini
 
 
 running 1 test
-test src\mutate\mod.rs - mutate (line 17) ... ignored
+test src/mutate/mod.rs - mutate (line 17) ... ignored
 
 test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
 
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.15s
-     Running unittests src\lib.rs (target\debug\deps\slopchop_core-d6c9c0fe90ecc0f3.exe)
-     Running unittests src\bin\slopchop.rs (target\debug\deps\slopchop-aae29bdfc3298f56.exe)
+   Compiling slopchop v1.6.0 (/home/juno/slopchop)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.17s
+     Running unittests src/lib.rs (target/debug/deps/slopchop_core-0a26adafbccf98c4)
+     Running unittests src/bin/slopchop.rs (target/debug/deps/slopchop-92caf94a6a3a0ee5)
    Doc-tests slopchop_core
 
 

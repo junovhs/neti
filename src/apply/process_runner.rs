@@ -33,7 +33,6 @@ fn run_stage_streaming(
 ) -> Result<CommandResult> {
     let start = Instant::now();
     
-    // Split command inline to avoid lifetime headaches with helpers
     let parts: Vec<&str> = cmd_str.split_whitespace().collect();
     let Some((prog, args)) = parts.split_first() else {
         return Ok(CommandResult {
@@ -45,7 +44,14 @@ fn run_stage_streaming(
         });
     };
 
-    let spinner = if silent { None } else { Some(Spinner::start(cmd_str)) };
+    let display_cmd = if cmd_str.len() > 50 {
+        format!("{}...", &cmd_str[..47])
+    } else {
+        cmd_str.to_string()
+    };
+
+    // The spinner now handles the Triptych HUD (Macro/Micro/Atomic)
+    let spinner = if silent { None } else { Some(Spinner::start(display_cmd)) };
 
     let mut child = Command::new(prog)
         .args(args)
@@ -61,6 +67,7 @@ fn run_stage_streaming(
     let stdout_acc = Arc::new(Mutex::new(String::new()));
     let stderr_acc = Arc::new(Mutex::new(String::new()));
 
+    // IO Threads push directly to the HUD
     let out_thread = spawn_stream_reader(stdout, stdout_acc.clone(), spinner.clone());
     let err_thread = spawn_stream_reader(stderr, stderr_acc.clone(), spinner.clone());
 
@@ -70,7 +77,6 @@ fn run_stage_streaming(
 
     if let Some(s) = spinner { s.stop(status.success()); }
 
-    // Safe cast: u64 millis > 500 million years
     #[allow(clippy::cast_possible_truncation)]
     let duration = start.elapsed().as_millis() as u64;
 
@@ -99,8 +105,7 @@ fn spawn_stream_reader<R: std::io::Read + Send + 'static>(
         let reader = BufReader::new(input);
         for line in reader.lines().map_while(Result::ok) {
             if let Some(sp) = &spinner {
-                let trunc = if line.len() > 60 { &line[..60] } else { &line };
-                sp.set_message(format!("Running... {trunc}"));
+                sp.push_log(&line);
             }
             #[allow(clippy::unwrap_used)]
             let mut guard = acc.lock().unwrap();
@@ -128,15 +133,16 @@ fn report_failure(result: &CommandResult) {
 
 fn summarize_output(output: &str, cmd: &str) -> String {
     let lines: Vec<&str> = output.lines().collect();
-    let max_lines = 20;
+    let max_lines = 30; 
 
     if lines.len() <= max_lines {
         return output.to_string();
     }
 
-    let summary: String = lines.iter().take(max_lines).copied().collect::<Vec<_>>().join("\n");
+    let start_idx = lines.len().saturating_sub(max_lines);
+    let summary = lines.get(start_idx..).unwrap_or(&[]).join("\n");
+    
     format!(
-        "{summary}\n... ({} more lines, run '{cmd}' for full output)",
-        lines.len() - max_lines
+        "... ({start_idx} lines hidden, run '{cmd}' for full output)\n{summary}"
     )
-}
+}
