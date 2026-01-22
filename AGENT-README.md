@@ -1,63 +1,79 @@
-# SlopChop Agent Protocol (v1.7.0)
+# SlopChop Autonomous Protocol
 
-You are operating in a repository governed by **SlopChop**. High-integrity development is mandatory. You must prioritize structural health and memory safety over speed.
+You are an autonomous engineer working in a **SlopChop** governed repository.
+**Your Goal:** Complete tasks in `PLAN.md` using the SlopChop Transactional Workflow.
 
-## 1. The Flight Recorder (Primary Data Source)
+## 1. The Prime Directive
 
-**Your terminal view is likely truncated.** Do not rely on stdout for full violation lists or compiler errors.
+**NEVER commit to `main` directly.**
+You must work inside the `slopchop-work` sandbox. You only earn the right to merge when `slopchop check` passes.
 
-After every check, SlopChop generates a persistent file at the repository root:
-📄 **`slopchop-report.txt`**
+## 2. The Loop (Standard Operating Procedure)
 
-**Workflow Requirements:**
-1. Run `slopchop check`.
-2. If it fails, **immediately read `slopchop-report.txt`**.
-3. Use the "DASHBOARD" section of the report to identify the most complex/largest files.
-4. Use the "FULL OUTPUT LOGS" section to see untruncated `cargo clippy` or test failures.
+Execute this exact loop for every task.
 
-## 2. Governance Profiles
+### PHASE 1: ISOLATE
+1.  **Read `PLAN.md`**. Pick the highest priority unchecked item.
+2.  **Create your sandbox**:
+    ```bash
+    slopchop branch --force
+    ```
+    *(This creates or resets the `slopchop-work` branch. You are now safe to break things.)*
 
-This repository uses a **Context-Aware** governance model. SlopChop automatically detects "Systems Code" (usage of `unsafe`, `Atomic`, `no_std`, or `repr(C)`) and adjusts the physics of the laws accordingly.
+### PHASE 2: ACT
+1.  **Modify the code directly.** Edit files, add features, refactor.
+2.  **Use your tools**:
+    *   `slopchop scan` -> Check token counts/complexity quickly.
+    *   `slopchop map` -> See the repo structure.
+    *   `slopchop pack --focus <file>` -> If you get confused about a file's context.
 
-| Metric | `application` (Default) | `systems` (Relaxed) |
+### PHASE 3: VERIFY
+1.  Run the gatekeeper:
+    ```bash
+    slopchop check
+    ```
+2.  **IMMEDIATELY READ `slopchop-report.txt`**.
+    *   **Ignore stdout.** It is truncated.
+    *   The report contains the actual compiler errors, linter violations, and complexity scores.
+
+### PHASE 4: DECIDE
+*   **IF FAILED (Red):**
+    *   Analyze the violations in the report.
+    *   **Refactor immediately.** (Extract functions, simplify logic).
+    *   *Loop back to Phase 2 (Act).*
+    *   *(Emergency: If you are totally stuck, run `slopchop abort` to delete the branch and start over).*
+
+*   **IF PASSED (Green):**
+    1.  **Promote your work**:
+        ```bash
+        slopchop promote
+        ```
+        *(This automatically squashes and merges your work to main).*
+    2.  **Update `PLAN.md`**: Mark the task as `[x]`.
+    3.  **Push**:
+        ```bash
+        git push
+        ```
+    4.  *Loop back to Phase 1.*
+
+---
+
+## 3. The Laws of Physics
+
+SlopChop enforces strict structural metrics. `slopchop check` will fail if you violate these.
+
+| Metric | Limit | Fix |
 | :--- | :--- | :--- |
-| **File Tokens** | < 2,000 | < 10,000 |
-| **Cognitive Complexity** | ≤ 15 | ≤ 50 |
-| **Nesting Depth** | ≤ 3 | ≤ 6 |
-| **LCOM4 / CBO / SFOUT** | Strict | **Disabled** |
+| **File Tokens** | < 2,000 | **Split the file.** Create submodules. |
+| **Cognitive Complexity** | ≤ 15 | **Extract methods.** Simplify branching. |
+| **Nesting Depth** | ≤ 3 | **Use guard clauses** (return early). |
+| **LCOM4** | = 1 | **Split the struct.** It lacks cohesion. |
 
-**Note on Safety:** In `systems` mode, structural rules are relaxed, but **Safety Checks are Escalated**. Every `unsafe` block **must** have a `// SAFETY:` comment or the check will fail.
+**Context-Aware Profiling:**
+If you see `systems` profile active (e.g. `unsafe`, `no_std`), limits relax, but **Safety Checks Escalate**. Every `unsafe` block *must* have a `// SAFETY:` comment.
 
-## 3. Mandatory Commands
+## 4. Dishonorable Behavior
 
-```bash
-slopchop check              # THE GATE - Runs metrics, safety scan, clippy, and tests.
-slopchop scan               # Internal metrics only (fast).
-slopchop config             # Use this to view or adjust project-wide thresholds.
-```
-
-## 4. Technical Goals & Commits
-
-When using the `XSC7XSC` protocol to deliver code via `PLAN` blocks:
-- Always include a **`GOAL: <summary>`** line.
-- SlopChop persists this goal. When the user runs `slopchop promote`, this goal is used to generate a high-quality merge commit.
-- Generic commit messages (e.g., "update code") are a violation of protocol.
-
-## 5. "Eating Your Vegetables"
-
-Do the hardest things FIRST. **Dishonorable behavior includes:**
-- Adding `#[allow(...)]` to bypass a metrics violation instead of refactoring.
-- Ignoring the `LAW OF PARANOIA` (`.unwrap()`/`.expect()`).
-- Claiming a task is complete without verifying that `slopchop-report.txt` shows **Status: PASSED**.
-
-## 6. Verification Loop
-
-```
-1. Make changes.
-2. Run `slopchop check`.
-3. READ `slopchop-report.txt` to find the root cause of failures.
-4. Refactor logic to reduce Cognitive Complexity or fix Safety documentation.
-5. GOTO 2 until the report shows Status: PASSED.
-```
-
-The `slopchop-report.txt` dashboard is the ground truth. If a file appears at the top of the "Top 5 Cognitive Complexity" list, it is your primary target for refactoring.
+*   **Bypassing the Sandbox:** Never edit code on `main`. Always run `slopchop branch` first.
+*   **Lazy Fixes:** Never add `#[allow(...)]` to silence SlopChop metrics. Refactor the code.
+*   **Hallucinating Success:** Never run `slopchop promote` unless `slopchop check` was GREEN.
