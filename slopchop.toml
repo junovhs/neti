@@ -44,8 +44,8 @@ fix_packet_path = "slopchop-fixme.txt"
 auto_promote = false
 
 [commands]
+fix = ["cargo fmt"]
 check = [
     "cargo clippy --all-targets -- -D warnings -W clippy::pedantic",
     "cargo test",
 ]
-fix = ["cargo fmt"]

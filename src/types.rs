@@ -82,6 +82,12 @@ impl ScanReport {
     pub fn clean_file_count(&self) -> usize {
         self.files.iter().filter(|f| f.is_clean()).count()
     }
+
+    /// Returns true if this scan was run in small codebase mode.
+    #[must_use]
+    pub fn is_small_codebase(&self) -> bool {
+        crate::analysis::v2::is_small_codebase(self.files.len())
+    }
 }
 
 /// Result of an external command execution.
@@ -101,4 +107,3 @@ pub struct CheckReport {
     pub commands: Vec<CommandResult>,
     pub passed: bool,
 }
-// test

@@ -12,4 +12,5 @@ pub(crate) mod worker;
 pub(crate) mod aggregator;
 pub(crate) mod deep;
 
-pub use engine::ScanEngineV2;
+pub use engine::ScanEngineV2;
+pub use engine::{is_small_codebase, small_codebase_threshold};
