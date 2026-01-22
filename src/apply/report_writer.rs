@@ -7,6 +7,10 @@ use anyhow::Result;
 use std::fmt::Write;
 use std::path::Path;
 
+/// Writes the check report to a file.
+///
+/// # Errors
+/// Returns error if file writing fails.
 pub fn write_check_report(scan: &ScanReport, cmds: &[CommandResult], passed: bool, root: &Path) -> Result<()> {
     let mut out = String::with_capacity(10000);
     

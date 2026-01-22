@@ -42,6 +42,7 @@ impl SafeHud {
         }
     }
 
+    #[must_use]
     pub fn completion_info(&self) -> (bool, String, Instant) {
         if let Ok(guard) = self.inner.lock() {
             let (s, t, i) = guard.completion_info();

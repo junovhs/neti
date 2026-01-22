@@ -24,6 +24,7 @@ pub fn get_repo_root() -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone)]
 pub struct PackArgs {
     pub stdout: bool,
@@ -39,6 +40,9 @@ pub struct PackArgs {
 }
 
 /// Handles the scan command.
+///
+/// # Errors
+/// Returns error if scan fails.
 pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChopExit> {
     if locality {
         return super::locality::handle_locality();
@@ -96,6 +100,9 @@ pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChop
 }
 
 /// Handles the check command.
+///
+/// # Errors
+/// Returns error if check fails.
 pub fn handle_check(json: bool) -> Result<SlopChopExit> {
     let config = Config::load();
     let repo_root = get_repo_root();
@@ -118,6 +125,9 @@ pub fn handle_check(json: bool) -> Result<SlopChopExit> {
 }
 
 /// Handles the pack command.
+///
+/// # Errors
+/// Returns error if pack fails.
 pub fn handle_pack(args: PackArgs) -> Result<SlopChopExit> {
     let opts = PackOptions {
         stdout: args.stdout,
@@ -160,6 +170,9 @@ pub fn handle_pack(args: PackArgs) -> Result<SlopChopExit> {
 }
 
 /// Handles the map command.
+///
+/// # Errors
+/// Returns error if map generation fails.
 pub fn handle_map(deps: bool) -> Result<SlopChopExit> {
     let output = map::generate(deps)?;
     println!("{output}");
@@ -167,6 +180,9 @@ pub fn handle_map(deps: bool) -> Result<SlopChopExit> {
 }
 
 /// Handles the signatures command.
+///
+/// # Errors
+/// Returns error if signature generation fails.
 pub fn handle_signatures(opts: SignatureOptions) -> Result<SlopChopExit> {
     signatures::run(&opts)?;
     Ok(SlopChopExit::Success)

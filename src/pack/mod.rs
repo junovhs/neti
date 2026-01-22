@@ -58,6 +58,9 @@ pub fn run(options: &PackOptions) -> Result<()> {
 }
 
 /// Runs the pack command with progress reporting.
+///
+/// # Errors
+/// Returns error if packing fails.
 pub fn run_with_progress<F>(options: &PackOptions, on_progress: F) -> Result<()>
 where
     F: Fn(usize, usize, &str) + Sync,

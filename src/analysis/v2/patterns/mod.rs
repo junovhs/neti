@@ -56,6 +56,7 @@ fn parse_source(source: &str, lang: Lang) -> Option<tree_sitter::Tree> {
 
 /// Helper to get a node from a capture by index.
 /// Centralized to reduce duplication and fix lifetime issues.
+#[must_use]
 pub fn get_capture_node<'a>(
     m: &tree_sitter::QueryMatch<'_, 'a>,
     idx: Option<u32>,
@@ -67,4 +68,4 @@ pub fn get_capture_node<'a>(
         }
     }
     None
-}
+}

@@ -19,6 +19,9 @@ use std::time::Instant;
 pub mod report_display;
 
 /// Runs the full verification pipeline.
+///
+/// # Errors
+/// Returns error if validation fails.
 pub fn run_verification_pipeline<P: AsRef<Path>>(
     ctx: &ApplyContext,
     cwd: P,
@@ -31,7 +34,6 @@ pub fn run_verification_pipeline<P: AsRef<Path>>(
     let (total_steps, _) = calculate_steps(ctx);
     let mut current_step = 0;
 
-    // Compiler check: removed `mut` from `controller` declaration
     let (client, controller) = if ctx.silent {
         (None, None)
     } else {
@@ -74,8 +76,6 @@ pub fn run_verification_pipeline<P: AsRef<Path>>(
         cmd_results.push(loc.clone());
     }
 
-    // We need to consume controller to stop it.
-    // If controller was not mut, we can still move it out of Option.
     if let Some(mut c) = controller {
         c.stop(passed);
     }

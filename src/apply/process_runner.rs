@@ -26,6 +26,10 @@ impl CommandRunner {
         Self { silent }
     }
 
+    /// Runs a command and returns the result.
+    ///
+    /// # Errors
+    /// Returns error if command spawning or execution fails.
     pub fn run(
         &self,
         cmd: &str,
@@ -78,17 +82,17 @@ fn run_streaming(
     let out_thread = spawn_reader(
         stdout,
         out_acc.clone(),
-        client.cloned(), // Fix: use .cloned() instead of .map(Clone::clone)
+        client.cloned(),
         line_count.clone(),
     );
     let err_thread = spawn_reader(
         stderr,
         err_acc.clone(),
-        client.cloned(), // Fix: use .cloned()
+        client.cloned(),
         line_count.clone(),
     );
 
-    let heartbeat = spawn_heartbeat(client.cloned(), line_count.clone()); // Fix: use .cloned()
+    let heartbeat = spawn_heartbeat(client.cloned(), line_count.clone());
     let status = child.wait()?;
     stop_heartbeat(heartbeat);
 

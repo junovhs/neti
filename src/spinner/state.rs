@@ -102,6 +102,7 @@ impl HudState {
         self.final_success = Some(success);
     }
 
+    #[must_use]
     pub fn completion_info(&self) -> (bool, &str, Instant) {
         (
             self.final_success.unwrap_or(false),
@@ -110,6 +111,7 @@ impl HudState {
         )
     }
 
+    #[must_use]
     pub fn snapshot(&self) -> HudSnapshot {
         HudSnapshot {
             pipeline_title: self.pipeline_title.clone(),
