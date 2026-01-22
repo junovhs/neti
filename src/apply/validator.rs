@@ -264,3 +264,7 @@ fn find_truncation_line(content: &str) -> Option<usize> {
     }
     None
 }
+
+#[cfg(test)]
+#[path = "validator_tests.rs"]
+mod tests;

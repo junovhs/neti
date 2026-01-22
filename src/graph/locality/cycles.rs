@@ -113,36 +113,96 @@ fn record_cycle(
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_no_cycles() {
-        let edges = vec![
-            (Path::new("a"), Path::new("b")),
-            (Path::new("b"), Path::new("c")),
-        ];
-        let cycles = detect_cycles(edges.into_iter());
-        assert!(cycles.is_empty());
+    fn p(s: &str) -> PathBuf { PathBuf::from(s) }
+    fn edges(list: &[(&str, &str)]) -> Vec<(PathBuf, PathBuf)> {
+        list.iter().map(|(a, b)| (p(a), p(b))).collect()
     }
 
     #[test]
-    fn test_simple_cycle() {
-        let edges = vec![
-            (Path::new("a"), Path::new("b")),
-            (Path::new("b"), Path::new("a")),
+    fn test_cycle_detection_logic() {
+        let cases = vec![
+            (
+                vec![("a", "b"), ("b", "c")], 
+                0, 
+                "No cycles"
+            ),
+            (
+                vec![("a", "b"), ("b", "a")], 
+                1, 
+                "Simple cycle"
+            ),
+            (
+                vec![("a", "b"), ("a", "c"), ("b", "d"), ("c", "d")], 
+                0, 
+                "Diamond DAG (no cycle)"
+            ),
+            (
+                vec![("a", "a")], 
+                1, 
+                "Self loop"
+            ),
+            (
+                vec![("a", "b"), ("b", "c"), ("c", "a")], 
+                1, 
+                "Three node cycle"
+            ),
+            (
+                vec![("a", "b"), ("b", "a"), ("c", "d"), ("d", "c")], 
+                2, 
+                "Disjoint cycles"
+            ),
+            (
+                vec![("a", "b"), ("b", "a"), ("b", "c"), ("c", "b")], // figure 8
+                2, 
+                "Figure-8 (shared node)"
+            ),
+            (
+                vec![("a", "b"), ("b", "c"), ("c", "d"), ("d", "e"), ("e", "a")], 
+                1, 
+                "Long cycle (5 nodes)"
+            ),
+            (
+                vec![], 
+                0, 
+                "Empty graph"
+            ),
+            (
+                vec![("a", "b")], 
+                0, 
+                "Single edge"
+            ),
         ];
-        let cycles = detect_cycles(edges.into_iter());
+
+        for (edge_list, expected_count, desc) in cases {
+            // Convert to format needed by detect_cycles
+            let edge_vec = edges(&edge_list);
+            let edge_refs: Vec<(&Path, &Path)> = edge_vec.iter().map(|(a, b)| (a.as_ref(), b.as_ref())).collect();
+            
+            let cycles = detect_cycles(edge_refs.into_iter());
+            assert_eq!(cycles.len(), expected_count, "Failed: {desc}");
+
+            // Extra validation for specific cases to ensure correctness
+            if desc == "Simple cycle" {
+                assert_eq!(cycles[0].len(), 3, "a->b->a length");
+            }
+            if desc == "Self loop" {
+                assert_eq!(cycles[0].len(), 2, "a->a length");
+            }
+        }
+    }
+
+    #[test]
+    fn test_cycle_content() {
+        // Correct nodes check
+        let list = vec![("x", "y"), ("y", "z"), ("z", "x")];
+        let edge_vec = edges(&list);
+        let edge_refs: Vec<(&Path, &Path)> = edge_vec.iter().map(|(a, b)| (a.as_ref(), b.as_ref())).collect();
+        let cycles = detect_cycles(edge_refs.into_iter());
+        
         assert_eq!(cycles.len(), 1);
-        assert_eq!(cycles[0].len(), 3); // a -> b -> a
-    }
-
-    #[test]
-    fn test_diamond_dag_no_cycle() {
-        let edges = vec![
-            (Path::new("a"), Path::new("b")),
-            (Path::new("a"), Path::new("c")),
-            (Path::new("b"), Path::new("d")),
-            (Path::new("c"), Path::new("d")),
-        ];
-        let cycles = detect_cycles(edges.into_iter());
-        assert!(cycles.is_empty());
+        let cycle = &cycles[0];
+        assert!(cycle.contains(&p("x")));
+        assert!(cycle.contains(&p("y")));
+        assert!(cycle.contains(&p("z")));
     }
 }

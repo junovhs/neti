@@ -32,25 +32,25 @@ impl CommandRunner {
     /// Returns error if command execution fails.
     pub fn run(
         &self,
-        cmd: &str,
-        cwd: &Path,
+        command: &str,
+        work_dir: &Path,
         client: Option<&SpinnerClient>,
     ) -> Result<CommandResult> {
-        run_streaming(cmd, cwd, self.silent, client)
+        run_streaming(command, work_dir, self.silent, client)
     }
 }
 
 fn run_streaming(
-    cmd: &str,
-    cwd: &Path,
+    command: &str,
+    work_dir: &Path,
     silent: bool,
     client: Option<&SpinnerClient>,
 ) -> Result<CommandResult> {
     let start = Instant::now();
-    let parts: Vec<&str> = cmd.split_whitespace().collect();
+    let parts: Vec<&str> = command.split_whitespace().collect();
     let Some((prog, args)) = parts.split_first() else {
         return Ok(CommandResult {
-            command: cmd.to_string(),
+            command: command.to_string(),
             exit_code: 0,
             stdout: String::new(),
             stderr: String::new(),
@@ -58,7 +58,7 @@ fn run_streaming(
         });
     };
 
-    let label = extract_label(cmd);
+    let label = extract_label(command);
     
     if let Some(c) = client {
         c.set_micro_status(format!("Running {label}..."));
@@ -66,11 +66,11 @@ fn run_streaming(
 
     let mut child = Command::new(prog)
         .args(args)
-        .current_dir(cwd)
+        .current_dir(work_dir)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .with_context(|| format!("Failed to spawn {cmd}"))?;
+        .with_context(|| format!("Failed to spawn {command}"))?;
 
     let stdout = child.stdout.take().ok_or_else(|| anyhow!("No stdout"))?;
     let stderr = child.stderr.take().ok_or_else(|| anyhow!("No stderr"))?;
@@ -101,7 +101,7 @@ fn run_streaming(
 
     #[allow(clippy::unwrap_used)]
     let result = CommandResult {
-        command: cmd.to_string(),
+        command: command.to_string(),
         exit_code: status.code().unwrap_or(1),
         stdout: out_acc.lock().unwrap().clone(),
         stderr: err_acc.lock().unwrap().clone(),
@@ -115,8 +115,8 @@ fn run_streaming(
     Ok(result)
 }
 
-fn extract_label(cmd: &str) -> String {
-    match cmd.split_whitespace().collect::<Vec<_>>().as_slice() {
+fn extract_label(command: &str) -> String {
+    match command.split_whitespace().collect::<Vec<_>>().as_slice() {
         ["cargo", sub, ..] => format!("cargo {sub}"),
         ["npm", "run", s, ..] => format!("npm {s}"),
         [p, s, ..] => format!("{p} {s}"),

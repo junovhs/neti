@@ -93,3 +93,105 @@ fn should_include(
 ) -> bool {
     !foveal.contains(path) && !peripheral.contains(path) && all_set.contains(path)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn p(s: &str) -> PathBuf { PathBuf::from(s) }
+
+    fn manual_graph(edges: &[(&str, &str)]) -> RepoGraph {
+        let mut defines: HashMap<String, HashSet<PathBuf>> = HashMap::new();
+        let mut references: HashMap<String, HashSet<PathBuf>> = HashMap::new();
+
+        for (src, dst) in edges {
+            // src depends on dst. 
+            // Implementation: src refs "SYM", dst defines "SYM".
+            let sym = format!("SYM_{dst}");
+            
+            references.entry(sym.clone())
+                .or_default()
+                .insert(p(src));
+                
+            defines.entry(sym)
+                .or_default()
+                .insert(p(dst));
+        }
+
+        RepoGraph::new(
+            Vec::new(), // tags
+            defines,
+            references,
+            HashMap::new(), // ranks
+        )
+    }
+
+    #[test]
+    fn test_collect_foveal_logic() {
+        let all_files: HashSet<_> = vec![p("a.rs"), p("b.rs"), p("c.rs")].into_iter().collect();
+        let focus = vec![p("a.rs"), p("x.rs")]; 
+
+        let foveal = collect_foveal(&focus, &all_files);
+        assert!(foveal.contains(&p("a.rs")));
+        assert!(!foveal.contains(&p("x.rs"))); 
+        assert!(!foveal.contains(&p("b.rs")));
+    }
+
+    #[test]
+    fn test_collect_peripheral_logic() {
+        // Graph: a -> b -> c
+        let graph = manual_graph(&[
+            ("a.rs", "b.rs"),
+            ("b.rs", "c.rs"),
+        ]);
+        let all_files: HashSet<_> = vec![p("a.rs"), p("b.rs"), p("c.rs")].into_iter().collect();
+        
+        let cases = vec![
+            (
+                "Depth 0",
+                vec!["a.rs"],
+                0,
+                vec![]
+            ),
+            (
+                "Depth 1",
+                vec!["a.rs"],
+                1,
+                vec!["b.rs"]
+            ),
+            (
+                "Depth 2",
+                vec!["a.rs"],
+                2,
+                vec!["b.rs", "c.rs"]
+            ),
+        ];
+
+        for (desc, foveal_strs, depth, expected_strs) in cases {
+            let foveal: HashSet<_> = foveal_strs.iter().map(|s| p(s)).collect();
+            let peripheral = collect_peripheral(&foveal, &graph, &all_files, depth);
+            
+            assert_eq!(peripheral.len(), expected_strs.len(), "{desc}: Count mismatch. \nFoveal: {foveal:?}\nPeripheral: {peripheral:?}");
+            for exp in expected_strs {
+                assert!(peripheral.contains(&p(exp)), "{desc}: Missing {exp}");
+            }
+            
+            // Peripheral should never contain foveal
+            for f in &foveal {
+                assert!(!peripheral.contains(f), "{desc}: Leaked foveal {f:?}");
+            }
+        }
+    }
+
+    #[test]
+    fn test_should_include_logic() {
+        let foveal: HashSet<_> = vec![p("f")].into_iter().collect();
+        let peripheral: HashSet<_> = vec![p("p")].into_iter().collect();
+        let all_set: HashSet<_> = vec![p("f"), p("p"), p("other")].into_iter().collect();
+
+        assert!(should_include(&p("other"), &foveal, &peripheral, &all_set));
+        assert!(!should_include(&p("f"), &foveal, &peripheral, &all_set));
+        assert!(!should_include(&p("p"), &foveal, &peripheral, &all_set));
+        assert!(!should_include(&p("missing"), &foveal, &peripheral, &all_set));
+    }
+}

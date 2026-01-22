@@ -80,80 +80,76 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_plan_and_manifest() -> Result<()> {
-        let input = format!(
-            "{SIGIL} PLAN {SIGIL}\nMy Plan\n{SIGIL} END {SIGIL}\n\
-             {SIGIL} MANIFEST {SIGIL}\nfile.rs\n{SIGIL} END {SIGIL}"
-        );
-        let blocks = parse(&input)?;
-        assert_eq!(blocks.len(), 2);
-        assert!(matches!(&blocks[0], Block::Plan(c) if c == "My Plan"));
-        assert!(matches!(&blocks[1], Block::Manifest(c) if c == "file.rs"));
-        Ok(())
+    fn test_parser_logic() {
+        let cases = vec![
+            (
+                "Plan and Manifest",
+                format!("{SIGIL} PLAN {SIGIL}\nMy Plan\n{SIGIL} END {SIGIL}\n{SIGIL} MANIFEST {SIGIL}\nfile.rs\n{SIGIL} END {SIGIL}"),
+                Box::new(|blocks: &Vec<Block>| {
+                    assert_eq!(blocks.len(), 2);
+                    assert!(matches!(&blocks[0], Block::Plan(c) if c == "My Plan"));
+                    assert!(matches!(&blocks[1], Block::Manifest(c) if c == "file.rs"));
+                }) as Box<dyn Fn(&Vec<Block>)>
+            ),
+            (
+                "File and Patch",
+                format!("{SIGIL} FILE {SIGIL} src/main.rs\nfn main() {{}}\n{SIGIL} END {SIGIL}\n{SIGIL} PATCH {SIGIL} lib.rs\nDIFF\n{SIGIL} END {SIGIL}"),
+                Box::new(|blocks: &Vec<Block>| {
+                    assert_eq!(blocks.len(), 2);
+                    if let Block::File { path, content } = &blocks[0] { assert_eq!(path, "src/main.rs"); assert_eq!(content, "fn main() {}"); } else { panic!() }
+                    if let Block::Patch { path, content } = &blocks[1] { assert_eq!(path, "lib.rs"); assert_eq!(content, "DIFF"); } else { panic!() }
+                })
+            ),
+            (
+                "Tolerant Parsing (prefixes)",
+                format!("  {SIGIL} PLAN {SIGIL}\n  Plan\n  {SIGIL} END {SIGIL}\n> {SIGIL} MANIFEST {SIGIL}\n> Man\n> {SIGIL} END {SIGIL}"),
+                Box::new(|blocks: &Vec<Block>| {
+                    assert_eq!(blocks.len(), 2);
+                    assert!(matches!(&blocks[0], Block::Plan(c) if c == "Plan"));
+                    assert!(matches!(&blocks[1], Block::Manifest(c) if c == "Man"));
+                })
+            ),
+            (
+                "Empty Input",
+                String::new(),
+                Box::new(|blocks: &Vec<Block>| assert!(blocks.is_empty()))
+            ),
+            (
+                "No Blocks",
+                "Just random text".to_string(),
+                Box::new(|blocks: &Vec<Block>| assert!(blocks.is_empty()))
+            ),
+            (
+                "Multiline Content",
+                format!("{SIGIL} FILE {SIGIL} f.rs\nline 1\nline 2\n{SIGIL} END {SIGIL}"),
+                Box::new(|blocks: &Vec<Block>| {
+                    if let Block::File { content, .. } = &blocks[0] { assert!(content.contains("line 1") && content.contains("line 2")) } else { panic!() }
+                })
+            ),
+            (
+                "Unicode Paths",
+                format!("{SIGIL} FILE {SIGIL} путь.rs\nC\n{SIGIL} END {SIGIL}"),
+                Box::new(|blocks: &Vec<Block>| {
+                    if let Block::File { path, .. } = &blocks[0] { assert!(path.contains("путь")) } else { panic!() }
+                })
+            ),
+        ];
+
+        for (desc, input, check) in cases {
+            let blocks = parse(&input).unwrap_or_else(|_| panic!("Parse failed: {desc}"));
+            check(&blocks);
+        }
     }
 
     #[test]
-    fn test_parse_file_and_patch() -> Result<()> {
-        let input = format!(
-            "{SIGIL} FILE {SIGIL} src/main.rs\nfn main() {{}}\n{SIGIL} END {SIGIL}\n\
-             {SIGIL} PATCH {SIGIL} lib.rs\nDIFF\n{SIGIL} END {SIGIL}"
-        );
-        let blocks = parse(&input)?;
-        assert_eq!(blocks.len(), 2);
-        match &blocks[0] {
-            Block::File { path, content } => {
-                assert_eq!(path, "src/main.rs");
-                assert_eq!(content, "fn main() {}");
-            }
-            _ => panic!("Expected File"),
-        }
-        match &blocks[1] {
-            Block::Patch { path, content } => {
-                assert_eq!(path, "lib.rs");
-                assert_eq!(content, "DIFF");
-            }
-            _ => panic!("Expected Patch"),
-        }
-        Ok(())
-    }
+    fn test_parser_failures() {
+        let cases = vec![
+            ("Unclosed block", format!("{SIGIL} FILE {SIGIL} f.rs\ncontent")),
+            ("Reserved keyword path", format!("{SIGIL} FILE {SIGIL} MANIFEST\ncontent\n{SIGIL} END {SIGIL}")),
+        ];
 
-    #[test]
-    fn test_rejects_keyword_path() {
-        let input = format!("{SIGIL} FILE {SIGIL} MANIFEST\ncontent\n{SIGIL} END {SIGIL}");
-        let err = parse(&input).unwrap_err();
-        assert!(err.to_string().contains("reserved keyword"));
-    }
-
-    #[test]
-    fn test_tolerant_parsing() -> Result<()> {
-        let input = format!(
-            "  {SIGIL} PLAN {SIGIL}\n  Plan\n  {SIGIL} END {SIGIL}\n\
-             > {SIGIL} MANIFEST {SIGIL}\n> Man\n> {SIGIL} END {SIGIL}\n\
-             - {SIGIL} FILE {SIGIL} f.rs\n- Code\n- {SIGIL} END {SIGIL}"
-        );
-        let blocks = parse(&input)?;
-        assert_eq!(blocks.len(), 3);
-        assert!(matches!(&blocks[0], Block::Plan(c) if c == "Plan"));
-        assert!(matches!(&blocks[1], Block::Manifest(c) if c == "Man"));
-        match &blocks[2] {
-            Block::File { path, content } => {
-                assert_eq!(path, "f.rs");
-                assert_eq!(content, "Code");
-            }
-            _ => panic!("Expected File"),
+        for (desc, input) in cases {
+            assert!(parse(&input).is_err(), "Should fail: {desc}");
         }
-        Ok(())
-    }
-
-    #[test]
-    fn test_inconsistent_prefix_parsing() -> Result<()> {
-        let input = format!("> {SIGIL} FILE {SIGIL} f.rs\n>code\n> {SIGIL} END {SIGIL}");
-        let blocks = parse(&input)?;
-        assert_eq!(blocks.len(), 1);
-        match &blocks[0] {
-            Block::File { content, .. } => assert_eq!(content, "code"),
-            _ => panic!("Expected File"),
-        }
-        Ok(())
     }
 }

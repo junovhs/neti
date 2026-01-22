@@ -13,8 +13,8 @@ You must work inside the `slopchop-work` sandbox. You only earn the right to mer
 Execute this exact loop for every task.
 
 ### PHASE 1: ISOLATE
-1.  **Read `PLAN.md`**. Pick the highest priority unchecked item.
-2.  **Create your sandbox**:
+1.  **Create and Read `PLAN.md`**. Pick the highest priority unchecked item.
+2.  **Create your safe sandbox**:
     ```bash
     slopchop branch --force
     ```
@@ -25,23 +25,25 @@ Execute this exact loop for every task.
 2.  **Use your tools**:
     *   `slopchop scan` -> Check token counts/complexity quickly.
     *   `slopchop map` -> See the repo structure.
-    *   `slopchop pack --focus <file>` -> If you get confused about a file's context.
+    *   `slopchop map --deps` -> See the repo structure with dependancies.
 
 ### PHASE 3: VERIFY
 1.  Run the gatekeeper:
     ```bash
     slopchop check
     ```
+This will run the full test gamut, and is required to fully pass. 
+
 2.  **IMMEDIATELY READ `slopchop-report.txt`**.
     *   **Ignore stdout.** It is truncated.
-    *   The report contains the actual compiler errors, linter violations, and complexity scores.
+    *   The report contains the entirety of actual compiler errors, linter violations, and complexity scores. Terminal views get truncated - this does not. 
 
 ### PHASE 4: DECIDE
 *   **IF FAILED (Red):**
     *   Analyze the violations in the report.
     *   **Refactor immediately.** (Extract functions, simplify logic).
     *   *Loop back to Phase 2 (Act).*
-    *   *(Emergency: If you are totally stuck, run `slopchop abort` to delete the branch and start over).*
+    *   *(Emergency: If you are totally stuck, run `slopchop abort` to delete the branch and start over WARNING: THIS IS MAXIMALLY DESTRUCTIVE, IT WILL LITERALLY ERASE ALL YOUR WORK, SO ENSURE WHATEVER WORK YOU WANTED TO SAVE HAS BEEN PUSHED. ASK THE USER BEFORE EVER RUNNING SLOPCHOP ABORT).*
 
 *   **IF PASSED (Green):**
     1.  **Promote your work**:

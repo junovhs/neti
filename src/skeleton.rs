@@ -112,3 +112,93 @@ fn compile_query(lang: Language, pattern: &str) -> Query {
         Err(e) => panic!("Invalid skeleton query: {e}"),
     }
 }
+
+#[cfg(test)]
+#[allow(clippy::single_range_in_vec_init)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_filter_nested_ranges_logic() {
+        let cases = vec![
+            // (input ranges, expected count, description)
+            (vec![], 0, "Empty input"),
+            (vec![5..10], 1, "Single range"),
+            (vec![0..5, 10..15], 2, "Disjoint ranges"),
+            (vec![0..20, 5..10], 1, "Nested range removed"),
+            (vec![0..10, 3..10], 1, "Nested ending at same point (>= check)"),
+            (vec![0..10, 5..15], 2, "Overlapping but extending range kept"),
+            (vec![20..30, 5..10, 0..5], 3, "Unsorted input"),
+        ];
+
+        for (ranges, expected_len, desc) in cases {
+            let result = filter_nested_ranges(ranges);
+            assert_eq!(result.len(), expected_len, "Failed: {desc}");
+            
+            // For the nested case, verify the correct one remained
+            if desc == "Nested range removed" {
+                assert_eq!(result[0], 0..20);
+            }
+        }
+    }
+
+    #[test]
+    fn test_replace_ranges_logic() {
+        let source = "hello world";
+        let cases = vec![
+            (vec![], "hello world", "No ranges"),
+            (vec![6..11], "hello X", "Single replacement"),
+            (vec![0..5], "X world", "Start replacement"),
+            (vec![0..5, 6..11], "X X", "Multiple replacements"),
+        ];
+
+        for (ranges, expected, desc) in cases {
+            let result = replace_ranges(source, &ranges, "X");
+            assert_eq!(result, expected, "Failed: {desc}");
+        }
+        
+        // Trailing content check
+        assert_eq!(replace_ranges("abc123xyz", &[3..6], "X"), "abcXxyz", "Trailing content");
+    }
+
+    #[test]
+    fn test_clean_integration() {
+        let cases = vec![
+            (
+                "test.rs",
+                "fn foo() { println!(\"hi\"); }",
+                vec!["fn foo()", "{ ... }", "!println"],
+                "Rust function"
+            ),
+            (
+                "test.py",
+                "def foo():\n    print('hi')",
+                vec!["def foo():", "...", "!print"],
+                "Python function"
+            ),
+            (
+                "test.ts",
+                "function f(x: any) { return x; }",
+                vec!["function f(x: any)", "{ ... }", "!return"],
+                "TypeScript function"
+            ),
+            (
+                "file.unknown",
+                "some content",
+                vec!["some content"],
+                "Unsupported extension"
+            ),
+        ];
+
+        for (path, source, checks, desc) in cases {
+            let result = clean(Path::new(path), source);
+            for check in checks {
+                if let Some(stripped) = check.strip_prefix('!') {
+                    assert!(!result.contains(stripped), "{desc}: Should not contain '{stripped}'");
+                } else {
+                    assert!(result.contains(check), "{desc}: Should contain '{check}'");
+                }
+            }
+        }
+    }
+}
