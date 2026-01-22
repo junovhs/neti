@@ -300,3 +300,147 @@ This enables `slopchop apply` to parse AI responses reliably.
 ---
 
 *"Governance is a social contract between you and your code. The tool should enforce the contract you chose, not guess what contract you wanted."* — case-study-thubo.md
+
+## Appended Goals
+
+This section captures additional goals derived from the broader discussion in this session (outsourcing commodity checks, minimizing “reviewer surprise,” reducing LLM split-brain, and formalizing the evidence trail). These are intended to be appended verbatim to the end of this document.
+
+---
+
+### 1) Outsource Commodity Verification to Best-in-Class Tools (HIGH)
+
+**Goal:** Remove or avoid maintaining “standard” verification features that the Rust ecosystem already provides well, and instead integrate those tools into the SlopChop workflow.
+
+**Why:** Reduces maintenance burden, improves credibility with external reviewers, and eliminates common “gotcha” criticism (“did you run X?”).
+
+**Plan (target state):**
+
+* **Mutation testing:** use `cargo-mutants` (remove SlopChop’s `src/mutate/` implementation)
+* **Dependency auditing:** add `cargo-deny`
+* **Unused dependency detection:** add `cargo-udeps` or `cargo-machete`
+* **Coverage measurement:** add `cargo-llvm-cov`
+* **TOML lint/format:** add `taplo` (including `slopchop.toml`)
+* **Spell checking:** add `typos`
+
+**Integration principle:** Prefer wiring these as optional/standard steps behind `slopchop check` (or a profile-driven equivalent), so SlopChop becomes the orchestrator and “single command” interface.
+
+---
+
+### 2) Make “No-Predictable-Surprises” a First-Class Quality Objective (HIGH)
+
+**Goal:** Ensure that the most common external-review criticisms have measured, reproducible answers.
+
+**Why:** The primary reputational risk is not “bugs exist,” but “you did not know the score.” SlopChop should ensure the maintainer always has receipts.
+
+**Definition of success:**
+
+* Mutation score available (even if imperfect), with known exclusions documented
+* Coverage report available (trend + threshold policy, if any)
+* Dependency policy output available (licenses/advisories)
+* A repeatable “how to verify this project” pathway exists for third parties
+
+**Deliverable:** A standard “Quality Evidence Bundle” (artifact set) produced on demand and/or in CI:
+
+* `slopchop-report.txt`
+* coverage summary
+* mutation summary
+* dependency audit summary
+* unused-deps summary
+
+---
+
+### 3) Implement Deterministic Change Summarization (“Change Capsule”) to Prevent Split-Brain (HIGH)
+
+**Goal:** Eliminate the token-costly requirement to narrate formatting/canonicalization changes back to the LLM by generating a bounded, deterministic summary of what changed.
+
+**Why:** Tool-driven rewrites (rustfmt, taplo, etc.) create a split-brain where the LLM reintroduces churn unless it is told what the canonical repo state is. This must be solved without doubling token usage.
+
+**Proposed feature:** `slopchop capsule` (and/or `slopchop fmt --capsule`)
+
+**Core behavior (v1):**
+
+* Compute `git diff` from a base ref to HEAD
+* Emit a small, pasteable capsule including:
+
+  * base/head identifiers
+  * diffstat + changed-file list
+  * per-file classification (format-only, imports-only, doc-only, logic-likely, suspicious)
+  * budgeted `-U0` “key hunks” (truncated)
+* “Fail closed” when the capsule is tagged as tool-output (e.g., `rustfmt`) but non-formatting token edits are detected (mark as `suspicious`)
+
+**Contract line (must appear in capsule):**
+
+* “Tool output is canonical; do not revert formatting.”
+
+**Deliverables:**
+
+* `change-capsule.txt` (human/LLM paste)
+* `change-capsule.json` (structured)
+
+---
+
+### 4) Formalize “Inner-Loop CI” vs “Outer-Loop CI” (MEDIUM)
+
+**Goal:** Preserve the SlopChop “layer down” workflow (apply → verify → promote) while still providing the public attestation and reproducibility expected by open-source norms.
+
+**Why:** Local gating is valuable, but external reviewers and contributors trust required CI checks and pinned environments.
+
+**Target posture:**
+
+* **Inner-loop:** SlopChop’s apply/check/promote loop remains the primary dev workflow.
+* **Outer-loop:** Minimal CI runs `slopchop check` on PRs, plus scheduled “expensive truth” jobs.
+
+**CI split:**
+
+* PR checks (fast): fmt/checks/tests + SlopChop verification gate
+* Scheduled (nightly/weekly): mutation testing, coverage, unused-deps scans, dependency auditing (and artifact upload)
+
+---
+
+### 5) Define and Document What SlopChop Uniquely Owns (HIGH)
+
+**Goal:** Clarify and protect the feature territory that is genuinely unique and defensible, so SlopChop is not a “kitchen sink” but a differentiated product.
+
+**Unique territory to preserve and deepen:**
+
+* Token counting / file size limits as LLM-aware governance
+* Cognitive complexity (SonarSource-style) beyond clippy’s cyclomatic focus
+* Structural metrics not served by Rust tooling (LCOM4/CBO/AHF)
+* XSC7XSC sigil protocol + apply reliability (AI change management)
+* Focus packing / Three-Turn Protocol (progressive disclosure context)
+* Locality / topological health as architecture enforcement
+* PageRank-based file importance for navigation and context prioritization
+
+**Non-goal:** Re-implement ecosystem-grade commodity tooling where the ecosystem is already strong.
+
+---
+
+### 6) Upgrade Documentation to Preempt Reviewer Misinterpretation (MEDIUM)
+
+**Goal:** Provide short, explicit language that sets expectations and prevents “bad faith” or uninformed critiques from landing.
+
+**Additions recommended:**
+
+* A “Verification Model” section: what `slopchop check` guarantees and what it does not
+* A “How to reproduce quality metrics” section (mutation, coverage, deny)
+* A “Known limits” section (e.g., no claim of perfect correctness; focus is on measurable governance + evidence)
+
+**Success criterion:** A reviewer can run one or two commands and reproduce the same high-level quality evidence you cite.
+
+---
+
+### 7) Plan the Deletion of In-Tree Mutation Testing (HIGH)
+
+**Goal:** Remove `src/mutate/` once `cargo-mutants` is integrated into the workflow and quality evidence bundle.
+
+**Why:** Mutation testing credibility depends on mature tooling and sharp edge-case handling; maintaining an in-tree implementation increases maintenance cost and reputational risk.
+
+**Exit criteria:**
+
+* `cargo-mutants` integrated (inner-loop and/or scheduled CI)
+* Output summarized in the “Quality Evidence Bundle”
+* Documentation updated to reference `cargo-mutants` as the supported path
+
+---
+
+These appended goals are intended to reinforce SlopChop’s strategic direction: keep the uniquely LLM-aware governance and context-engine innovations, outsource the commodity verification surface area, and produce deterministic artifacts that eliminate both reviewer surprise and LLM split-brain.
