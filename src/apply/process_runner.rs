@@ -2,7 +2,7 @@
 //! External command execution with streaming output.
 
 use crate::clipboard;
-use crate::spinner::Spinner;
+use crate::spinner::SpinnerClient;
 use crate::types::CommandResult;
 use anyhow::{anyhow, Context, Result};
 use colored::Colorize;
@@ -26,8 +26,13 @@ impl CommandRunner {
         Self { silent }
     }
 
-    pub fn run(&self, cmd: &str, cwd: &Path, spinner: Option<&Spinner>) -> Result<CommandResult> {
-        run_streaming(cmd, cwd, self.silent, spinner)
+    pub fn run(
+        &self,
+        cmd: &str,
+        cwd: &Path,
+        client: Option<&SpinnerClient>,
+    ) -> Result<CommandResult> {
+        run_streaming(cmd, cwd, self.silent, client)
     }
 }
 
@@ -35,7 +40,7 @@ fn run_streaming(
     cmd: &str,
     cwd: &Path,
     silent: bool,
-    ext_spinner: Option<&Spinner>,
+    client: Option<&SpinnerClient>,
 ) -> Result<CommandResult> {
     let start = Instant::now();
     let parts: Vec<&str> = cmd.split_whitespace().collect();
@@ -50,15 +55,9 @@ fn run_streaming(
     };
 
     let label = extract_label(cmd);
-    let local_spinner = if ext_spinner.is_none() && !silent {
-        Some(Spinner::start(label.clone()))
-    } else {
-        None
-    };
-    let spinner = ext_spinner.or(local_spinner.as_ref());
-
-    if let Some(s) = spinner {
-        s.set_micro_status(format!("Running {label}..."));
+    
+    if let Some(c) = client {
+        c.set_micro_status(format!("Running {label}..."));
     }
 
     let mut child = Command::new(prog)
@@ -79,25 +78,22 @@ fn run_streaming(
     let out_thread = spawn_reader(
         stdout,
         out_acc.clone(),
-        spinner.cloned(),
+        client.cloned(), // Fix: use .cloned() instead of .map(Clone::clone)
         line_count.clone(),
     );
     let err_thread = spawn_reader(
         stderr,
         err_acc.clone(),
-        spinner.cloned(),
+        client.cloned(), // Fix: use .cloned()
         line_count.clone(),
     );
 
-    let heartbeat = spawn_heartbeat(spinner.cloned(), line_count.clone());
+    let heartbeat = spawn_heartbeat(client.cloned(), line_count.clone()); // Fix: use .cloned()
     let status = child.wait()?;
     stop_heartbeat(heartbeat);
 
     let _ = out_thread.join();
     let _ = err_thread.join();
-    if let Some(s) = local_spinner {
-        s.stop(status.success());
-    }
 
     #[allow(clippy::unwrap_used)]
     let result = CommandResult {
@@ -128,14 +124,14 @@ fn extract_label(cmd: &str) -> String {
 fn spawn_reader<R: std::io::Read + Send + 'static>(
     input: R,
     acc: Arc<Mutex<String>>,
-    spinner: Option<Spinner>,
+    client: Option<SpinnerClient>,
     count: Arc<AtomicUsize>,
 ) -> thread::JoinHandle<()> {
     thread::spawn(move || {
         for line in BufReader::new(input).lines().map_while(Result::ok) {
             count.fetch_add(1, Ordering::Relaxed);
-            if let Some(s) = &spinner {
-                s.push_log(&line);
+            if let Some(c) = &client {
+                c.push_log(&line);
             }
             #[allow(clippy::unwrap_used)]
             {
@@ -148,10 +144,10 @@ fn spawn_reader<R: std::io::Read + Send + 'static>(
 }
 
 fn spawn_heartbeat(
-    spinner: Option<Spinner>,
+    client: Option<SpinnerClient>,
     count: Arc<AtomicUsize>,
 ) -> Option<(Arc<AtomicBool>, thread::JoinHandle<()>)> {
-    let s = spinner?;
+    let c = client?;
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     let handle = thread::spawn(move || {
@@ -160,7 +156,7 @@ fn spawn_heartbeat(
             thread::sleep(Duration::from_millis(200));
             let curr = count.load(Ordering::Relaxed);
             if curr == last {
-                s.tick();
+                c.tick();
             }
             last = curr;
         }

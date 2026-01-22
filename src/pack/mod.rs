@@ -2,6 +2,7 @@
 pub mod docs;
 pub mod focus;
 pub mod formats;
+pub mod xml_format;
 
 use std::collections::HashSet;
 use std::fmt::Write;
@@ -152,7 +153,7 @@ where
 {
     match opts.format {
         OutputFormat::Text => formats::pack_slopchop_focus(files, ctx, opts, focus, on_progress),
-        OutputFormat::Xml => formats::pack_xml_focus(files, ctx, opts, focus, on_progress),
+        OutputFormat::Xml => xml_format::pack_xml_focus(files, ctx, opts, focus, on_progress),
         OutputFormat::Spec => {
             let spec = formats::pack_spec(files)?;
             ctx.push_str(&spec);

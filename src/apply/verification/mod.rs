@@ -8,7 +8,7 @@ use crate::cli::locality;
 use crate::config::Config;
 use crate::discovery;
 use crate::events::{EventKind, EventLogger};
-use crate::spinner::Spinner;
+use crate::spinner::{self, SpinnerClient};
 use crate::types::{CheckReport, CommandResult, ScanReport};
 use anyhow::Result;
 use std::env;
@@ -31,10 +31,12 @@ pub fn run_verification_pipeline<P: AsRef<Path>>(
     let (total_steps, _) = calculate_steps(ctx);
     let mut current_step = 0;
 
-    let hud = if ctx.silent {
-        None
+    // Compiler check: removed `mut` from `controller` declaration
+    let (client, controller) = if ctx.silent {
+        (None, None)
     } else {
-        Some(Spinner::start("slopchop check"))
+        let (cli, ctrl) = spinner::start("slopchop check");
+        (Some(cli), Some(ctrl))
     };
 
     let (mut cmd_results, mut passed) = run_external_commands(
@@ -42,16 +44,16 @@ pub fn run_verification_pipeline<P: AsRef<Path>>(
         working_dir,
         &runner,
         &logger,
-        hud.as_ref(),
+        client.as_ref(),
         &mut current_step,
         total_steps,
     )?;
 
     current_step += 1;
-    if let Some(h) = &hud {
-        h.set_macro_step(current_step, total_steps, "Structural Analysis");
+    if let Some(c) = &client {
+        c.set_macro_step(current_step, total_steps, "Structural Analysis");
     }
-    let scan = run_internal_scan(working_dir, hud.as_ref())?;
+    let scan = run_internal_scan(working_dir, client.as_ref())?;
     if scan.has_errors() {
         passed = false;
         logger.log(EventKind::CheckFailed { exit_code: 1 });
@@ -60,7 +62,7 @@ pub fn run_verification_pipeline<P: AsRef<Path>>(
     let locality_res = run_locality_if_enabled(
         ctx,
         working_dir,
-        hud.as_ref(),
+        client.as_ref(),
         &mut current_step,
         total_steps,
         &logger,
@@ -72,8 +74,10 @@ pub fn run_verification_pipeline<P: AsRef<Path>>(
         cmd_results.push(loc.clone());
     }
 
-    if let Some(h) = &hud {
-        h.stop(passed);
+    // We need to consume controller to stop it.
+    // If controller was not mut, we can still move it out of Option.
+    if let Some(mut c) = controller {
+        c.stop(passed);
     }
 
     if !ctx.silent {
@@ -104,7 +108,7 @@ fn run_external_commands(
     cwd: &Path,
     runner: &CommandRunner,
     logger: &EventLogger,
-    hud: Option<&Spinner>,
+    client: Option<&SpinnerClient>,
     step: &mut usize,
     total: usize,
 ) -> Result<(Vec<CommandResult>, bool)> {
@@ -114,10 +118,10 @@ fn run_external_commands(
         for cmd in commands {
             *step += 1;
             let label = extract_label(cmd);
-            if let Some(h) = hud {
-                h.set_macro_step(*step, total, label);
+            if let Some(c) = client {
+                c.set_macro_step(*step, total, label);
             }
-            let result = runner.run(cmd, cwd, hud)?;
+            let result = runner.run(cmd, cwd, client)?;
             if result.exit_code != 0 {
                 passed = false;
                 logger.log(EventKind::CheckFailed {
@@ -141,7 +145,7 @@ fn extract_label(cmd: &str) -> String {
     }
 }
 
-fn run_internal_scan(cwd: &Path, hud: Option<&Spinner>) -> Result<ScanReport> {
+fn run_internal_scan(cwd: &Path, client: Option<&SpinnerClient>) -> Result<ScanReport> {
     let start = Instant::now();
     let original = env::current_dir()?;
     env::set_current_dir(cwd)?;
@@ -155,16 +159,16 @@ fn run_internal_scan(cwd: &Path, hud: Option<&Spinner>) -> Result<ScanReport> {
     let report = engine.scan_with_progress(
         &files,
         &|path| {
-            if let Some(h) = hud {
+            if let Some(c) = client {
                 let i = counter.fetch_add(1, Ordering::Relaxed) + 1;
                 let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
-                h.step_micro_progress(i, total, format!("Scanning {name}"));
-                h.push_log(&format!("{}", path.display()));
+                c.step_micro_progress(i, total, format!("Scanning {name}"));
+                c.push_log(&format!("{}", path.display()));
             }
         },
         &|status| {
-            if let Some(h) = hud {
-                h.set_micro_status(status);
+            if let Some(c) = client {
+                c.set_micro_status(status);
             }
         },
     );
@@ -178,7 +182,7 @@ fn run_internal_scan(cwd: &Path, hud: Option<&Spinner>) -> Result<ScanReport> {
 fn run_locality_if_enabled(
     ctx: &ApplyContext,
     cwd: &Path,
-    hud: Option<&Spinner>,
+    client: Option<&SpinnerClient>,
     step: &mut usize,
     total: usize,
     logger: &EventLogger,
@@ -187,15 +191,15 @@ fn run_locality_if_enabled(
         return Ok(None);
     }
     *step += 1;
-    if let Some(h) = hud {
-        h.set_macro_step(*step, total, "Locality Analysis");
+    if let Some(c) = client {
+        c.set_macro_step(*step, total, "Locality Analysis");
     }
 
     let start = Instant::now();
     let original = env::current_dir()?;
     env::set_current_dir(cwd)?;
-    if let Some(h) = hud {
-        h.set_micro_status("Building dependency graph...");
+    if let Some(c) = client {
+        c.set_micro_status("Building dependency graph...");
     }
 
     let (passed, violations) = locality::check_locality_silent(cwd)?;

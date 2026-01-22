@@ -1,4 +1,4 @@
-// src/cli/handlers.rs
+// src/cli/handlers/mod.rs
 //! Core analysis command handlers.
 
 use crate::analysis::RuleEngine;
@@ -11,7 +11,7 @@ use crate::map;
 use crate::pack::{self, OutputFormat, PackOptions};
 use crate::reporting;
 use crate::signatures::{self, SignatureOptions};
-use crate::spinner::Spinner;
+use crate::spinner;
 use anyhow::Result;
 use colored::Colorize;
 use std::path::PathBuf;
@@ -59,8 +59,8 @@ pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChop
         });
     }
 
-    let spinner = Spinner::start("slopchop scan");
-    spinner.set_micro_status("Discovering files...");
+    let (client, mut controller) = spinner::start("slopchop scan");
+    client.set_micro_status("Discovering files...");
 
     let files = discovery::discover(&config)?;
     let total = files.len();
@@ -72,16 +72,16 @@ pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChop
         &|path| {
             let i = counter.fetch_add(1, Ordering::Relaxed) + 1;
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("file");
-            spinner.step_micro_progress(i, total, format!("Scanning {name}"));
-            spinner.push_log(&format!("{}", path.display()));
+            client.step_micro_progress(i, total, format!("Scanning {name}"));
+            client.push_log(&format!("{}", path.display()));
         },
         &|status| {
-            spinner.set_micro_status(status);
+            client.set_micro_status(status);
         },
     );
 
     let has_errors = report.has_errors();
-    spinner.stop(!has_errors);
+    controller.stop(!has_errors);
 
     scan_report::print(&report);
     if has_errors {
@@ -137,23 +137,23 @@ pub fn handle_pack(args: PackArgs) -> Result<SlopChopExit> {
         return Ok(SlopChopExit::Success);
     }
 
-    let spinner = Spinner::start("slopchop pack");
-    spinner.set_micro_status("Discovering files...");
+    let (client, mut controller) = spinner::start("slopchop pack");
+    client.set_micro_status("Discovering files...");
 
     let res = pack::run_with_progress(&opts, |done, total, msg| {
-        spinner.step_micro_progress(done, total, msg.to_string());
+        client.step_micro_progress(done, total, msg.to_string());
         if msg.starts_with("Packing") {
-            spinner.push_log(msg);
+            client.push_log(msg);
         }
     });
 
     match res {
         Ok(()) => {
-            spinner.stop(true);
+            controller.stop(true);
             Ok(SlopChopExit::Success)
         }
         Err(e) => {
-            spinner.stop(false);
+            controller.stop(false);
             Err(e)
         }
     }

@@ -1,16 +1,15 @@
 // src/spinner/render.rs
 //! HUD rendering logic.
 
-use super::state::{HudSnapshot, HudState, ATOMIC_LINES};
+use super::safe_hud::SafeHud;
+use super::state::{HudSnapshot, ATOMIC_LINES};
 use crossterm::{
     cursor, execute,
     terminal::{self, Clear, ClearType},
 };
 use std::io::{self, Write};
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc, Mutex,
-};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
@@ -52,7 +51,7 @@ impl SimpleColor for str {
     }
 }
 
-pub fn run_hud_loop(running: &Arc<AtomicBool>, state: &Arc<Mutex<HudState>>) {
+pub fn run_hud_loop(running: &Arc<AtomicBool>, hud: &SafeHud) {
     let mut frame_idx = 0;
     let mut stdout = io::stdout();
     let _ = execute!(stdout, cursor::Hide);
@@ -65,19 +64,15 @@ pub fn run_hud_loop(running: &Arc<AtomicBool>, state: &Arc<Mutex<HudState>>) {
     let _ = execute!(stdout, cursor::MoveUp(height));
 
     while running.load(Ordering::Relaxed) {
-        if let Ok(guard) = state.lock() {
-            render_frame(&mut stdout, &guard.snapshot(), frame_idx);
-        }
+        render_frame(&mut stdout, &hud.snapshot(), frame_idx);
         thread::sleep(Duration::from_millis(INTERVAL));
         frame_idx += 1;
     }
 
     let _ = execute!(stdout, cursor::Show);
-    if let Ok(guard) = state.lock() {
-        let _ = clear_lines(total_lines);
-        let (success, title, start) = guard.completion_info();
-        print_final(success, title, start.elapsed());
-    }
+    let _ = clear_lines(total_lines);
+    let (success, title, start) = hud.completion_info();
+    print_final(success, &title, start.elapsed());
 }
 
 fn render_frame(stdout: &mut io::Stdout, snap: &HudSnapshot, frame_idx: usize) {

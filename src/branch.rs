@@ -120,14 +120,16 @@ pub fn promote(dry_run: bool, custom_msg: Option<String>) -> Result<PromoteResul
 
     // Merge into main
     run_git(&["checkout", "main"])?;
-    run_git(&[
-        "merge",
-        WORK_BRANCH,
-        "--no-ff",
-        "-m",
-        &msg,
-    ])?;
-    run_git(&["branch", "-d", WORK_BRANCH])?;
+    
+    // Use --squash to avoid duplicate commits in history when merging feature branches
+    // This creates a single clean commit on main.
+    run_git(&["merge", "--squash", WORK_BRANCH])?;
+    
+    // Commit the squashed changes
+    run_git(&["commit", "-m", &msg])?;
+    
+    // Delete the work branch
+    run_git(&["branch", "-D", WORK_BRANCH])?;
 
     Ok(PromoteResult::Merged)
 }
@@ -201,4 +203,4 @@ mod tests {
     fn test_work_branch_name() {
         assert_eq!(work_branch_name(), "slopchop-work");
     }
-}
+}

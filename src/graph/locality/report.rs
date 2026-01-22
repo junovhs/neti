@@ -23,13 +23,25 @@ pub fn print_full_report(report: &ValidationReport, analysis: &TopologyAnalysis)
     print_entropy(report);
 }
 
+#[allow(clippy::cast_precision_loss)]
 fn print_summary(report: &ValidationReport) {
+    let health = if report.total_edges() > 0 {
+        let clean = report.total_edges() - report.failed().len();
+        (clean as f64 / report.total_edges() as f64) * 100.0
+    } else {
+        100.0
+    };
+
+    println!("\n{}", "TOPOLOGICAL HEALTH".cyan().bold());
     println!(
-        "\n{} {} edges | {} passed | {} failed",
-        "LOCALITY SCAN".cyan().bold(),
-        report.total_edges(),
-        report.passed().len().to_string().green(),
-        format_count(report.failed().len()),
+        "  Health Score: {:.1}%  ({} clean / {} edges)",
+        health,
+        report.total_edges() - report.failed().len(),
+        report.total_edges()
+    );
+    println!(
+        "  Violations:   {}",
+        format_count(report.failed().len())
     );
 }
 
@@ -52,7 +64,6 @@ fn print_violations_by_category(analysis: &TopologyAnalysis) {
     let order = [
         ViolationKind::EncapsulationBreach,
         ViolationKind::GodModule,
-        ViolationKind::MissingHub,
         ViolationKind::MissingHub,
         ViolationKind::SidewaysDep,
         ViolationKind::UpwardDep,
@@ -127,8 +138,8 @@ fn print_module_coupling(analysis: &TopologyAnalysis) {
 
     println!("\n{}", "MODULE COUPLING".cyan().bold());
     for (a, b, count) in &analysis.module_coupling {
-        let bar = "█".repeat(*count);
-        println!("  {a} - {b}: {bar} ({count})");
+        let bar = "█".repeat((*count).min(20));
+        println!("  {a} → {b}: {bar} ({count})");
     }
 }
 
@@ -153,16 +164,12 @@ fn print_layers(report: &ValidationReport) {
         return;
     }
 
-    println!("\n{}", "INFERRED LAYERS".cyan().bold());
+    println!("\n{}", "LAYER ARCHITECTURE".cyan().bold());
     
     // Group modules by layer
     let mut layers: std::collections::HashMap<usize, Vec<String>> = std::collections::HashMap::new();
     for (path, layer) in report.layers() {
-        // Only show relevant top-level concepts or significant modules to avoid noise?
-        // Proposal showed: "L0: constants, error..." (implied module basenames)
         let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("?");
-        // Clean up "mod" noise? No, just show file stem.
-        // If it's a mod.rs, maybe show parent?
         let name = if name == "mod" {
              path.parent().and_then(|p| p.file_name()).and_then(|s| s.to_str()).unwrap_or("mod")
         } else {
@@ -175,19 +182,21 @@ fn print_layers(report: &ValidationReport) {
     let mut sorted_layers: Vec<_> = layers.into_iter().collect();
     sorted_layers.sort_by_key(|(l, _)| *l);
 
+    let max_bar = 30;
+    let max_files = sorted_layers.iter().map(|(_, m)| m.len()).max().unwrap_or(1);
+
     for (layer, modules) in sorted_layers {
         let mut mods = modules;
         // Deduplicate and sort
         mods.sort();
         mods.dedup();
         
-        // Truncate if too many?
-        let list = if mods.len() > 10 {
-            format!("{}, ... ({} total)", mods[0..8].join(", "), mods.len())
-        } else {
-            mods.join(", ")
-        };
+        let count = mods.len();
+        let bar_len = (count * max_bar) / max_files;
+        let bar = "█".repeat(bar_len.max(1));
+        
+        let role = if layer == 0 { "(leaf)" } else { "" };
 
-        println!("  L{layer}: {list}");
+        println!("  L{layer} {role:<6} {bar} {count} files");
     }
 }

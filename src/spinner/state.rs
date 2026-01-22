@@ -29,6 +29,21 @@ pub struct HudSnapshot {
     pub activity_tick: usize,
 }
 
+impl Default for HudSnapshot {
+    fn default() -> Self {
+        Self {
+            pipeline_title: String::new(),
+            pipeline_step: None,
+            step_name: String::new(),
+            micro_status: String::new(),
+            micro_progress: None,
+            atomic_buffer: VecDeque::new(),
+            start_time: Instant::now(),
+            activity_tick: 0,
+        }
+    }
+}
+
 impl HudState {
     pub fn new(title: impl Into<String>) -> Self {
         let t = title.into();
