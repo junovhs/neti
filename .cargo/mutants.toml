@@ -1,0 +1,63 @@
+# SlopChop Mutation Testing Configuration
+# =========================================
+#
+# Philosophy: Exclude code that hits external system boundaries where
+# mutations cannot be caught by unit tests.
+#
+# Last updated: 2026-01-23
+# Baseline before exclusions: 2475 mutants, 17% kill rate (post Phase 1)
+
+# -----------------------------------------------------------------------------
+# PATH-BASED EXCLUSIONS (glob patterns)
+# -----------------------------------------------------------------------------
+
+exclude_globs = [
+    # External System Boundaries
+    "src/branch.rs",              # Git shell commands
+    "src/clean.rs",               # Filesystem + git operations
+    "src/clipboard/*",            # OS clipboard APIs
+    "src/spinner/*",              # Terminal rendering
+    "src/apply/process_runner.rs", # Subprocess execution
+
+    # CLI/Integration Layer
+    "src/cli/handlers/*",         # CLI orchestration
+    "src/cli/config_ui/*",        # Interactive TUI
+    "src/cli/dispatch.rs",        # CLI dispatch
+    "src/cli/locality.rs",        # CLI orchestration
+    "src/reporting.rs",           # Console output formatting
+
+    # Scheduled for Deletion
+    "src/mutate/*",               # Being replaced by cargo-mutants
+
+    # Low-Value Display Code
+    "src/apply/messages.rs",      # User-facing messages
+    "src/apply/report_writer.rs", # Report formatting
+    "src/graph/locality/report.rs", # Display formatting
+
+    # Filesystem-heavy modules
+    "src/detection.rs",           # Build system detection (fs scanning)
+]
+
+# -----------------------------------------------------------------------------
+# REGEX-BASED EXCLUSIONS (function names)
+# -----------------------------------------------------------------------------
+
+exclude_re = [
+    "save_to_file",               # Filesystem write
+    "Config::save",               # Config file write
+    "::fmt$",                     # Display/Debug trait implementations
+]
+
+# -----------------------------------------------------------------------------
+# NOTES FOR FUTURE
+# -----------------------------------------------------------------------------
+#
+# When kill rate reaches 80%, review this file and consider:
+# 1. Adding integration test suite that covers excluded modules
+# 2. Refactoring I/O-heavy modules to extract pure logic
+# 3. Moving some exclusions to "examined and accepted" status
+#
+# Modules with partial coverage that should NOT be excluded:
+# - src/config/mod.rs (extract pure validation logic)
+# - src/discovery.rs (extract filter predicates)
+# - src/apply/executor.rs (has some pure logic)
