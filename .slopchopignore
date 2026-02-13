@@ -21,3 +21,4 @@ tests
 src/stage/tests_manager.rs
 src/stage/tests_promote.rs
 README.md
+SEMMAP.md
