@@ -2,6 +2,8 @@
 use serde::Serialize;
 use std::path::PathBuf;
 
+use crate::analysis::aggregator::FileAnalysis;
+
 /// A single violation detected during analysis.
 #[derive(Debug, Clone, Serialize)]
 pub struct Violation {
@@ -23,7 +25,12 @@ impl Violation {
     /// Creates a simple violation without details.
     #[must_use]
     pub fn simple(row: usize, message: String, law: &'static str) -> Self {
-        Self { row, message, law, details: None }
+        Self {
+            row,
+            message,
+            law,
+            details: None,
+        }
     }
 
     /// Creates a violation with prescriptive details.
@@ -34,7 +41,12 @@ impl Violation {
         law: &'static str,
         details: ViolationDetails,
     ) -> Self {
-        Self { row, message, law, details: Some(details) }
+        Self {
+            row,
+            message,
+            law,
+            details: Some(details),
+        }
     }
 }
 
@@ -45,6 +57,8 @@ pub struct FileReport {
     pub token_count: usize,
     pub complexity_score: usize,
     pub violations: Vec<Violation>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub analysis: Option<FileAnalysis>,
 }
 
 impl FileReport {
@@ -86,7 +100,7 @@ impl ScanReport {
     /// Returns true if this scan was run in small codebase mode.
     #[must_use]
     pub fn is_small_codebase(&self) -> bool {
-        crate::analysis::v2::is_small_codebase(self.files.len())
+        crate::analysis::Engine::small_codebase_threshold() >= self.files.len()
     }
 }
 

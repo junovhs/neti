@@ -1,7 +1,8 @@
+use serde::Serialize;
 use std::collections::{HashMap, HashSet};
 
 /// Represents a cohesion and coupling scope (Class, Struct+Impl, Enum).
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Scope {
     name: String,
     row: usize,
@@ -11,7 +12,7 @@ pub struct Scope {
     derives: HashSet<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct FieldInfo {
     pub name: String,
     pub is_public: bool,
@@ -20,12 +21,15 @@ pub struct FieldInfo {
 impl FieldInfo {
     #[must_use]
     pub fn new(name: &str, is_public: bool) -> Self {
-        Self { name: name.to_string(), is_public }
+        Self {
+            name: name.to_string(),
+            is_public,
+        }
     }
 }
 
 /// Represents a method within a scope.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct Method {
     pub name: String,
     /// Fields accessed by this method
@@ -79,12 +83,30 @@ impl Scope {
         }
     }
 
-    #[must_use] pub fn name(&self) -> &str { &self.name }
-    #[must_use] pub fn row(&self) -> usize { self.row }
-    #[must_use] pub fn is_enum(&self) -> bool { self.is_enum }
-    #[must_use] pub fn fields(&self) -> &HashMap<String, FieldInfo> { &self.fields }
-    #[must_use] pub fn methods(&self) -> &HashMap<String, Method> { &self.methods }
-    #[must_use] pub fn derives(&self) -> &HashSet<String> { &self.derives }
+    #[must_use]
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+    #[must_use]
+    pub fn row(&self) -> usize {
+        self.row
+    }
+    #[must_use]
+    pub fn is_enum(&self) -> bool {
+        self.is_enum
+    }
+    #[must_use]
+    pub fn fields(&self) -> &HashMap<String, FieldInfo> {
+        &self.fields
+    }
+    #[must_use]
+    pub fn methods(&self) -> &HashMap<String, Method> {
+        &self.methods
+    }
+    #[must_use]
+    pub fn derives(&self) -> &HashSet<String> {
+        &self.derives
+    }
 
     #[must_use]
     pub fn has_derives(&self) -> bool {
@@ -114,7 +136,8 @@ impl Scope {
     /// Unified record validator to ensure cross-field consistency and struct cohesion.
     #[must_use]
     pub fn validate_record(&self) -> bool {
-        !self.name.is_empty() && (self.row > 0 || self.is_enum)
+        !self.name.is_empty()
+            && (self.row > 0 || self.is_enum)
             && self.fields.len() + self.methods.len() + self.derives.len() < usize::MAX
     }
 }

@@ -1,1226 +1,143 @@
 SLOPCHOP CHECK REPORT
-Generated: 2026-02-13 15:36:49
+Generated: 2026-02-13 21:15:32
 Status: FAILED
 
 === DASHBOARD ===
 Top 5 Cognitive Complexity:
-  15   src\analysis\patterns\security.rs
-  15   src\analysis\structural.rs
-  13   src\analysis\ast.rs
-  13   src\analysis\safety.rs
-  12   src\analysis\extract.rs
+  15   src/analysis/structural.rs
+  15   src/analysis/patterns/security.rs
+  13   src/analysis/ast.rs
+  13   src/analysis/safety.rs
+  12   src/cli/config_ui/items.rs
 
 Top 5 Largest Files (Tokens):
-  1945  src\analysis\patterns\logic.rs
-  1932  src\graph\rank\pagerank.rs
-  1929  src\spinner\render.rs
-  1876  src\apply\validator.rs
-  1851  src\apply\executor.rs
+  1955  src/graph/rank/pagerank.rs
+  1945  src/analysis/patterns/logic.rs
+  1929  src/spinner/render.rs
+  1876  src/apply/validator.rs
+  1851  src/apply/executor.rs
 
 === VIOLATIONS ===
+[SlopChop Internal Rules]
+src/analysis/engine.rs:22 | CBO | Class 'Engine' is tightly coupled (CBO: 23)
+src/analysis/engine.rs:22 | SFOUT | Class 'Engine' has high fan-out (SFOUT: 17)
 
 [External Tools]
-FAILED: cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing -A clippy::struct_excessive_bools -A clippy::module_name_repetitions -A clippy::missing_errors_doc -A clippy::must_use_candidate (Exit Code: 101)
--- STDOUT --
-
--- STDERR --
-    Checking slopchop v1.6.0 (C:\Users\SpencerNunamakerTrav\slopchop)
-error[E0432]: unresolved import `crate::apply::types::Manifest`
- --> src\apply\backup.rs:2:5
-  |
-2 | use crate::apply::types::Manifest;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Manifest` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\blocks.rs:4:5
-  |
-4 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`
- --> src\apply\executor.rs:4:27
-  |
-4 | use crate::apply::types::{ApplyContext, ApplyOutcome, ExtractedFiles, Manifest};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^ no `Manifest` in `apply::types`
-  |                           |             |             |
-  |                           |             |             no `ExtractedFiles` in `apply::types`
-  |                           |             no `ApplyOutcome` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\manifest.rs:2:27
-  |
-2 | use crate::apply::types::{ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |
-  |                           no `ManifestEntry` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::ApplyOutcome`
- --> src\apply\messages.rs:2:5
-  |
-2 | use crate::apply::types::ApplyOutcome;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\parser.rs:8:5
-  |
-8 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\parser.rs:8:5
-  |
-8 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::blocks::tests::Block` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::Block`, `crate::apply::types::FileContent`
- --> src\apply\processor.rs:5:33
-  |
-5 | use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent};
-  |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^  ^^^^^^^^^^^ no `FileContent` in `apply::types`
-  |                                 |             |             |
-  |                                 |             |             no `Block` in `apply::types`
-  |                                 |             no `ApplyOutcome` in `apply::types`
-  |                                 no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::Block`, `crate::apply::types::FileContent`
- --> src\apply\processor.rs:5:33
-  |
-5 | use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent};
-  |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^  ^^^^^^^^^^^ no `FileContent` in `apply::types`
-  |                                 |             |             |
-  |                                 |             |             no `Block` in `apply::types`
-  |                                 |             no `ApplyOutcome` in `apply::types`
-  |                                 no `ApplyContext` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::messages::tests::ApplyOutcome` exists but is inaccessible
-  = note: unresolved item `crate::apply::parser::tests::Block` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\validator.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |         |
-  |                           |             |               |         no `ManifestEntry` in `apply::types`
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::ApplyContext`
- --> src\apply\verification\mod.rs:5:5
-  |
-5 | use crate::apply::types::ApplyContext;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\validator.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |         |
-  |                           |             |               |         no `ManifestEntry` in `apply::types`
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::messages::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::Operation`
- --> src\apply\writer.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-
-error[E0432]: unresolved imports `types::ApplyContext`, `types::ApplyInput`, `types::ApplyOutcome`
-  --> src\apply\mod.rs:20:13
-   |
-20 | use types::{ApplyContext, ApplyInput, ApplyOutcome};
-   |             ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-   |             |             |
-   |             |             no `ApplyInput` in `apply::types`
-   |             no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::Operation`
- --> src\apply\writer.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::ExtractedFiles` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::Manifest` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::Operation` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyInput`, `crate::apply::types::ApplyOutcome`
- --> src\cli\apply_handler.rs:5:27
-  |
-5 | use crate::apply::types::{ApplyContext, ApplyInput, ApplyOutcome};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-  |                           |             |
-  |                           |             no `ApplyInput` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::ApplyContext`
- --> src\cli\handlers\mod.rs:5:5
-  |
-5 | use crate::apply::types::ApplyContext;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `types::ApplyContext`, `types::ApplyInput`, `types::ApplyOutcome`
-  --> src\apply\mod.rs:20:13
-   |
-20 | use types::{ApplyContext, ApplyInput, ApplyOutcome};
-   |             ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-   |             |             |
-   |             |             no `ApplyInput` in `apply::types`
-   |             no `ApplyContext` in `apply::types`
-   |
-   = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyInput`, `crate::apply::types::ApplyOutcome`
- --> src\cli\apply_handler.rs:5:27
-  |
-5 | use crate::apply::types::{ApplyContext, ApplyInput, ApplyOutcome};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-  |                           |             |
-  |                           |             no `ApplyInput` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0433]: failed to resolve: could not find `v2` in `analysis`
-  --> src\types.rs:89:26
-   |
-89 |         crate::analysis::v2::is_small_codebase(self.files.len())
-   |                          ^^ could not find `v2` in `analysis`
-
-error[E0412]: cannot find type `ExtractedFiles` in module `types`
-  --> src\apply\processor.rs:81:48
-   |
-81 | fn perform_sanitization(extracted: &mut types::ExtractedFiles, ctx: &ApplyContext) {
-   |                                                ^^^^^^^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `Manifest` in module `types`
-   --> src\apply\processor.rs:134:56
-    |
-134 | fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::ExtractedFiles)> {
-    |                                                        ^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `ExtractedFiles` in module `types`
-   --> src\apply\processor.rs:134:73
-    |
-134 | fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::ExtractedFiles)> {
-    |                                                                         ^^^^^^^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `ManifestEntry` in module `crate::apply::types`
-  --> src\apply\writer.rs:66:34
-   |
-66 |     entry: &crate::apply::types::ManifestEntry,
-   |                                  ^^^^^^^^^^^^^ not found in `crate::apply::types`
-
-error[E0560]: struct `types::FileReport` has no field named `analysis`
-  --> src\analysis\worker.rs:25:9
-   |
-25 |         analysis: None,
-   |         ^^^^^^^^ `types::FileReport` does not have this field
-   |
-   = note: all struct fields are already assigned
-
-error[E0609]: no field `analysis` on type `types::FileReport`
-  --> src\analysis\worker.rs:74:12
-   |
-74 |     report.analysis = Some(FileAnalysis {
-   |            ^^^^^^^^ unknown field
-   |
-   = note: available fields are: `path`, `token_count`, `complexity_score`, `violations`
-
-error[E0609]: no field `analysis` on type `&types::FileReport`
-   --> src\analysis\engine.rs:111:45
-    |
-111 |             if let Some(analysis) = &report.analysis {
-    |                                             ^^^^^^^^ unknown field
-    |
-    = note: available fields are: `path`, `token_count`, `complexity_score`, `violations`
-
-error[E0277]: the size for values of type `str` cannot be known at compilation time
-   --> src\apply\parser.rs:138:20
-    |
-138 |         for (desc, input, check) in cases {
-    |                    ^^^^^ doesn't have a size known at compile-time
-    |
-    = help: the trait `std::marker::Sized` is not implemented for `str`
-    = note: all local variables must have a statically known size
-
-error[E0277]: the size for values of type `str` cannot be known at compilation time
-   --> src\apply\parser.rs:138:37
-    |
-138 |         for (desc, input, check) in cases {
-    |                                     ^^^^^ doesn't have a size known at compile-time
-    |
-    = help: the trait `std::marker::Sized` is not implemented for `str`
-    = note: only the last element of a tuple may have a dynamically sized type
-
-error[E0308]: mismatched types
-   --> src\apply\processor.rs:107:23
-    |
-107 |                 path: path.clone(),
-    |                       ^^^^^^^^^^^^ expected `String`, found `&str`
-    |
-help: try using a conversion method
-    |
-107 -                 path: path.clone(),
-107 +                 path: path.to_string(),
-    |
-
-error[E0277]: the trait bound `analysis::aggregator::FileAnalysis: serde::Serialize` is not satisfied
-    --> src\apply\types.rs:39:24
-     |
-  39 | #[derive(Debug, Clone, Serialize)]
-     |                        ^^^^^^^^^ the trait `events::_::_serde::Serialize` is not implemented for `analysis::aggregator::FileAnalysis`
-...
-  45 |     #[serde(skip_serializing_if = "Option::is_none")]
-     |     - required by a bound introduced by this call
-     |
-     = note: for local types consider adding `#[derive(serde::Serialize)]` to your `analysis::aggregator::FileAnalysis` type
-     = note: for types from other crates check whether the crate offers a `serde` feature flag
-     = help: the following other types implement trait `events::_::_serde::Serialize`:
-               &'a T
-               &'a mut T
-               ()
-               (T,)
-               (T0, T1)
-               (T0, T1, T2)
-               (T0, T1, T2, T3)
-               (T0, T1, T2, T3, T4)
-             and 160 others
-     = note: required for `std::option::Option<analysis::aggregator::FileAnalysis>` to implement `events::_::_serde::Serialize`
-note: required by a bound in `events::_::_serde::ser::SerializeStruct::serialize_field`
-    --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\src\ser\mod.rs:1917:21
-     |
-1915 |     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
-     |        --------------- required by a bound in this associated function
-1916 |     where
-1917 |         T: ?Sized + Serialize;
-     |                     ^^^^^^^^^ required by this bound in `SerializeStruct::serialize_field`
-     = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-Some errors have detailed explanations: E0277, E0308, E0412, E0432, E0433, E0560, E0609.
-For more information about an error, try `rustc --explain E0277`.
-error: could not compile `slopchop` (lib) due to 23 previous errors
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `slopchop` (lib test) due to 25 previous errors
-
-FAILED: cargo test (Exit Code: 101)
--- STDOUT --
-
--- STDERR --
-   Compiling slopchop v1.6.0 (C:\Users\SpencerNunamakerTrav\slopchop)
-error[E0432]: unresolved import `crate::apply::types::Manifest`
- --> src\apply\backup.rs:2:5
-  |
-2 | use crate::apply::types::Manifest;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Manifest` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\blocks.rs:4:5
-  |
-4 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`
- --> src\apply\executor.rs:4:27
-  |
-4 | use crate::apply::types::{ApplyContext, ApplyOutcome, ExtractedFiles, Manifest};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^ no `Manifest` in `apply::types`
-  |                           |             |             |
-  |                           |             |             no `ExtractedFiles` in `apply::types`
-  |                           |             no `ApplyOutcome` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\manifest.rs:2:27
-  |
-2 | use crate::apply::types::{ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |
-  |                           no `ManifestEntry` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::ApplyOutcome`
- --> src\apply\messages.rs:2:5
-  |
-2 | use crate::apply::types::ApplyOutcome;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\parser.rs:8:5
-  |
-8 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::Block`, `crate::apply::types::FileContent`
- --> src\apply\processor.rs:5:33
-  |
-5 | use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent};
-  |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^  ^^^^^^^^^^^ no `FileContent` in `apply::types`
-  |                                 |             |             |
-  |                                 |             |             no `Block` in `apply::types`
-  |                                 |             no `ApplyOutcome` in `apply::types`
-  |                                 no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\validator.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |         |
-  |                           |             |               |         no `ManifestEntry` in `apply::types`
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::ApplyContext`
- --> src\apply\verification\mod.rs:5:5
-  |
-5 | use crate::apply::types::ApplyContext;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::Operation`
- --> src\apply\writer.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-
-error[E0432]: unresolved imports `types::ApplyContext`, `types::ApplyInput`, `types::ApplyOutcome`
-  --> src\apply\mod.rs:20:13
-   |
-20 | use types::{ApplyContext, ApplyInput, ApplyOutcome};
-   |             ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-   |             |             |
-   |             |             no `ApplyInput` in `apply::types`
-   |             no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyInput`, `crate::apply::types::ApplyOutcome`
- --> src\cli\apply_handler.rs:5:27
-  |
-5 | use crate::apply::types::{ApplyContext, ApplyInput, ApplyOutcome};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-  |                           |             |
-  |                           |             no `ApplyInput` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::ApplyContext`
- --> src\cli\handlers\mod.rs:5:5
-  |
-5 | use crate::apply::types::ApplyContext;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\parser.rs:8:5
-  |
-8 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::blocks::tests::Block` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::Block`, `crate::apply::types::FileContent`
- --> src\apply\processor.rs:5:33
-  |
-5 | use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent};
-  |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^  ^^^^^^^^^^^ no `FileContent` in `apply::types`
-  |                                 |             |             |
-  |                                 |             |             no `Block` in `apply::types`
-  |                                 |             no `ApplyOutcome` in `apply::types`
-  |                                 no `ApplyContext` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::messages::tests::ApplyOutcome` exists but is inaccessible
-  = note: unresolved item `crate::apply::parser::tests::Block` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\validator.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |         |
-  |                           |             |               |         no `ManifestEntry` in `apply::types`
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::messages::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::Operation`
- --> src\apply\writer.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::ExtractedFiles` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::Manifest` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::Operation` exists but is inaccessible
-
-error[E0432]: unresolved imports `types::ApplyContext`, `types::ApplyInput`, `types::ApplyOutcome`
-  --> src\apply\mod.rs:20:13
-   |
-20 | use types::{ApplyContext, ApplyInput, ApplyOutcome};
-   |             ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-   |             |             |
-   |             |             no `ApplyInput` in `apply::types`
-   |             no `ApplyContext` in `apply::types`
-   |
-   = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0433]: failed to resolve: could not find `v2` in `analysis`
-  --> src\types.rs:89:26
-   |
-89 |         crate::analysis::v2::is_small_codebase(self.files.len())
-   |                          ^^ could not find `v2` in `analysis`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyInput`, `crate::apply::types::ApplyOutcome`
- --> src\cli\apply_handler.rs:5:27
-  |
-5 | use crate::apply::types::{ApplyContext, ApplyInput, ApplyOutcome};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-  |                           |             |
-  |                           |             no `ApplyInput` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0412]: cannot find type `ExtractedFiles` in module `types`
-  --> src\apply\processor.rs:81:48
-   |
-81 | fn perform_sanitization(extracted: &mut types::ExtractedFiles, ctx: &ApplyContext) {
-   |                                                ^^^^^^^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `Manifest` in module `types`
-   --> src\apply\processor.rs:134:56
-    |
-134 | fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::ExtractedFiles)> {
-    |                                                        ^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `ExtractedFiles` in module `types`
-   --> src\apply\processor.rs:134:73
-    |
-134 | fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::ExtractedFiles)> {
-    |                                                                         ^^^^^^^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `ManifestEntry` in module `crate::apply::types`
-  --> src\apply\writer.rs:66:34
-   |
-66 |     entry: &crate::apply::types::ManifestEntry,
-   |                                  ^^^^^^^^^^^^^ not found in `crate::apply::types`
-
-error[E0560]: struct `types::FileReport` has no field named `analysis`
-  --> src\analysis\worker.rs:25:9
-   |
-25 |         analysis: None,
-   |         ^^^^^^^^ `types::FileReport` does not have this field
-   |
-   = note: all struct fields are already assigned
-
-error[E0609]: no field `analysis` on type `types::FileReport`
-  --> src\analysis\worker.rs:74:12
-   |
-74 |     report.analysis = Some(FileAnalysis {
-   |            ^^^^^^^^ unknown field
-   |
-   = note: available fields are: `path`, `token_count`, `complexity_score`, `violations`
-
-error[E0609]: no field `analysis` on type `&types::FileReport`
-   --> src\analysis\engine.rs:111:45
-    |
-111 |             if let Some(analysis) = &report.analysis {
-    |                                             ^^^^^^^^ unknown field
-    |
-    = note: available fields are: `path`, `token_count`, `complexity_score`, `violations`
-
-error[E0308]: mismatched types
-   --> src\apply\processor.rs:107:23
-    |
-107 |                 path: path.clone(),
-    |                       ^^^^^^^^^^^^ expected `String`, found `&str`
-    |
-help: try using a conversion method
-    |
-107 -                 path: path.clone(),
-107 +                 path: path.to_string(),
-    |
-
-error[E0277]: the trait bound `FileAnalysis: serde::Serialize` is not satisfied
-    --> src\apply\types.rs:39:24
-     |
-  39 | #[derive(Debug, Clone, Serialize)]
-     |                        ^^^^^^^^^ the trait `Serialize` is not implemented for `FileAnalysis`
-...
-  45 |     #[serde(skip_serializing_if = "Option::is_none")]
-     |     - required by a bound introduced by this call
-     |
-     = note: for local types consider adding `#[derive(serde::Serialize)]` to your `FileAnalysis` type
-     = note: for types from other crates check whether the crate offers a `serde` feature flag
-     = help: the following other types implement trait `Serialize`:
-               &'a T
-               &'a mut T
-               ()
-               (T,)
-               (T0, T1)
-               (T0, T1, T2)
-               (T0, T1, T2, T3)
-               (T0, T1, T2, T3, T4)
-             and 160 others
-     = note: required for `std::option::Option<FileAnalysis>` to implement `Serialize`
-note: required by a bound in `events::_::_serde::ser::SerializeStruct::serialize_field`
-    --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\src\ser\mod.rs:1917:21
-     |
-1915 |     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
-     |        --------------- required by a bound in this associated function
-1916 |     where
-1917 |         T: ?Sized + Serialize;
-     |                     ^^^^^^^^^ required by this bound in `SerializeStruct::serialize_field`
-     = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0277]: the size for values of type `str` cannot be known at compilation time
-   --> src\apply\parser.rs:138:20
-    |
-138 |         for (desc, input, check) in cases {
-    |                    ^^^^^ doesn't have a size known at compile-time
-    |
-    = help: the trait `Sized` is not implemented for `str`
-    = note: all local variables must have a statically known size
-
-error[E0277]: the size for values of type `str` cannot be known at compilation time
-   --> src\apply\parser.rs:138:37
-    |
-138 |         for (desc, input, check) in cases {
-    |                                     ^^^^^ doesn't have a size known at compile-time
-    |
-    = help: the trait `Sized` is not implemented for `str`
-    = note: only the last element of a tuple may have a dynamically sized type
-
-Some errors have detailed explanations: E0277, E0308, E0412, E0432, E0433, E0560, E0609.
-For more information about an error, try `rustc --explain E0277`.
-error: could not compile `slopchop` (lib) due to 23 previous errors
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `slopchop` (lib test) due to 25 previous errors
-
 
 === FULL OUTPUT LOGS ===
 
 >>> COMMAND: cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing -A clippy::struct_excessive_bools -A clippy::module_name_repetitions -A clippy::missing_errors_doc -A clippy::must_use_candidate
-    Checking slopchop v1.6.0 (C:\Users\SpencerNunamakerTrav\slopchop)
-error[E0432]: unresolved import `crate::apply::types::Manifest`
- --> src\apply\backup.rs:2:5
-  |
-2 | use crate::apply::types::Manifest;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Manifest` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\blocks.rs:4:5
-  |
-4 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`
- --> src\apply\executor.rs:4:27
-  |
-4 | use crate::apply::types::{ApplyContext, ApplyOutcome, ExtractedFiles, Manifest};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^ no `Manifest` in `apply::types`
-  |                           |             |             |
-  |                           |             |             no `ExtractedFiles` in `apply::types`
-  |                           |             no `ApplyOutcome` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\manifest.rs:2:27
-  |
-2 | use crate::apply::types::{ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |
-  |                           no `ManifestEntry` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::ApplyOutcome`
- --> src\apply\messages.rs:2:5
-  |
-2 | use crate::apply::types::ApplyOutcome;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\parser.rs:8:5
-  |
-8 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\parser.rs:8:5
-  |
-8 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::blocks::tests::Block` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::Block`, `crate::apply::types::FileContent`
- --> src\apply\processor.rs:5:33
-  |
-5 | use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent};
-  |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^  ^^^^^^^^^^^ no `FileContent` in `apply::types`
-  |                                 |             |             |
-  |                                 |             |             no `Block` in `apply::types`
-  |                                 |             no `ApplyOutcome` in `apply::types`
-  |                                 no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::Block`, `crate::apply::types::FileContent`
- --> src\apply\processor.rs:5:33
-  |
-5 | use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent};
-  |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^  ^^^^^^^^^^^ no `FileContent` in `apply::types`
-  |                                 |             |             |
-  |                                 |             |             no `Block` in `apply::types`
-  |                                 |             no `ApplyOutcome` in `apply::types`
-  |                                 no `ApplyContext` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::messages::tests::ApplyOutcome` exists but is inaccessible
-  = note: unresolved item `crate::apply::parser::tests::Block` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\validator.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |         |
-  |                           |             |               |         no `ManifestEntry` in `apply::types`
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::ApplyContext`
- --> src\apply\verification\mod.rs:5:5
-  |
-5 | use crate::apply::types::ApplyContext;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\validator.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |         |
-  |                           |             |               |         no `ManifestEntry` in `apply::types`
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::messages::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::Operation`
- --> src\apply\writer.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-
-error[E0432]: unresolved imports `types::ApplyContext`, `types::ApplyInput`, `types::ApplyOutcome`
-  --> src\apply\mod.rs:20:13
-   |
-20 | use types::{ApplyContext, ApplyInput, ApplyOutcome};
-   |             ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-   |             |             |
-   |             |             no `ApplyInput` in `apply::types`
-   |             no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::Operation`
- --> src\apply\writer.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::ExtractedFiles` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::Manifest` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::Operation` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyInput`, `crate::apply::types::ApplyOutcome`
- --> src\cli\apply_handler.rs:5:27
-  |
-5 | use crate::apply::types::{ApplyContext, ApplyInput, ApplyOutcome};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-  |                           |             |
-  |                           |             no `ApplyInput` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::ApplyContext`
- --> src\cli\handlers\mod.rs:5:5
-  |
-5 | use crate::apply::types::ApplyContext;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `types::ApplyContext`, `types::ApplyInput`, `types::ApplyOutcome`
-  --> src\apply\mod.rs:20:13
-   |
-20 | use types::{ApplyContext, ApplyInput, ApplyOutcome};
-   |             ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-   |             |             |
-   |             |             no `ApplyInput` in `apply::types`
-   |             no `ApplyContext` in `apply::types`
-   |
-   = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyInput`, `crate::apply::types::ApplyOutcome`
- --> src\cli\apply_handler.rs:5:27
-  |
-5 | use crate::apply::types::{ApplyContext, ApplyInput, ApplyOutcome};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-  |                           |             |
-  |                           |             no `ApplyInput` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0433]: failed to resolve: could not find `v2` in `analysis`
-  --> src\types.rs:89:26
-   |
-89 |         crate::analysis::v2::is_small_codebase(self.files.len())
-   |                          ^^ could not find `v2` in `analysis`
-
-error[E0412]: cannot find type `ExtractedFiles` in module `types`
-  --> src\apply\processor.rs:81:48
-   |
-81 | fn perform_sanitization(extracted: &mut types::ExtractedFiles, ctx: &ApplyContext) {
-   |                                                ^^^^^^^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `Manifest` in module `types`
-   --> src\apply\processor.rs:134:56
-    |
-134 | fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::ExtractedFiles)> {
-    |                                                        ^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `ExtractedFiles` in module `types`
-   --> src\apply\processor.rs:134:73
-    |
-134 | fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::ExtractedFiles)> {
-    |                                                                         ^^^^^^^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `ManifestEntry` in module `crate::apply::types`
-  --> src\apply\writer.rs:66:34
-   |
-66 |     entry: &crate::apply::types::ManifestEntry,
-   |                                  ^^^^^^^^^^^^^ not found in `crate::apply::types`
-
-error[E0560]: struct `types::FileReport` has no field named `analysis`
-  --> src\analysis\worker.rs:25:9
-   |
-25 |         analysis: None,
-   |         ^^^^^^^^ `types::FileReport` does not have this field
-   |
-   = note: all struct fields are already assigned
-
-error[E0609]: no field `analysis` on type `types::FileReport`
-  --> src\analysis\worker.rs:74:12
-   |
-74 |     report.analysis = Some(FileAnalysis {
-   |            ^^^^^^^^ unknown field
-   |
-   = note: available fields are: `path`, `token_count`, `complexity_score`, `violations`
-
-error[E0609]: no field `analysis` on type `&types::FileReport`
-   --> src\analysis\engine.rs:111:45
-    |
-111 |             if let Some(analysis) = &report.analysis {
-    |                                             ^^^^^^^^ unknown field
-    |
-    = note: available fields are: `path`, `token_count`, `complexity_score`, `violations`
-
-error[E0277]: the size for values of type `str` cannot be known at compilation time
-   --> src\apply\parser.rs:138:20
-    |
-138 |         for (desc, input, check) in cases {
-    |                    ^^^^^ doesn't have a size known at compile-time
-    |
-    = help: the trait `std::marker::Sized` is not implemented for `str`
-    = note: all local variables must have a statically known size
-
-error[E0277]: the size for values of type `str` cannot be known at compilation time
-   --> src\apply\parser.rs:138:37
-    |
-138 |         for (desc, input, check) in cases {
-    |                                     ^^^^^ doesn't have a size known at compile-time
-    |
-    = help: the trait `std::marker::Sized` is not implemented for `str`
-    = note: only the last element of a tuple may have a dynamically sized type
-
-error[E0308]: mismatched types
-   --> src\apply\processor.rs:107:23
-    |
-107 |                 path: path.clone(),
-    |                       ^^^^^^^^^^^^ expected `String`, found `&str`
-    |
-help: try using a conversion method
-    |
-107 -                 path: path.clone(),
-107 +                 path: path.to_string(),
-    |
-
-error[E0277]: the trait bound `analysis::aggregator::FileAnalysis: serde::Serialize` is not satisfied
-    --> src\apply\types.rs:39:24
-     |
-  39 | #[derive(Debug, Clone, Serialize)]
-     |                        ^^^^^^^^^ the trait `events::_::_serde::Serialize` is not implemented for `analysis::aggregator::FileAnalysis`
-...
-  45 |     #[serde(skip_serializing_if = "Option::is_none")]
-     |     - required by a bound introduced by this call
-     |
-     = note: for local types consider adding `#[derive(serde::Serialize)]` to your `analysis::aggregator::FileAnalysis` type
-     = note: for types from other crates check whether the crate offers a `serde` feature flag
-     = help: the following other types implement trait `events::_::_serde::Serialize`:
-               &'a T
-               &'a mut T
-               ()
-               (T,)
-               (T0, T1)
-               (T0, T1, T2)
-               (T0, T1, T2, T3)
-               (T0, T1, T2, T3, T4)
-             and 160 others
-     = note: required for `std::option::Option<analysis::aggregator::FileAnalysis>` to implement `events::_::_serde::Serialize`
-note: required by a bound in `events::_::_serde::ser::SerializeStruct::serialize_field`
-    --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\src\ser\mod.rs:1917:21
-     |
-1915 |     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
-     |        --------------- required by a bound in this associated function
-1916 |     where
-1917 |         T: ?Sized + Serialize;
-     |                     ^^^^^^^^^ required by this bound in `SerializeStruct::serialize_field`
-     = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-Some errors have detailed explanations: E0277, E0308, E0412, E0432, E0433, E0560, E0609.
-For more information about an error, try `rustc --explain E0277`.
-error: could not compile `slopchop` (lib) due to 23 previous errors
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `slopchop` (lib test) due to 25 previous errors
+    Checking slopchop v1.6.0 (/home/juno/slopchop)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.37s
 
 
 >>> COMMAND: cargo test
-   Compiling slopchop v1.6.0 (C:\Users\SpencerNunamakerTrav\slopchop)
-error[E0432]: unresolved import `crate::apply::types::Manifest`
- --> src\apply\backup.rs:2:5
-  |
-2 | use crate::apply::types::Manifest;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Manifest` in `apply::types`
 
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\blocks.rs:4:5
-  |
-4 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
+running 84 tests
+test analysis::cognitive::tests::test_if_statement ... ok
+test analysis::checks::syntax::tests::test_valid_rust ... ok
+test analysis::cognitive::tests::test_boolean_ops ... ok
+test analysis::cognitive::tests::test_else_if_flattening ... ok
+test analysis::checks::syntax::tests::test_rust_error ... ok
+test analysis::cognitive::tests::test_linear_flow ... ok
+test analysis::cognitive::tests::test_nested_if ... ok
+test apply::blocks::tests::test_create_file_block ... ok
+test apply::blocks::tests::test_clean_empty_prefix ... ok
+test apply::blocks::tests::test_create_plan_block ... ok
+test apply::blocks::tests::test_clean_line_fallback ... ok
+test apply::messages::tests::test_feedback_truncation_utf8 ... ok
+test apply::messages::tests::test_floor_char_boundary ... ok
+test apply::blocks::tests::test_clean_with_prefix ... ok
+test apply::blocks::tests::test_rejects_keyword_paths ... ok
+test apply::validator::tests::test_protected_files_logic ... ok
+test apply::validator::tests::test_path_validation_logic ... ok
+test branch::tests::test_work_branch_name ... ok
+test apply::validator::tests::test_is_absolute_os_logic ... ok
+test apply::validator::tests::test_content_validation_logic ... ok
+test graph::locality::classifier::tests::test_deadwood ... ok
+test graph::locality::classifier::tests::test_god_module ... ok
+test graph::locality::classifier::tests::test_stable_hub ... ok
+test graph::locality::classifier::tests::test_volatile_leaf ... ok
+test graph::locality::coupling::tests::test_compute_coupling ... ok
+test graph::locality::cycles::tests::test_cycle_content ... ok
+test graph::locality::cycles::tests::test_cycle_detection_logic ... ok
+test graph::locality::distance::tests::test_deep_hierarchy ... ok
+test graph::locality::distance::tests::test_same_directory ... ok
+test graph::locality::distance::tests::test_sibling_directories ... ok
+test graph::locality::exemptions::tests::test_crate_root ... ok
+test graph::locality::exemptions::tests::test_parent_reexport ... ok
+test graph::locality::exemptions::tests::test_shared_infrastructure ... ok
+test graph::locality::exemptions::tests::test_vertical_routing ... ok
+test graph::locality::tests::integration::test_cycle_detection_three_node ... ok
+test graph::defs::extract::tests::test_python_defs ... ok
+test graph::locality::tests::integration::test_distance_boundary_condition ... ok
+test graph::locality::tests::integration::test_encapsulation_allows_mod_rs_import ... ok
+test graph::locality::tests::integration::test_encapsulation_breach_detects_internal_import ... ok
+test graph::locality::tests::integration::test_hub_exemption_ignores_distance ... ok
+test graph::locality::tests::integration::test_upward_dep_categorization_with_manual_layers ... ok
+test graph::locality::tests::integration::test_lib_rs_exempt_from_all_rules ... ok
+test graph::locality::tests::integration::test_vertical_routing_same_module ... ok
+test graph::rank::pagerank::tests::test_helpers_table ... ok
+test graph::tsconfig::tests::test_match_pattern ... ok
+test graph::tsconfig::tests::test_strip_comments ... ok
+test graph::rank::pagerank::tests::test_compute_logic ... ok
+test lang::tests::test_from_ext ... ok
+test map::tests::test_format_size ... ok
+test map::tests::test_format_tokens ... ok
+test mutate::discovery::tests::test_discover_finds_operators ... ok
+test mutate::mutations::tests::test_boolean_mutations ... ok
+test mutate::mutations::tests::test_comparison_mutations ... ok
+test mutate::mutations::tests::test_logical_mutations ... ok
+test analysis::patterns::idiomatic::tests::i02_flag_duplicate_arms ... ok
+test mutate::mutations::tests::test_no_mutation ... ok
+test graph::defs::extract::tests::test_rust_defs ... ok
+test analysis::patterns::idiomatic::tests::i01_flag_simple_from ... ok
+test apply::parser::tests::test_parser_failures ... ok
+test pack::focus::tests::test_collect_foveal_logic ... ok
+test pack::focus::tests::test_should_include_logic ... ok
+test skeleton::tests::test_filter_nested_ranges_logic ... ok
+test pack::focus::tests::test_collect_peripheral_logic ... ok
+test skeleton::tests::test_replace_ranges_logic ... ok
+test analysis::patterns::logic::tests::l03_flag_first_unwrap ... ok
+test analysis::patterns::idiomatic::tests::i02_skip_unique_arms ... ok
+test analysis::patterns::logic::tests::l02_skip_threshold ... ok
+test analysis::patterns::resource::tests::r07_skip_returned_writer ... ok
+test analysis::patterns::logic::tests::l02_flag_lte_len ... ok
+test analysis::patterns::idiomatic::tests::i01_skip_error_from ... ok
+test analysis::patterns::logic::tests::l03_skip_with_empty_check ... ok
+test analysis::patterns::semantic::tests::m03_skip_getter_without_mut ... ok
+test analysis::patterns::semantic::tests::m04_flag_is_returning_string ... ok
+test analysis::patterns::semantic::tests::m04_skip_is_returning_bool ... ok
+test analysis::patterns::semantic::tests::m03_flag_getter_with_mut ... ok
+test analysis::patterns::semantic::tests::m05_flag_calculate_with_mut ... ok
+test analysis::patterns::resource::tests::r07_flag_missing_flush ... ok
+test analysis::patterns::resource::tests::r07_skip_with_flush ... ok
+test analysis::patterns::logic::tests::l02_skip_max_var ... ok
+test analysis::patterns::logic::tests::l03_flag_index_zero ... ok
+test apply::parser::tests::test_parser_logic ... ok
+test graph::imports::tests::test_extract_imports ... ok
+test skeleton::tests::test_clean_integration ... ok
+test map::tests::test_build_tree_structure ... ok
 
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`
- --> src\apply\executor.rs:4:27
-  |
-4 | use crate::apply::types::{ApplyContext, ApplyOutcome, ExtractedFiles, Manifest};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^ no `Manifest` in `apply::types`
-  |                           |             |             |
-  |                           |             |             no `ExtractedFiles` in `apply::types`
-  |                           |             no `ApplyOutcome` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
+test result: ok. 84 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.39s
 
-error[E0432]: unresolved imports `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\manifest.rs:2:27
-  |
-2 | use crate::apply::types::{ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |
-  |                           no `ManifestEntry` in `apply::types`
 
-error[E0432]: unresolved import `crate::apply::types::ApplyOutcome`
- --> src\apply\messages.rs:2:5
-  |
-2 | use crate::apply::types::ApplyOutcome;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
+running 0 tests
 
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\parser.rs:8:5
-  |
-8 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::Block`, `crate::apply::types::FileContent`
- --> src\apply\processor.rs:5:33
-  |
-5 | use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent};
-  |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^  ^^^^^^^^^^^ no `FileContent` in `apply::types`
-  |                                 |             |             |
-  |                                 |             |             no `Block` in `apply::types`
-  |                                 |             no `ApplyOutcome` in `apply::types`
-  |                                 no `ApplyContext` in `apply::types`
 
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\validator.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |         |
-  |                           |             |               |         no `ManifestEntry` in `apply::types`
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
+running 1 test
+test src/mutate/mod.rs - mutate (line 17) ... ignored
 
-error[E0432]: unresolved import `crate::apply::types::ApplyContext`
- --> src\apply\verification\mod.rs:5:5
-  |
-5 | use crate::apply::types::ApplyContext;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyContext` in `apply::types`
+test result: ok. 0 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::Operation`
- --> src\apply\writer.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
 
-error[E0432]: unresolved imports `types::ApplyContext`, `types::ApplyInput`, `types::ApplyOutcome`
-  --> src\apply\mod.rs:20:13
-   |
-20 | use types::{ApplyContext, ApplyInput, ApplyOutcome};
-   |             ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-   |             |             |
-   |             |             no `ApplyInput` in `apply::types`
-   |             no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyInput`, `crate::apply::types::ApplyOutcome`
- --> src\cli\apply_handler.rs:5:27
-  |
-5 | use crate::apply::types::{ApplyContext, ApplyInput, ApplyOutcome};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-  |                           |             |
-  |                           |             no `ApplyInput` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::ApplyContext`
- --> src\cli\handlers\mod.rs:5:5
-  |
-5 | use crate::apply::types::ApplyContext;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ no `ApplyContext` in `apply::types`
-
-error[E0432]: unresolved import `crate::apply::types::Block`
- --> src\apply\parser.rs:8:5
-  |
-8 | use crate::apply::types::Block;
-  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^ no `Block` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::blocks::tests::Block` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyOutcome`, `crate::apply::types::Block`, `crate::apply::types::FileContent`
- --> src\apply\processor.rs:5:33
-  |
-5 | use crate::apply::types::{self, ApplyContext, ApplyOutcome, Block, FileContent};
-  |                                 ^^^^^^^^^^^^  ^^^^^^^^^^^^  ^^^^^  ^^^^^^^^^^^ no `FileContent` in `apply::types`
-  |                                 |             |             |
-  |                                 |             |             no `Block` in `apply::types`
-  |                                 |             no `ApplyOutcome` in `apply::types`
-  |                                 no `ApplyContext` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::messages::tests::ApplyOutcome` exists but is inaccessible
-  = note: unresolved item `crate::apply::parser::tests::Block` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::ManifestEntry`, `crate::apply::types::Operation`
- --> src\apply\validator.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, ManifestEntry, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |         |
-  |                           |             |               |         no `ManifestEntry` in `apply::types`
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::messages::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyOutcome`, `crate::apply::types::ExtractedFiles`, `crate::apply::types::Manifest`, `crate::apply::types::Operation`
- --> src\apply\writer.rs:3:27
-  |
-3 | use crate::apply::types::{ApplyOutcome, ExtractedFiles, Manifest, Operation};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^^^^^  ^^^^^^^^  ^^^^^^^^^ no `Operation` in `apply::types`
-  |                           |             |               |
-  |                           |             |               no `Manifest` in `apply::types`
-  |                           |             no `ExtractedFiles` in `apply::types`
-  |                           no `ApplyOutcome` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::ExtractedFiles` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::Manifest` exists but is inaccessible
-  = note: unresolved item `crate::apply::validator::tests::Operation` exists but is inaccessible
-
-error[E0432]: unresolved imports `types::ApplyContext`, `types::ApplyInput`, `types::ApplyOutcome`
-  --> src\apply\mod.rs:20:13
-   |
-20 | use types::{ApplyContext, ApplyInput, ApplyOutcome};
-   |             ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-   |             |             |
-   |             |             no `ApplyInput` in `apply::types`
-   |             no `ApplyContext` in `apply::types`
-   |
-   = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0433]: failed to resolve: could not find `v2` in `analysis`
-  --> src\types.rs:89:26
-   |
-89 |         crate::analysis::v2::is_small_codebase(self.files.len())
-   |                          ^^ could not find `v2` in `analysis`
-
-error[E0432]: unresolved imports `crate::apply::types::ApplyContext`, `crate::apply::types::ApplyInput`, `crate::apply::types::ApplyOutcome`
- --> src\cli\apply_handler.rs:5:27
-  |
-5 | use crate::apply::types::{ApplyContext, ApplyInput, ApplyOutcome};
-  |                           ^^^^^^^^^^^^  ^^^^^^^^^^  ^^^^^^^^^^^^ no `ApplyOutcome` in `apply::types`
-  |                           |             |
-  |                           |             no `ApplyInput` in `apply::types`
-  |                           no `ApplyContext` in `apply::types`
-  |
-  = note: unresolved item `crate::apply::validator::tests::ApplyOutcome` exists but is inaccessible
-
-error[E0412]: cannot find type `ExtractedFiles` in module `types`
-  --> src\apply\processor.rs:81:48
-   |
-81 | fn perform_sanitization(extracted: &mut types::ExtractedFiles, ctx: &ApplyContext) {
-   |                                                ^^^^^^^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `Manifest` in module `types`
-   --> src\apply\processor.rs:134:56
-    |
-134 | fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::ExtractedFiles)> {
-    |                                                        ^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `ExtractedFiles` in module `types`
-   --> src\apply\processor.rs:134:73
-    |
-134 | fn extract_content(blocks: &[Block]) -> Result<(types::Manifest, types::ExtractedFiles)> {
-    |                                                                         ^^^^^^^^^^^^^^ not found in `types`
-
-error[E0412]: cannot find type `ManifestEntry` in module `crate::apply::types`
-  --> src\apply\writer.rs:66:34
-   |
-66 |     entry: &crate::apply::types::ManifestEntry,
-   |                                  ^^^^^^^^^^^^^ not found in `crate::apply::types`
-
-error[E0560]: struct `types::FileReport` has no field named `analysis`
-  --> src\analysis\worker.rs:25:9
-   |
-25 |         analysis: None,
-   |         ^^^^^^^^ `types::FileReport` does not have this field
-   |
-   = note: all struct fields are already assigned
-
-error[E0609]: no field `analysis` on type `types::FileReport`
-  --> src\analysis\worker.rs:74:12
-   |
-74 |     report.analysis = Some(FileAnalysis {
-   |            ^^^^^^^^ unknown field
-   |
-   = note: available fields are: `path`, `token_count`, `complexity_score`, `violations`
-
-error[E0609]: no field `analysis` on type `&types::FileReport`
-   --> src\analysis\engine.rs:111:45
-    |
-111 |             if let Some(analysis) = &report.analysis {
-    |                                             ^^^^^^^^ unknown field
-    |
-    = note: available fields are: `path`, `token_count`, `complexity_score`, `violations`
-
-error[E0308]: mismatched types
-   --> src\apply\processor.rs:107:23
-    |
-107 |                 path: path.clone(),
-    |                       ^^^^^^^^^^^^ expected `String`, found `&str`
-    |
-help: try using a conversion method
-    |
-107 -                 path: path.clone(),
-107 +                 path: path.to_string(),
-    |
-
-error[E0277]: the trait bound `FileAnalysis: serde::Serialize` is not satisfied
-    --> src\apply\types.rs:39:24
-     |
-  39 | #[derive(Debug, Clone, Serialize)]
-     |                        ^^^^^^^^^ the trait `Serialize` is not implemented for `FileAnalysis`
-...
-  45 |     #[serde(skip_serializing_if = "Option::is_none")]
-     |     - required by a bound introduced by this call
-     |
-     = note: for local types consider adding `#[derive(serde::Serialize)]` to your `FileAnalysis` type
-     = note: for types from other crates check whether the crate offers a `serde` feature flag
-     = help: the following other types implement trait `Serialize`:
-               &'a T
-               &'a mut T
-               ()
-               (T,)
-               (T0, T1)
-               (T0, T1, T2)
-               (T0, T1, T2, T3)
-               (T0, T1, T2, T3, T4)
-             and 160 others
-     = note: required for `std::option::Option<FileAnalysis>` to implement `Serialize`
-note: required by a bound in `events::_::_serde::ser::SerializeStruct::serialize_field`
-    --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.228\src\ser\mod.rs:1917:21
-     |
-1915 |     fn serialize_field<T>(&mut self, key: &'static str, value: &T) -> Result<(), Self::Error>
-     |        --------------- required by a bound in this associated function
-1916 |     where
-1917 |         T: ?Sized + Serialize;
-     |                     ^^^^^^^^^ required by this bound in `SerializeStruct::serialize_field`
-     = note: this error originates in the derive macro `Serialize` (in Nightly builds, run with -Z macro-backtrace for more info)
-
-error[E0277]: the size for values of type `str` cannot be known at compilation time
-   --> src\apply\parser.rs:138:20
-    |
-138 |         for (desc, input, check) in cases {
-    |                    ^^^^^ doesn't have a size known at compile-time
-    |
-    = help: the trait `Sized` is not implemented for `str`
-    = note: all local variables must have a statically known size
-
-error[E0277]: the size for values of type `str` cannot be known at compilation time
-   --> src\apply\parser.rs:138:37
-    |
-138 |         for (desc, input, check) in cases {
-    |                                     ^^^^^ doesn't have a size known at compile-time
-    |
-    = help: the trait `Sized` is not implemented for `str`
-    = note: only the last element of a tuple may have a dynamically sized type
-
-Some errors have detailed explanations: E0277, E0308, E0412, E0432, E0433, E0560, E0609.
-For more information about an error, try `rustc --explain E0277`.
-error: could not compile `slopchop` (lib) due to 23 previous errors
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `slopchop` (lib test) due to 25 previous errors
+   Compiling slopchop v1.6.0 (/home/juno/slopchop)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.16s
+     Running unittests src/lib.rs (target/debug/deps/slopchop_core-a152a6b14f2c8c9c)
+     Running unittests src/bin/slopchop.rs (target/debug/deps/slopchop-fefc2ad99977d610)
+   Doc-tests slopchop_core
 
 
 >>> COMMAND: slopchop scan --locality

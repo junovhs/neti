@@ -1,12 +1,12 @@
 // src/cli/apply_handler.rs
 //! Handler for the apply command.
 
+use super::handlers::get_repo_root;
 use crate::apply;
 use crate::apply::types::{ApplyContext, ApplyInput, ApplyOutcome};
 use crate::cli::args::ApplyArgs;
 use crate::config::Config;
 use crate::exit::SlopChopExit;
-use super::handlers::get_repo_root;
 use anyhow::Result;
 use colored::Colorize;
 
@@ -20,7 +20,10 @@ pub fn handle_apply(args: &ApplyArgs) -> Result<SlopChopExit> {
     let input = determine_input(args);
 
     if args.sync {
-        println!("{}", "Sync is deprecated. Use git branches instead.".yellow());
+        println!(
+            "{}",
+            "Sync is deprecated. Use git branches instead.".yellow()
+        );
         return Ok(SlopChopExit::Success);
     }
 
@@ -32,15 +35,16 @@ pub fn handle_apply(args: &ApplyArgs) -> Result<SlopChopExit> {
     }
 
     let sanitize = determine_sanitize(args);
+    let auto_promote = config.preferences.auto_promote;
 
     let ctx = ApplyContext {
-        config: &config,
+        config,
         repo_root: repo_root.clone(),
         force: args.force,
         dry_run: args.dry_run,
         input,
         check_after: args.check,
-        auto_promote: config.preferences.auto_promote,
+        auto_promote,
         reset_stage: args.reset,
         sanitize,
         silent: false,
@@ -64,9 +68,9 @@ fn determine_sanitize(args: &ApplyArgs) -> bool {
 
 fn map_outcome_to_exit(outcome: &ApplyOutcome) -> SlopChopExit {
     match outcome {
-        ApplyOutcome::Success { .. }
-        | ApplyOutcome::Promoted { .. }
-        | ApplyOutcome::StageReset => SlopChopExit::Success,
+        ApplyOutcome::Success { .. } | ApplyOutcome::Promoted { .. } | ApplyOutcome::StageReset => {
+            SlopChopExit::Success
+        }
         ApplyOutcome::ValidationFailure { .. } => SlopChopExit::InvalidInput,
         ApplyOutcome::ParseError(msg) => {
             if msg.contains("Patch mismatch")
@@ -78,7 +82,7 @@ fn map_outcome_to_exit(outcome: &ApplyOutcome) -> SlopChopExit {
                 SlopChopExit::InvalidInput
             }
         }
-        ApplyOutcome::WriteError(_) => SlopChopExit::Error,
+        ApplyOutcome::WriteError(_) | ApplyOutcome::Cancelled => SlopChopExit::Error,
     }
 }
 

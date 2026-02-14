@@ -1,7 +1,5 @@
 # project -- Semantic Map
 
-**Purpose:** Architectural goverance in CI
-
 ## Legend
 
 `[ENTRY]` Application entry point
@@ -64,10 +62,7 @@ Parser for tsconfig.json / jsconfig.json path mappings. Centralizes project conf
 `src/analysis/mod.rs`
 Core analysis logic (The "Rule Engine"). Supports application functionality.
 
-`src/analysis/v2/mod.rs`
-Orchestrates `engine`. Supports application functionality.
-
-`src/analysis/v2/patterns/mod.rs`
+`src/analysis/patterns/mod.rs`
 AST pattern detection for violations. Supports application functionality.
 → Exports: detect_all, get_capture_node
 
@@ -138,6 +133,10 @@ Triptych HUD (Head-Up Display) for process execution feedback. Supports applicat
 
 ## Layer 2 -- Domain
 
+`src/analysis/aggregator.rs`
+Aggregation logic for analysis results. Supports application functionality.
+→ Exports: Aggregator, FileAnalysis, ingest, merge, new
+
 `src/analysis/ast.rs`
 Module providing `AnalysisResult`, `Analyzer`, `analyze`. Supports application functionality.
 → Exports: AnalysisResult, Analyzer, analyze, new
@@ -162,109 +161,97 @@ Function naming checks (Law of Complexity). Supports application functionality.
 Checks for syntax errors or missing nodes in the AST. Supports application functionality.
 → Exports: check_syntax
 
+`src/analysis/cognitive.rs`
+Cognitive Complexity metric implementation. Supports application functionality.
+→ Exports: CognitiveAnalyzer, calculate
+
+`src/analysis/deep.rs`
+Deep analysis runner. Supports application functionality.
+→ Exports: DeepAnalyzer, compute_violations, new
+
 `src/analysis/engine.rs`
-Orchestrates the analysis of multiple files. Supports application functionality.
-→ Exports: RuleEngine, new, scan, scan_with_progress
+Main execution logic for the SlopChop analysis engine. Supports application functionality.
+→ Exports: Engine, new, scan, scan_with_progress
 
-`src/analysis/file_analysis.rs`
-Module providing `analyze_file`, `has_ignore_directive`, `is_ignored`. Supports application functionality.
-→ Exports: analyze_file, has_ignore_directive, is_ignored
+`src/analysis/extract.rs`
+Rust scope extraction logic (Structs/Enums/Fields). Supports application functionality.
+→ Exports: RustExtractor, extract_scopes
 
-`src/analysis/logic.rs`
-Module providing `run_scan`. Supports application functionality.
-→ Exports: run_scan
+`src/analysis/extract_impl.rs`
+Rust impl/method extraction logic. Supports application functionality.
+→ Exports: extract
 
 `src/analysis/metrics.rs`
 Calculates the nesting depth of a node. Supports application functionality.
 → Exports: calculate_complexity, calculate_max_depth, count_arguments
 
+`src/analysis/patterns/concurrency.rs`
+Concurrency pattern detection: C03, C04. Supports application functionality.
+→ Exports: detect
+
+`src/analysis/patterns/concurrency_lock.rs`
+C03: `MutexGuard` held across `.await`. Supports application functionality.
+→ Exports: detect_c03
+
+`src/analysis/patterns/concurrency_sync.rs`
+C04: Undocumented synchronization primitives. Supports application functionality.
+→ Exports: detect_c04
+
+`src/analysis/patterns/db_patterns.rs`
+Database anti-patterns: P03 (N+1 queries). Supports application functionality.
+→ Exports: detect
+
+`src/analysis/patterns/idiomatic.rs`
+Idiomatic patterns: I01, I02. Supports application functionality.
+→ Exports: detect
+
+`src/analysis/patterns/logic.rs`
+Logic patterns: L02, L03. Supports application functionality.
+→ Exports: detect
+
+`src/analysis/patterns/performance.rs`
+Performance anti-patterns: P01, P02, P04, P06. Supports application functionality.
+→ Exports: detect
+
+`src/analysis/patterns/resource.rs`
+Resource patterns: R07 (missing flush). Supports application functionality.
+→ Exports: detect
+
+`src/analysis/patterns/security.rs`
+Security patterns: X01, X02, X03. Supports application functionality.
+→ Exports: detect
+
+`src/analysis/patterns/semantic.rs`
+Semantic patterns: M03, M04, M05. Supports application functionality.
+→ Exports: detect
+
+`src/analysis/patterns/state.rs`
+State pattern detection: S01, S02, S03. Supports application functionality.
+→ Exports: detect
+
 `src/analysis/safety.rs`
 Checks for unsafe blocks and ensures they have justification comments. Supports application functionality.
 → Exports: check_safety
 
-`src/analysis/v2/aggregator.rs`
-Aggregation logic for analysis results. Supports application functionality.
-→ Exports: Aggregator, ingest, merge, new
-
-`src/analysis/v2/cognitive.rs`
-Cognitive Complexity metric implementation. Supports application functionality.
-→ Exports: CognitiveAnalyzer, calculate
-
-`src/analysis/v2/deep.rs`
-Deep analysis runner. Supports application functionality.
-→ Exports: DeepAnalyzer, compute_violations, new
-
-`src/analysis/v2/engine.rs`
-Main execution logic for Scan V2. Supports application functionality.
-→ Exports: ScanEngineV2, count_source_files, is_small_codebase, new, run
-
-`src/analysis/v2/metrics.rs`
-Metrics calculation for V2 Scopes (LCOM4, CBO, SFOUT, AHF). Supports application functionality.
-→ Exports: ScopeMetrics, calculate_ahf, calculate_cbo, calculate_lcom4, calculate_max_sfout
-
-`src/analysis/v2/patterns/concurrency.rs`
-Concurrency pattern detection: C03, C04. Supports application functionality.
-→ Exports: detect
-
-`src/analysis/v2/patterns/concurrency_lock.rs`
-C03: `MutexGuard` held across `.await`. Supports application functionality.
-→ Exports: detect_c03
-
-`src/analysis/v2/patterns/concurrency_sync.rs`
-C04: Undocumented synchronization primitives. Supports application functionality.
-→ Exports: detect_c04
-
-`src/analysis/v2/patterns/db_patterns.rs`
-Database anti-patterns: P03 (N+1 queries). Supports application functionality.
-→ Exports: detect
-
-`src/analysis/v2/patterns/idiomatic.rs`
-Idiomatic patterns: I01, I02. Supports application functionality.
-→ Exports: detect
-
-`src/analysis/v2/patterns/logic.rs`
-Logic patterns: L02, L03. Supports application functionality.
-→ Exports: detect
-
-`src/analysis/v2/patterns/performance.rs`
-Performance anti-patterns: P01, P02, P04, P06. Supports application functionality.
-→ Exports: detect
-
-`src/analysis/v2/patterns/resource.rs`
-Resource patterns: R07 (missing flush). Supports application functionality.
-→ Exports: detect
-
-`src/analysis/v2/patterns/security.rs`
-Security patterns: X01, X02, X03. Supports application functionality.
-→ Exports: detect
-
-`src/analysis/v2/patterns/semantic.rs`
-Semantic patterns: M03, M04, M05. Supports application functionality.
-→ Exports: detect
-
-`src/analysis/v2/patterns/state.rs`
-State pattern detection: S01, S02, S03. Supports application functionality.
-→ Exports: detect
-
-`src/analysis/v2/rust.rs`
-Module providing `RustExtractor`, `extract_scopes`. Supports application functionality.
-→ Exports: RustExtractor, extract_scopes
-
-`src/analysis/v2/rust_impl.rs`
-Rust impl/method extraction logic. Supports application functionality.
-→ Exports: RustImplExtractor, extract
-
-`src/analysis/v2/scope.rs`
+`src/analysis/scope.rs`
 Represents a cohesion and coupling scope (Class, Struct+Impl, Enum). Supports application functionality.
 → Exports: FieldInfo, Method, Scope, add_derive, add_field, add_method, has_behavior, has_derives, new, new_enum, validate_record
 
-`src/analysis/v2/visitor.rs`
-AST Visitor for Scan v2.0. Supports application functionality.
+`src/analysis/structural.rs`
+Structural metrics calculation (LCOM4, CBO, SFOUT, AHF). Supports application functionality.
+→ Exports: ScopeMetrics, calculate_ahf, calculate_cbo, calculate_lcom4, calculate_max_sfout
+
+`src/analysis/types.rs`
+A single violation detected during analysis. Defines domain data structures.
+→ Exports: CheckReport, CommandResult, FileReport, ScanReport, Violation, ViolationDetails, clean_file_count, has_errors, is_clean, is_small_codebase, simple, violation_count, with_details
+
+`src/analysis/visitor.rs`
+AST Visitor for analysis. Supports application functionality.
 → Exports: AstVisitor, extract_scopes, new
 
-`src/analysis/v2/worker.rs`
+`src/analysis/worker.rs`
 Worker module for file parsing and analysis. Supports application functionality.
-→ Exports: FileAnalysis, scan_file
+→ Exports: is_ignored, scan_file
 
 `src/apply/advisory.rs`
 Threshold for triggering the high edit volume advisory. Supports application functionality.
@@ -311,8 +298,8 @@ Logic for generating the verification report file. Supports application function
 → Exports: write_check_report
 
 `src/apply/types.rs`
-Represents a parsed block from the `SlopChop` protocol stream. Defines domain data structures.
-→ Exports: ApplyContext, ApplyInput, ApplyOutcome, Block, FileContent, ManifestEntry, Operation, new
+A single violation detected during analysis. Defines domain data structures.
+→ Exports: CheckReport, CommandResult, FileReport, ScanReport, Violation, ViolationDetails, clean_file_count, has_errors, is_clean, is_small_codebase, simple, violation_count, with_details
 
 `src/apply/validator.rs`
 Module providing `validate`. Supports application functionality.
@@ -596,7 +583,7 @@ Computes SHA256 hash of content with normalized line endings. Provides reusable 
 
 ## Layer 4 -- Tests
 
-`src/analysis/v2/inspector.rs`
+`src/analysis/inspector.rs`
 Inspection logic for scopes (Metrics application). Verifies correctness.
 → Exports: Inspector, inspect, new
 

@@ -18,6 +18,7 @@ pub fn print_outcome(outcome: &ApplyOutcome) {
         ApplyOutcome::ValidationFailure { ai_message, .. } => handle_failure(ai_message),
         ApplyOutcome::ParseError(e) => println!("{}: {e}", "✗ Parse Error".red()),
         ApplyOutcome::WriteError(e) => println!("{}: {e}", "✗ Write Error".red()),
+        ApplyOutcome::Cancelled => println!("{}", "✗ Operation cancelled.".yellow()),
     }
 }
 
@@ -119,7 +120,9 @@ pub fn generate_ai_feedback(report: &CheckReport, modified_files: &[String]) -> 
     }
 
     if report.scan.has_errors() {
-        msg.push_str("COMMAND: slopchop scan\nOUTPUT:\nInternal violations found (see scan report).\n\n");
+        msg.push_str(
+            "COMMAND: slopchop scan\nOUTPUT:\nInternal violations found (see scan report).\n\n",
+        );
     }
 
     if !modified_files.is_empty() {
@@ -154,17 +157,17 @@ mod tests {
     #[test]
     fn test_floor_char_boundary() {
         let s = "abc🦀"; // bytes: 61 62 63 f0 9f 96 80
-        
+
         // Exact boundaries
         assert_eq!(floor_char_boundary(s, 0), 0);
         assert_eq!(floor_char_boundary(s, 1), 1);
         assert_eq!(floor_char_boundary(s, 3), 3);
-        
+
         // Inside crab (bytes 4, 5, 6) - should rewind to 3
         assert_eq!(floor_char_boundary(s, 4), 3);
         assert_eq!(floor_char_boundary(s, 5), 3);
         assert_eq!(floor_char_boundary(s, 6), 3);
-        
+
         // End
         assert_eq!(floor_char_boundary(s, 7), 7);
         assert_eq!(floor_char_boundary(s, 100), 7);
@@ -174,7 +177,7 @@ mod tests {
     fn test_feedback_truncation_utf8() {
         let prefix = "a".repeat(999);
         let s = format!("{prefix}🦀");
-        
+
         let report = CheckReport {
             scan: crate::types::ScanReport::default(),
             commands: vec![CommandResult {
@@ -186,9 +189,9 @@ mod tests {
             }],
             passed: false,
         };
-        
+
         let feedback = generate_ai_feedback(&report, &[]);
-        
+
         assert!(feedback.contains("[truncated]"));
         assert!(feedback.contains(&prefix));
         assert!(!feedback.contains("🦀"));

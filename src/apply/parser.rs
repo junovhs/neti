@@ -56,7 +56,7 @@ fn parse_single_block(
     let prefix = caps.name("prefix").map_or("", |m| m.as_str());
 
     let content_start = header_match.end();
-    
+
     // Fix I01: Bind footer to the specific prefix used by the header to prevent
     // content with different (or no) prefixes from terminating the block early.
     let escaped_prefix = regex::escape(prefix);
@@ -73,15 +73,16 @@ fn parse_single_block(
     Ok((block, footer_match.end()))
 }
 
-
 #[cfg(test)]
-#[allow(clippy::indexing_slicing, clippy::unwrap_used)]
+#[allow(clippy::indexing_slicing, clippy::unwrap_used, clippy::type_complexity)]
 mod tests {
     use super::*;
 
+    type TestCase = (&'static str, String, Box<dyn Fn(&Vec<Block>)>);
+
     #[test]
     fn test_parser_logic() {
-        let cases = vec![
+        let cases: Vec<TestCase> = vec![
             (
                 "Plan and Manifest",
                 format!("{SIGIL} PLAN {SIGIL}\nMy Plan\n{SIGIL} END {SIGIL}\n{SIGIL} MANIFEST {SIGIL}\nfile.rs\n{SIGIL} END {SIGIL}"),
@@ -89,7 +90,7 @@ mod tests {
                     assert_eq!(blocks.len(), 2);
                     assert!(matches!(&blocks[0], Block::Plan(c) if c == "My Plan"));
                     assert!(matches!(&blocks[1], Block::Manifest(c) if c == "file.rs"));
-                }) as Box<dyn Fn(&Vec<Block>)>
+                })
             ),
             (
                 "File and Patch",
@@ -143,9 +144,15 @@ mod tests {
 
     #[test]
     fn test_parser_failures() {
-        let cases = vec![
-            ("Unclosed block", format!("{SIGIL} FILE {SIGIL} f.rs\ncontent")),
-            ("Reserved keyword path", format!("{SIGIL} FILE {SIGIL} MANIFEST\ncontent\n{SIGIL} END {SIGIL}")),
+        let cases: Vec<(&str, String)> = vec![
+            (
+                "Unclosed block",
+                format!("{SIGIL} FILE {SIGIL} f.rs\ncontent"),
+            ),
+            (
+                "Reserved keyword path",
+                format!("{SIGIL} FILE {SIGIL} MANIFEST\ncontent\n{SIGIL} END {SIGIL}"),
+            ),
         ];
 
         for (desc, input) in cases {

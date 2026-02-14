@@ -1,14 +1,15 @@
 //! Aggregation logic for analysis results.
 //! Pure data container to decouple data collection from analysis.
 
+use serde::Serialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::types::Violation;
 use super::scope::Scope;
+use crate::types::Violation;
 
 /// Results extracted from a single file.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Serialize)]
 pub struct FileAnalysis {
     pub path_str: String,
     pub scopes: HashMap<String, Scope>,
@@ -47,7 +48,8 @@ impl Aggregator {
         for (name, scope) in &analysis.scopes {
             let key = format!("{}::{}", analysis.path_str, name);
             self.global_scopes.insert(key, scope.clone());
-            self.path_map.insert(analysis.path_str.clone(), path.to_path_buf());
+            self.path_map
+                .insert(analysis.path_str.clone(), path.to_path_buf());
         }
     }
 

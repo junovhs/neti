@@ -101,18 +101,29 @@ fn normalize(ranks: &mut HashMap<PathBuf, f64>) {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 
-    fn p(s: &str) -> PathBuf { PathBuf::from(s) }
-    fn f(paths: &[&str]) -> HashSet<PathBuf> { paths.iter().map(|s| p(s)).collect() }
-    
+    fn p(s: &str) -> PathBuf {
+        PathBuf::from(s)
+    }
+    fn f(paths: &[&str]) -> HashSet<PathBuf> {
+        paths.iter().map(|s| p(s)).collect()
+    }
+
     fn assert_approx_eq(a: f64, b: f64, desc: &str) {
         let diff = (a - b).abs();
         assert!(diff < 0.001, "{desc}: {a} != {b} (diff {diff})");
     }
 
-    type GraphSetup = Box<dyn Fn() -> (HashMap<PathBuf, HashMap<PathBuf, usize>>, HashSet<PathBuf>, Option<PathBuf>)>;
+    type GraphSetup = Box<
+        dyn Fn() -> (
+            HashMap<PathBuf, HashMap<PathBuf, usize>>,
+            HashSet<PathBuf>,
+            Option<PathBuf>,
+        ),
+    >;
     type ResultCheck = Box<dyn Fn(HashMap<PathBuf, f64>)>;
 
     #[test]
@@ -124,7 +135,7 @@ mod tests {
         cases.push((
             Box::new(|| (HashMap::new(), HashSet::new(), None)),
             Box::new(|res| assert!(res.is_empty())),
-            "Empty graph"
+            "Empty graph",
         ));
 
         // 2. Single Node
@@ -134,7 +145,7 @@ mod tests {
                 assert_eq!(res.len(), 1);
                 assert_approx_eq(*res.get(&p("a.rs")).unwrap(), 1.0, "Single node rank");
             }),
-            "Single node"
+            "Single node",
         ));
 
         // 3. Directed Edge (a -> b)
@@ -150,7 +161,7 @@ mod tests {
                 assert!(r_b > r_a, "Target rank > source rank");
                 assert_approx_eq(r_a + r_b, 1.0, "Sum to 1.0");
             }),
-            "Directed edge"
+            "Directed edge",
         ));
 
         // 4. Cycle (a -> b -> c -> a)
@@ -163,12 +174,12 @@ mod tests {
                 (edges, f(&["a.rs", "b.rs", "c.rs"]), None)
             }),
             Box::new(|res| {
-                let expected = 1.0/3.0;
+                let expected = 1.0 / 3.0;
                 for val in res.values() {
                     assert_approx_eq(*val, expected, "Cycle equal rank");
                 }
             }),
-            "Cycle"
+            "Cycle",
         ));
 
         // 5. Anchor (Personalization)
@@ -181,11 +192,11 @@ mod tests {
             Box::new(|res| {
                 let r_a = *res.get(&p("a.rs")).unwrap();
                 // Without anchor, a would be low. With anchor, it's boosted.
-                // In directed edge a->b, steady state is low for a. 
+                // In directed edge a->b, steady state is low for a.
                 // Anchor ensures probability resets to a.
-                assert!(r_a > 0.3, "Anchor boosts rank significantly (got {r_a})"); 
+                assert!(r_a > 0.3, "Anchor boosts rank significantly (got {r_a})");
             }),
-            "Anchor boost"
+            "Anchor boost",
         ));
 
         for (setup, check, _desc) in cases {

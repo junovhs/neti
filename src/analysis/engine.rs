@@ -1,4 +1,4 @@
-//! Main execution logic for the SlopChop analysis engine.
+//! Main execution logic for the `SlopChop` analysis engine.
 //! Unified entry point for all scanning operations.
 
 use std::collections::HashMap;
@@ -62,7 +62,7 @@ impl Engine {
         // Structural metrics (LCOM4, CBO) for sufficiently large codebases
         on_status("Running Deep Analysis (LCOM4/CBO)...");
 
-        if self.should_run_deep_analysis(&results) {
+        if should_run_deep_analysis(&results) {
             let deep_violations = self.run_deep_analysis(&results);
             merge_violations(&mut results, &deep_violations);
         }
@@ -85,7 +85,7 @@ impl Engine {
             .map(|path| worker::scan_file(path, &self.config))
             .collect();
 
-        if self.should_run_deep_analysis(&results) {
+        if should_run_deep_analysis(&results) {
             let deep_violations = self.run_deep_analysis(&results);
             merge_violations(&mut results, &deep_violations);
         }
@@ -96,12 +96,6 @@ impl Engine {
             files: results,
             duration_ms: start.elapsed().as_millis(),
         }
-    }
-
-    fn should_run_deep_analysis(&self, results: &[FileReport]) -> bool {
-        // Small codebase detection: count only src/ files, skip structural metrics.
-        let source_count = results.iter().filter(|r| is_source_file(&r.path)).count();
-        source_count >= SMALL_CODEBASE_THRESHOLD
     }
 
     fn run_deep_analysis(&self, results: &[FileReport]) -> HashMap<PathBuf, Vec<Violation>> {
@@ -117,6 +111,12 @@ impl Engine {
         let deep_analyzer = DeepAnalyzer::new(&self.config.rules);
         deep_analyzer.compute_violations(&aggregator)
     }
+}
+
+fn should_run_deep_analysis(results: &[FileReport]) -> bool {
+    // Small codebase detection: count only src/ files, skip structural metrics.
+    let source_count = results.iter().filter(|r| is_source_file(&r.path)).count();
+    source_count >= SMALL_CODEBASE_THRESHOLD
 }
 
 fn merge_violations(results: &mut [FileReport], deep: &HashMap<PathBuf, Vec<Violation>>) {
@@ -135,7 +135,8 @@ fn is_source_file(path: &Path) -> bool {
         return false;
     }
 
-    if path_str.contains("/tests/") || path_str.contains("_test.") || path_str.contains("tests.rs") {
+    if path_str.contains("/tests/") || path_str.contains("_test.") || path_str.contains("tests.rs")
+    {
         return false;
     }
 

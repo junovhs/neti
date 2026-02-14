@@ -65,7 +65,7 @@ fn filter_nested_ranges(mut ranges: Vec<std::ops::Range<usize>>) -> Vec<std::ops
     let mut i = 0;
     while i < ranges.len() {
         let current = &ranges[i];
-        
+
         // Check if this range is contained by any already added range.
         if let Some(last) = result.last() {
             if last.end >= current.end {
@@ -74,7 +74,7 @@ fn filter_nested_ranges(mut ranges: Vec<std::ops::Range<usize>>) -> Vec<std::ops
                 continue;
             }
         }
-        
+
         result.push(current.clone());
         i += 1;
     }
@@ -90,10 +90,10 @@ fn replace_ranges(source: &str, ranges: &[std::ops::Range<usize>], replacement: 
         if range.start > last_pos {
             result.push_str(&source[last_pos..range.start]);
         }
-        
+
         // Push replacement
         result.push_str(replacement);
-        
+
         // Advance
         last_pos = range.end;
     }
@@ -114,7 +114,7 @@ fn compile_query(lang: Language, pattern: &str) -> Query {
 }
 
 #[cfg(test)]
-#[allow(clippy::single_range_in_vec_init)]
+#[allow(clippy::single_range_in_vec_init, clippy::indexing_slicing)]
 mod tests {
     use super::*;
 
@@ -126,15 +126,23 @@ mod tests {
             (vec![5..10], 1, "Single range"),
             (vec![0..5, 10..15], 2, "Disjoint ranges"),
             (vec![0..20, 5..10], 1, "Nested range removed"),
-            (vec![0..10, 3..10], 1, "Nested ending at same point (>= check)"),
-            (vec![0..10, 5..15], 2, "Overlapping but extending range kept"),
+            (
+                vec![0..10, 3..10],
+                1,
+                "Nested ending at same point (>= check)",
+            ),
+            (
+                vec![0..10, 5..15],
+                2,
+                "Overlapping but extending range kept",
+            ),
             (vec![20..30, 5..10, 0..5], 3, "Unsorted input"),
         ];
 
         for (ranges, expected_len, desc) in cases {
             let result = filter_nested_ranges(ranges);
             assert_eq!(result.len(), expected_len, "Failed: {desc}");
-            
+
             // For the nested case, verify the correct one remained
             if desc == "Nested range removed" {
                 assert_eq!(result[0], 0..20);
@@ -156,9 +164,13 @@ mod tests {
             let result = replace_ranges(source, &ranges, "X");
             assert_eq!(result, expected, "Failed: {desc}");
         }
-        
+
         // Trailing content check
-        assert_eq!(replace_ranges("abc123xyz", &[3..6], "X"), "abcXxyz", "Trailing content");
+        assert_eq!(
+            replace_ranges("abc123xyz", &[3..6], "X"),
+            "abcXxyz",
+            "Trailing content"
+        );
     }
 
     #[test]
@@ -168,25 +180,25 @@ mod tests {
                 "test.rs",
                 "fn foo() { println!(\"hi\"); }",
                 vec!["fn foo()", "{ ... }", "!println"],
-                "Rust function"
+                "Rust function",
             ),
             (
                 "test.py",
                 "def foo():\n    print('hi')",
                 vec!["def foo():", "...", "!print"],
-                "Python function"
+                "Python function",
             ),
             (
                 "test.ts",
                 "function f(x: any) { return x; }",
                 vec!["function f(x: any)", "{ ... }", "!return"],
-                "TypeScript function"
+                "TypeScript function",
             ),
             (
                 "file.unknown",
                 "some content",
                 vec!["some content"],
-                "Unsupported extension"
+                "Unsupported extension",
             ),
         ];
 
@@ -194,7 +206,10 @@ mod tests {
             let result = clean(Path::new(path), source);
             for check in checks {
                 if let Some(stripped) = check.strip_prefix('!') {
-                    assert!(!result.contains(stripped), "{desc}: Should not contain '{stripped}'");
+                    assert!(
+                        !result.contains(stripped),
+                        "{desc}: Should not contain '{stripped}'"
+                    );
                 } else {
                     assert!(result.contains(check), "{desc}: Should contain '{check}'");
                 }

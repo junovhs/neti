@@ -38,7 +38,10 @@ pub fn scan_file(path: &Path, config: &Config) -> FileReport {
     {
         report.violations.push(Violation::simple(
             1,
-            format!("File size is {} tokens (Limit: {})", report.token_count, effective_config.rules.max_file_tokens),
+            format!(
+                "File size is {} tokens (Limit: {})",
+                report.token_count, effective_config.rules.max_file_tokens
+            ),
             "LAW OF ATOMICITY",
         ));
     }
@@ -50,7 +53,7 @@ pub fn scan_file(path: &Path, config: &Config) -> FileReport {
     let mut parser = Parser::new();
     if parser.set_language(lang.grammar()).is_err() {
         return report;
-    };
+    }
 
     let Some(tree) = parser.parse(&source, None) else {
         return report;
@@ -58,9 +61,16 @@ pub fn scan_file(path: &Path, config: &Config) -> FileReport {
 
     let root = tree.root_node();
 
-    report.violations.extend(patterns::detect_all(path, &source));
+    report
+        .violations
+        .extend(patterns::detect_all(path, &source));
 
-    let ast_result = ast::Analyzer::new().analyze(lang, path.to_str().unwrap_or(""), &source, &effective_config.rules);
+    let ast_result = ast::Analyzer::new().analyze(
+        lang,
+        path.to_str().unwrap_or(""),
+        &source,
+        &effective_config.rules,
+    );
     report.violations.extend(ast_result.violations);
     report.complexity_score = ast_result.max_complexity;
 
@@ -96,13 +106,27 @@ fn determine_effective_config(source: &str, base_config: &Config) -> Config {
 
 fn calculate_systems_score(source: &str) -> usize {
     let mut score = 0;
-    if source.contains("#![no_std]") { score += 5; }
-    if source.contains("unsafe {") || source.contains("unsafe fn") { score += 1; }
-    if source.contains("transmute") { score += 2; }
-    if source.contains("repr(C)") || source.contains("repr(packed)") { score += 2; }
-    if source.contains("Atomic") { score += 1; }
-    if source.contains("*const") || source.contains("*mut") { score += 1; }
-    if source.contains("Pin<Box") { score += 1; }
+    if source.contains("#![no_std]") {
+        score += 5;
+    }
+    if source.contains("unsafe {") || source.contains("unsafe fn") {
+        score += 1;
+    }
+    if source.contains("transmute") {
+        score += 2;
+    }
+    if source.contains("repr(C)") || source.contains("repr(packed)") {
+        score += 2;
+    }
+    if source.contains("Atomic") {
+        score += 1;
+    }
+    if source.contains("*const") || source.contains("*mut") {
+        score += 1;
+    }
+    if source.contains("Pin<Box") {
+        score += 1;
+    }
     score
 }
 
