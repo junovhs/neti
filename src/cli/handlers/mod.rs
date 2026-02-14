@@ -7,7 +7,6 @@ use crate::config::Config;
 use crate::discovery;
 use crate::exit::SlopChopExit;
 use crate::map;
-use crate::pack::{self, OutputFormat, PackOptions};
 use crate::reporting;
 use crate::signatures::{self, SignatureOptions};
 use crate::spinner;
@@ -21,21 +20,6 @@ pub mod scan_report;
 #[must_use]
 pub fn get_repo_root() -> PathBuf {
     std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
-}
-
-#[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone)]
-pub struct PackArgs {
-    pub stdout: bool,
-    pub copy: bool,
-    pub noprompt: bool,
-    pub format: OutputFormat,
-    pub skeleton: bool,
-    pub code_only: bool,
-    pub verbose: bool,
-    pub target: Option<PathBuf>,
-    pub focus: Vec<PathBuf>,
-    pub depth: usize,
 }
 
 /// Handles the scan command.
@@ -121,51 +105,6 @@ pub fn handle_check(json: bool) -> Result<SlopChopExit> {
     } else {
         SlopChopExit::CheckFailed
     })
-}
-
-/// Handles the pack command.
-///
-/// # Errors
-/// Returns error if packing process fails.
-pub fn handle_pack(args: PackArgs) -> Result<SlopChopExit> {
-    let opts = PackOptions {
-        stdout: args.stdout,
-        copy: args.copy,
-        verbose: args.verbose,
-        prompt: !args.noprompt,
-        format: args.format,
-        skeleton: args.skeleton,
-        code_only: args.code_only,
-        target: args.target,
-        focus: args.focus,
-        depth: args.depth,
-    };
-
-    if args.stdout {
-        pack::run(&opts)?;
-        return Ok(SlopChopExit::Success);
-    }
-
-    let (client, mut controller) = spinner::start("slopchop pack");
-    client.set_micro_status("Discovering files...");
-
-    let res = pack::run_with_progress(&opts, |done, total, msg| {
-        client.step_micro_progress(done, total, msg.to_string());
-        if msg.starts_with("Packing") {
-            client.push_log(msg);
-        }
-    });
-
-    match res {
-        Ok(()) => {
-            controller.stop(true);
-            Ok(SlopChopExit::Success)
-        }
-        Err(e) => {
-            controller.stop(false);
-            Err(e)
-        }
-    }
 }
 
 /// Handles the map command.

@@ -1,5 +1,3 @@
-// src/cli/args.rs
-use crate::pack::OutputFormat;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -70,30 +68,6 @@ pub enum Commands {
     Clean {
         #[arg(long, short)]
         commit: bool,
-    },
-
-    /// Generate AI context from codebase
-    Pack {
-        #[arg(long, short)]
-        stdout: bool,
-        #[arg(long, short)]
-        copy: bool,
-        #[arg(long)]
-        noprompt: bool,
-        #[arg(long, value_enum, default_value_t = OutputFormat::Text)]
-        format: OutputFormat,
-        #[arg(long)]
-        skeleton: bool,
-        #[arg(long)]
-        code_only: bool,
-        #[arg(long, short)]
-        verbose: bool,
-        #[arg(long, value_name = "FILE")]
-        target: Option<PathBuf>,
-        #[arg(long, short, value_name = "FILE", num_args = 1..)]
-        focus: Vec<PathBuf>,
-        #[arg(long, default_value = "1")]
-        depth: usize,
     },
 
     /// Show repository structure [EXPERIMENTAL]

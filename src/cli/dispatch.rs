@@ -1,13 +1,10 @@
-// src/cli/dispatch.rs
 //! Command dispatch logic extracted from binary to reduce main function size.
 
 use super::{
     apply_handler::handle_apply,
     args::{ApplyArgs, Commands},
     git_ops::{handle_abort, handle_branch, handle_promote},
-    handlers::{
-        handle_check, handle_map, handle_pack, handle_scan, handle_signatures, PackArgs,
-    },
+    handlers::{handle_check, handle_map, handle_scan, handle_signatures},
 };
 use crate::exit::SlopChopExit;
 use crate::signatures::SignatureOptions;
@@ -29,10 +26,9 @@ pub fn execute(command: Commands) -> Result<SlopChopExit> {
             handle_git_ops(&command)
         }
 
-        Commands::Apply { .. }
-        | Commands::Clean { .. }
-        | Commands::Pack { .. }
-        | Commands::Config => handle_core_ops(command),
+        Commands::Apply { .. } | Commands::Clean { .. } | Commands::Config => {
+            handle_core_ops(command)
+        }
     }
 }
 
@@ -102,32 +98,6 @@ fn handle_core_ops(command: Commands) -> Result<SlopChopExit> {
         Commands::Clean { commit } => {
             crate::clean::run(commit)?;
             Ok(SlopChopExit::Success)
-        }
-        Commands::Pack {
-            stdout,
-            copy,
-            noprompt,
-            format,
-            skeleton,
-            code_only,
-            verbose,
-            target,
-            focus,
-            depth,
-        } => {
-            let args = PackArgs {
-                stdout,
-                copy,
-                noprompt,
-                format,
-                skeleton,
-                code_only,
-                verbose,
-                target,
-                focus,
-                depth,
-            };
-            handle_pack(args)
         }
         Commands::Config => {
             super::config_ui::run_config_editor()?;

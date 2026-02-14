@@ -1,5 +1,7 @@
 # project -- Semantic Map
 
+**Purpose:** Architectural linter and context engineering
+
 ## Legend
 
 `[ENTRY]` Application entry point
@@ -170,7 +172,7 @@ Deep analysis runner. Supports application functionality.
 → Exports: DeepAnalyzer, compute_violations, new
 
 `src/analysis/engine.rs`
-Main execution logic for the SlopChop analysis engine. Supports application functionality.
+Main execution logic for the `SlopChop` analysis engine. Supports application functionality.
 → Exports: Engine, new, scan, scan_with_progress
 
 `src/analysis/extract.rs`
@@ -235,7 +237,7 @@ Checks for unsafe blocks and ensures they have justification comments. Supports 
 
 `src/analysis/scope.rs`
 Represents a cohesion and coupling scope (Class, Struct+Impl, Enum). Supports application functionality.
-→ Exports: FieldInfo, Method, Scope, add_derive, add_field, add_method, has_behavior, has_derives, new, new_enum, validate_record
+→ Exports: FieldInfo, Method, Scope, add_derive, add_field, add_method, derives, fields, has_behavior, has_derives, is_enum, methods, name, new, new_enum, row, validate_record
 
 `src/analysis/structural.rs`
 Structural metrics calculation (LCOM4, CBO, SFOUT, AHF). Supports application functionality.
@@ -298,8 +300,8 @@ Logic for generating the verification report file. Supports application function
 → Exports: write_check_report
 
 `src/apply/types.rs`
-A single violation detected during analysis. Defines domain data structures.
-→ Exports: CheckReport, CommandResult, FileReport, ScanReport, Violation, ViolationDetails, clean_file_count, has_errors, is_clean, is_small_codebase, simple, violation_count, with_details
+Types for the apply module. Defines domain data structures.
+→ Exports: ApplyContext, ApplyInput, ApplyOutcome, Block, CheckReport, CommandResult, FileContent, FileReport, ManifestEntry, Operation, ScanReport, Violation, ViolationDetails, clean_file_count, has_errors, is_clean, is_small_codebase, new, simple, violation_count, with_details
 
 `src/apply/validator.rs`
 Module providing `validate`. Supports application functionality.
