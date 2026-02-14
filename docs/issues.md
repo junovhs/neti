@@ -1,3 +1,4 @@
+
 # issues-0002: Nim Integration + Consolidation Sweep
 ---
 ## FORMAT (DO NOT MODIFY)
@@ -140,8 +141,9 @@ Question: should `slopchop apply` and `slopchop check` be separate binaries, sep
 - `slopchop scan` — Violation detection
 - `slopchop check` — External command verification (clippy, tests, etc.)
 - `slopchop branch/promote/abort` — Git sandbox workflow for AI agents
-- `slopchop signatures` — Type surface extraction
-- `slopchop config`, `clean`, `mutate` — Utilities
+- `slopchop config` — Interactive configuration editor
+- `slopchop clean` — Artifact cleanup
+- `slopchop mutate` — Mutation testing
 
 **New module:** `src/verification/` — minimal command runner that executes `[commands]` from config and writes to `slopchop-report.txt`.
 
@@ -332,6 +334,16 @@ This enables the law of locality graph to work with Nim projects. The edge colle
 
 ---
 
+## [18] Cut signatures command
+**Status:** DONE
+**Files:** `src/signatures/` (all), `src/cli/args.rs`, `src/cli/dispatch.rs`, `src/cli/handlers/mod.rs`, `src/lib.rs`
+
+The signatures command generates AI context (type surfaces, PageRank, topological ordering) — it's context generation for AI, not governance. Same category as pack/map.
+
+**Resolution:** Deleted `src/signatures/` directory. Removed `Signatures` command from `args.rs`, removed `handle_signatures` function and imports from `handlers/mod.rs` and `dispatch.rs`, removed `pub mod signatures;` from `lib.rs`. Build green.
+
+---
+
 ## Dependency Graph
 
 ```
@@ -342,6 +354,7 @@ Track A (Consolidation) ──────────────────�
 [4] Prompt eval ────────────────── DONE (prompt.rs deleted)
 [6] Clipboard issues ───────────── DESCOPED (clipboard deleted)
 [7] Apply/check separation ─────── DONE (apply deleted)
+[18] Cut signatures ────────────── DONE
 
 Track B (Nim Integration)
 [9] Grammar validation (GATE)
@@ -364,4 +377,6 @@ Independent:
 [5] Output compression
 ```
 
-**Track A is complete.** Ready to proceed with Track B (Nim Integration) starting with [9].
+**Track A is complete.** SlopChop is now a lean governance tool with 6 commands: `scan`, `check`, `branch`, `promote`, `abort`, `config`, `clean`, `mutate`.
+
+Ready to proceed with Track B (Nim Integration) starting with [9].

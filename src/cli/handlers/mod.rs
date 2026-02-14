@@ -85,31 +85,155 @@ pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChop
 /// Returns error if report file cannot be written.
 pub fn handle_check(json: bool) -> Result<SlopChopExit> {
     let repo_root = get_repo_root();
-    let report = verification::run(&repo_root);
-
-    // Write report to file
-    std::fs::write("slopchop-report.txt", &report.output)?;
 
     if json {
-        println!(
-            "{}",
-            serde_json::json!({
-                "passed": report.passed,
-                "output": report.output
-            })
-        );
-    } else if report.passed {
-        println!("{}", "✓ All checks passed.".green().bold());
-    } else {
-        println!(
-            "{}",
-            "✗ Checks failed. See slopchop-report.txt".red().bold()
-        );
+        let report = verification::run(&repo_root, |_, _, _| {});
+        std::fs::write("slopchop-report.txt", &report.output)?;
+        reporting::print_json(&report)?;
+        return Ok(if report.passed {
+            SlopChopExit::Success
+        } else {
+            SlopChopExit::CheckFailed
+        });
     }
+
+    let (client, mut controller) = spinner::start("slopchop check");
+    client.set_micro_status("Running verification commands...");
+
+    let report = verification::run(&repo_root, |cmd, current, total| {
+        client.step_micro_progress(current, total, format!("Running: {cmd}"));
+        client.push_log(cmd);
+    });
+
+    std::fs::write("slopchop-report.txt", &report.output)?;
+
+    controller.stop(report.passed);
+
+    print_check_scorecard(&report);
 
     Ok(if report.passed {
         SlopChopExit::Success
     } else {
         SlopChopExit::CheckFailed
     })
+}
+
+/// Prints a formatted scorecard for the verification report.
+fn print_check_scorecard(report: &verification::VerificationReport) {
+    use std::time::Duration;
+
+    #[allow(clippy::cast_possible_truncation)]
+    let duration = Duration::from_millis(report.duration_ms);
+
+    println!();
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════".blue()
+    );
+    println!(
+        "{} {}",
+        "  SLOPCHOP CHECK REPORT".white().bold(),
+        format!("({duration:.2?})").dimmed()
+    );
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════".blue()
+    );
+    println!();
+
+    // Command results
+    println!("{}", "  COMMANDS".cyan().bold());
+    println!(
+        "{}",
+        "  ─────────────────────────────────────────────────────────".blue()
+    );
+
+    for cmd in &report.commands {
+        let status = if cmd.passed {
+            "✓".green()
+        } else {
+            "✗".red()
+        };
+        let duration_str = format!("{:>4}ms", cmd.duration_ms).dimmed();
+        let cmd_display = if cmd.command.len() > 40 {
+            format!("{}...", &cmd.command[..37])
+        } else {
+            cmd.command.clone()
+        };
+
+        println!("  {} {} {}", status, cmd_display.white(), duration_str);
+
+        // Show errors/warnings if any
+        let errors = cmd.error_count();
+        let warnings = cmd.warning_count();
+
+        if errors > 0 || warnings > 0 {
+            let mut parts = Vec::new();
+            if errors > 0 {
+                parts.push(format!("{} {}", errors.to_string().red(), "errors".red()));
+            }
+            if warnings > 0 {
+                parts.push(format!(
+                    "{} {}",
+                    warnings.to_string().yellow(),
+                    "warnings".yellow()
+                ));
+            }
+            println!("      └─ {}", parts.join(", "));
+        }
+    }
+
+    println!();
+
+    // Summary
+    println!("{}", "  SUMMARY".cyan().bold());
+    println!(
+        "{}",
+        "  ─────────────────────────────────────────────────────────".blue()
+    );
+
+    let total_cmds = report.total_commands();
+    let passed = report.passed_count();
+    let failed = report.failed_count();
+    let total_errors = report.total_errors();
+    let total_warnings = report.total_warnings();
+
+    println!(
+        "  Commands:  {} total, {} {}, {} {}",
+        total_cmds.to_string().white().bold(),
+        passed.to_string().green(),
+        "passed".green(),
+        failed.to_string().red(),
+        "failed".red()
+    );
+
+    println!(
+        "  Output:    {} {}, {} {}",
+        total_errors.to_string().red().bold(),
+        if total_errors == 1 { "error" } else { "errors" }.red(),
+        total_warnings.to_string().yellow().bold(),
+        if total_warnings == 1 {
+            "warning"
+        } else {
+            "warnings"
+        }
+        .yellow()
+    );
+
+    println!();
+
+    // Final verdict
+    if report.passed {
+        println!("{}", "  ✓ ALL CHECKS PASSED".green().bold());
+    } else {
+        println!("{}", "  ✗ CHECKS FAILED".red().bold());
+        println!();
+        println!("  See slopchop-report.txt for full output.");
+    }
+
+    println!();
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════".blue()
+    );
 }

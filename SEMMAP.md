@@ -1,5 +1,7 @@
 # project -- Semantic Map
 
+**Purpose:** Architectural linter and code quality governance
+
 ## Legend
 
 `[ENTRY]` Application entry point
