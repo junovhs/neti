@@ -13,11 +13,11 @@ keywords = ["code-quality", "linter", "ast", "developer-tools", "cli"]
 categories = ["development-tools", "command-line-utilities"]
 rust-version = "1.82"
 include = [
-  "Cargo.toml",
-  "Cargo.lock",
-  "src/**",
-  "README.md",
-  "LICENSE*",
+  "/Cargo.toml",
+  "/Cargo.lock",
+  "/src/**",
+  "/README.md",
+  "/LICENSE*",
 ]
 
 [lib]
