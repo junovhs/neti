@@ -175,3 +175,246 @@ Required behavior:
 * Add targeted regression tests using Dioxus CLI Tailwind integration patterns (`tokio::process::Command` + `.arg(...)`) to verify correct classification
 
 **Resolution:**
+
+---
+
+## [7] Rust parser correctness: eliminate “Syntax error detected” on valid Rust
+
+**Status:** OPEN
+**Files:** `src/analysis/ast.rs`, `src/analysis/syntax.rs`, `src/lang.rs`, `Cargo.toml` (tree-sitter deps), tests
+
+Neti currently emits LAW OF INTEGRITY “Syntax error detected” for valid Rust constructs (range patterns `0..`, `1..`, `Some(2..)`, inner attributes like `#![doc(...)]`, C-string literals `c"..."`, cfg-gated destructuring, etc). This is a trust-killer and blocks any attempt to use Neti on modern Rust.
+
+Required behavior:
+
+* Upgrade Rust parsing to fully support modern Rust syntax (Rust 1.90+).
+* If Neti cannot parse a file due to unsupported grammar, it must report a **non-violation diagnostic** (“parser unsupported for this syntax”) and must not claim a syntax error.
+* Add a **soundness guard**: if `cargo check` (or `cargo metadata` + a compile probe) succeeds for the workspace, Neti must never emit “syntax error” for Rust source files (unless the file is outside the crate graph and truly malformed).
+
+Deliverables:
+
+* Update tree-sitter Rust grammar and any node-kind mappings used by Neti.
+* Add regression tests for:
+
+  * inner attributes (`#![doc(...)]`)
+  * range patterns (`0..`, `24..`, `..=2`, `Some(2..)`)
+  * C-string literals (`c"main"`)
+  * cfg-conditional fields/destructuring
+* Add a “parser unsupported” diagnostics path distinct from “syntax error”.
+
+**Resolution:**
+
+---
+
+## [8] Proof-based indexing analysis: stop flagging safe indexing (arrays, iterators with invariants, chunks_exact)
+
+**Status:** OPEN
+**Files:** `src/analysis/patterns/logic.rs` (L03), `src/analysis/ast.rs`, tests
+
+Neti’s L03 “Index `[0]` without bounds check” is currently over-broad. It flags cases that are provably safe (fixed-size arrays, `chunks_exact(2)` indexing `[0]`/`[1]`, known-invariant code paths) and generates noise.
+
+Required behavior:
+
+* Do not flag indexing on **fixed-size arrays** when the index is a constant within bounds.
+* Do not flag indexing into slices produced by APIs that guarantee length, e.g.:
+
+  * `chunks_exact(N)` → indexing `[0..N-1]` is safe inside the closure
+  * `split_at(N)` → first slice length is `N`
+  * `array_chunks::<N>()` / `chunks_exact` patterns (where applicable)
+* For ambiguous cases, keep the warning, but provide a more precise suggestion:
+
+  * “prove non-empty with an assertion” (e.g., `debug_assert!(!x.is_empty())`) or refactor.
+
+Deliverables:
+
+* Implement small, composable proofs/invariants:
+
+  * “known fixed length container”
+  * “chunks_exact(N) closure implies length >= N”
+* Add regression tests using Dioxus examples:
+
+  * `chunks_exact(2).map(|a| u16::from_le_bytes([a[0], a[1]]))` should be **clean**
+  * fixed array indexing like `seed[0] = 1` should be **clean**
+* Keep L03 strong only when a panic is genuinely plausible.
+
+**Resolution:**
+
+---
+
+## [9] Fix L02 rule logic: remove incorrect off-by-one guidance and replace with correct boundary heuristics
+
+**Status:** OPEN
+**Files:** `src/analysis/patterns/logic.rs` (L02), tests
+
+Neti flags correct boundary guards (e.g. `if index >= len { return None; }`) with guidance that suggests it’s suspicious. That’s backwards; it produces false positives and bad advice.
+
+Required behavior:
+
+* L02 should target *actual* boundary ambiguity patterns, such as:
+
+  * loops with `0..=len()` or indexing with `<= len()` comparisons that can reach `len`
+  * patterns where `len()` is used in an inclusive range for indexing
+* Do not flag `index >= len()` guards—they’re canonical.
+
+Deliverables:
+
+* Replace L02 with a smaller set of precise triggers.
+* Add tests to ensure:
+
+  * `if idx >= v.len() { return None; } v[idx]` is not flagged
+  * `for i in 0..=v.len() { v[i] }` *is* flagged
+
+**Resolution:**
+
+---
+
+## [10] Safety rule robustness: recognize SAFETY justifications and avoid penalizing well-documented unsafe
+
+**Status:** OPEN
+**Files:** `src/analysis/safety.rs`, `src/analysis/patterns/safety.rs` (if split), tests
+
+Requiring `// SAFETY:` is good, but the rule should be robust and ergonomic: it should recognize nearby justifications and avoid false negatives in common formatting patterns.
+
+Required behavior:
+
+* Accept `// SAFETY:` comments that are:
+
+  * immediately above the `unsafe` block
+  * on the same line
+  * within a small window (e.g., within the preceding 2 lines) if separated by blank line or short comment
+* If an unsafe block is inside a function documented with a `# Safety` section, allow an opt-in mode to satisfy the requirement (still strict, but not brittle).
+
+Deliverables:
+
+* Improve detection of SAFETY comment adjacency.
+* Add tests with common Rust idioms (including code formatted by rustfmt).
+* Ensure Dioxus cases with correct justifications stop being flagged once a proper comment exists.
+
+**Resolution:**
+
+---
+
+## [11] Meaningful performance signals: downgrade/disable heuristic-only P01/P02 unless allocation is proven
+
+**Status:** OPEN
+**Files:** `src/analysis/patterns/performance.rs`, tests
+
+Neti’s P01/P02 heuristics fire frequently in real codebases (cloning Arcs, cheap string conversions, etc). To be antifragile, Neti should only escalate when it can establish material cost, otherwise it becomes “perf lint spam.”
+
+Required behavior:
+
+* For `.clone()` in loop:
+
+  * Only escalate when the cloned type is likely heap-owning (e.g., `String`, `Vec`, `HashMap`, `Box`, `Rc`), or when clone is nested in an inner hot loop and cannot be hoisted.
+  * For `Arc::clone` / `Rc::clone`, default to INFO/WARN unless additional evidence exists.
+* For `.to_string()`/string conversions in loops:
+
+  * Treat as WARN only when inside loop and result is not immediately consumed in a way that requires allocation.
+* Always include “why we think this is expensive” in analysis.
+
+Deliverables:
+
+* Add lightweight type heuristics based on token/path (no full type inference required).
+* Add tests that:
+
+  * don’t flag `Arc::clone` in loop by default
+  * do flag `String::to_string()` in loop when clearly alloc-heavy
+
+**Resolution:**
+
+---
+
+## [12] Governance-grade clippy integration: separate “lint hygiene” from “merge blockers”
+
+**Status:** OPEN
+**Files:** `src/verification/runner.rs`, `src/cli/audit.rs` (if relevant), docs/README, tests
+
+You’ve discovered that `cargo clippy -- -D warnings` on mature crates can explode due to lints the project does not treat as deny-by-default. Neti needs a robust approach: **Neti should not force an ecosystem-wide policy**, but it should support governance.
+
+Required behavior:
+
+* Provide first-class support for two tiers of command enforcement:
+
+  1. **Blockers**: compile/test failures, security-critical patterns, explicit deny-lists
+  2. **Hygiene**: clippy pedantic/nursery/etc as non-blocking or separately summarized
+* Allow commands to be marked as `mode = "error" | "warn"` in Neti config (without special-casing any repo).
+* Ensure the report compression (Issue [1]) groups these clearly.
+
+Deliverables:
+
+* Extend `[commands]` schema to allow severity / mode per command.
+* Report should clearly show:
+
+  * “BLOCKING” sections
+  * “NON-BLOCKING / HYGIENE” sections
+* Add tests on runner behavior.
+
+**Resolution:**
+
+---
+
+## [13] Asset and non-source file classification: stop applying code laws to non-code artifacts
+
+**Status:** OPEN
+**Files:** `src/discovery.rs`, `src/lang.rs`, `src/analysis/engine.rs` (or wherever file typing occurs), tests
+
+Neti is currently applying LAW OF ATOMICITY and other code-focused checks to large artifacts like HTML, JSON schema, and bundled/minified JS. That’s not a “large repo special case”—it’s a correctness issue: those aren’t code units governed by the same rules.
+
+Required behavior:
+
+* Classify files into:
+
+  * **source code** (Rust/Python/TS/etc)
+  * **config** (toml/yaml)
+  * **assets** (html/json/svg/minified js/css/etc)
+* Only apply structural laws (tokens, cognitive complexity, naming, etc.) to **source code** by default.
+* Still allow scanning assets for specific checks where meaningful (e.g., secrets detection), but **do not** treat them as atomicity violations.
+
+Deliverables:
+
+* Implement file classification centrally.
+* Add tests:
+
+  * `.html` and `.json` do not trigger token-limit violations
+  * Rust/TS/Py still do
+  * secrets scanning can still include assets if enabled
+
+**Resolution:**
+
+---
+
+## [14] Dioxus calibration gate: prove “all green means real green” with a locked regression suite
+
+**Status:** OPEN
+**Files:** `tests/` (new), `src/analysis/*`, `src/discovery.rs`, CI config (optional)
+
+Once the above fixes land, we need a stable regression target to prevent backsliding. Dioxus is a perfect real-world corpus.
+
+Required behavior:
+
+* Add a regression test harness that runs Neti scan against a pinned Dioxus snapshot (or a small curated fixture extracted from Dioxus that includes the problematic constructs).
+* The suite should assert:
+
+  * no “syntax error” false positives
+  * no C03/X02 misclassifications
+  * no asset token-limit violations
+  * indexing proofs behave correctly
+
+Deliverables:
+
+* Add fixtures (small extracted files) to avoid huge repo vendoring.
+* Add CI job that runs these regression tests.
+
+**Resolution:**
+
+---
+
+### Notes on ordering
+
+If you want to get to “Dioxus green OR real problems” fastest, the order is:
+
+1. **[7] parser correctness** (everything depends on this)
+2. **[13] file classification** (removes asset noise correctly)
+3. **[8]/[9] indexing + boundary correctness** (removes lots of false positives)
+4. **[5]/[6] (already in your list)** C03/X02 correctness
+5. **[12] command tiering** + **[1] compression** (quality of life + governance)
