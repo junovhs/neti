@@ -93,3 +93,7 @@ Rust has full pattern detection. Python and TypeScript are marked "Partial" in t
 scratchpad need to fix later: 
 
 getting some C03 violations on Dioxus as false positives from Neti. Which is actually useful to know — it means Neti needs a smarter check that distinguishes std::sync::Mutex from tokio::sync::Mutex / futures_util::lock::Mutex.
+
+
+
+Neti incorrectly flags `futures_util::lock::Mutex` (async mutex) as `std::sync::MutexGuard held across .await`, reporting “critical deadlock risk” in async code (e.g., Dioxus `packages/fullstack/src/payloads/websocket.rs`). Detection should distinguish sync vs async mutexes and downgrade/adjust guidance for async locks (reentrancy/starvation vs thread-blocking deadlock).
