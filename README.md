@@ -171,7 +171,7 @@ For codebases above a minimum size threshold, Neti computes full dependency grap
 ```toml
 [commands]
 check = [
-    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic",
+    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing -A clippy::struct_excessive_bools -A clippy::module_name_repetitions -A clippy::missing_errors_doc -A clippy::must_use_candidate",
     "cargo test",
 ]
 ```
