@@ -1,5 +1,4 @@
-
-# issues-0002: Nim Integration + Consolidation Sweep
+# issues-0003: Post-Launch Work
 ---
 ## FORMAT (DO NOT MODIFY)
 **Status values:** `OPEN`, `IN PROGRESS`, `DONE`, `DESCOPED`
@@ -16,367 +15,73 @@ Description of the task.
 - Update status as you go
 - Add **Resolution:** when completing
 - Don't modify this FORMAT section
-- Content below the line is the work. When done, archive in docs/archive and create next issues doc.
+- Content below the line is the work.
 ---
 
-## Context
-
-This issue set covers two tracks:
-- **Track A (Carried from issues-0001):** Consolidation, cleanup, and refocusing of SlopChop core.
-- **Track B (New):** Tier-1 Nim language support per `docs/SlopChop_Nim_Tier1_Spec.md`.
-
-Track A should be completed first where items directly affect Track B (e.g., cutting v1 remnants, reframing the analysis engine). Items are ordered by dependency, not priority number.
-
----
-
-## [1] Reframe v2 analysis engine as THE analysis engine
-**Status:** DONE
-**Files:** `src/analysis/v2/` (all), `src/analysis/mod.rs`, `src/analysis/ast.rs`, `src/analysis/engine.rs`, `src/analysis/logic.rs`, `src/analysis/file_analysis.rs`, `src/analysis/checks.rs`, `src/analysis/metrics.rs`, `src/analysis/safety.rs`
-**Blocking:** [9], [10], [11]
-
-Remove all traces of "v2" naming. The v2 engine IS the engine. This must land before Nim integration because new Nim code should not be written into a `/v2/` namespace that's about to be renamed.
-
-Tasks:
-- Rename `src/analysis/v2/` contents into `src/analysis/` proper (or a clean namespace like `src/analysis/engine/`)
-- Remove or absorb any remaining v1 analysis code (`ast.rs`, `checks.rs`, `metrics.rs`, `safety.rs`, `engine.rs`, `logic.rs`, `file_analysis.rs`) — determine what's still live vs dead
-- Update all internal imports and references
-- Update the scan spec doc to remove "v2" language
-- Run `slopchop check` against self to verify nothing broke
-
-**Resolution:** The `src/analysis/v2/` directory does not exist — consolidation was already complete. Remaining "v2" references are only historical comments noting file origin (e.g., `// src/analysis/v2/cognitive.rs`). These are not blocking. No code changes required.
-
----
-
-## [2] Cut packing functionality
-**Status:** DONE
-**Files:** `src/pack/mod.rs`, `src/pack/docs.rs`, `src/pack/focus.rs`, `src/pack/formats.rs`, `src/pack/xml_format.rs`, `src/cli/handlers/mod.rs` (handle_pack), `src/cli/args.rs` (pack command definition)
-
-SEMMAP replaces packing. Remove all pack-related code:
-- Delete `src/pack/` module entirely
-- Remove `handle_pack` from CLI handlers
-- Remove `PackArgs` and pack command from `src/cli/args.rs`
-- Remove pack-related exports from `src/lib.rs`
-- Clean up any `FocusContext`, `OutputFormat`, `PackOptions` references elsewhere
-
-**Resolution:** Deleted `src/pack/` directory. Removed `Pack` command from `args.rs`, removed `PackArgs` struct and `handle_pack` function from `handlers/mod.rs`, removed pack import from `dispatch.rs`, removed `pub mod pack;` from `lib.rs`. Build green.
-
----
-
-## [3] Cut slopchop map and map --deps
-**Status:** DONE
-**Files:** `src/map.rs`, `src/cli/handlers/mod.rs` (handle_map), `src/cli/args.rs` (map command definition)
-
-Separate app handles this better now. Remove:
-- Delete `src/map.rs`
-- Remove `handle_map` from CLI handlers
-- Remove map command from args
-- Remove map-related exports from `src/lib.rs`
-- Clean up `src/discovery.rs` if it was only used by map (check — it may still be used by scan/analysis)
-
-**Resolution:** Deleted `src/map.rs`. Removed `Map` command from `args.rs`, removed `handle_map` function and `use crate::map;` from `handlers/mod.rs`, removed `handle_map` import and `Commands::Map` match arms from `dispatch.rs`, removed `pub mod map;` from `lib.rs`. `src/discovery.rs` retained — still used by scan/analysis. Build green.
-
----
-
-## [4] Evaluate prompt mechanisms post-pack removal
-**Status:** DONE
-**Files:** `src/prompt.rs`, `AGENT-README.md`
-
-With pack and map cut, the prompt generation system (`src/prompt.rs`) may have dead code paths or references to removed features. Evaluate:
-- Is `src/prompt.rs` still needed at all, or does `AGENT-README.md` in root fully replace it?
-- If keeping prompt.rs: strip references to pack, context generation, and anything that assumes the old chat-based workflow
-- If the autonomous protocol markdown (AGENT-README.md) is the primary interface, ensure it's the source of truth and prompt.rs just generates/updates it
-- Update prompt content for Nim support (see Nim spec Section 6)
-
-**Resolution:** Deleted `src/prompt.rs` entirely as part of apply system removal. Updated `AGENT-README.md` to remove `slopchop map` references. SlopChop is now a pure governance tool — AI ingestion is handled externally. Build green.
-
----
-
-## [5] Smart clippy/compiler output compression
+## [1] Smart output compression for neti-report.txt
 **Status:** OPEN
-**Files:** `src/cli/handlers/scan_report.rs`, `src/verification/runner.rs`, potentially new `src/reporting/compression.rs`
+**Files:** `src/verification/runner.rs`, potentially new `src/reporting/compression.rs`
 
-The problem: clippy (and soon `nim check`) can output 10,000 lines for what amounts to 2 distinct issues repeated across many call sites. AI agents waste context window on this noise. `slopchop-report.txt` should be maximally informative but succinct.
+Clippy and other tools can output 10,000 lines for what amounts to 2 distinct issues repeated across many call sites. AI agents waste context window on this noise. `neti-report.txt` should be maximally informative but succinct.
 
 Approach:
-- Group violations/errors by **kind** (error code + message template), not by occurrence
+- Group violations/errors by kind (error code + message template), not by occurrence
 - For each kind: show the first 2-3 instances with full context, then a count of remaining occurrences with just file:line references
-- Example output format:
+- Example:
   ```
   E0308 (mismatched types) — 47 occurrences across 12 files
     src/foo.rs:42  expected `String`, found `&str`
     src/bar.rs:88  expected `String`, found `&str`
     ... and 45 more (src/baz.rs:12, src/qux.rs:55, ...)
-  
-  W0599 (clippy::clone_on_copy) — 3 occurrences
-    src/utils.rs:14  ...
-    src/utils.rs:28  ...
-    src/utils.rs:91  ...
   ```
-- This must work for ANY command output in the `[commands]` check pipeline — not just clippy. When Nim's `nim check` joins, it benefits automatically.
-- Write compression logic as a shared utility, not clippy-specific
+- Must work for ANY command output in the `[commands]` pipeline — not clippy-specific
+- Write compression logic as a shared utility
 
 **Resolution:**
 
 ---
 
-## [6] Clipboard character encoding issues
-**Status:** DESCOPED
-**Files:** `src/clipboard/mod.rs`, `src/clipboard/linux.rs`, `src/clipboard/macos.rs`, `src/clipboard/windows.rs`, `src/clipboard/utils.rs`, `src/apply/parser.rs`, `src/apply/blocks.rs`
-
-Recurring issue: clipboard transfers corrupt trailing characters, especially in `Cargo.toml` files. Last character often becomes `#`, carriage return errors appear.
-
-**Resolution:** The entire clipboard module (`src/clipboard/`) and apply system have been deleted. SlopChop no longer handles clipboard operations. Issue is no longer relevant.
-
----
-
-## [7] Evaluate apply/check separation
-**Status:** DONE
-**Files:** Architectural decision — no immediate code changes
-
-Question: should `slopchop apply` and `slopchop check` be separate binaries, separate crates in a workspace, or remain unified?
-
-**Resolution:** **Apply system deleted entirely.** SlopChop is now a pure governance/verification tool. The AI ingestion layer (apply, clipboard, XSC7XSC protocol parsing) has been removed as it was causing recurring issues (clipboard corruption, file corruption) and wasn't necessary for human-in-the-loop workflows. 
-
-**Current SlopChop scope:**
-- `slopchop scan` — Violation detection
-- `slopchop check` — External command verification (clippy, tests, etc.)
-- `slopchop branch/promote/abort` — Git sandbox workflow for AI agents
-- `slopchop config` — Interactive configuration editor
-- `slopchop clean` — Artifact cleanup
-- `slopchop mutate` — Mutation testing
-
-**New module:** `src/verification/` — minimal command runner that executes `[commands]` from config and writes to `slopchop-report.txt`.
-
----
-
-## [8] Revisit law of locality elevation
+## [2] Locality integration into standard scan pipeline
 **Status:** OPEN
 **Files:** `src/graph/locality/` (all), `src/cli/locality.rs`, `src/config/locality.rs`
 
-Locality has a massive subgraph (classifier, coupling, cycles, distance, edges, exemptions, layers, validator, types, report, analysis/metrics, analysis/violations). It feels weirdly separate from the main scan pipeline.
+Locality has a massive subgraph (classifier, coupling, cycles, distance, edges, exemptions, layers, validator, types, report, analysis/metrics, analysis/violations) but feels separate from the main scan pipeline.
 
 Questions to resolve:
-- Should locality be a first-class `slopchop check` phase (runs automatically like clippy), or an opt-in `slopchop locality` command?
-- Is the current implementation actually providing value proportional to its code size?
-- Can the locality violations be surfaced as regular scan violations (same format, same report) rather than having their own separate report?
-- For Nim support: the edge collection (`src/graph/locality/edges.rs`) and import resolution (`src/graph/imports.rs`, `src/graph/resolver.rs`) need Nim import syntax support. This is simpler if locality is integrated into the standard pipeline.
+- Should locality be a first-class `neti check` phase (runs automatically), or remain an opt-in `neti locality` command?
+- Is the implementation providing value proportional to its code size?
+- Can locality violations be surfaced as regular scan violations (same format, same report) rather than a separate report?
 
-Recommendation: integrate locality results into the standard scan report format. Keep the graph engine as-is but unify the output so it doesn't feel like a separate tool.
+Recommendation: integrate locality results into the standard scan report format. Keep the graph engine as-is but unify the output.
 
 **Resolution:**
 
 ---
 
-## [9] Nim: Grammar validation and node discovery (GATE)
+## [3] Mutation testing kill rate
 **Status:** OPEN
-**Files:** `Cargo.toml`, `tests/nim_grammar.rs` (new)
-**Blocking:** [10], [11], [12], [13], [14], [15]
-**Spec ref:** Nim Spec Phase 1
+**Files:** `src/mutate/` (all), tests
 
-This is the gating step. Everything else depends on this.
+Current mutation testing exists but kill rate is unknown. Target: 70%+ kill rate. This requires meaningful test coverage of core analysis logic — engine phase separation, violation detection contracts, `Violation`/`FileReport` constructors.
 
 Tasks:
-- Add `tree-sitter-nim = { git = "https://github.com/alaviss/tree-sitter-nim", tag = "0.6.2" }` to Cargo.toml
-- Verify it compiles with existing tree-sitter version
-- Write and run `test_nim_grammar_node_discovery` — this prints the actual AST for a sample Nim file
-- Document discovered node names for: proc declarations, if/elif/case, import statements, type declarations, exported symbols (the `*` postfix), routine bodies
-- Compare discovered names against the queries in the Nim spec Section 3.2
-- Update spec queries to match reality
-- Write query compilation tests for all 6 query categories
-- **STOP HERE if queries don't compile. Do not proceed to [10]+.**
+- Run `neti mutate` against self, establish baseline kill rate
+- Add contract tests for core types
+- Add regression tests for two-phase engine invariant (parallel local → sequential deep)
+- Iterate until 70%+ kill rate achieved
 
 **Resolution:**
 
 ---
 
-## [10] Nim: Language integration
+## [4] Python and TypeScript pattern detection parity
 **Status:** OPEN
-**Files:** `src/lang.rs`, `src/constants.rs`, `src/project.rs`, `src/config/types.rs`
-**Depends on:** [9]
-**Spec ref:** Nim Spec Sections 3.1, 5
+**Files:** `src/analysis/patterns/` (all), `src/lang.rs`
 
-Tasks:
-- Add `Nim` variant to `Lang` enum
-- Implement `from_ext` for `.nim` / `.nims`
-- Implement `grammar()` returning `tree_sitter_nim::language()`
-- Implement `skeleton_replacement()` returning `"\n  discard"`
-- Add Nim queries to the QUERIES array (using corrected node names from [9])
-- Update `CODE_EXT_PATTERN` in constants.rs
-- Add `Nim` to `ProjectType` enum
-- Implement `.nimble` file detection
-- Implement `nim.cfg` / `config.nims` fallback detection
-- Add default commands: `nim check`, `nimpretty --check`, `nimble test`
-- Implement tool presence detection for `nimpretty`
+Rust has full pattern detection. Python and TypeScript are marked "Partial" in the README. Close the gap on the most impactful patterns:
+- Concurrency patterns where applicable
+- Security patterns (injection, credential exposure)
+- Performance patterns (allocation in loops, linear search in loops)
+- Idiomatic patterns per language
 
 **Resolution:**
-
----
-
-## [11] Nim: Paranoia checks
-**Status:** OPEN
-**Files:** `src/analysis/checks/nim_checks.rs` (new), `src/analysis/ast.rs`
-**Depends on:** [9], [10]
-**Spec ref:** Nim Spec Section 4
-
-Create `nim_checks.rs` with detection for all 10+ unsafe constructs:
-
-- [ ] `check_cast` — `cast[T](x)`, AST-based with text fallback
-- [ ] `check_addr` — `addr()` / `unsafeAddr()`, AST with text fallback
-- [ ] `check_ptr_types` — `ptr T` / `pointer` type declarations
-- [ ] `check_emit_pragma` — `{.emit.}` inline C injection (text-based)
-- [ ] `check_asm_statement` — `asm` blocks, AST with text fallback
-- [ ] `check_raw_memory_ops` — `copyMem`, `moveMem`, `zeroMem`, `equalMem`, `cmpMem`
-- [ ] `check_manual_alloc` — `alloc`, `alloc0`, `dealloc`, `realloc`, `create(T)` with uppercase heuristic
-- [ ] `check_disabled_checks` — `{.push checks:off.}` and 9 other pragma variants
-- [ ] `check_noinit` — `{.noinit.}` pragma
-- [ ] `check_global_pragma` — `{.global.}` on local `var`/`let`
-- [ ] `has_safety_comment` — shared helper, checks current line and line above for `# SAFETY:`
-- [ ] Wire up `check_nim_specifics` dispatch in `ast.rs`
-- [ ] Profile-aware severity: systems mode relaxes ptr/cast/addr/alloc/memory/noinit to warnings; emit/asm/disabled-checks remain errors
-
-**Resolution:**
-
----
-
-## [12] Nim: Naming conventions
-**Status:** OPEN
-**Files:** `src/analysis/checks/naming.rs`
-**Depends on:** [10]
-**Spec ref:** Nim Spec Section 8
-
-Add Nim naming convention checks:
-- Types/objects/enums: must start uppercase (PascalCase)
-- Procs/funcs/methods/iterators/converters: must start lowercase (camelCase)
-- Exception: backtick-quoted operators (`\`+\``, `\`$\``) are exempt
-- Wire into the naming check dispatcher with `Lang::Nim` guard
-
-**Resolution:**
-
----
-
-## [13] Nim: Strict config generator
-**Status:** OPEN
-**Files:** `src/project.rs` (or new `src/nim_config.rs`), `src/cli/args.rs`, `src/cli/dispatch.rs`
-**Depends on:** [10]
-**Spec ref:** Nim Spec Section 5.4
-
-Implement `slopchop init --nim`:
-- Generate `nim.cfg` with strict defaults: `--mm:arc`, `--warningAsError:on`, `--checks:on`, `--panics:on`, `--styleCheck:error`, all runtime checks enabled
-- Generate `slopchop.toml` with Nim-appropriate defaults
-- Generate `.slopchopignore` with Nim-specific entries (`nimcache/`, `nimblecache/`)
-- If `slopchop init` already exists, extend it with `--nim` flag or auto-detect from project type
-
-**Resolution:**
-
----
-
-## [14] Nim: Test suite
-**Status:** OPEN
-**Files:** `tests/nim_grammar.rs` (extend from [9]), `tests/nim_paranoia.rs` (new), `tests/fixtures/nim/paranoia.nim` (new), `tests/fixtures/nim/false_positive.nim` (new)
-**Depends on:** [11]
-**Spec ref:** Nim Spec Section 9
-
-- [ ] Query compilation tests pass for all 6 categories (naming, complexity, imports, defs, exports, skeleton)
-- [ ] Paranoia test: ≥9 violations from unsafe code fixture
-- [ ] False positive test: 0 violations from safe Nim code fixture
-- [ ] SAFETY comment suppression: violations disappear when `# SAFETY:` is present
-- [ ] Smoke test: `slopchop scan` on a minimal Nimble project produces correct output
-- [ ] `slopchop check` on Nimble project runs `nimble test` (or emits tool-not-found warning)
-- [ ] `slopchop init --nim` generates valid `nim.cfg` and `slopchop.toml`
-
-**Resolution:**
-
----
-
-## [15] Nim: Autonomous protocol and prompt updates
-**Status:** OPEN
-**Files:** `AGENT-README.md`
-**Depends on:** [11]
-**Spec ref:** Nim Spec Sections 6, 10
-
-- Add Nim-specific guidance to autonomous protocol / AGENT-README.md
-- Include: no `cast[]` without `# SAFETY:`, no `{.emit.}`, no disabled runtime checks, prefer `ref` over `ptr`, respect `nim.cfg` as governance
-
-**Resolution:**
-
----
-
-## [16] Nim: V2 metrics exclusion guard
-**Status:** OPEN
-**Files:** `src/analysis/worker.rs`
-**Depends on:** [10]
-**Spec ref:** Nim Spec Section 7
-
-Ensure the analysis engine guard clause excludes Nim from LCOM4/CBO/AHF/SFOUT scope extraction. Nim scope extraction (mapping `type Foo = object` + procs-with-Foo-first-param to cohesion scopes) is a future Phase 2 item.
-
-- Add `Lang::Nim` to the `if lang != Lang::Rust` early-return guard
-- Ensure Nim files still get basic violations (token count, complexity, nesting, args) just not structural metrics
-
-**Resolution:**
-
----
-
-## [17] Nim: Import resolver for locality graph
-**Status:** OPEN
-**Files:** `src/graph/imports.rs`, `src/graph/resolver.rs`
-**Depends on:** [8], [10]
-
-Extend the import extraction and resolution to understand Nim's import syntax:
-- `import std/strutils` → resolves to stdlib module
-- `import mymodule` → resolves to `mymodule.nim` in project
-- `from os import paramCount` → resolves to `os` module
-- `include helpers` → resolves to `helpers.nim` (textual include)
-- `import pkg/somelib` → Nimble package dependency
-
-This enables the law of locality graph to work with Nim projects. The edge collection, coupling computation, and cycle detection are all language-agnostic once edges are resolved.
-
-**Resolution:**
-
----
-
-## [18] Cut signatures command
-**Status:** DONE
-**Files:** `src/signatures/` (all), `src/cli/args.rs`, `src/cli/dispatch.rs`, `src/cli/handlers/mod.rs`, `src/lib.rs`
-
-The signatures command generates AI context (type surfaces, PageRank, topological ordering) — it's context generation for AI, not governance. Same category as pack/map.
-
-**Resolution:** Deleted `src/signatures/` directory. Removed `Signatures` command from `args.rs`, removed `handle_signatures` function and imports from `handlers/mod.rs` and `dispatch.rs`, removed `pub mod signatures;` from `lib.rs`. Build green.
-
----
-
-## Dependency Graph
-
-```
-Track A (Consolidation) ───────────────────────────────────── DONE
-[1] Reframe v2 engine ──────────── DONE
-[2] Cut packing ────────────────── DONE
-[3] Cut map ────────────────────── DONE
-[4] Prompt eval ────────────────── DONE (prompt.rs deleted)
-[6] Clipboard issues ───────────── DESCOPED (clipboard deleted)
-[7] Apply/check separation ─────── DONE (apply deleted)
-[18] Cut signatures ────────────── DONE
-
-Track B (Nim Integration)
-[9] Grammar validation (GATE)
-         │
-         ├──→ [10] Language integration
-         │         │
-         │         ├──→ [11] Paranoia checks ──→ [14] Tests
-         │         │         │
-         │         │         └──→ [15] Protocol updates
-         │         │
-         │         ├──→ [12] Naming conventions
-         │         │
-         │         ├──→ [13] Strict config gen
-         │         │
-         │         └──→ [16] Metrics guard
-         │
-[8] Locality revisit ────────────→ [17] Nim import resolver
-
-Independent:
-[5] Output compression
-```
-
-**Track A is complete.** SlopChop is now a lean governance tool with 6 commands: `scan`, `check`, `branch`, `promote`, `abort`, `config`, `clean`, `mutate`.
-
-Ready to proceed with Track B (Nim Integration) starting with [9].
