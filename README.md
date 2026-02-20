@@ -105,52 +105,56 @@ Hard limits that block merges when exceeded:
 
 ### Pattern Detection (AST-Level)
 
-Neti parses your actual AST using Tree-sitter and detects specific anti-patterns by category:
+Neti parses your actual AST using Tree-sitter and detects specific anti-patterns by category. Every violation includes a precise diagnosis and a concrete suggestion — not "this looks bad" but "here is exactly what to do."
 
 **Concurrency**
-- `C03` — `MutexGuard` held across an `.await` point (deadlock waiting to happen)
-- `C04` — Undocumented synchronization primitives
+- `C03` — `MutexGuard` held across an `.await` point. A deadlock waiting to happen. Suggestion: drop the guard before the await, or use an async-aware lock.
+- `C04` — `Arc<Mutex<T>>` without documentation. Undocumented synchronization primitives are landmines for the next person touching the code.
 
 **Security**
-- `X01` — SQL injection surface patterns
-- `X02` — Credential and secret exposure
-- `X03` — Unsafe input handling
+- `X01` — Format string used to build SQL. Formatting into SQL bypasses parameterization. Suggestion: use parameterized queries.
+- `X02` — Dynamic value passed to a command or shell invocation. Suggestion: validate against an allowlist or use a constant.
+- `X03` — Hardcoded secret or credential. Secrets should come from the environment. Suggestion: use `std::env::var()`.
 
 **Performance**
-- `P01` — Unnecessary cloning in hot paths
-- `P02` — Excessive allocation patterns
-- `P04` — Inefficient iteration
-- `P06` — String formatting anti-patterns
-
-**Logic**
-- `L02` — Boundary ambiguity (`<=`/`>=` with `.len()`, off-by-one surface)
-- `L03` — Additional logic correctness patterns
-
-**State**
-- `S01`, `S02`, `S03` — State management violations and anti-patterns
-
-**Resource**
-- `R07` — Missing flush on buffered writers
-
-**Semantic**
-- `M03`, `M04`, `M05` — Semantic correctness patterns
-
-**Idiomatic**
-- `I01`, `I02` — Language-idiomatic patterns
+- `P01` — `.clone()` detected inside a loop. Clone appears hoistable. Suggestion: hoist the clone or use `Arc`.
+- `P02` — String conversion inside a loop. Allocation appears hoistable. Suggestion: hoist the allocation.
+- `P04` — Nested loop (O(n²) or worse). Quadratic or O(n×m) complexity detected.
+- `P06` — Linear search inside a loop. Suggestion: use a `HashSet` or sort + binary search.
 
 **Database**
-- `P03` — N+1 query patterns
+- `P03` — DB call inside a loop using the loop variable. Classic N+1 query pattern. Suggestion: batch the query outside the loop.
+
+**Logic**
+- `L02` — `<=` or `>=` used with `.len()`. Boundary ambiguity — off-by-one surface.
+- `L03` — Unchecked `[0]` index or `.first().unwrap()`. Panics on empty input.
+
+**State**
+- `S01` — `static mut` declaration. Global mutable state is a source of data races and unpredictable behavior. Suggestion: use `AtomicUsize`, `Mutex<T>`, or `OnceCell`.
+- `S02` — `pub static` with a non-constant-style name. Exported statics expose shared state and create implicit coupling. Suggestion: make it private or use a function.
+- `S03` — `lazy_static!` containing `Mutex<Vec>`, `Mutex<HashMap>`, `RwLock<Vec>`, or `RwLock<HashMap>`. Global container pattern — often indicates singleton abuse. Suggestion: pass data through function parameters.
+
+**Resource**
+- `R07` — `BufWriter` created without a `flush()` call. Silent data loss on drop.
+
+**Semantic**
+- `M03` — `get_*` or `is_*` method that takes `&mut self`. A getter with hidden mutation violates the principle of least surprise.
+- `M04` — `is_*` or `has_*` method that doesn't return `bool`. Misleading name.
+- `M05` — `calculate_*` or `compute_*` method that takes `&mut self`. Pure computation shouldn't mutate state.
+
+**Idiomatic**
+- `I01` — Manual `From` implementation that could use `derive`. Unnecessary boilerplate.
+- `I02` — Match arms with duplicate bodies. Should be collapsed into a single arm.
 
 **Safety**
-- Unsafe blocks without `// SAFETY:` justification comments
-- Optional: ban `unsafe` entirely
+- Unsafe blocks without a `// SAFETY:` justification comment.
+- Optional: ban `unsafe` entirely.
 
 **Syntax**
-- AST-level syntax error detection
-- Missing or malformed nodes
+- AST-level syntax error and malformed node detection.
 
 **Naming**
-- Function naming convention enforcement by language
+- Function naming convention enforcement by language.
 
 ### Deep Structural Analysis (Graph-Level)
 
@@ -158,10 +162,10 @@ For codebases above a minimum size threshold, Neti computes full dependency grap
 
 - **Law of Locality** — Dependency distance analysis using Lowest Common Ancestor. Flags cross-boundary coupling that violates your intended layering. Configurable as warn or error.
 - **Cycle Detection** — Finds circular dependencies in your module graph.
-- **PageRank** — Identifies the most structurally critical files in the codebase. Useful for understanding what's load-bearing.
-- **Hub Detection** — Finds modules with unusually high afferent coupling (everything depends on them).
+- **PageRank** — Identifies the most structurally critical files in the codebase.
+- **Hub Detection** — Finds modules with unusually high afferent coupling.
 - **God Module Detection** — Finds modules that do too much.
-- **Layer Violation Detection** — Enforces that your dependency direction matches your intended architecture (e.g. `ui → domain → infra`, never `infra → domain`).
+- **Layer Violation Detection** — Enforces that dependency direction matches your intended architecture (e.g. `ui → domain → infra`, never `infra → domain`).
 - **Coupling Entropy** — Measures overall topological health of the codebase.
 
 ### Your Own Commands
@@ -239,7 +243,7 @@ backup_retention = 5
 
 [commands]
 check = [
-    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing",
+    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing -A clippy::struct_excessive_bools -A clippy::module_name_repetitions -A clippy::missing_errors_doc -A clippy::must_use_candidate",
     "cargo test",
 ]
 fix = ["cargo fmt"]
