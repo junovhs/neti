@@ -22,7 +22,6 @@ pub struct ViolationDetails {
 }
 
 impl Violation {
-    /// Creates a simple violation without details.
     #[must_use]
     pub fn simple(row: usize, message: String, law: &'static str) -> Self {
         Self {
@@ -33,7 +32,6 @@ impl Violation {
         }
     }
 
-    /// Creates a violation with prescriptive details.
     #[must_use]
     pub fn with_details(
         row: usize,
@@ -62,13 +60,11 @@ pub struct FileReport {
 }
 
 impl FileReport {
-    /// Returns true if no violations were found.
     #[must_use]
     pub fn is_clean(&self) -> bool {
         self.violations.is_empty()
     }
 
-    /// Returns the number of violations.
     #[must_use]
     pub fn violation_count(&self) -> usize {
         self.violations.len()
@@ -85,19 +81,16 @@ pub struct ScanReport {
 }
 
 impl ScanReport {
-    /// Returns true if any violations were found.
     #[must_use]
     pub fn has_errors(&self) -> bool {
         self.total_violations > 0
     }
 
-    /// Returns the number of clean files.
     #[must_use]
     pub fn clean_file_count(&self) -> usize {
         self.files.iter().filter(|f| f.is_clean()).count()
     }
 
-    /// Returns true if this scan was run in small codebase mode.
     #[must_use]
     pub fn is_small_codebase(&self) -> bool {
         crate::analysis::Engine::small_codebase_threshold() >= self.files.len()

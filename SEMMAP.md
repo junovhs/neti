@@ -115,7 +115,7 @@ Triptych HUD (Head-Up Display) for process execution feedback. Supports applicat
 
 `src/verification/mod.rs`
 External command verification pipeline. Supports application functionality.
-→ Exports: VerificationReport, new, run
+→ Exports: CommandResult, VerificationReport, error_count, failed_count, new, passed_count, run, total_commands, total_errors, total_warnings, warning_count
 
 ## Layer 2 -- Domain
 
@@ -282,9 +282,6 @@ Detects build systems. Supports application functionality.
 `src/discovery.rs`
 Runs the file discovery pipeline. Parses input into structured data.
 → Exports: discover, group_by_directory
-
-`src/error.rs`
-Error handling - just use anyhow everywhere. Defines error types and handling.
 
 `src/events.rs`
 Machine-readable event logging for audit trails. Supports application functionality.
@@ -460,4 +457,7 @@ Inspection logic for scopes (Metrics application). Verifies correctness.
 
 `src/graph/locality/tests.rs`
 Integration tests for locality analysis. Verifies correctness.
+
+`tests/nim_grammar.rs`
+Nim grammar validation tests for Issue [9]. Verifies correctness.
 

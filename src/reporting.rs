@@ -35,26 +35,13 @@ fn print_file_violations(file: &FileReport) {
 
 fn print_violation(path: &Path, v: &Violation) {
     let path_str = path.display().to_string();
-    println!(
-        "{} {}",
-        "error:".red().bold(),
-        v.message
-    );
-    println!(
-        "  {} {}:{}",
-        "-->".blue(),
-        path_str,
-        v.row
-    );
+    println!("{} {}", "error:".red().bold(), v.message);
+    println!("  {} {}:{}", "-->".blue(), path_str, v.row);
 
     // Render code snippet if available
     print_snippet(path, v.row);
 
-    println!(
-        "   {} {}: Action required",
-        "=".blue(),
-        v.law.yellow()
-    );
+    println!("   {} {}: Action required", "=".blue(), v.law.yellow());
 
     if let Some(ref details) = v.details {
         print_violation_details(details);
@@ -65,27 +52,29 @@ fn print_violation(path: &Path, v: &Violation) {
 
 fn print_snippet(path: &Path, row: usize) {
     // Basic caching could go here, but OS file cache is usually sufficient for CLI
-    let Ok(content) = fs::read_to_string(path) else { return };
+    let Ok(content) = fs::read_to_string(path) else {
+        return;
+    };
     let lines: Vec<&str> = content.lines().collect();
-    
+
     // Convert 1-based row to 0-based index
     let idx = row.saturating_sub(1);
-    
+
     // Show 1 line of context above, the error line, and 1 below if possible
     let start = idx.saturating_sub(1);
     let end = (idx + 1).min(lines.len() - 1);
 
     println!("   {}", "|".blue());
-    
+
     for i in start..=end {
         if let Some(line) = lines.get(i) {
             let line_num = i + 1;
             let gutter = format!("{line_num:3} |");
-            
+
             if i == idx {
                 // Focus line
                 println!("   {} {}", gutter.blue(), line);
-                
+
                 // Draw underline
                 // Simple heuristic: underline everything that isn't leading whitespace
                 let trimmed = line.trim_start();
@@ -93,7 +82,7 @@ fn print_snippet(path: &Path, row: usize) {
                 let underline_len = trimmed.len().max(1);
                 let spaces = " ".repeat(padding);
                 let carets = "^".repeat(underline_len);
-                
+
                 println!("   {} {}{}", "|".blue(), spaces, carets.red().bold());
             } else {
                 // Context line
@@ -114,12 +103,7 @@ fn print_violation_details(details: &crate::types::ViolationDetails) {
 
     if let Some(ref suggestion) = details.suggestion {
         println!("   {}", "|".blue());
-        println!(
-            "   {} {} {}",
-            "=".blue(),
-            "SUGGESTION:".green(),
-            suggestion
-        );
+        println!("   {} {} {}", "=".blue(), "SUGGESTION:".green(), suggestion);
     }
 }
 
@@ -183,4 +167,4 @@ pub fn print_json<T: serde::Serialize>(data: &T) -> Result<()> {
     let json = serde_json::to_string_pretty(data)?;
     println!("{json}");
     Ok(())
-}
+}

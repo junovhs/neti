@@ -6,7 +6,6 @@ pub mod config;
 pub mod constants;
 pub mod detection;
 pub mod discovery;
-pub mod error;
 pub mod events;
 pub mod exit;
 pub mod graph;
