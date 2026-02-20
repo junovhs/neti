@@ -1,7 +1,5 @@
 # project -- Semantic Map
 
-**Purpose:** Architectural linter and code quality governance
-
 ## Legend
 
 `[ENTRY]` Application entry point
@@ -17,8 +15,8 @@
 `Cargo.toml`
 Rust package manifest and dependencies. Centralizes project configuration.
 
-`slopchop.toml`
-Configuration for slopchop. Centralizes project configuration.
+`neti.toml`
+Configuration for neti. Centralizes project configuration.
 
 `src/cli/config_ui/editor.rs`
 Runs the interactive editor. Centralizes project configuration.
@@ -48,12 +46,12 @@ Configuration for the Law of Locality enforcement. Centralizes project configura
 → Exports: LocalityConfig, is_enabled, is_error_mode, to_validator_config
 
 `src/config/mod.rs`
-Creates a new config and loads local settings (`slopchop.toml`, `.slopchopignore`). Centralizes project configuration.
+Creates a new config and loads local settings (`neti.toml`, `.netiignore`). Centralizes project configuration.
 → Exports: load, load_local_config, new, parse_toml, process_ignore_line, save, save_to_file, validate
 
 `src/config/types.rs`
 Module providing `CommandEntry`, `Config`, `Preferences`. Centralizes project configuration.
-→ Exports: CommandEntry, Config, Preferences, RuleConfig, SafetyConfig, SlopChopToml, into_vec
+→ Exports: CommandEntry, Config, Preferences, RuleConfig, SafetyConfig, NetiToml, into_vec
 
 `src/graph/tsconfig.rs`
 Parser for tsconfig.json / jsconfig.json path mappings. Centralizes project configuration.
@@ -68,8 +66,8 @@ Core analysis logic (The "Rule Engine"). Supports application functionality.
 AST pattern detection for violations. Supports application functionality.
 → Exports: detect_all, get_capture_node
 
-`src/bin/slopchop.rs`
-Orchestrates `clap`, `colored`, `slopchop_core`. Defines command-line interface.
+`src/bin/neti.rs`
+Orchestrates `clap`, `colored`, `neti_core`. Defines command-line interface.
 
 `src/cli/args.rs`
 Run structural checks on the codebase. Defines command-line interface.
@@ -156,7 +154,7 @@ Deep analysis runner. Supports application functionality.
 → Exports: DeepAnalyzer, compute_violations, new
 
 `src/analysis/engine.rs`
-Main execution logic for the `SlopChop` analysis engine. Supports application functionality.
+Main execution logic for the `Neti` analysis engine. Supports application functionality.
 → Exports: Engine, new, scan, scan_with_progress
 
 `src/analysis/extract.rs`
@@ -227,10 +225,6 @@ Represents a cohesion and coupling scope (Class, Struct+Impl, Enum). Supports ap
 Structural metrics calculation (LCOM4, CBO, SFOUT, AHF). Supports application functionality.
 → Exports: ScopeMetrics, calculate_ahf, calculate_cbo, calculate_lcom4, calculate_max_sfout
 
-`src/analysis/types.rs`
-A single violation detected during analysis. Defines domain data structures.
-→ Exports: CheckReport, CommandResult, FileReport, ScanReport, Violation, ViolationDetails, clean_file_count, has_errors, is_clean, is_small_codebase, simple, violation_count, with_details
-
 `src/analysis/visitor.rs`
 AST Visitor for analysis. Supports application functionality.
 → Exports: AstVisitor, extract_scopes, new
@@ -285,11 +279,11 @@ Runs the file discovery pipeline. Parses input into structured data.
 
 `src/events.rs`
 Machine-readable event logging for audit trails. Supports application functionality.
-→ Exports: EventKind, EventLogger, SlopChopEvent, log, new
+→ Exports: EventKind, EventLogger, NetiEvent, log, new
 
 `src/exit.rs`
-Standardized process exit codes for `SlopChop`. Supports application functionality.
-→ Exports: SlopChopExit, code, exit
+Standardized process exit codes for `Neti`. Supports application functionality.
+→ Exports: NetiExit, code, exit
 
 `src/graph/defs/extract.rs`
 A symbol definition found in source code. Supports application functionality.

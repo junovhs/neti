@@ -1,11 +1,9 @@
 //! Command execution and output capture.
-
+use super::{CommandResult, VerificationReport};
 use std::fmt::Write;
 use std::path::Path;
 use std::process::Command;
 use std::time::Instant;
-
-use super::{CommandResult, VerificationReport};
 
 /// Runs a list of commands and captures combined output.
 ///
@@ -32,9 +30,7 @@ where
 
         let cmd_start = Instant::now();
         let result = run_single_command(repo_root, cmd_str);
-
-        #[allow(clippy::cast_possible_truncation)]
-        let cmd_duration = cmd_start.elapsed().as_millis() as u64;
+        let cmd_duration = u64::try_from(cmd_start.elapsed().as_millis()).unwrap_or(u64::MAX);
 
         match result {
             Ok(cmd_output) => {
@@ -80,20 +76,16 @@ where
         }
     }
 
-    #[allow(clippy::cast_possible_truncation)]
-    let total_duration = start.elapsed().as_millis() as u64;
-
+    let total_duration = u64::try_from(start.elapsed().as_millis()).unwrap_or(u64::MAX);
     VerificationReport::new(all_passed, combined_output, results, total_duration)
 }
 
 /// Runs a single command string.
 fn run_single_command(repo_root: &Path, cmd_str: &str) -> anyhow::Result<String> {
     let parts: Vec<&str> = cmd_str.split_whitespace().collect();
-
     let Some(&program) = parts.first() else {
         return Ok("(empty command)".to_string());
     };
-
     let args = parts.get(1..).unwrap_or(&[]);
 
     let output = Command::new(program)
@@ -102,18 +94,15 @@ fn run_single_command(repo_root: &Path, cmd_str: &str) -> anyhow::Result<String>
         .output()?;
 
     let mut result = String::new();
-
     if !output.stdout.is_empty() {
         result.push_str(&String::from_utf8_lossy(&output.stdout));
     }
-
     if !output.stderr.is_empty() {
         if !result.is_empty() {
             result.push('\n');
         }
         result.push_str(&String::from_utf8_lossy(&output.stderr));
     }
-
     if !output.status.success() {
         let _ = writeln!(
             result,
@@ -121,6 +110,5 @@ fn run_single_command(repo_root: &Path, cmd_str: &str) -> anyhow::Result<String>
             output.status.code().unwrap_or(-1)
         );
     }
-
     Ok(result)
 }

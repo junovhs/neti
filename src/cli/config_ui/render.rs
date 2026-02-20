@@ -38,7 +38,7 @@ fn draw_header(stdout: &mut std::io::Stdout) -> Result<()> {
     execute!(
         stdout,
         SetForegroundColor(Color::Cyan),
-        Print("┌─ SlopChop Configuration ──────────────────"),
+        Print("┌─ Neti Configuration ──────────────────"),
         ResetColor
     )?;
     Ok(())

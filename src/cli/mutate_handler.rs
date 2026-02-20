@@ -1,5 +1,5 @@
 // src/cli/mutate_handler.rs
-use crate::exit::SlopChopExit;
+use crate::exit::NetiExit;
 use crate::mutate::{self, MutateOptions};
 use crate::cli::handlers::get_repo_root;
 use anyhow::Result;
@@ -13,7 +13,7 @@ pub fn handle_mutate(
     timeout: u64,
     json: bool,
     filter: Option<String>,
-) -> Result<SlopChopExit> {
+) -> Result<NetiExit> {
     let opts = MutateOptions {
         workers,
         timeout_secs: timeout,
@@ -25,8 +25,8 @@ pub fn handle_mutate(
     let report = mutate::run(&repo_root, &opts)?;
     
     if report.summary.survived > 0 {
-        Ok(SlopChopExit::CheckFailed)
+        Ok(NetiExit::CheckFailed)
     } else {
-        Ok(SlopChopExit::Success)
+        Ok(NetiExit::Success)
     }
 }

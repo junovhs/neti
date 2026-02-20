@@ -3,7 +3,7 @@
 use crate::analysis::Engine;
 use crate::config::Config;
 use crate::discovery;
-use crate::exit::SlopChopExit;
+use crate::exit::NetiExit;
 use crate::reporting;
 use crate::spinner;
 use crate::verification;
@@ -23,7 +23,7 @@ pub fn get_repo_root() -> PathBuf {
 ///
 /// # Errors
 /// Returns error if scan execution fails.
-pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChopExit> {
+pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<NetiExit> {
     if locality {
         return super::locality::handle_locality();
     }
@@ -37,13 +37,13 @@ pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChop
         let report = engine.scan(&files);
         reporting::print_json(&report)?;
         return Ok(if report.has_errors() {
-            SlopChopExit::CheckFailed
+            NetiExit::CheckFailed
         } else {
-            SlopChopExit::Success
+            NetiExit::Success
         });
     }
 
-    let (client, mut controller) = spinner::start("slopchop scan");
+    let (client, mut controller) = spinner::start("neti scan");
     client.set_micro_status("Discovering files...");
 
     let files = discovery::discover(&config)?;
@@ -73,9 +73,9 @@ pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChop
     }
 
     Ok(if has_errors {
-        SlopChopExit::CheckFailed
+        NetiExit::CheckFailed
     } else {
-        SlopChopExit::Success
+        NetiExit::Success
     })
 }
 
@@ -83,21 +83,21 @@ pub fn handle_scan(verbose: bool, locality: bool, json: bool) -> Result<SlopChop
 ///
 /// # Errors
 /// Returns error if report file cannot be written.
-pub fn handle_check(json: bool) -> Result<SlopChopExit> {
+pub fn handle_check(json: bool) -> Result<NetiExit> {
     let repo_root = get_repo_root();
 
     if json {
         let report = verification::run(&repo_root, |_, _, _| {});
-        std::fs::write("slopchop-report.txt", &report.output)?;
+        std::fs::write("neti-report.txt", &report.output)?;
         reporting::print_json(&report)?;
         return Ok(if report.passed {
-            SlopChopExit::Success
+            NetiExit::Success
         } else {
-            SlopChopExit::CheckFailed
+            NetiExit::CheckFailed
         });
     }
 
-    let (client, mut controller) = spinner::start("slopchop check");
+    let (client, mut controller) = spinner::start("neti check");
     client.set_micro_status("Running verification commands...");
 
     let report = verification::run(&repo_root, |cmd, current, total| {
@@ -105,16 +105,16 @@ pub fn handle_check(json: bool) -> Result<SlopChopExit> {
         client.push_log(cmd);
     });
 
-    std::fs::write("slopchop-report.txt", &report.output)?;
+    std::fs::write("neti-report.txt", &report.output)?;
 
     controller.stop(report.passed);
 
     print_check_scorecard(&report);
 
     Ok(if report.passed {
-        SlopChopExit::Success
+        NetiExit::Success
     } else {
-        SlopChopExit::CheckFailed
+        NetiExit::CheckFailed
     })
 }
 
@@ -228,7 +228,7 @@ fn print_check_scorecard(report: &verification::VerificationReport) {
     } else {
         println!("{}", "  ✗ CHECKS FAILED".red().bold());
         println!();
-        println!("  See slopchop-report.txt for full output.");
+        println!("  See neti-report.txt for full output.");
     }
 
     println!();

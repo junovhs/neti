@@ -5,7 +5,7 @@ pub mod types;
 
 pub use self::locality::LocalityConfig;
 pub use self::types::{
-    CommandEntry, Config, Preferences, RuleConfig, SlopChopToml,
+    CommandEntry, Config, Preferences, RuleConfig, NetiToml,
 };
 use anyhow::Result;
 
@@ -15,7 +15,7 @@ impl Config {
         Self::default()
     }
 
-    /// Creates a new config and loads local settings (`slopchop.toml`, `.slopchopignore`).
+    /// Creates a new config and loads local settings (`neti.toml`, `.netiignore`).
     #[must_use]
     pub fn load() -> Self {
         let mut config = Self::new();
@@ -65,7 +65,7 @@ impl Config {
         io::parse_toml(self, content);
     }
 
-    /// Saves the current configuration to `slopchop.toml`.
+    /// Saves the current configuration to `neti.toml`.
     ///
     /// # Errors
     /// Returns error if file write fails.
@@ -83,7 +83,7 @@ pub use crate::constants::{
     BIN_EXT_PATTERN, CODE_BARE_PATTERN, CODE_EXT_PATTERN, PRUNE_DIRS, SECRET_PATTERN,
 };
 
-/// Saves the current configuration to `slopchop.toml`.
+/// Saves the current configuration to `neti.toml`.
 ///
 /// # Errors
 /// Returns error if file write fails or serialization fails.

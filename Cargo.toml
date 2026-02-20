@@ -1,36 +1,35 @@
 [package]
-name = "slopchop"
-version = "1.6.1"
+name = "neti"
+version = "1.6.5"
 edition = "2021"
 authors = ["Spencer Nunamaker <junovhs@gmail.com>"]
 description = "High-integrity code quality governance and transactional change management for AI-assisted development"
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/junovhs/slopchop"
-homepage = "https://github.com/junovhs/slopchop"
-documentation = "https://docs.rs/slopchop"
+repository = "https://github.com/junovhs/neti"
+homepage = "https://github.com/junovhs/neti"
+documentation = "https://docs.rs/neti"
 readme = "README.md"
 keywords = ["code-quality", "linter", "ast", "developer-tools", "cli"]
 categories = ["development-tools", "command-line-utilities"]
 rust-version = "1.82"
 exclude = [
     "docs/archived/*",
-    ".slopchop/*",
+    ".neti/*",
     "context.txt",
     "target/",
     ".git/",
 ]
 
 [lib]
-name = "slopchop_core"
+name = "neti_core"
 path = "src/lib.rs"
 
 [[bin]]
-name = "slopchop"
-path = "src/bin/slopchop.rs"
+name = "neti"
+path = "src/bin/neti.rs"
 
 [dependencies]
 anyhow = "1.0"
-thiserror = "1.0"
 regex = "1.10"
 walkdir = "2.5"
 clap = { version = "4.5", features = ["derive"] }
@@ -53,7 +52,6 @@ tree-sitter = "0.20"
 tree-sitter-rust = "0.20"
 tree-sitter-python = "0.20"
 tree-sitter-typescript = "0.20"
-tree-sitter-nim = { git = "https://github.com/alaviss/tree-sitter-nim", tag = "0.6.2" }
 
 [dev-dependencies]
 tempfile = "3.10"

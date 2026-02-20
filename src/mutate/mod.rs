@@ -15,7 +15,7 @@
 //! # Example
 //!
 //! ```ignore
-//! slopchop mutate --filter src/tokens.rs --timeout 30
+//! neti mutate --filter src/tokens.rs --timeout 30
 //! ```
 
 pub mod discovery;

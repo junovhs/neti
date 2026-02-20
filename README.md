@@ -1,171 +1,288 @@
-# SlopChop
+# Neti
 
-**The architectural compiler for AI-assisted Rust development.**
+**The gatekeeper. Code that doesn't pass Neti doesn't enter your codebase.**
 
-Rust's compiler rejects code that's memory-unsafe. Clippy rejects code that's unidiomatic. Tests reject code that's functionally wrong. SlopChop rejects code that's *structurally* unsound—files too large for AI to handle atomically, complexity that invites bugs, coupling that makes changes risky.
+In Sumerian mythology, Neti was the guardian of the underworld gate — the one who decided what passed and what was turned back. That's exactly what this tool does.
 
-If it doesn't pass `slopchop check`, it doesn't enter the codebase. The AI bounces off and tries again, just like it bounces off rustc until the types are right.
-
-## The Problem
-
-AI-generated code has specific failure modes:
-
-- **Giant files.** AI will happily write 2,000 lines in one file. Good luck getting it to surgically edit line 847 later.
-- **Creeping complexity.** Each fix adds "just one more" nested condition. Nobody notices until the function is unmaintainable.
-- **Coupling.** Module A imports B imports C imports A. Refactoring becomes surgery.
-- **The classics.** N+1 queries, clones in loops, mutex guards held across await points—patterns AI reproduces confidently.
-
-These aren't type errors. They're structural problems that compound over time.
-
-## The Solution
-
-SlopChop runs a governance check before code enters your codebase:
+Neti is a **structural governance and code quality enforcement engine** built for the era of AI-assisted development. It sits between AI agents (or developers) and your codebase, running a comprehensive battery of static analysis, structural metrics, pattern detection, and your own custom verification commands. If the code doesn't pass, it doesn't merge. The AI tries again.
 
 ```
-$ slopchop check
+$ neti check
 
-  ✓ cargo clippy (14.2s)
-  ✓ cargo test (8.7s)
+✖ error: Function 'parse_response' has 8 args (Max: 5)
+  --> src/client.rs:42
+  = LAW OF COMPLEXITY: Action required
+    Group related parameters into a struct or options object
 
-  ┌─────────────────────────────────────────────┐
-  │ SLOPCHOP GOVERNANCE                         │
-  ├─────────────────────────────────────────────┤
-  │ Files scanned     18                        │
-  │ Total tokens      12,847                    │
-  │ Violations        2                         │
-  └─────────────────────────────────────────────┘
+✖ error: File size is 2847 tokens (Limit: 2000)
+  --> src/handlers/mod.rs:1
+  = LAW OF ATOMICITY: Action required
+    Split the file. Create submodules.
 
-  src/engine.rs:142
-  │ P01: Clone inside hot loop
-  │ Consider moving the clone outside the loop or using references.
+✖ error: MutexGuard held across `.await` point
+  --> src/worker.rs:88
+  = C03: Action required
+    Drop the guard before the await, or use an async-aware lock.
 
-  src/handlers.rs
-  │ File exceeds 2,000 tokens (2,341)
-  │ Split into smaller, focused modules.
-
-  ✗ Governance check failed
+FAILED — 3 violations. See neti-report.txt for full output.
 ```
 
-## Current Features (v1.7)
+---
 
-**Metrics — quantitative thresholds**
+## Three Ways to Use Neti
 
-| Metric | Default | What it catches |
-|--------|---------|-----------------|
-| File tokens | 2,000 | God files that AI can't edit atomically |
-| Cognitive complexity | 15 | Functions too complex to reason about |
-| Nesting depth | 3 | Arrow code that hides bugs |
-| Function arguments | 5 | Weak abstraction boundaries |
-| LCOM4 | 1 | Classes doing too many unrelated things |
-| CBO | 9 | Modules coupled to too many others |
+Neti is designed to fit into your workflow however you work with AI — from casual chat sessions to fully autonomous agents to production CI pipelines.
 
-**Patterns — AST-based detection (23 active)**
+### 1. Chat Loop (Human in the Loop)
 
-SlopChop parses your code and detects specific anti-patterns:
+You're working with an AI assistant in a chat interface. The AI delivers code, you apply it, Neti checks it, you paste the report back. The AI fixes violations and redelivers. Repeat until green.
 
-| Category | Examples |
-|----------|----------|
-| State | Global mutables, exported mutable statics |
-| Concurrency | Mutex guard held across `.await`, undocumented sync primitives |
-| Security | SQL injection, command injection, hardcoded secrets, dangerous TLS config |
-| Performance | Clone in loop, allocation in loop, N+1 queries, nested loops, linear search in loop |
-| Semantic | Getter that mutates, `is_*` returning non-bool |
-| Idiomatic | Global mutation via `std::env::set_var` |
-| Logic | Boundary ambiguity (`<= .len()`), unchecked indexing |
+```bash
+# AI delivers files → you apply them → you run:
+neti check
 
-**Governance Profiles**
+# Paste neti-report.txt back to the AI
+# AI fixes violations and redelivers
+# Repeat until green
+```
 
-Different code has different physics. A CLI app and a lock-free queue have fundamentally different constraints.
+The `CHAT-PROTOCOL.md` in any Neti-governed repo contains the full protocol for this workflow, including how to structure AI instructions, how many files to deliver per batch, and how to converge on green in minimum turns.
+
+The key insight: every failed check costs real money in API tokens. Neti's report format is designed to give the AI maximum signal in minimum tokens — structured, untruncated, prescriptive.
+
+### 2. Autonomous Agent Loop (No Human Required)
+
+An AI agent runs the full loop itself. It creates a sandbox branch, makes changes, runs `neti check`, reads the report, fixes violations, and only promotes to main when the gate is green. No human intervention until the task is complete.
+
+```bash
+# Agent runs this loop autonomously:
+neti branch          # Create isolated sandbox
+# ... agent makes changes ...
+neti check           # Run the full gate
+# ... agent reads neti-report.txt, fixes violations ...
+neti promote         # Only runs when check is GREEN
+git push
+```
+
+The `AGENT-README.md` in any Neti-governed repo contains the complete autonomous protocol — the exact loop, the laws, what constitutes dishonorable behavior (bypassing the sandbox, silencing violations with `#[allow(...)]`, promoting without a green check).
+
+### 3. CI Pipeline (Always On)
+
+Neti runs in your GitHub Actions, GitLab CI, or any other pipeline. Structural violations block merges the same way a failing test would. The gate never sleeps.
+
+```yaml
+# .github/workflows/neti.yml
+- name: Install Neti
+  run: cargo install neti
+
+- name: Run Neti Check
+  run: neti check
+```
+
+`neti check` exits with a non-zero code on any violation. It integrates cleanly with any CI system that respects exit codes.
+
+---
+
+## What Neti Actually Checks
+
+This is not a simple linter. Neti runs a multi-layer analysis pipeline across every file in your codebase.
+
+### Structural Limits (Configurable)
+
+Hard limits that block merges when exceeded:
+
+| Metric | What It Catches | Default |
+| :--- | :--- | :--- |
+| **File Token Count** | Files too large for AI or humans to reason about atomically | 2,000 tokens |
+| **Cognitive Complexity** | Functions too complex to safely modify or understand | ≤ 25 |
+| **Nesting Depth** | Logic nested so deep it becomes unreadable | ≤ 3 levels |
+| **Function Arity** | Functions with too many parameters | ≤ 5 args |
+| **Function Name Length** | Overly verbose or meaninglessly short names | ≤ 10 words |
+| **LCOM4** | Structs/classes doing too many unrelated things — split them | = 1 |
+| **CBO** | Modules coupled to too many others — reduce dependencies | ≤ 9 |
+| **SFOUT** | Structural fan-out — god module detection | ≤ 7 |
+| **AHF** | Attribute Hiding Factor — encapsulation discipline | ≥ 60% |
+
+### Pattern Detection (AST-Level)
+
+Neti parses your actual AST using Tree-sitter and detects specific anti-patterns by category:
+
+**Concurrency**
+- `C03` — `MutexGuard` held across an `.await` point (deadlock waiting to happen)
+- `C04` — Undocumented synchronization primitives
+
+**Security**
+- `X01` — SQL injection surface patterns
+- `X02` — Credential and secret exposure
+- `X03` — Unsafe input handling
+
+**Performance**
+- `P01` — Unnecessary cloning in hot paths
+- `P02` — Excessive allocation patterns
+- `P04` — Inefficient iteration
+- `P06` — String formatting anti-patterns
+
+**Logic**
+- `L02` — Boundary ambiguity (`<=`/`>=` with `.len()`, off-by-one surface)
+- `L03` — Additional logic correctness patterns
+
+**State**
+- `S01`, `S02`, `S03` — State management violations and anti-patterns
+
+**Resource**
+- `R07` — Missing flush on buffered writers
+
+**Semantic**
+- `M03`, `M04`, `M05` — Semantic correctness patterns
+
+**Idiomatic**
+- `I01`, `I02` — Language-idiomatic patterns
+
+**Database**
+- `P03` — N+1 query patterns
+
+**Safety**
+- Unsafe blocks without `// SAFETY:` justification comments
+- Optional: ban `unsafe` entirely
+
+**Syntax**
+- AST-level syntax error detection
+- Missing or malformed nodes
+
+**Naming**
+- Function naming convention enforcement by language
+
+### Deep Structural Analysis (Graph-Level)
+
+For codebases above a minimum size threshold, Neti computes full dependency graph metrics:
+
+- **Law of Locality** — Dependency distance analysis using Lowest Common Ancestor. Flags cross-boundary coupling that violates your intended layering. Configurable as warn or error.
+- **Cycle Detection** — Finds circular dependencies in your module graph.
+- **PageRank** — Identifies the most structurally critical files in the codebase. Useful for understanding what's load-bearing.
+- **Hub Detection** — Finds modules with unusually high afferent coupling (everything depends on them).
+- **God Module Detection** — Finds modules that do too much.
+- **Layer Violation Detection** — Enforces that your dependency direction matches your intended architecture (e.g. `ui → domain → infra`, never `infra → domain`).
+- **Coupling Entropy** — Measures overall topological health of the codebase.
+
+### Your Own Commands
+
+`neti check` also runs whatever you put in `[commands]` — clippy, your test suite, biome, ruff, go vet, anything. The output of all commands is captured and written to `neti-report.txt` alongside the structural analysis. One command, one report, one green/red answer.
 
 ```toml
-# slopchop.toml
-profile = "application"  # or "systems"
+[commands]
+check = [
+    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic",
+    "cargo test",
+]
 ```
 
-| | application | systems |
-|---|-------------|---------|
-| Philosophy | Maintainability first | Throughput first |
-| File tokens | 2,000 | 10,000 |
-| Complexity | 15 | 50 |
-| Structural metrics | Enabled | Disabled |
-| Safety checks | Standard | Escalated |
+---
 
-The `systems` profile relaxes structural limits while *tightening* safety requirements—because systems code trades abstraction for performance but must be paranoid about memory.
+## The Report File
 
-**Flight Recorder**
+Every `neti check` writes full results to `neti-report.txt`. This is not a log file — it's the **contract**.
 
-Every `slopchop check` writes full results to `slopchop-report.txt`. Untruncated, machine-parseable, no terminal formatting. Useful for CI pipelines, agent loops, or just grepping later.
+- **Never truncated.** Terminal output gets cut off. The report does not.
+- **No ANSI formatting.** Machine-readable by default.
+- **Prescriptive.** Every violation includes what went wrong, where, why it matters, and what to do about it.
+- **Complete.** Compiler errors, linter output, test failures, and structural violations — all in one place.
 
-**Transactional Workflow**
+AI agents are instructed to read `neti-report.txt`, not stdout. This is intentional.
 
-```
-$ slopchop apply    # Creates a working branch, applies changes
-$ slopchop check    # Validates the changes
-$ slopchop promote  # Merges with goal-aware commit message
-```
-
-The `apply` command reads a PLAN block from your AI's response and extracts the stated goal. When you `promote`, that goal becomes the merge commit message. Cleaner git history without writing commit messages yourself.
+---
 
 ## Installation
 
-```
-cargo install slopchop
+```bash
+cargo install neti
 ```
 
 Or build from source:
 
+```bash
+git clone https://github.com/junovhs/neti
+cd neti
+cargo install --path .
 ```
-git clone https://github.com/junovhs/slopchop
-cd slopchop
-cargo build --release
-```
+
+---
 
 ## Configuration
 
-Run `slopchop config` for an interactive TUI, or edit `slopchop.toml` directly:
+Run `neti config` for an interactive TUI editor, or edit `neti.toml` directly:
 
 ```toml
 [rules]
 max_file_tokens = 2000
-max_cognitive_complexity = 15
+max_cognitive_complexity = 25
 max_nesting_depth = 3
 max_function_args = 5
+max_function_words = 10
 max_lcom4 = 1
+min_ahf = 60.0
 max_cbo = 9
+max_sfout = 7
 
 [rules.safety]
 require_safety_comment = true
+ban_unsafe = false
 
-[commands]
-check = [
-    "cargo clippy --all-targets -- -D warnings",
-    "cargo test",
-]
+[rules.locality]
+max_distance = 4
+l1_threshold = 2
+mode = "warn"   # or "error" to make locality violations block merges
 
 [preferences]
 auto_copy = true
+progress_bars = true
+backup_retention = 5
+
+[commands]
+check = [
+    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing",
+    "cargo test",
+]
+fix = ["cargo fmt"]
 ```
 
-## Aspirational / Roadmap
+Neti auto-detects your project type (Rust, Node, Python, Go) and generates sensible defaults if no `neti.toml` exists.
 
-These features are planned but not yet implemented:
+---
 
-**Small-codebase detection.** Structural metrics (LCOM4, CBO, AHF) are meaningless for a 6-file project. SlopChop should auto-skip them when `total_files < 10` or `total_tokens < 5000`.
+## Language Support
 
-**TypeScript support.** The tree-sitter infrastructure exists, but pattern coverage and tuning are Rust-first for now. TypeScript will follow once Rust governance is rock-solid.
+| Language | Complexity | Naming | Pattern Detection | Structural Metrics |
+| :--- | :--- | :--- | :--- | :--- |
+| Rust | ✅ | ✅ | ✅ Full | ✅ Full |
+| Python | ✅ | ✅ | Partial | — |
+| TypeScript / JavaScript | ✅ | ✅ | Partial | — |
 
-**Per-directory profiles.** `src/core/` as `systems`, `src/api/` as `application`, in the same repo.
+---
 
-## What SlopChop Is Not
+## What Neti Is Not
 
-**Not a linter.** Clippy handles Rust-specific lints better than SlopChop ever could. SlopChop defers to it (and runs it as part of `check`).
+**Not a linter.** Clippy, ESLint, Ruff — Neti runs them as part of `check` but doesn't replace them. They handle language-specific lints better than any general tool could.
 
-**Not a formatter.** Use `rustfmt`.
+**Not a test framework.** Neti runs your tests. It doesn't write them.
 
-**Not a test framework.** SlopChop runs your tests but doesn't replace them.
+**Not a formatter.** `neti fix` triggers your formatter. Neti doesn't format itself.
 
-**Not a context/packing tool.** SlopChop verifies AI *output*. Feeding context *to* AI is a different problem.
+**Not a context packing tool.** Neti verifies AI output. Feeding context to AI is a different problem — see [SEMMAP](https://semmap.dev).
+
+---
+
+## Why This Exists
+
+AI coding assistants are extraordinarily capable and extraordinarily bad at maintaining architectural discipline over time. They'll pass your unit tests while quietly making your codebase harder to change, harder to understand, and more fragile. They optimize for "works now" and produce the kind of code that looks fine in a single PR review but compounds into spaghetti across dozens of sessions.
+
+Neti exists because the feedback loop that keeps human developers honest — code review, accumulated taste, architectural intuition — doesn't naturally exist for AI agents. So we make it mechanical. You define what "good" looks like. Neti enforces it. The AI can't ship slop if the gate won't open.
+
+---
 
 ## License
 
 MIT OR Apache-2.0
+
+---
+
+*Neti — a [SEMMAP Labs](https://semmap.dev) project*

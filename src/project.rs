@@ -72,7 +72,7 @@ pub fn generate_toml(project: ProjectType, strictness: Strictness) -> String {
     let rules = rules_section(strictness);
     let commands = commands_section(project);
 
-    format!("# slopchop.toml\n{rules}\n\n{commands}\n")
+    format!("# neti.toml\n{rules}\n\n{commands}\n")
 }
 
 fn rules_section(strictness: Strictness) -> String {

@@ -1,4 +1,4 @@
-//! Main execution logic for the `SlopChop` analysis engine.
+//! Main execution logic for the `Neti` analysis engine.
 //! Unified entry point for all scanning operations.
 
 use std::collections::HashMap;

@@ -1,4 +1,4 @@
-# SlopChop Mutation Testing Configuration
+# Neti Mutation Testing Configuration
 # =========================================
 #
 # Philosophy: Exclude code that hits external system boundaries where

@@ -1,7 +1,7 @@
 // src/events.rs
 //! Machine-readable event logging for audit trails.
 //!
-//! Events are appended to `.slopchop/events.jsonl`.
+//! Events are appended to `.neti/events.jsonl`.
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -52,7 +52,7 @@ pub enum EventKind {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SlopChopEvent {
+pub struct NetiEvent {
     pub timestamp: u64,
     pub kind: EventKind,
 }
@@ -65,7 +65,7 @@ pub struct EventLogger {
 impl EventLogger {
     #[must_use]
     pub fn new(repo_root: &Path) -> Self {
-        let log_path = repo_root.join(".slopchop").join("events.jsonl");
+        let log_path = repo_root.join(".neti").join("events.jsonl");
         Self { log_path }
     }
 
@@ -78,7 +78,7 @@ impl EventLogger {
 
     fn serialize_event(kind: EventKind) -> Result<String> {
         let timestamp = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
-        let event = SlopChopEvent { timestamp, kind };
+        let event = NetiEvent { timestamp, kind };
         Ok(serde_json::to_string(&event)?)
     }
 

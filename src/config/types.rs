@@ -50,7 +50,7 @@ fn default_backup_retention() -> usize {
     5
 }
 fn default_fix_packet_path() -> String {
-    "slopchop-fixme.txt".to_string()
+    "neti-fixme.txt".to_string()
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,7 +190,7 @@ impl CommandEntry {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct SlopChopToml {
+pub struct NetiToml {
     #[serde(default)]
     pub rules: RuleConfig,
     #[serde(default)]

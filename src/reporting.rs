@@ -113,7 +113,7 @@ fn print_summary(report: &ScanReport) {
 
     if report.has_errors() {
         println!(
-            "{} SlopChop found {} {} in {:?}.",
+            "{} Neti found {} {} in {:?}.",
             "X".red().bold(),
             report.total_violations,
             pluralize("violation", report.total_violations),

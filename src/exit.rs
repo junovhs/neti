@@ -1,5 +1,5 @@
 // src/exit.rs
-//! Standardized process exit codes for `SlopChop`.
+//! Standardized process exit codes for `Neti`.
 //!
 //! Provides a stable contract for scripts and automation.
 
@@ -7,7 +7,7 @@ use std::process::Termination;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i32)]
-pub enum SlopChopExit {
+pub enum NetiExit {
     /// Operation completed successfully.
     Success = 0,
     /// Generic error (e.g. IO, network, config).
@@ -24,7 +24,7 @@ pub enum SlopChopExit {
     CheckFailed = 6,
 }
 
-impl SlopChopExit {
+impl NetiExit {
     #[must_use]
     pub fn code(self) -> i32 {
         self as i32
@@ -35,7 +35,7 @@ impl SlopChopExit {
     }
 }
 
-impl Termination for SlopChopExit {
+impl Termination for NetiExit {
     fn report(self) -> std::process::ExitCode {
         // Rust's std::process::ExitCode implies usage of `u8` on many unix-likes,
         // but we cast to standard 0..255 range implicitly via `u8`.
@@ -45,7 +45,7 @@ impl Termination for SlopChopExit {
     }
 }
 
-impl From<anyhow::Result<()>> for SlopChopExit {
+impl From<anyhow::Result<()>> for NetiExit {
     fn from(res: anyhow::Result<()>) -> Self {
         match res {
             Ok(()) => Self::Success,

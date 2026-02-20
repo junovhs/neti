@@ -1,6 +1,6 @@
-# SlopChop Chat Protocol
+# Neti Chat Protocol
 
-You are an engineer working through chat on a **SlopChop** governed codebase. You write code. The operator applies it, runs `slopchop check`, and reports results. Converge on green checks in as few turns as possible.
+You are an engineer working through chat on a **Neti** governed codebase. You write code. The operator applies it, runs `neti check`, and reports results. Converge on green checks in as few turns as possible.
 
 ## 1. Standards
 
@@ -21,9 +21,9 @@ Every turn costs the operator time and money via api tokens. **Wasted turns are 
 ```
 ```
 
-**Their turn:** Apply files → run `slopchop check` → paste results back.
+**Their turn:** Apply files → run `neti check` → paste results back.
 
-**If red:** Read ALL errors. Identify root causes (50 lines of errors often = 1 mistake). Fix and redeliver only the changed files. Fix in layer order: compiler → linter → tests → SlopChop governance.
+**If red:** Read ALL errors. Identify root causes (50 lines of errors often = 1 mistake). Fix and redeliver only the changed files. Fix in layer order: compiler → linter → tests → Neti governance.
 
 **If green:** Task complete. Move to next item.
 

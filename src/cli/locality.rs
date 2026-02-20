@@ -7,7 +7,7 @@ use std::path::{Path, PathBuf};
 
 use crate::config::Config;
 use crate::discovery;
-use crate::exit::SlopChopExit;
+use crate::exit::NetiExit;
 use crate::graph::locality::analysis::analyze;
 use crate::graph::locality::coupling::compute_coupling;
 use crate::graph::locality::report::print_full_report;
@@ -23,13 +23,13 @@ pub struct LocalityResult {
 ///
 /// # Errors
 /// Returns error if file discovery or import extraction fails.
-pub fn handle_locality() -> Result<SlopChopExit> {
+pub fn handle_locality() -> Result<NetiExit> {
     let result = run_locality_check(Path::new("."))?;
     
     if result.passed {
-        Ok(SlopChopExit::Success)
+        Ok(NetiExit::Success)
     } else {
-        Ok(SlopChopExit::CheckFailed)
+        Ok(NetiExit::CheckFailed)
     }
 }
 

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::graph::locality::{ClassifierConfig, ValidatorConfig};
 
-/// Locality rules configuration from slopchop.toml.
+/// Locality rules configuration from neti.toml.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct LocalityConfig {

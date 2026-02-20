@@ -4,7 +4,7 @@
 use anyhow::{Context, Result};
 use std::process::Command;
 
-const WORK_BRANCH: &str = "slopchop-work";
+const WORK_BRANCH: &str = "neti-work";
 
 /// Checks if we're in a git repository.
 fn in_git_repo() -> bool {
@@ -104,7 +104,7 @@ pub fn promote(dry_run: bool, custom_msg: Option<String>) -> Result<PromoteResul
     let current = current_branch()?;
     if current != WORK_BRANCH {
         anyhow::bail!(
-            "Not on work branch. Currently on '{current}'. Run 'slopchop branch' first.",
+            "Not on work branch. Currently on '{current}'. Run 'neti branch' first.",
         );
     }
 
@@ -116,7 +116,7 @@ pub fn promote(dry_run: bool, custom_msg: Option<String>) -> Result<PromoteResul
         return Ok(PromoteResult::DryRun);
     }
 
-    let msg = custom_msg.unwrap_or_else(|| "chore: promote slopchop-work".to_string());
+    let msg = custom_msg.unwrap_or_else(|| "chore: promote neti-work".to_string());
 
     // Merge into main
     run_git(&["checkout", "main"])?;
@@ -201,6 +201,6 @@ mod tests {
 
     #[test]
     fn test_work_branch_name() {
-        assert_eq!(work_branch_name(), "slopchop-work");
+        assert_eq!(work_branch_name(), "neti-work");
     }
 }

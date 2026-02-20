@@ -40,7 +40,7 @@ backup_retention = 5
 progress_bars = true
 require_plan = false
 write_fix_packet = false
-fix_packet_path = "slopchop-fixme.txt"
+fix_packet_path = "neti-fixme.txt"
 auto_promote = false
 
 [commands]

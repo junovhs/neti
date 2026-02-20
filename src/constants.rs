@@ -17,7 +17,7 @@ pub const PRUNE_DIRS: &[&str] = &[
     "__pycache__",
     "coverage",
     "vendor",
-    ".slopchop_apply_backup",
+    ".neti_apply_backup",
 ];
 
 pub const PRUNE_FILES: &[&str] = &[

@@ -1,5 +1,5 @@
 // src/config/io.rs
-use super::types::{CommandEntry, Config, Preferences, RuleConfig, SlopChopToml};
+use super::types::{CommandEntry, Config, Preferences, RuleConfig, NetiToml};
 use crate::project::{self, ProjectType};
 use anyhow::{anyhow, Result};
 use regex::Regex;
@@ -8,7 +8,7 @@ use std::fs;
 use std::path::Path;
 
 pub fn load_ignore_file(config: &mut Config) {
-    let Ok(content) = fs::read_to_string(".slopchopignore") else {
+    let Ok(content) = fs::read_to_string(".netiignore") else {
         return;
     };
     for line in content.lines() {
@@ -27,17 +27,17 @@ pub fn process_ignore_line(config: &mut Config, line: &str) {
 }
 
 pub fn load_toml_config(config: &mut Config) {
-    if !Path::new("slopchop.toml").exists() {
+    if !Path::new("neti.toml").exists() {
         return;
     }
-    let Ok(content) = fs::read_to_string("slopchop.toml") else {
+    let Ok(content) = fs::read_to_string("neti.toml") else {
         return;
     };
     parse_toml(config, &content);
 }
 
 pub fn parse_toml(config: &mut Config, content: &str) {
-    let Ok(parsed) = toml::from_str::<SlopChopToml>(content) else {
+    let Ok(parsed) = toml::from_str::<NetiToml>(content) else {
         return;
     };
     config.rules = parsed.rules;
@@ -74,7 +74,7 @@ pub fn save_to_file(
         .map(|(k, v)| (k.clone(), CommandEntry::List(v.clone())))
         .collect();
 
-    let toml_struct = SlopChopToml {
+    let toml_struct = NetiToml {
         rules: rules.clone(),
         preferences: prefs.clone(),
         commands: cmd_entries,
@@ -83,7 +83,7 @@ pub fn save_to_file(
     let content = toml::to_string_pretty(&toml_struct)
         .map_err(|e| anyhow!("Failed to serialize config: {e}"))?;
 
-    fs::write("slopchop.toml", content)?;
+    fs::write("neti.toml", content)?;
     Ok(())
 }
 

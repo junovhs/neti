@@ -5,14 +5,14 @@ use super::{
     git_ops::{handle_abort, handle_branch, handle_promote},
     handlers::{handle_check, handle_scan},
 };
-use crate::exit::SlopChopExit;
+use crate::exit::NetiExit;
 use anyhow::{anyhow, Result};
 
 /// Executes the parsed command.
 ///
 /// # Errors
 /// Returns error if the command handler fails.
-pub fn execute(command: Commands) -> Result<SlopChopExit> {
+pub fn execute(command: Commands) -> Result<NetiExit> {
     match command {
         Commands::Check { .. } | Commands::Scan { .. } | Commands::Mutate { .. } => {
             handle_analysis(command)
@@ -26,7 +26,7 @@ pub fn execute(command: Commands) -> Result<SlopChopExit> {
     }
 }
 
-fn handle_analysis(command: Commands) -> Result<SlopChopExit> {
+fn handle_analysis(command: Commands) -> Result<NetiExit> {
     match command {
         Commands::Check { json } => handle_check(json),
         Commands::Scan {
@@ -49,7 +49,7 @@ fn handle_analysis(command: Commands) -> Result<SlopChopExit> {
     }
 }
 
-fn handle_git_ops(command: &Commands) -> Result<SlopChopExit> {
+fn handle_git_ops(command: &Commands) -> Result<NetiExit> {
     match command {
         Commands::Branch { force } => handle_branch(*force),
         Commands::Promote { dry_run } => handle_promote(*dry_run),
@@ -58,15 +58,15 @@ fn handle_git_ops(command: &Commands) -> Result<SlopChopExit> {
     }
 }
 
-fn handle_core_ops(command: &Commands) -> Result<SlopChopExit> {
+fn handle_core_ops(command: &Commands) -> Result<NetiExit> {
     match command {
         Commands::Clean { commit } => {
             crate::clean::run(*commit)?;
-            Ok(SlopChopExit::Success)
+            Ok(NetiExit::Success)
         }
         Commands::Config => {
             super::config_ui::run_config_editor()?;
-            Ok(SlopChopExit::Success)
+            Ok(NetiExit::Success)
         }
         _ => Err(anyhow!("Internal error: Invalid core command")),
     }

@@ -1,7 +1,7 @@
 //! External command verification pipeline.
 //!
-//! Runs commands defined in `[commands]` section of slopchop.toml
-//! and captures output to `slopchop-report.txt`.
+//! Runs commands defined in `[commands]` section of neti.toml
+//! and captures output to `neti-report.txt`.
 
 mod runner;
 
