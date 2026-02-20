@@ -85,3 +85,11 @@ Rust has full pattern detection. Python and TypeScript are marked "Partial" in t
 - Idiomatic patterns per language
 
 **Resolution:**
+
+
+
+
+
+scratchpad need to fix later: 
+
+getting some C03 violations on Dioxus as false positives from Neti. Which is actually useful to know — it means Neti needs a smarter check that distinguishes std::sync::Mutex from tokio::sync::Mutex / futures_util::lock::Mutex.

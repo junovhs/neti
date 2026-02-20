@@ -50,8 +50,8 @@ Creates a new config and loads local settings (`neti.toml`, `.netiignore`). Cent
 → Exports: load, load_local_config, new, parse_toml, process_ignore_line, save, save_to_file, validate
 
 `src/config/types.rs`
-Module providing `CommandEntry`, `Config`, `Preferences`. Centralizes project configuration.
-→ Exports: CommandEntry, Config, Preferences, RuleConfig, SafetyConfig, NetiToml, into_vec
+Module providing `CommandEntry`, `Config`, `NetiToml`. Centralizes project configuration.
+→ Exports: CommandEntry, Config, NetiToml, Preferences, RuleConfig, SafetyConfig, into_vec
 
 `src/graph/tsconfig.rs`
 Parser for tsconfig.json / jsconfig.json path mappings. Centralizes project configuration.
@@ -451,7 +451,4 @@ Inspection logic for scopes (Metrics application). Verifies correctness.
 
 `src/graph/locality/tests.rs`
 Integration tests for locality analysis. Verifies correctness.
-
-`tests/nim_grammar.rs`
-Nim grammar validation tests for Issue [9]. Verifies correctness.
 
