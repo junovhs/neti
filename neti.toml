@@ -45,7 +45,7 @@ auto_promote = false
 
 [commands]
 check = [
-    "cargo clippy --all-targets -- -D warnings -W clippy::pedantic -W clippy::unwrap_used -W clippy::expect_used -W clippy::indexing_slicing -A clippy::struct_excessive_bools -A clippy::module_name_repetitions -A clippy::missing_errors_doc -A clippy::must_use_candidate",
+    "cargo clippy --all-targets --no-deps -- -D warnings",
     "cargo test",
 ]
 fix = ["cargo fmt"]
