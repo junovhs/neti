@@ -1,4 +1,12 @@
+// src/analysis/worker.rs
 //! Worker module for file parsing and analysis.
+//!
+//! Orchestrates the per-file analysis pipeline:
+//! 1. File classification — only source code is structurally governed
+//! 2. Token counting and LAW OF ATOMICITY check
+//! 3. Pattern detection (AST-based anti-patterns)
+//! 4. AST analysis (complexity, naming, safety)
+//! 5. Scope extraction (for deep LCOM4/CBO analysis)
 
 use std::collections::HashMap;
 use std::path::Path;
@@ -6,6 +14,7 @@ use std::path::Path;
 use tree_sitter::Parser;
 
 use crate::config::Config;
+use crate::file_class;
 use crate::lang::Lang;
 use crate::tokens::Tokenizer;
 use crate::types::{FileReport, Violation};
@@ -15,6 +24,12 @@ use super::ast;
 use super::patterns;
 use super::visitor::AstVisitor;
 
+/// Scans a single file and returns a `FileReport`.
+///
+/// For non-source files (HTML, JSON, SVG, etc.), returns a report with only
+/// the token count populated. No structural violations are emitted for assets
+/// or config files — applying LAW OF ATOMICITY to a generated JSON bundle is
+/// a false positive, not a real governance concern.
 #[must_use]
 pub fn scan_file(path: &Path, config: &Config) -> FileReport {
     let mut report = FileReport {
@@ -30,6 +45,12 @@ pub fn scan_file(path: &Path, config: &Config) -> FileReport {
     };
 
     report.token_count = Tokenizer::count(&source);
+
+    // Only apply structural governance to source code files.
+    // Config files, assets, and data must not trigger token-limit violations.
+    if !file_class::classify(path).is_governed() {
+        return report;
+    }
 
     let effective_config = determine_effective_config(&source, config);
 
@@ -90,6 +111,10 @@ pub fn scan_file(path: &Path, config: &Config) -> FileReport {
     report
 }
 
+/// Returns an adjusted config for "systems programming" files.
+///
+/// Files containing `unsafe`, `no_std`, raw pointers, etc. indicate
+/// low-level code where standard structural limits are too tight.
 fn determine_effective_config(source: &str, base_config: &Config) -> Config {
     let score = calculate_systems_score(source);
     if score >= 3 {
@@ -133,5 +158,5 @@ fn calculate_systems_score(source: &str) -> usize {
 #[must_use]
 pub fn is_ignored(path: &Path, patterns: &[String]) -> bool {
     let path_str = path.to_string_lossy();
-    patterns.iter().any(|p| path_str.contains(p))
+    patterns.iter().any(|p| path_str.contains(p.as_str()))
 }

@@ -8,6 +8,7 @@ pub mod detection;
 pub mod discovery;
 pub mod events;
 pub mod exit;
+pub mod file_class;
 pub mod graph;
 pub mod lang;
 pub mod mutate;
