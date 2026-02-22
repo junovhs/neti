@@ -94,9 +94,8 @@ fn lock_spans_await(body: &str) -> bool {
     let mut lock_active = false;
     for line in body.lines() {
         let trimmed = line.trim();
-        if trimmed == "{" || trimmed == "}" {
+        if trimmed == "{" || trimmed.starts_with('}') {
             lock_active = false;
-            continue;
         }
         if is_lock_assignment(trimmed) {
             lock_active = true;

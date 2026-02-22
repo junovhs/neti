@@ -94,10 +94,10 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
 
     let mut cursor = QueryCursor::new();
     for m in cursor.matches(&query, body, source.as_bytes()) {
-        let call = get_capture_node(&m, idx_call);
+        let Some(call) = get_capture_node(&m, idx_call) else {
+            continue;
+        };
         let recv = get_capture_node(&m, idx_recv).and_then(|c| c.utf8_text(source.as_bytes()).ok());
-
-        let Some(call) = call else { continue };
 
         // Arc::clone / Rc::clone — cheap ref-count, never escalate
         let call_text = call.utf8_text(source.as_bytes()).unwrap_or("");
@@ -111,16 +111,9 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
 
         // Determine if the cloned receiver is likely heap-owning
         let recv_text = recv.unwrap_or("");
-        let is_heap_owning = looks_heap_owning(recv_text);
-
-        let analysis = if is_heap_owning {
-            vec![
-                format!("Receiver `{recv_text}` appears to be a heap-owning type."),
-                "Clone inside a loop allocates on every iteration.".into(),
-            ]
-        } else {
-            vec!["Clone inside a loop; type may be cheap but worth reviewing.".into()]
-        };
+        if !looks_heap_owning(recv_text) {
+            continue; // Skip cheap clones
+        }
 
         out.push(Violation::with_details(
             call.start_position().row + 1,
@@ -128,7 +121,10 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
             "P01",
             ViolationDetails {
                 function_name: None,
-                analysis,
+                analysis: vec![
+                    format!("Receiver `{recv_text}` appears to be a heap-owning type."),
+                    "Clone inside a loop allocates on every iteration.".into(),
+                ],
                 suggestion: Some(
                     "Hoist clone before the loop, or use Arc if shared ownership is needed.".into(),
                 ),
@@ -151,24 +147,41 @@ fn is_arc_or_rc_clone(call_text: &str) -> bool {
 /// Heuristic: types known to own heap memory, or capitalized identifiers
 /// (likely struct instances that derive Clone and may hold owned data).
 fn looks_heap_owning(recv: &str) -> bool {
-    // Known heap types as substrings of the receiver expression
-    const HEAP_TYPES: &[&str] = &[
-        "String",
-        "Vec",
-        "HashMap",
-        "HashSet",
-        "BTreeMap",
-        "BTreeSet",
-        "Box",
-        "Rc",
-        "BufWriter",
-        "Bytes",
-    ];
-    if HEAP_TYPES.iter().any(|t| recv.contains(t)) {
+    let r = recv.trim();
+    if r.is_empty() {
         return true;
     }
-    // Capitalized simple identifier → likely a struct instance
-    recv.chars().next().is_some_and(|c| c.is_uppercase())
+
+    if r.chars().next().is_some_and(|c| c.is_uppercase()) {
+        return true;
+    }
+
+    let lower = r.to_lowercase();
+    let heap_keywords = [
+        "string",
+        "vec",
+        "map",
+        "set",
+        "box",
+        "rc",
+        "bufwriter",
+        "bytes",
+        "name",
+        "text",
+        "data",
+        "list",
+        "array",
+        "items",
+        "buffer",
+        "cache",
+    ];
+
+    if heap_keywords.iter().any(|&k| lower.contains(k)) {
+        return true;
+    }
+
+    // Default to true for any variable longer than 2 chars, to be safe.
+    r.len() > 2
 }
 
 fn should_skip_clone(source: &str, call: Node, recv: Option<&str>, lv: Option<&str>) -> bool {
@@ -176,12 +189,12 @@ fn should_skip_clone(source: &str, call: Node, recv: Option<&str>, lv: Option<&s
         return true;
     }
     if let (Some(r), Some(v)) = (recv, lv) {
-        if r.trim() == v || r.contains(&format!("{v}.")) {
-            return true;
-        }
-    }
-    if let Some(r) = recv {
-        if r.contains("..") || r.parse::<i64>().is_ok() {
+        let r_trim = r.trim();
+        let v_trim = v.trim();
+        if !r_trim.is_empty()
+            && !v_trim.is_empty()
+            && (r_trim == v_trim || r_trim.starts_with(&format!("{v_trim}.")))
+        {
             return true;
         }
     }
@@ -190,15 +203,22 @@ fn should_skip_clone(source: &str, call: Node, recv: Option<&str>, lv: Option<&s
 
 fn is_ownership_sink(source: &str, node: Node) -> bool {
     let mut cur = node;
-    for _ in 0..10 {
+    for _ in 0..5 {
         let Some(p) = cur.parent() else { break };
-        let txt = p.utf8_text(source.as_bytes()).unwrap_or("");
-        if txt.contains(".insert(")
-            || txt.contains(".push(")
-            || txt.contains(".entry(")
-            || txt.contains(".extend(")
-        {
-            return true;
+        if p.kind() == "call_expression" {
+            if let Some(func) = p.child_by_field_name("function") {
+                let txt = func.utf8_text(source.as_bytes()).unwrap_or("");
+                if txt.ends_with(".insert")
+                    || txt.ends_with(".push")
+                    || txt.ends_with(".entry")
+                    || txt.ends_with(".extend")
+                {
+                    return true;
+                }
+            }
+        }
+        if p.kind() == "expression_statement" || p.kind() == "let_declaration" {
+            break;
         }
         cur = p;
     }
@@ -221,15 +241,16 @@ fn check_p02(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
         let recv = get_capture_node(&m, idx_recv).and_then(|c| c.utf8_text(source.as_bytes()).ok());
 
         let Some(call) = call else { continue };
-        if is_ownership_sink(source, call) {
-            continue;
-        }
+
         // Skip conversion of the loop variable itself — caller intent
         if let (Some(r), Some(v)) = (recv, loop_var) {
             if r.trim() == v || r.contains(&format!("{v}.")) {
                 continue;
             }
         }
+
+        // Removed is_ownership_sink check here for P02!
+        // Calling to_string() in a loop allocations even if pushed directly.
 
         let recv_text = recv.unwrap_or("<expr>");
         out.push(Violation::with_details(
@@ -356,7 +377,7 @@ mod tests {
     fn looks_heap_owning_identifies_string() {
         assert!(looks_heap_owning("name_string"));
         assert!(looks_heap_owning("SomeStruct"));
-        assert!(!looks_heap_owning("count"));
+        assert!(!looks_heap_owning("i"));
         assert!(!looks_heap_owning("x"));
     }
 }
