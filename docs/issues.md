@@ -17,265 +17,225 @@ Description of the task.
 * Don't modify this FORMAT section
 * Content below the line is the work.
 ---
-## [1] Smart output compression for neti-report.txt
+
+## [1] L03: Fixed-size array indexing produces false positives
+**Status:** OPEN
+**Files:** `src/analysis/patterns/logic.rs`
+L03 flags `self.s[0]` on `[u32; 4]`, `seed[0]` on `[u8; 32]`, and similar constant-index access on fixed-size arrays. These cannot panic. This is the single largest false positive source — 13 violations on the rand crate alone.
+
+Required behavior:
+* When the receiver is a fixed-size array (`[T; N]`), and the index is a constant literal less than N, suppress the violation.
+* Detection approach: walk up from the index expression to find the variable/field declaration. If the declaration has array type syntax `[T; N]`, extract N and compare against the index constant.
+* Also suppress `self.field[0]` when the struct field is declared as a fixed-size array (requires walking to the struct definition or recognizing the pattern heuristically).
+* Keep L03 active for dynamic indices and slice/Vec indexing where bounds are unknown.
+
+Deliverables:
+* Implement `is_fixed_size_array_access()` in logic.rs
+* Add tests:
+  * `let seed = [0u8; 32]; seed[0] = 1;` — NOT flagged
+  * `let v: Vec<i32> = vec![1]; v[0]` — still flagged
+  * `self.s[0]` where `s: [u32; 4]` — NOT flagged
+**Resolution:**
+
+---
+
+## [2] I02: Type-blind duplicate arm detection flags unfuseable match arms
+**Status:** OPEN
+**Files:** `src/analysis/patterns/idiomatic.rs`
+I02 flags match arms as "duplicate" when the arm bodies are textually identical but the bindings have different concrete types. Example from rand's `IndexVec`:
+```rust
+match self {
+    IndexVec::U32(v) => v.len(),  // v: Vec<u32>
+    IndexVec::U64(v) => v.len(),  // v: Vec<u64>
+}
+```
+Neti suggests `U32(v) | U64(v) => v.len()` which does not compile — you cannot bind different types to the same name in a combined pattern. This produced 9 false positives on rand alone.
+
+Required behavior:
+* When an enum has variants wrapping different inner types, skip the duplicate-arm check.
+* Heuristic: if the enum definition shows variants with different type parameters (e.g., `U32(Vec<u32>)` vs `U64(Vec<u64>)`), the arms are structurally forced to be separate.
+* Minimum viable fix: if the match arms destructure enum variants with bindings, and the enum has more than one variant with different payloads, suppress I02.
+* More precise fix: check if the variants' inner types differ at the AST level.
+
+Deliverables:
+* Update I02 detection to skip type-incompatible arms
+* Add tests with `enum Foo { A(u32), B(u64) }` match — NOT flagged
+* Keep I02 active for genuinely fuseable arms (same variant type or no destructuring)
+**Resolution:**
+
+---
+
+## [3] Syntax error on `#![doc(...)]` inner attribute — Issue [7] regression
+**Status:** OPEN
+**Files:** `src/analysis/checks/syntax.rs`
+`#![doc(html_logo_url = "...")]` in rand's `src/lib.rs` triggers "Syntax error detected" (LAW OF INTEGRITY). Issue [7] added `is_known_unsupported_construct()` for inner attributes, but it's not catching `#![doc(...)]` — likely the recognizer only matches `#![allow` or `#![cfg` patterns.
+
+Required behavior:
+* The inner attribute recognizer must match ANY `#![...]` form, not just specific attribute names.
+* Fix the pattern to check for `#![` prefix generically.
+* Verify against: `#![doc(...)]`, `#![allow(...)]`, `#![cfg_attr(...)]`, `#![feature(...)]`, `#![warn(...)]`, `#![deny(...)]`.
+
+Deliverables:
+* Fix the recognizer pattern
+* Add regression test for `#![doc(html_logo_url = "...")]`
+* Verify existing `#![allow(...)]` test still passes
+**Resolution:**
+
+---
+
+## [4] P01: Skip test functions and intentional iterator clone patterns
+**Status:** OPEN
+**Files:** `src/analysis/patterns/performance.rs`
+P01 flags `iter.clone().choose(r)` inside test loops. The clone is intentional — consume-once iterator APIs require a fresh iterator each iteration to test sampling distributions. This produced 3 false positives on rand's test code.
+
+Additionally, P01 flags structurally necessary clones on generic types (e.g., `self.cumulative_weights[i].clone()` where `W: Clone`) where the clone cannot be hoisted because the value changes each iteration. 4 more false positives on rand.
+
+Required behavior:
+* Skip P01 inside `#[test]` functions entirely, or at minimum inside `#[cfg(test)]` modules.
+* For non-test code: recognize when a clone is on an indexed collection element inside a loop where the index varies — the clone is structurally necessary and cannot be hoisted.
+
+Deliverables:
+* Add `is_test_context()` check that walks ancestors for `#[test]` or `#[cfg(test)]`
+* Add test: clone in `#[test]` fn — NOT flagged
+* Add test: clone of `vec[i]` inside loop with varying `i` — NOT flagged (or reduced severity)
+**Resolution:**
+
+---
+
+## [5] P06: Floyd's algorithm and small-collection linear search are false positives
+**Status:** OPEN
+**Files:** `src/analysis/patterns/performance.rs`
+P06 flags `.position()` inside loops without considering whether the linear scan IS the algorithm (Floyd's sampling) or operates on a trivially small collection (4-element test arrays). 4 false positives on rand.
+
+Required behavior:
+* Skip P06 inside `#[test]` / `#[cfg(test)]` contexts (same as [4]).
+* Consider adding a heuristic: if the collection being scanned is demonstrably small (literal array, or bounded by a small constant), suppress or downgrade.
+* For algorithmic cases (Floyd's), there's no good automated fix — but at minimum, test code should not be flagged.
+
+Deliverables:
+* Share the `is_test_context()` implementation with [4]
+* Add test: `.position()` in test loop — NOT flagged
+**Resolution:**
+
+---
+
+## [6] I01: Suggesting derive_more to zero-dependency crates is tone-deaf
+**Status:** OPEN
+**Files:** `src/analysis/patterns/idiomatic.rs`
+I01 suggests `derive_more::From` for manual `From` impls. This is actively harmful advice for foundational crates (rand, serde, tokio) that intentionally maintain zero proc-macro dependencies. 2 violations on rand.
+
+Required behavior:
+* Downgrade I01 from error to info/suggestion severity.
+* OR: add context to the suggestion: "Consider `derive_more::From` if your crate already uses proc macros."
+* OR: suppress I01 when the impl is for a core/std trait (From, Into, TryFrom) and the crate has no proc-macro dependencies in Cargo.toml.
+
+The simplest fix is severity downgrade — I01 is a style preference, not a correctness issue.
+
+Deliverables:
+* Change I01 severity or add qualifier to suggestion text
+* Verify rand's manual From impls no longer appear as errors
+**Resolution:**
+
+---
+
+## [7] Smart output compression for neti-report.txt
 **Status:** OPEN
 **Files:** `src/verification/runner.rs`, potentially new `src/reporting/compression.rs`
 Clippy and other tools can output 10,000 lines for what amounts to 2 distinct issues repeated across many call sites. AI agents waste context window on this noise. `neti-report.txt` should be maximally informative but succinct.
+
 Approach:
 * Group violations/errors by kind (error code + message template), not by occurrence
 * For each kind: show the first 2-3 instances with full context, then a count of remaining occurrences with just file:line references
-* Example:
-  ```
-  E0308 (mismatched types) — 47 occurrences across 12 files
-    src/foo.rs:42  expected `String`, found `&str`
-    src/bar.rs:88  expected `String`, found `&str`
-    ... and 45 more (src/baz.rs:12, src/qux.rs:55, ...)
-  ```
 * Must work for ANY command output in the `[commands]` pipeline — not clippy-specific
 * Write compression logic as a shared utility
 **Resolution:**
 
 ---
-## [2] Locality integration into standard scan pipeline
+
+## [8] Safety rule robustness: recognize SAFETY justifications and avoid penalizing well-documented unsafe
+**Status:** OPEN
+**Files:** `src/analysis/safety.rs`, tests
+Requiring `// SAFETY:` is good, but the rule should be robust and ergonomic: it should recognize nearby justifications and avoid false negatives in common formatting patterns.
+
+Required behavior:
+* Accept `// SAFETY:` comments that are:
+  * immediately above the `unsafe` block
+  * on the same line
+  * within a small window (e.g., within the preceding 2 lines) if separated by blank line or short comment
+* If an unsafe block is inside a function documented with a `# Safety` section, allow an opt-in mode to satisfy the requirement.
+
+Deliverables:
+* Improve detection of SAFETY comment adjacency
+* Add tests with common Rust idioms (including code formatted by rustfmt)
+**Resolution:**
+
+---
+
+## [9] Locality integration into standard scan pipeline
 **Status:** OPEN
 **Files:** `src/graph/locality/` (all), `src/cli/locality.rs`, `src/config/locality.rs`
-Locality has a massive subgraph (classifier, coupling, cycles, distance, edges, exemptions, layers, validator, types, report, analysis/metrics, analysis/violations) but feels separate from the main scan pipeline.
+Locality has a massive subgraph but feels separate from the main scan pipeline.
+
 Questions to resolve:
-* Should locality be a first-class `neti check` phase (runs automatically), or remain an opt-in `neti locality` command?
-* Is the implementation providing value proportional to its code size?
-* Can locality violations be surfaced as regular scan violations (same format, same report) rather than a separate report?
+* Should locality be a first-class `neti check` phase or remain opt-in `neti locality`?
+* Can locality violations be surfaced as regular scan violations (same format, same report)?
+
 Recommendation: integrate locality results into the standard scan report format. Keep the graph engine as-is but unify the output.
 **Resolution:**
 
 ---
-## [3] Mutation testing strategy: de-scope `neti mutate` or make it truly cross-language
-**Status:** DESCOPED
-**Files:** `src/mutate/` (all), `src/cli/mutate_handler.rs`, `src/verification/runner.rs`, docs/README (where mutate is described), tests
-`neti mutate` exists today, but Neti's direction is language-agnostic governance. Mutation testing is valuable, but we need a clear strategy:
-**Decision A — Remove/De-scope `neti mutate` (recommended default):**
-* Mark `neti mutate` as deprecated and/or remove it.
-* Prefer best-in-class ecosystem tools per language (e.g., Rust: `cargo-mutants`).
-* Add "mutation testing hooks" via `[commands]` so teams can run their tool of choice and still get unified reporting in `neti-report.txt`.
-* Ensure output compression (Issue [1]) supports mutation tool output well.
-**Decision B — Make `neti mutate` real and cross-language:**
-If we keep it, it must be a generic orchestration layer:
-* Define a language-agnostic mutation interface:
-  * discover target files
-  * generate/apply mutations
-  * run configured test command(s)
-  * record killed/survived mutants + timing
-* Provide per-language adapters:
-  * Rust adapter could wrap `cargo-mutants` (or implement minimal native mutations)
-  * Python adapter wraps `mutmut`/`cosmic-ray`
-  * JS/TS adapter wraps `Stryker`
-* Output a consistent report section with:
-  * overall kill rate
-  * survivors grouped by mutation operator + file:line
-  * links to reproduction commands
-* Add a baseline target (e.g., 70%+ kill rate) **only** for Neti's own core logic tests (not for arbitrary repos).
-**Deliverables:**
-1. Pick A or B and document the rationale.
-2. Implement chosen path.
-3. Add regression tests around the mutate pipeline (or deprecation/removal behavior).
-4. Ensure results flow into the standard `neti check` report format.
-**Resolution:** Chose Decision A. `neti mutate` is the wrong level of abstraction for a language-agnostic governance tool. Best-in-class per-language tools (cargo-mutants, mutmut, Stryker) are far more capable than Neti can realistically replicate. The `[commands]` pipeline already supports running external tools; teams should plug mutation runners in there and get compressed output via Issue [1] compression. The existing `src/mutate/` code is preserved but the command should be marked `#[deprecated]` in the CLI layer and excluded from documentation. No new implementation work needed for this descope — the hook pattern already exists.
+
+## [10] Governance-grade clippy integration: separate "lint hygiene" from "merge blockers"
+**Status:** OPEN
+**Files:** `src/verification/runner.rs`, `src/cli/audit.rs`, `src/config/types.rs`, tests
+Required behavior:
+* Two tiers of command enforcement: **blockers** (compile/test failures) and **hygiene** (clippy pedantic as non-blocking)
+* Commands marked as `mode = "error" | "warn"` in neti.toml
+* Report clearly separates blocking vs non-blocking sections
+
+Deliverables:
+* Extend `[commands]` schema for severity/mode per command
+* Add tests on runner behavior
+**Resolution:**
 
 ---
-## [4] Python and TypeScript pattern detection parity
+
+## [11] Python and TypeScript pattern detection parity
 **Status:** OPEN
 **Files:** `src/analysis/patterns/` (all), `src/lang.rs`
 Rust has full pattern detection. Python and TypeScript are marked "Partial" in the README. Close the gap on the most impactful patterns:
-* Concurrency patterns where applicable
 * Security patterns (injection, credential exposure)
 * Performance patterns (allocation in loops, linear search in loops)
 * Idiomatic patterns per language
 **Resolution:**
 
 ---
-## [5] Concurrency rule C03: distinguish sync Mutex vs async mutexes to reduce false positives
-**Status:** DONE
-**Files:** `src/analysis/patterns/concurrency_lock.rs`
-Neti currently flags "MutexGuard held across `.await`" (C03) in codebases that use async-aware mutexes (e.g., `tokio::sync::Mutex`, `futures_util::lock::Mutex`). This produces false positives and overly severe guidance ("critical deadlock risk") for async locks.
-Required behavior:
-* Detect whether the guard is from `std::sync::Mutex`/`parking_lot::Mutex` (sync) vs `tokio::sync::Mutex` / `futures_util::lock::Mutex` (async)
-* For sync mutex guards across `.await`: keep as high severity (real deadlock/thread-block risk)
-* For async mutex guards across `.await`: downgrade severity and adjust guidance to async-appropriate risks (head-of-line blocking, reentrancy hazards, starvation), and/or propose more specific patterns like "awaiting I/O while holding async lock"
-* Add regression tests using real-world examples (Dioxus fullstack websocket payloads and CLI logging patterns)
-Notes:
-* If type resolution is unavailable, add pragmatic heuristics: import path checks, fully-qualified type names in tokens, or pattern match on `.lock().await` vs `.lock()`.
-**Resolution:** Added `MutexKind` enum (Sync / Async) with a two-tier classification heuristic: (1) if the acquisition line ends in `.lock().await` it's an async mutex; (2) if the source file imports `tokio::sync::*`, `futures::lock::*`, or similar, treat as async context; (3) default to sync. Sync violations keep the original deadlock-risk message and suggestion. Async violations get a head-of-line blocking message with appropriate guidance. Six regression tests cover both paths, the import heuristic, and the guard-dropped-before-await safe case.
 
----
-## [6] Command injection rule X02: reduce false positives for tokio::process::Command and non-shell execution
-**Status:** DONE
-**Files:** `src/analysis/patterns/security.rs`
-Neti flags `tokio::process::Command::new(binary_path)` (and similar `std::process::Command`) as "command injection" even when arguments are passed via `.arg(...)` and no shell is invoked. This is often not injection; the realistic risk is executable provenance (PATH hijacking, untrusted download integrity, unexpected resolution).
-Required behavior:
-* Differentiate "shell invocation" vs "direct exec"
-  * Shell invocation examples: `sh -c ...`, `cmd /C ...`, `powershell -Command ...`, `Command::new("sh").arg("-c")...`, etc.
-  * Direct exec with `.arg(...)` should not be classified as injection by default
-* Introduce improved taxonomy/guidance:
-  * "Shell injection" (high severity) when shell is involved or untrusted string becomes a shell command
-  * "Untrusted executable provenance" (warn) when `Command::new` uses dynamic path/name and resolution may be unsafe (PATH, downloads), with suggestions like allowlists, absolute paths, signature checks, or controlled install locations
-* Add targeted regression tests using Dioxus CLI Tailwind integration patterns (`tokio::process::Command` + `.arg(...)`) to verify correct classification
-**Resolution:** Rewrote X02 detection with a two-tier model. `is_shell_invocation()` checks whether the executable name/variable suggests a shell interpreter (sh, bash, cmd, powershell, etc.) or the call chain shows `.arg("-c")` / `.arg("/C")`; those get HIGH severity "Shell injection" violations. All other `Command::new(dynamic_var)` paths get WARN severity "Untrusted executable provenance" with allowlist/absolute-path guidance — not "injection". Added `is_command_type()` to recognize `tokio::process::Command` and `std::process::Command` as the same risk surface. Four regression tests cover: direct exec (provenance warn), shell invocation (high), const binary (safe), and the `is_shell_invocation` heuristic directly.
-
----
-## [7] Rust parser correctness: eliminate "Syntax error detected" on valid Rust
-**Status:** DONE
-**Files:** `src/analysis/checks/syntax.rs`
-Neti currently emits LAW OF INTEGRITY "Syntax error detected" for valid Rust constructs (range patterns `0..`, `1..`, `Some(2..)`, inner attributes like `#![doc(...)]`, C-string literals `c"..."`, cfg-gated destructuring, etc). This is a trust-killer and blocks any attempt to use Neti on modern Rust.
-Required behavior:
-* Upgrade Rust parsing to fully support modern Rust syntax (Rust 1.90+).
-* If Neti cannot parse a file due to unsupported grammar, it must report a **non-violation diagnostic** ("parser unsupported for this syntax") and must not claim a syntax error.
-* Add a **soundness guard**: if `cargo check` (or `cargo metadata` + a compile probe) succeeds for the workspace, Neti must never emit "syntax error" for Rust source files (unless the file is outside the crate graph and truly malformed).
-Deliverables:
-* Update tree-sitter Rust grammar and any node-kind mappings used by Neti.
-* Add regression tests for:
-  * inner attributes (`#![doc(...)]`)
-  * range patterns (`0..`, `24..`, `..=2`, `Some(2..)`)
-  * C-string literals (`c"main"`)
-  * cfg-conditional fields/destructuring
-* Add a "parser unsupported" diagnostics path distinct from "syntax error".
-**Resolution:** Added `is_known_unsupported_construct()` in `syntax.rs` with recognizers for: C-string literals (`c"..."`, `cr"..."`), open-ended range patterns (`0..`, `24..`), numeric literals with type suffixes in pattern context (`24u8`, `100usize`), and inner attributes (`#![...]`). When an error node matches any of these, the violation is suppressed rather than reported as "Syntax error detected." The suppression is documented with a module-level soundness contract explaining the cost trade-off (false silence < false hard error). Regression tests cover all four construct families. Note: the full fix requires also updating the bundled tree-sitter-rust crate version — that's a `Cargo.toml` change to `tree-sitter-rust = "0.21"` or later which supports these constructs natively.
-
----
-## [8] Proof-based indexing analysis: stop flagging safe indexing (arrays, iterators with invariants, chunks_exact)
-**Status:** DONE
-**Files:** `src/analysis/patterns/logic.rs`
-Neti's L03 "Index `[0]` without bounds check" is currently over-broad. It flags cases that are provably safe (fixed-size arrays, `chunks_exact(2)` indexing `[0]`/`[1]`, known-invariant code paths) and generates noise.
-Required behavior:
-* Do not flag indexing on **fixed-size arrays** when the index is a constant within bounds.
-* Do not flag indexing into slices produced by APIs that guarantee length, e.g.:
-  * `chunks_exact(N)` → indexing `[0..N-1]` is safe inside the closure
-  * `split_at(N)` → first slice length is `N`
-  * `array_chunks::<N>()` / `chunks_exact` patterns (where applicable)
-* For ambiguous cases, keep the warning, but provide a more precise suggestion:
-  * "prove non-empty with an assertion" (e.g., `debug_assert!(!x.is_empty())`) or refactor.
-Deliverables:
-* Implement small, composable proofs/invariants:
-  * "known fixed length container"
-  * "chunks_exact(N) closure implies length >= N"
-* Add regression tests using Dioxus examples:
-  * `chunks_exact(2).map(|a| u16::from_le_bytes([a[0], a[1]]))` should be **clean**
-  * fixed array indexing like `seed[0] = 1` should be **clean**
-* Keep L03 strong only when a panic is genuinely plausible.
-**Resolution:** Added `has_chunks_exact_context()` which walks up the ancestor chain looking for `chunks_exact(` or `array_chunks(` calls. If the `[0]`/`[1]` index is inside one of these iterator closures, the violation is suppressed. Regression test confirms `data.chunks_exact(2).map(|a| u16::from_le_bytes([a[0], a[1]]))` produces no L03. Note: fixed-size array indexing (e.g. `seed[0] = 1`) is also handled — the existing `has_explicit_guard()` check already covers the pattern where the array is declared as `[T; N]`, but a more robust proof would require type-level analysis. Added a note in the suggestion to use `debug_assert!(!x.is_empty())` for genuinely ambiguous cases.
-
----
-## [9] Fix L02 rule logic: remove incorrect off-by-one guidance and replace with correct boundary heuristics
-**Status:** DONE
-**Files:** `src/analysis/patterns/logic.rs`
-Neti flags correct boundary guards (e.g. `if index >= len { return None; }`) with guidance that suggests it's suspicious. That's backwards; it produces false positives and bad advice.
-Required behavior:
-* L02 should target *actual* boundary ambiguity patterns, such as:
-  * loops with `0..=len()` or indexing with `<= len()` comparisons that can reach `len`
-  * patterns where `len()` is used in an inclusive range for indexing
-* Do not flag `index >= len()` guards—they're canonical.
-Deliverables:
-* Replace L02 with a smaller set of precise triggers.
-* Add tests to ensure:
-  * `if idx >= v.len() { return None; } v[idx]` is not flagged
-  * `for i in 0..=v.len() { v[i] }` *is* flagged
-**Resolution:** Rewrote `is_safe_boundary()` with explicit directional logic. The key insight: `idx >= v.len()` means "idx is out of bounds" — that's a guard and is SAFE. `idx <= v.len()` means "idx could equal len" — that's dangerous. The original code checked `is_index_variable` symmetrically on both sides, which caused it to suppress the guard direction. New logic: when RHS is `.len()`, `>=` operator means safe guard; when LHS is `.len()`, `<=` operator means safe guard. Literals always safe (threshold check). Four tests: flag `i <= v.len()`, flag `v.len() >= i`, skip `idx >= v.len()` guard, skip `v.len() <= idx` guard.
-
----
-## [10] Safety rule robustness: recognize SAFETY justifications and avoid penalizing well-documented unsafe
+## [12] Regression suite: prove scan correctness against real-world crates
 **Status:** OPEN
-**Files:** `src/analysis/safety.rs`, `src/analysis/patterns/safety.rs` (if split), tests
-Requiring `// SAFETY:` is good, but the rule should be robust and ergonomic: it should recognize nearby justifications and avoid false negatives in common formatting patterns.
-Required behavior:
-* Accept `// SAFETY:` comments that are:
-  * immediately above the `unsafe` block
-  * on the same line
-  * within a small window (e.g., within the preceding 2 lines) if separated by blank line or short comment
-* If an unsafe block is inside a function documented with a `# Safety` section, allow an opt-in mode to satisfy the requirement (still strict, but not brittle).
+**Files:** `tests/` (new), `src/analysis/*`, CI config
+Once [1]-[5] land, lock down correctness with a regression harness against pinned real-world code (rand, Dioxus, or curated fixtures extracted from them).
+
+The suite should assert:
+* No syntax error false positives on valid Rust
+* No L03 on fixed-size arrays
+* No I02 on type-incompatible match arms
+* No P01/P06 in test code
+* No C03/X02 misclassifications
+
 Deliverables:
-* Improve detection of SAFETY comment adjacency.
-* Add tests with common Rust idioms (including code formatted by rustfmt).
-* Ensure Dioxus cases with correct justifications stop being flagged once a proper comment exists.
+* Add curated fixture files reproducing known false positives
+* Add CI job running regression tests
 **Resolution:**
 
 ---
-## [11] Meaningful performance signals: downgrade/disable heuristic-only P01/P02 unless allocation is proven
-**Status:** DONE
-**Files:** `src/analysis/patterns/performance.rs`
-Neti's P01/P02 heuristics fire frequently in real codebases (cloning Arcs, cheap string conversions, etc). To be antifragile, Neti should only escalate when it can establish material cost, otherwise it becomes "perf lint spam."
-Required behavior:
-* For `.clone()` in loop:
-  * Only escalate when the cloned type is likely heap-owning (e.g., `String`, `Vec`, `HashMap`, `Box`, `Rc`), or when clone is nested in an inner hot loop and cannot be hoisted.
-  * For `Arc::clone` / `Rc::clone`, default to INFO/WARN unless additional evidence exists.
-* For `.to_string()`/string conversions in loops:
-  * Treat as WARN only when inside loop and result is not immediately consumed in a way that requires allocation.
-* Always include "why we think this is expensive" in analysis.
-Deliverables:
-* Add lightweight type heuristics based on token/path (no full type inference required).
-* Add tests that:
-  * don't flag `Arc::clone` in loop by default
-  * do flag `String::to_string()` in loop when clearly alloc-heavy
-**Resolution:** Added `is_arc_or_rc_clone()` which detects `Arc::clone(...)` / `Rc::clone(...)` call patterns by checking whether the call text matches `Arc::clone` or `Rc::clone` prefix — these are ref-count increments (pointer-width copy), not heap allocations, and are suppressed. Added `looks_heap_owning()` which checks the receiver token for heap-type signals (`String`, `Vec`, `HashMap`, `Box`, `Rc`, `_string`, `_vec`, `_map`, or an uppercase identifier suggesting a heap-owning struct). If neither heuristic applies, the receiver is considered cheap and the violation is suppressed. P02 unchanged — `to_string()`/`to_owned()` in a loop is always a real allocation and is always flagged. Three tests: Arc::clone not flagged, String::to_string flagged, and the `looks_heap_owning` heuristic directly.
 
----
-## [12] Governance-grade clippy integration: separate "lint hygiene" from "merge blockers"
-**Status:** OPEN
-**Files:** `src/verification/runner.rs`, `src/cli/audit.rs` (if relevant), docs/README, tests
-You've discovered that `cargo clippy -- -D warnings` on mature crates can explode due to lints the project does not treat as deny-by-default. Neti needs a robust approach: **Neti should not force an ecosystem-wide policy**, but it should support governance.
-Required behavior:
-* Provide first-class support for two tiers of command enforcement:
-  1. **Blockers**: compile/test failures, security-critical patterns, explicit deny-lists
-  2. **Hygiene**: clippy pedantic/nursery/etc as non-blocking or separately summarized
-* Allow commands to be marked as `mode = "error" | "warn"` in Neti config (without special-casing any repo).
-* Ensure the report compression (Issue [1]) groups these clearly.
-Deliverables:
-* Extend `[commands]` schema to allow severity / mode per command.
-* Report should clearly show:
-  * "BLOCKING" sections
-  * "NON-BLOCKING / HYGIENE" sections
-* Add tests on runner behavior.
-**Resolution:**
-
----
-## [13] Asset and non-source file classification: stop applying code laws to non-code artifacts
-**Status:** DONE
-**Files:** `src/file_class.rs` (new), `src/analysis/worker.rs`
-Neti is currently applying LAW OF ATOMICITY and other code-focused checks to large artifacts like HTML, JSON schema, and bundled/minified JS. That's not a "large repo special case"—it's a correctness issue: those aren't code units governed by the same rules.
-Required behavior:
-* Classify files into:
-  * **source code** (Rust/Python/TS/etc)
-  * **config** (toml/yaml)
-  * **assets** (html/json/svg/minified js/css/etc)
-* Only apply structural laws (tokens, cognitive complexity, naming, etc.) to **source code** by default.
-* Still allow scanning assets for specific checks where meaningful (e.g., secrets detection), but **do not** treat them as atomicity violations.
-Deliverables:
-* Implement file classification centrally.
-* Add tests:
-  * `.html` and `.json` do not trigger token-limit violations
-  * Rust/TS/Py still do
-  * secrets scanning can still include assets if enabled
-**Resolution:** New `src/file_class.rs` module with `FileKind` enum (SourceCode / Config / Asset / Other) and `classify(path)` function. Classification is extension-based with a minified-artifact name check (`*.min.js`, `*.bundle.js`) taking priority. `FileKind::is_governed()` returns `true` only for SourceCode. Updated `worker.rs` to call `file_class::classify(path)` early in `scan_file()` — non-governed files return immediately after token counting (no atomicity violation emitted, no AST analysis). `FileKind::secrets_applicable()` is available for future use when secrets scanning is extended to config/asset files. Nine tests cover all classification categories plus minified-artifact detection.
-
----
-## [14] Dioxus calibration gate: prove "all green means real green" with a locked regression suite
-**Status:** OPEN
-**Files:** `tests/` (new), `src/analysis/*`, `src/discovery.rs`, CI config (optional)
-Once the above fixes land, we need a stable regression target to prevent backsliding. Dioxus is a perfect real-world corpus.
-Required behavior:
-* Add a regression test harness that runs Neti scan against a pinned Dioxus snapshot (or a small curated fixture extracted from Dioxus that includes the problematic constructs).
-* The suite should assert:
-  * no "syntax error" false positives
-  * no C03/X02 misclassifications
-  * no asset token-limit violations
-  * indexing proofs behave correctly
-Deliverables:
-* Add fixtures (small extracted files) to extract from Dioxus that reproduce the known false positives.
-* Add CI job that runs these regression tests.
-**Resolution:**
-
----
-### Notes on ordering
-If you want to get to "Dioxus green OR real problems" fastest, the order is:
-1. **[7] parser correctness** (everything depends on this)
-2. **[13] file classification** (removes asset noise correctly)
-3. **[8]/[9] indexing + boundary correctness** (removes lots of false positives)
-4. **[5]/[6] (already in your list)** C03/X02 correctness
-5. **[12] command tiering** + **[1] compression** (quality of life + governance)
+### Priority order
+1. **[1] L03 fixed-size arrays** — 13 false positives, single fix
+2. **[2] I02 type-blind matching** — 9 false positives, single fix
+3. **[3] `#![doc]` regression** — 1 false positive, trivial fix
+4. **[4]+[5] Test context skipping** — 7 false positives, shared `is_test_context()` implementation
+5. **[6] I01 severity** — 2 false positives, trivial
+6. **[7]-[10] Infrastructure** — compression, safety, locality, clippy tiers
+7. **[11] Language parity** — feature expansion
+8. **[12] Regression suite** — lock it all down
