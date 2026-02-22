@@ -56,7 +56,7 @@ fn should_skip(path: &Path) -> bool {
 
 fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"
-        (for_expression pattern: (_) @pat body: (block) @body) @loop
+        (for_expression pattern: _ @pat body: (block) @body) @loop
         (while_expression body: (block) @body) @loop
         (loop_expression body: (block) @body) @loop
     ";
@@ -85,7 +85,8 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
 
 fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Violation>) {
     let q = r#"(call_expression function: (field_expression
-        value: (_) @recv field: (field_identifier) @m (#eq? @m "clone"))) @call"#;
+        value: (_) @recv field: (field_identifier) @m)
+        (#eq? @m "clone")) @call"#;
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
         return;
     };

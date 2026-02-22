@@ -1,5 +1,7 @@
 # project -- Semantic Map
 
+**Purpose:** architectural linter and code quality CI gate
+
 ## Legend
 
 `[ENTRY]` Application entry point
@@ -142,7 +144,7 @@ Function naming checks (Law of Complexity). Supports application functionality.
 → Exports: check_naming
 
 `src/analysis/checks/syntax.rs`
-Checks for syntax errors or missing nodes in the AST. Supports application functionality.
+AST-level syntax error and malformed node detection. Supports application functionality.
 → Exports: check_syntax
 
 `src/analysis/cognitive.rs`
@@ -174,7 +176,7 @@ Concurrency pattern detection: C03, C04. Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/concurrency_lock.rs`
-C03: `MutexGuard` held across `.await`. Supports application functionality.
+C03: `MutexGuard` held across `.await`  # Severity Tiers  Not all "lock held across await" patterns carry the same risk:  **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH severity** Holding a sync guard across `.await` is a *bug*: it blocks the OS thread, starving the executor, and can deadlock if another task on the same thread tries to acquire the same lock. Supports application functionality.
 → Exports: detect_c03
 
 `src/analysis/patterns/concurrency_sync.rs`
@@ -190,11 +192,11 @@ Idiomatic patterns: I01, I02. Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/logic.rs`
-Logic patterns: L02, L03. Supports application functionality.
+Logic boundary patterns: L02 (off-by-one risk), L03 (unchecked index). Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/performance.rs`
-Performance anti-patterns: P01, P02, P04, P06. Supports application functionality.
+Performance anti-patterns: P01, P02, P04, P06  # Escalation Philosophy  P01/P02 must only fire when we can make a reasonable argument that the allocation is *material*. Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/resource.rs`
@@ -202,7 +204,7 @@ Resource patterns: R07 (missing flush). Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/security.rs`
-Security patterns: X01, X02, X03. Supports application functionality.
+Security patterns: X01, X02, X03  # X02 Design  The original X02 rule flagged any `Command::new(variable)` as "command injection." This is over-broad and generates false positives on idiomatic `tokio::process::Command` usage in Dioxus/CLI tools. Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/semantic.rs`
@@ -284,6 +286,10 @@ Machine-readable event logging for audit trails. Supports application functional
 `src/exit.rs`
 Standardized process exit codes for `Neti`. Supports application functionality.
 → Exports: NetiExit, code, exit
+
+`src/file_class.rs`
+File classification: distinguishes source code from config, assets, and data. Supports application functionality.
+→ Exports: FileKind, classify, is_governed, secrets_applicable
 
 `src/graph/defs/extract.rs`
 A symbol definition found in source code. Supports application functionality.

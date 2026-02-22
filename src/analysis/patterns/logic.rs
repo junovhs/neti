@@ -6,14 +6,14 @@
 //! L02 flags `<=`/`>=` comparisons with `.len()` that risk an off-by-one
 //! panic. Crucially, it must NOT flag canonical bounds guards:
 //!
-//!   ```rust
+//!   ```ignore
 //!   if idx >= v.len() { return None; } // safe guard — do NOT flag
 //!   ```
 //!
 //! Only the dangerous direction (where idx could reach len as an array index)
 //! should produce a violation:
 //!
-//!   ```rust
+//!   ```ignore
 //!   if i <= v.len() { process(v[i]); } // idx could equal len — DO flag
 //!   ```
 //!
@@ -22,7 +22,7 @@
 //! L03 flags `[0]` and `.first().unwrap()` without a bounds proof. It must
 //! NOT flag indexing that is provably safe due to iterator invariants:
 //!
-//!   ```rust
+//!   ```ignore
 //!   slice.chunks_exact(2).map(|a| u16::from_le_bytes([a[0], a[1]]));
 //!   //                                                  ^^^^  safe
 //!   ```
@@ -271,7 +271,7 @@ fn has_explicit_guard(source: &str, node: Node) -> bool {
 /// iterator — meaning the chunk length is guaranteed by the iterator contract.
 ///
 /// Example (safe — do NOT flag):
-/// ```rust
+/// ```ignore
 /// data.chunks_exact(2).map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]));
 /// ```
 fn has_chunks_exact_context(source: &str, node: Node) -> bool {
