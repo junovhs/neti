@@ -193,6 +193,10 @@ Idiomatic patterns: I01, I02. Supports application functionality.
 Logic boundary patterns: L02 (off-by-one risk), L03 (unchecked index). Supports application functionality.
 → Exports: detect
 
+`src/analysis/patterns/logic_proof.rs`
+Fixed-size array proof helpers for L03. Supports application functionality.
+→ Exports: extract_receiver, is_fixed_size_array_access
+
 `src/analysis/patterns/performance.rs`
 Performance anti-patterns: P01, P02, P04, P06  # Escalation Philosophy  P01/P02 must only fire when we can make a reasonable argument that the allocation is *material*. Supports application functionality.
 → Exports: detect
@@ -443,6 +447,10 @@ Command execution and output capture. Supports application functionality.
 
 ## Layer 3 -- Utilities
 
+`src/analysis/patterns/logic_helpers.rs`
+Shared helpers for L02/L03 logic pattern detection. Provides reusable helper functions.
+→ Exports: can_find_local_declaration, decl_matches_variable, has_chunks_exact_context, has_explicit_guard, has_matching_parameter, is_index_variable, is_literal
+
 `src/utils.rs`
 Computes SHA256 hash of content with normalized line endings. Provides reusable helper functions.
 → Exports: compute_sha256
@@ -452,6 +460,10 @@ Computes SHA256 hash of content with normalized line endings. Provides reusable 
 `src/analysis/inspector.rs`
 Inspection logic for scopes (Metrics application). Verifies correctness.
 → Exports: Inspector, inspect, new
+
+`src/analysis/patterns/performance_test_ctx.rs`
+Test context detection for pattern detectors. Verifies correctness.
+→ Exports: is_test_context
 
 `src/graph/locality/tests.rs`
 Integration tests for locality analysis. Verifies correctness.
