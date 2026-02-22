@@ -5,7 +5,7 @@
 //! I01 detects manual `From` implementations that could potentially use
 //! `derive_more::From`. However, this is a STYLE suggestion, not a
 //! correctness issue. Many foundational crates intentionally avoid proc-macro
-//! dependencies. I01 is reported as a suggestion, not an error.
+//! dependencies. I01 is reported as INFO confidence.
 //!
 //! # I02 Design
 //!
@@ -17,7 +17,7 @@
 //!
 //! I02 must detect this case and suppress the suggestion.
 
-use crate::types::{Violation, ViolationDetails};
+use crate::types::{Confidence, Violation, ViolationDetails};
 use std::collections::HashMap;
 use tree_sitter::{Node, Query, QueryCursor};
 
@@ -31,15 +31,7 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
 
 // ── I01 ─────────────────────────────────────────────────────────────────────
 
-/// Detects manual `From` implementations by scanning for `impl_item` nodes
-/// whose text matches the `impl From<...> for ...` pattern.
-///
-/// We avoid relying on tree-sitter field names (`type:`, `trait:`) because
-/// they vary across grammar versions. Instead we do a text-based check on
-/// the impl header, which is simple and robust.
-///
-/// Reported as a style suggestion — many crates intentionally avoid
-/// proc-macro dependencies and manual From impls are perfectly valid.
+/// Detects manual `From` implementations. Reported as INFO — style suggestion.
 fn detect_i01(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"(impl_item) @impl";
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
@@ -53,21 +45,17 @@ fn detect_i01(source: &str, root: Node, out: &mut Vec<Violation>) {
         };
 
         let impl_text = impl_node.utf8_text(source.as_bytes()).unwrap_or("");
-
-        // Extract the first line to check the impl header
         let header = impl_text.lines().next().unwrap_or("");
 
-        // Must be `impl From<...> for ...`
         if !is_from_impl(header) {
             continue;
         }
 
-        // Skip Error → Self From impls (idiomatic for error types)
         if is_error_from_impl(impl_text) {
             continue;
         }
 
-        out.push(Violation::with_details(
+        let mut v = Violation::with_details(
             impl_node.start_position().row + 1,
             "Manual `From` impl — consider derive_more if already using proc macros".into(),
             "I01",
@@ -81,11 +69,12 @@ fn detect_i01(source: &str, root: Node, out: &mut Vec<Violation>) {
                     "Use derive_more::From if your crate already uses proc macros. Otherwise this is fine as-is.".into(),
                 ),
             },
-        ));
+        );
+        v.confidence = Confidence::Info;
+        out.push(v);
     }
 }
 
-/// Checks if an impl header line is a `From` impl.
 fn is_from_impl(header: &str) -> bool {
     let trimmed = header.trim();
     let after_impl = match trimmed.strip_prefix("impl") {
@@ -185,12 +174,6 @@ fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut V
     }
 }
 
-/// Returns `true` if the set of patterns destructure enum variants that likely
-/// have incompatible inner types, making arm fusion impossible.
-///
-/// Handles two forms:
-/// 1. Simple: `Enum::VariantA(v)` vs `Enum::VariantB(v)`
-/// 2. Tuple:  `(Enum::A(x), Enum::A(y))` vs `(Enum::B(x), Enum::B(y))`
 fn patterns_have_incompatible_types(patterns: &[String]) -> bool {
     if patterns.len() < 2 {
         return false;
@@ -240,7 +223,6 @@ fn patterns_have_incompatible_types(patterns: &[String]) -> bool {
     false
 }
 
-/// Extracts enum variant names from a pattern string.
 fn extract_variant_names(pattern: &str) -> Vec<&str> {
     let trimmed = pattern.trim();
 
@@ -268,7 +250,6 @@ fn extract_variant_names(pattern: &str) -> Vec<&str> {
     Vec::new()
 }
 
-/// Extracts a single variant name from a pattern like `Enum::Variant(x)`.
 fn extract_single_variant_name(pattern: &str) -> Option<&str> {
     let paren_pos = pattern.find('(')?;
     let path = pattern[..paren_pos].trim();
@@ -280,7 +261,6 @@ fn extract_single_variant_name(pattern: &str) -> Option<&str> {
     Some(path.rsplit("::").next().unwrap_or(path))
 }
 
-/// Splits a string on commas at the top level only (not inside parentheses).
 fn split_top_level_commas(s: &str) -> Vec<&str> {
     let mut parts = Vec::new();
     let mut depth = 0;
@@ -301,7 +281,6 @@ fn split_top_level_commas(s: &str) -> Vec<&str> {
     parts
 }
 
-/// Extracts the body text from a match arm.
 fn arm_body_text(source: &str, arm: Node) -> Option<String> {
     let child_count = arm.child_count();
     if child_count == 0 {
@@ -345,7 +324,12 @@ mod tests {
                 fn from(s: String) -> Self { MyType(s) }
             }
         "#;
-        assert!(parse_and_detect(code).iter().any(|v| v.law == "I01"));
+        let vs = parse_and_detect(code);
+        assert!(vs.iter().any(|v| v.law == "I01"));
+        assert_eq!(
+            vs.iter().find(|v| v.law == "I01").unwrap().confidence,
+            Confidence::Info
+        );
     }
 
     #[test]

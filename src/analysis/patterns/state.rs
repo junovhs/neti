@@ -1,9 +1,8 @@
-// src/analysis/v2/patterns/state.rs
 //! State pattern detection: S01, S02, S03
 
-use crate::types::{Violation, ViolationDetails};
-use tree_sitter::{Node, Query, QueryCursor};
 use super::get_capture_node;
+use crate::types::{Confidence, Violation, ViolationDetails};
+use tree_sitter::{Node, Query, QueryCursor};
 
 /// Detects state-related violations in Rust code.
 #[must_use]
@@ -22,7 +21,7 @@ fn detect_s01(source: &str, root: Node, out: &mut Vec<Violation>) {
         return;
     };
     let idx_mut = query.capture_index_for_name("mut");
-    
+
     let mut cursor = QueryCursor::new();
     for m in cursor.matches(&query, root, source.as_bytes()) {
         if let Some(cap) = get_capture_node(&m, idx_mut) {
@@ -34,7 +33,8 @@ fn detect_s01(source: &str, root: Node, out: &mut Vec<Violation>) {
 }
 
 fn build_s01_violation(row: usize, text: &str) -> Violation {
-    Violation::with_details(
+    // MEDIUM: static mut is unsafe but may be intentional (FFI, low-level)
+    let mut v = Violation::with_details(
         row,
         format!("Global mutable state: `{}`", truncate(text, 50)),
         "S01",
@@ -46,7 +46,10 @@ fn build_s01_violation(row: usize, text: &str) -> Violation {
             ],
             suggestion: Some("Use `AtomicUsize`, `Mutex<T>`, or `OnceCell`.".into()),
         },
-    )
+    );
+    v.confidence = Confidence::Medium;
+    v.confidence_reason = Some("static mut may be intentional for FFI or low-level code".into());
+    v
 }
 
 /// S02: Exported mutable - `pub static` (non-const)
@@ -58,44 +61,42 @@ fn detect_s02(source: &str, root: Node, out: &mut Vec<Violation>) {
     let idx_vis = query.capture_index_for_name("vis");
     let idx_name = query.capture_index_for_name("name");
     let idx_item = query.capture_index_for_name("item");
-    
+
     let mut cursor = QueryCursor::new();
     for m in cursor.matches(&query, root, source.as_bytes()) {
         let vis = get_capture_node(&m, idx_vis);
         let name = get_capture_node(&m, idx_name);
         let item = get_capture_node(&m, idx_item);
-        
+
         if let (Some(vis), Some(name), Some(item)) = (vis, name, item) {
-             if process_s02_check(source, vis, name, item, out) {
-                 // violation added
-             }
+            process_s02_check(source, vis, name, item, out);
         }
     }
 }
 
-fn process_s02_check(source: &str, vis: Node, name: Node, item: Node, out: &mut Vec<Violation>) -> bool {
+fn process_s02_check(source: &str, vis: Node, name: Node, item: Node, out: &mut Vec<Violation>) {
     let vis_text = vis.utf8_text(source.as_bytes()).unwrap_or("");
     if !vis_text.contains("pub") {
-        return false;
+        return;
     }
-    
+
     let name_text = name.utf8_text(source.as_bytes()).unwrap_or("");
     let item_text = item.utf8_text(source.as_bytes()).unwrap_or("");
-    
+
     if item_text.contains("static mut") {
-        return false; // Already caught by S01
+        return; // Already caught by S01
     }
-    
+
     if name_text.chars().all(|c| c.is_uppercase() || c == '_') {
-        return false; // Const-like naming
+        return; // Const-like naming
     }
-    
+
     out.push(build_s02_violation(item.start_position().row, name_text));
-    true
 }
 
 fn build_s02_violation(row: usize, name: &str) -> Violation {
-    Violation::with_details(
+    // MEDIUM: pub static may be intentional API surface
+    let mut v = Violation::with_details(
         row,
         format!("Exported static `{name}` may expose shared state"),
         "S02",
@@ -107,17 +108,21 @@ fn build_s02_violation(row: usize, name: &str) -> Violation {
             ],
             suggestion: Some("Use a function or make the static private.".into()),
         },
-    )
+    );
+    v.confidence = Confidence::Medium;
+    v.confidence_reason = Some("pub static may be intentional API surface".into());
+    v
 }
 
 /// S03: Suspicious global container - `lazy_static` with Mutex
 fn detect_s03(source: &str, root: Node, out: &mut Vec<Violation>) {
-    let query_str = r#"(macro_invocation macro: (identifier) @mac (#match? @mac "^lazy_static$")) @item"#;
+    let query_str =
+        r#"(macro_invocation macro: (identifier) @mac (#match? @mac "^lazy_static$")) @item"#;
     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
         return;
     };
     let idx_item = query.capture_index_for_name("item");
-    
+
     let mut cursor = QueryCursor::new();
     for m in cursor.matches(&query, root, source.as_bytes()) {
         if let Some(item) = get_capture_node(&m, idx_item) {
@@ -134,12 +139,13 @@ fn check_s03_container(source: &str, node: Node) -> Option<Violation> {
         || text.contains("Mutex<HashMap")
         || text.contains("RwLock<Vec")
         || text.contains("RwLock<HashMap");
-    
+
     if !has_container {
         return None;
     }
-    
-    Some(Violation::with_details(
+
+    // MEDIUM: lazy_static with Mutex may be intentional singleton pattern
+    let mut v = Violation::with_details(
         node.start_position().row,
         "Suspicious global container in lazy_static".to_string(),
         "S03",
@@ -151,7 +157,10 @@ fn check_s03_container(source: &str, node: Node) -> Option<Violation> {
             ],
             suggestion: Some("Pass data through function parameters.".into()),
         },
-    ))
+    );
+    v.confidence = Confidence::Medium;
+    v.confidence_reason = Some("global container may be intentional (caching, config)".into());
+    Some(v)
 }
 
 fn extract_first_line(source: &str, node: Node) -> String {
@@ -165,5 +174,9 @@ fn extract_first_line(source: &str, node: Node) -> String {
 }
 
 fn truncate(s: &str, max: usize) -> String {
-    if s.len() <= max { s.to_string() } else { format!("{}...", &s[..max]) }
-}
+    if s.len() <= max {
+        s.to_string()
+    } else {
+        format!("{}...", &s[..max])
+    }
+}

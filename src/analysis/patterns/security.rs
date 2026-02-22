@@ -1,4 +1,3 @@
-// src/analysis/patterns/security.rs
 //! Security patterns: X01, X02, X03
 //!
 //! # X02 Design
@@ -10,22 +9,17 @@
 //! The real risk taxonomy for `Command::new`:
 //!
 //! **Shell injection (HIGH)** — when a shell interpreter is the executable
-//! and user-controlled strings flow through as arguments. The shell parses the
-//! string and can be exploited. Examples:
-//!   - `Command::new("sh").arg("-c").arg(user_input)`
-//!   - `Command::new("cmd").arg("/C").arg(user_input)`
-//!   - `Command::new("bash").arg("-c").arg(expr)`
+//! and user-controlled strings flow through as arguments.
 //!
-//! **Untrusted executable provenance (WARN)** — when the executable name/path
+//! **Untrusted executable provenance (MEDIUM)** — when the executable name/path
 //! comes from a variable whose origin we cannot verify. Direct `execve` with
-//! `.arg(...)` is not injection, but PATH hijacking or download-and-run is
-//! still a concern. The fix is not "don't use Command" but "control provenance."
+//! `.arg(...)` is not injection, but PATH hijacking is still a concern.
 //!
 //! **Safe / no flag** — when the executable is a constant, comes from a
 //! trusted config context, or is determined by an allowlist match.
 
 use super::get_capture_node;
-use crate::types::{Violation, ViolationDetails};
+use crate::types::{Confidence, Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
 
 #[must_use]
@@ -79,7 +73,6 @@ fn is_suspicious_sql(text: &str) -> bool {
 // ── X02: Command / Shell Injection ──────────────────────────────────────────
 
 fn detect_x02_command(source: &str, root: Node, out: &mut Vec<Violation>) {
-    // Match Command::new(<variable>) — including tokio::process::Command
     let q = r#"(call_expression
         function: (scoped_identifier path: (_) @path name: (identifier) @method)
         arguments: (arguments (identifier) @arg)
@@ -102,7 +95,6 @@ fn detect_x02_command(source: &str, root: Node, out: &mut Vec<Violation>) {
             continue;
         };
 
-        // Filter: only Command types
         let path_text = path
             .and_then(|n| n.utf8_text(source.as_bytes()).ok())
             .unwrap_or("");
@@ -112,16 +104,16 @@ fn detect_x02_command(source: &str, root: Node, out: &mut Vec<Violation>) {
 
         let var_name = arg.utf8_text(source.as_bytes()).unwrap_or("");
 
-        // Safe: const/static, trusted name, config context, match allowlist
         if is_safe_cmd_source(source, call, var_name) {
             continue;
         }
 
-        // Classify by shell involvement
         let call_text = call.utf8_text(source.as_bytes()).unwrap_or("");
         if is_shell_invocation(var_name, call_text) {
+            // HIGH: shell interpreter with dynamic args — provable injection vector
             out.push(x02_shell_injection(call.start_position().row + 1, var_name));
         } else {
+            // MEDIUM: direct exec, no shell — risk is provenance, not injection
             out.push(x02_provenance_warn(call.start_position().row + 1, var_name));
         }
     }
@@ -129,15 +121,11 @@ fn detect_x02_command(source: &str, root: Node, out: &mut Vec<Violation>) {
 
 /// Returns `true` if the scoped path indicates a `Command` type.
 fn is_command_type(path: &str) -> bool {
-    // Matches: Command, process::Command, std::process::Command, tokio::process::Command
     path.contains("Command") || path == "process" || path.ends_with("::process") || path.is_empty()
-    // bare Command::new
 }
 
-/// Returns `true` if this invocation directly runs a shell interpreter,
-/// which means user-controlled args could be treated as shell code.
+/// Returns `true` if this invocation directly runs a shell interpreter.
 fn is_shell_invocation(var_name: &str, call_chain: &str) -> bool {
-    // Variable named after a shell binary
     let lower = var_name.to_lowercase();
     let shell_vars = [
         "sh",
@@ -152,7 +140,6 @@ fn is_shell_invocation(var_name: &str, call_chain: &str) -> bool {
     if shell_vars.iter().any(|s| lower == *s) {
         return true;
     }
-    // Call chain includes .arg("-c") or .arg("/C") patterns (shell execution flags)
     if call_chain.contains(".arg(\"-c\")")
         || call_chain.contains(".arg(\"-c\" )")
         || call_chain.contains(".arg(\"/C\")")
@@ -164,6 +151,7 @@ fn is_shell_invocation(var_name: &str, call_chain: &str) -> bool {
 }
 
 fn x02_shell_injection(row: usize, var_name: &str) -> Violation {
+    // HIGH confidence — shell interpreter with dynamic args is provably dangerous
     Violation::with_details(
         row,
         "Shell Injection risk: dynamic value used as shell executable".into(),
@@ -182,7 +170,8 @@ fn x02_shell_injection(row: usize, var_name: &str) -> Violation {
 }
 
 fn x02_provenance_warn(row: usize, var_name: &str) -> Violation {
-    Violation::with_details(
+    // MEDIUM confidence — no shell, but provenance is unverifiable
+    let mut v = Violation::with_details(
         row,
         format!("Untrusted executable provenance: `{var_name}` passed to Command::new"),
         "X02",
@@ -197,7 +186,11 @@ fn x02_provenance_warn(row: usize, var_name: &str) -> Violation {
                 "Prefer absolute paths, validate against an allowlist, or use a controlled install location.".into(),
             ),
         },
-    )
+    );
+    v.confidence = Confidence::Medium;
+    v.confidence_reason =
+        Some("direct exec without shell — risk is provenance, not injection".into());
+    v
 }
 
 fn is_safe_cmd_source(source: &str, call: Node, var_name: &str) -> bool {
@@ -296,7 +289,6 @@ fn is_in_match_allowlist(source: &str, node: Node) -> bool {
         let Some(p) = cur.parent() else { break };
         if p.kind() == "match_expression" {
             let text = p.utf8_text(source.as_bytes()).unwrap_or("");
-            // Has string literals as match arms → allowlist check
             if text.contains('"') {
                 return true;
             }
@@ -362,7 +354,6 @@ mod tests {
 
     #[test]
     fn x02_direct_exec_with_args_is_provenance_not_injection() {
-        // Idiomatic tokio::process::Command + .arg(...) — must NOT be shell injection
         let code = r#"
             async fn run_tailwind(binary_path: String) {
                 tokio::process::Command::new(binary_path)
@@ -373,7 +364,6 @@ mod tests {
             }
         "#;
         let vs = parse_and_detect(code);
-        // Should not produce shell injection; may produce provenance warn
         assert!(
             vs.iter().all(|v| !v.message.contains("Shell Injection")),
             "Direct exec with .arg() must not be classified as shell injection"
@@ -391,7 +381,6 @@ mod tests {
             }
         "#;
         let vs = parse_and_detect(code);
-        // sh + -c pattern should be shell injection
         assert!(
             vs.iter().any(|v| v.law == "X02"),
             "sh -c pattern should be flagged"

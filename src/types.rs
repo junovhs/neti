@@ -1,8 +1,43 @@
-// src/types.rs
 use serde::Serialize;
 use std::path::PathBuf;
 
 use crate::analysis::aggregator::FileAnalysis;
+
+/// Confidence level for a violation — how certain Neti is that this is a real problem.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
+pub enum Confidence {
+    /// Style observation. Not wrong, but could be improved.
+    Info,
+    /// Neti sees a suspicious pattern but cannot prove it's wrong.
+    /// May require type information, algorithmic intent, or cross-scope
+    /// analysis that tree-sitter cannot provide.
+    Medium,
+    /// Neti can prove this is wrong. Structural violation, missing required
+    /// annotation, provable bounds error.
+    High,
+}
+
+impl Confidence {
+    /// Label shown in the report output.
+    #[must_use]
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::High => "Fix required",
+            Self::Medium => "Review recommended",
+            Self::Info => "Style suggestion",
+        }
+    }
+
+    /// Prefix word for the report line (error/warn/info).
+    #[must_use]
+    pub fn prefix(self) -> &'static str {
+        match self {
+            Self::High => "error",
+            Self::Medium => "warn",
+            Self::Info => "info",
+        }
+    }
+}
 
 /// A single violation detected during analysis.
 #[derive(Debug, Clone, Serialize)]
@@ -10,6 +45,11 @@ pub struct Violation {
     pub row: usize,
     pub message: String,
     pub law: &'static str,
+    pub confidence: Confidence,
+    /// Why Neti can't be fully certain (for Medium confidence).
+    /// Shown after "Review recommended — {reason}".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub confidence_reason: Option<String>,
     pub details: Option<ViolationDetails>,
 }
 
@@ -28,6 +68,8 @@ impl Violation {
             row,
             message,
             law,
+            confidence: Confidence::High,
+            confidence_reason: None,
             details: None,
         }
     }
@@ -43,6 +85,8 @@ impl Violation {
             row,
             message,
             law,
+            confidence: Confidence::High,
+            confidence_reason: None,
             details: Some(details),
         }
     }
@@ -84,6 +128,42 @@ impl ScanReport {
     #[must_use]
     pub fn has_errors(&self) -> bool {
         self.total_violations > 0
+    }
+
+    /// Count of violations at HIGH confidence (proven errors).
+    #[must_use]
+    pub fn error_count(&self) -> usize {
+        self.files
+            .iter()
+            .flat_map(|f| &f.violations)
+            .filter(|v| v.confidence == Confidence::High)
+            .count()
+    }
+
+    /// Count of violations at MEDIUM confidence (review recommended).
+    #[must_use]
+    pub fn warning_count(&self) -> usize {
+        self.files
+            .iter()
+            .flat_map(|f| &f.violations)
+            .filter(|v| v.confidence == Confidence::Medium)
+            .count()
+    }
+
+    /// Count of violations at INFO confidence (style suggestions).
+    #[must_use]
+    pub fn suggestion_count(&self) -> usize {
+        self.files
+            .iter()
+            .flat_map(|f| &f.violations)
+            .filter(|v| v.confidence == Confidence::Info)
+            .count()
+    }
+
+    /// Returns `true` if any HIGH confidence violations exist.
+    #[must_use]
+    pub fn has_blocking_errors(&self) -> bool {
+        self.error_count() > 0
     }
 
     #[must_use]

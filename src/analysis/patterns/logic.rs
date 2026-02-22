@@ -33,7 +33,7 @@
 //!   self.s[0]  // where s: [u32; 4]     // cannot panic
 //!   ```
 
-use crate::types::{Violation, ViolationDetails};
+use crate::types::{Confidence, Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
 
 #[must_use]
@@ -86,21 +86,10 @@ fn detect_l02(source: &str, root: Node, out: &mut Vec<Violation>) {
     }
 }
 
-/// Returns `true` if this boundary comparison is provably safe (should not flag).
-///
-/// Safe cases:
-/// - One side is a literal (threshold check, e.g. `v.len() >= 5`)
-/// - `idx >= v.len()` — canonical early-return guard (idx is OUT of bounds)
-/// - `v.len() <= idx` — same guard, reversed
-///
-/// Flaggable cases:
-/// - `idx <= v.len()` — idx could equal len (off-by-one risk)
-/// - `v.len() >= idx` — same risk, reversed
 fn is_safe_boundary(node: Node, source: &str) -> bool {
     let left = node.child_by_field_name("left");
     let right = node.child_by_field_name("right");
 
-    // Literal on either side → threshold check, always safe
     if is_literal(left) || is_literal(right) {
         return true;
     }
@@ -116,9 +105,6 @@ fn is_safe_boundary(node: Node, source: &str) -> bool {
         .unwrap_or("");
 
     if right_text.contains(".len()") {
-        // Pattern: X OP v.len()
-        // `>=`: x >= v.len() → guard ("x is out of bounds") — SAFE
-        // `<=`: x <= v.len() → x could equal len — DANGEROUS
         if op == ">=" {
             return true;
         }
@@ -126,21 +112,16 @@ fn is_safe_boundary(node: Node, source: &str) -> bool {
     }
 
     if left_text.contains(".len()") {
-        // Pattern: v.len() OP X
-        // `<=`: v.len() <= x → same as x >= v.len() → guard — SAFE
-        // `>=`: v.len() >= x → same as x <= v.len() → DANGEROUS
         if op == "<=" {
             return true;
         }
         return !is_index_variable(right_text);
     }
 
-    // Ambiguous — err on the side of silence
     true
 }
 
 fn extract_op(full_text: &str) -> &str {
-    // Order matters: check `<=` before `<`, `>=` before `>`
     if full_text.contains("<=") {
         "<="
     } else if full_text.contains(">=") {
@@ -156,7 +137,6 @@ fn is_literal(node: Option<Node>) -> bool {
 
 fn is_index_variable(name: &str) -> bool {
     let n = name.trim();
-    // Common short index names
     n == "i"
         || n == "j"
         || n == "k"
@@ -194,22 +174,33 @@ fn detect_index_zero(source: &str, root: Node, out: &mut Vec<Violation>) {
             continue;
         }
 
-        // Explicit guard: caller already checks .is_empty() or .len()
         if has_explicit_guard(source, idx_node) {
             continue;
         }
 
-        // Proof by iterator invariant: inside chunks_exact / array_chunks
         if has_chunks_exact_context(source, idx_node) {
             continue;
         }
 
-        // Proof by fixed-size array: indexing a [T; N] with constant < N
+        // If we proved it's a fixed-size array, skip entirely (HIGH confidence safe)
         if is_fixed_size_array_access(source, idx_node, root) {
             continue;
         }
 
-        out.push(Violation::with_details(
+        // We get here when we can't prove it's safe. Determine confidence:
+        // if receiver contains `self.` or is a complex expression, we likely
+        // can't see the declaration — downgrade to Medium
+        let receiver = extract_receiver(text);
+        let (confidence, reason) = if receiver.contains("self.") || receiver.contains('(') {
+            (
+                Confidence::Medium,
+                Some("cannot trace type through field access or method return".to_string()),
+            )
+        } else {
+            (Confidence::High, None)
+        };
+
+        let mut v = Violation::with_details(
             idx_node.start_position().row + 1,
             "Index `[0]` without bounds check".into(),
             "L03",
@@ -220,7 +211,10 @@ fn detect_index_zero(source: &str, root: Node, out: &mut Vec<Violation>) {
                     "Use `.first()` and handle `None`, or check `.is_empty()` first.".into(),
                 ),
             },
-        ));
+        );
+        v.confidence = confidence;
+        v.confidence_reason = reason;
+        out.push(v);
     }
 }
 
@@ -260,8 +254,6 @@ fn detect_first_last_unwrap(source: &str, root: Node, out: &mut Vec<Violation>) 
     }
 }
 
-/// Returns `true` if a `.len()` / `.is_empty()` guard is visible in the
-/// ancestor chain — meaning the caller already proved non-emptiness.
 fn has_explicit_guard(source: &str, node: Node) -> bool {
     let mut cur = node;
     for _ in 0..10 {
@@ -279,9 +271,8 @@ fn has_explicit_guard(source: &str, node: Node) -> bool {
 }
 
 /// Returns `true` if the node is inside a `chunks_exact(N)` or `array_chunks()`
-/// iterator — meaning the chunk length is guaranteed by the iterator contract.
+/// iterator.
 ///
-/// Example (safe — do NOT flag):
 /// ```ignore
 /// data.chunks_exact(2).map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]));
 /// ```
@@ -293,7 +284,6 @@ fn has_chunks_exact_context(source: &str, node: Node) -> bool {
         if text.contains("chunks_exact(") || text.contains("array_chunks(") {
             return true;
         }
-        // Stop at source-file boundary
         if p.kind() == "source_file" {
             break;
         }
@@ -304,15 +294,6 @@ fn has_chunks_exact_context(source: &str, node: Node) -> bool {
 
 // ── Fixed-size array proof ──────────────────────────────────────────────────
 
-/// Returns `true` if this index expression accesses a fixed-size array with a
-/// constant index that is provably within bounds.
-///
-/// Covers:
-/// 1. Local `let arr = [0u8; 32]; arr[0]` — repeat expression `[expr; N]`
-/// 2. Local `let arr = [1, 2, 3]; arr[0]` — array literal
-/// 3. Local `let arr: [u8; 4] = ...; arr[0]` — type annotation
-/// 4. Struct field `self.s[0]` where `s: [u32; 4]`
-/// 5. Function param `fn f(buf: [u8; 4]) { buf[0] }`
 fn is_fixed_size_array_access(source: &str, idx_node: Node, root: Node) -> bool {
     let text = idx_node.utf8_text(source.as_bytes()).unwrap_or("");
 
@@ -322,14 +303,11 @@ fn is_fixed_size_array_access(source: &str, idx_node: Node, root: Node) -> bool 
 
     let receiver = extract_receiver(text);
 
-    // Strategy 1: local variable declaration
     if let Some(size) = find_local_array_size(source, idx_node, receiver) {
         return index_val < size;
     }
 
-    // Strategy 2: struct field via self.field
     if let Some(field_name) = receiver.strip_prefix("self.") {
-        // Only handle simple field names (no nested dots)
         if !field_name.contains('.') {
             if let Some(size) = find_struct_field_array_size(source, idx_node, root, field_name) {
                 return index_val < size;
@@ -337,7 +315,6 @@ fn is_fixed_size_array_access(source: &str, idx_node: Node, root: Node) -> bool 
         }
     }
 
-    // Strategy 3: function parameter with array type annotation
     if let Some(size) = find_param_array_size(source, idx_node, receiver) {
         return index_val < size;
     }
@@ -345,7 +322,6 @@ fn is_fixed_size_array_access(source: &str, idx_node: Node, root: Node) -> bool 
     false
 }
 
-/// Extracts a constant integer index from text like `foo[0]`, `self.s[3]`.
 fn extract_constant_index(text: &str) -> Option<usize> {
     let bracket_start = text.rfind('[')?;
     let bracket_end = text.rfind(']')?;
@@ -356,13 +332,10 @@ fn extract_constant_index(text: &str) -> Option<usize> {
     inner.parse::<usize>().ok()
 }
 
-/// Extracts the receiver from an index expression: `self.s[0]` → `self.s`
 fn extract_receiver(text: &str) -> &str {
     text.rfind('[').map_or(text, |pos| text[..pos].trim())
 }
 
-/// Walks up from the index node to find a `let` declaration for the receiver
-/// variable and extracts array size from the initializer or type annotation.
 fn find_local_array_size(source: &str, node: Node, receiver: &str) -> Option<usize> {
     if receiver.contains('.') {
         return None;
@@ -398,30 +371,23 @@ fn find_local_array_size(source: &str, node: Node, receiver: &str) -> Option<usi
     None
 }
 
-/// Checks if a `let` declaration text declares the given variable name.
 fn decl_matches_variable(decl_text: &str, var_name: &str) -> bool {
     let after_let = decl_text.strip_prefix("let").unwrap_or(decl_text).trim();
     let after_mut = after_let.strip_prefix("mut").unwrap_or(after_let).trim();
     after_mut.starts_with(var_name) && after_mut[var_name.len()..].starts_with([' ', ':', '=', ';'])
 }
 
-/// Extracts array size from a let declaration initializer or type annotation.
 fn extract_array_size_from_decl(decl_text: &str) -> Option<usize> {
-    // Pattern 1: repeat expression `[expr; N]` in initializer
     if let Some(size) = extract_repeat_array_size(decl_text) {
         return Some(size);
     }
-    // Pattern 2: type annotation `[T; N]`
     if let Some(size) = extract_type_array_size(decl_text) {
         return Some(size);
     }
-    // Pattern 3: array literal `[a, b, c]`
     extract_literal_array_size(decl_text)
 }
 
-/// Extracts N from `[expr; N]` repeat expressions.
 fn extract_repeat_array_size(text: &str) -> Option<usize> {
-    // Find the initializer part (after `=`)
     let eq_pos = text.find('=')?;
     let after_eq = text[eq_pos + 1..].trim();
 
@@ -436,12 +402,10 @@ fn extract_repeat_array_size(text: &str) -> Option<usize> {
     parse_size_literal(size_str)
 }
 
-/// Extracts N from `: [T; N]` type annotations.
 fn extract_type_array_size(text: &str) -> Option<usize> {
     let colon_pos = text.find(':')?;
     let after_colon = &text[colon_pos + 1..];
 
-    // Find `[` that starts the array type (skip past `=` if any)
     let eq_pos = after_colon.find('=').unwrap_or(after_colon.len());
     let type_region = &after_colon[..eq_pos];
 
@@ -456,7 +420,6 @@ fn extract_type_array_size(text: &str) -> Option<usize> {
     parse_size_literal(size_str)
 }
 
-/// Counts elements in an array literal `[a, b, c]`.
 fn extract_literal_array_size(text: &str) -> Option<usize> {
     let eq_pos = text.find('=')?;
     let after_eq = text[eq_pos + 1..].trim();
@@ -467,7 +430,6 @@ fn extract_literal_array_size(text: &str) -> Option<usize> {
     let bracket_end = after_eq.find(']')?;
     let inner = &after_eq[1..bracket_end];
 
-    // If it contains a semicolon, it's a repeat expression, not a literal
     if inner.contains(';') {
         return None;
     }
@@ -480,7 +442,6 @@ fn extract_literal_array_size(text: &str) -> Option<usize> {
     Some(trimmed.split(',').count())
 }
 
-/// Parses a size literal that may have a type suffix: `32`, `32usize`, etc.
 fn parse_size_literal(s: &str) -> Option<usize> {
     let cleaned = s
         .trim()
@@ -493,18 +454,14 @@ fn parse_size_literal(s: &str) -> Option<usize> {
     cleaned.parse::<usize>().ok()
 }
 
-/// Searches for a struct field's array type size by finding the struct
-/// definition in the same file.
 fn find_struct_field_array_size(
     source: &str,
     node: Node,
     root: Node,
     field_name: &str,
 ) -> Option<usize> {
-    // Walk up to find the impl block and get the type name
     let type_name = find_enclosing_impl_type(source, node)?;
 
-    // Scan top-level items for the struct definition
     let mut cursor = root.walk();
     for child in root.children(&mut cursor) {
         if child.kind() != "struct_item" {
@@ -518,7 +475,6 @@ fn find_struct_field_array_size(
             continue;
         }
 
-        // Search each line for the field declaration
         for line in struct_text.lines() {
             if let Some(size) = extract_field_array_size(line, field_name) {
                 return Some(size);
@@ -528,7 +484,6 @@ fn find_struct_field_array_size(
     None
 }
 
-/// Walks up from a node to find the enclosing `impl` block's type name.
 fn find_enclosing_impl_type<'a>(source: &'a str, node: Node) -> Option<&'a str> {
     let mut cur = node;
     for _ in 0..30 {
@@ -545,13 +500,10 @@ fn find_enclosing_impl_type<'a>(source: &'a str, node: Node) -> Option<&'a str> 
     None
 }
 
-/// Extracts the type name from `impl TypeName { ... }` or
-/// `impl Trait for TypeName { ... }`.
 fn extract_impl_type_name(impl_text: &str) -> Option<&str> {
     let first_line = impl_text.lines().next()?;
     let after_impl = first_line.strip_prefix("impl")?.trim();
 
-    // Skip generic parameters `<T, U>`
     let after_generics = if after_impl.starts_with('<') {
         let mut depth = 0;
         let mut end = 0;
@@ -573,7 +525,6 @@ fn extract_impl_type_name(impl_text: &str) -> Option<&str> {
         after_impl
     };
 
-    // Handle `Trait for TypeName`
     let type_part = if let Some(pos) = after_generics.find(" for ") {
         after_generics[pos + 5..].trim()
     } else {
@@ -591,8 +542,6 @@ fn extract_impl_type_name(impl_text: &str) -> Option<&str> {
     }
 }
 
-/// Extracts array size from a struct field line like `s: [u32; 4],` or
-/// `pub s: [u32; 4],`.
 fn extract_field_array_size(line: &str, field_name: &str) -> Option<usize> {
     let trimmed = line.trim();
     let after_pub = trimmed.strip_prefix("pub ").unwrap_or(trimmed).trim();
@@ -616,7 +565,6 @@ fn extract_field_array_size(line: &str, field_name: &str) -> Option<usize> {
     size_str.parse::<usize>().ok()
 }
 
-/// Checks if the receiver is a function parameter with array type annotation.
 fn find_param_array_size(source: &str, node: Node, receiver: &str) -> Option<usize> {
     if receiver.contains('.') {
         return None;
@@ -628,7 +576,6 @@ fn find_param_array_size(source: &str, node: Node, receiver: &str) -> Option<usi
 
         if matches!(p.kind(), "function_item" | "closure_expression") {
             let fn_text = p.utf8_text(source.as_bytes()).unwrap_or("");
-            // Look for `receiver: [T; N]` in the function signature
             let pattern = format!("{receiver}:");
             if let Some(pos) = fn_text.find(&pattern) {
                 let after = fn_text[pos + pattern.len()..].trim();

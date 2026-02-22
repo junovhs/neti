@@ -1,16 +1,15 @@
-// src/analysis/patterns/concurrency_lock.rs
 //! C03: `MutexGuard` held across `.await`
 //!
 //! # Severity Tiers
 //!
 //! Not all "lock held across await" patterns carry the same risk:
 //!
-//! **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH severity**
+//! **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH confidence**
 //! Holding a sync guard across `.await` is a *bug*: it blocks the OS thread,
 //! starving the executor, and can deadlock if another task on the same thread
 //! tries to acquire the same lock. This is the original C03 intent.
 //!
-//! **Async mutex (tokio::sync::Mutex, futures::lock::Mutex) — WARN severity**
+//! **Async mutex (tokio::sync::Mutex, futures::lock::Mutex) — MEDIUM confidence**
 //! Async mutexes yield to the executor when contended. Holding them across
 //! `.await` is not a deadlock, but it may cause head-of-line blocking (other
 //! tasks waiting for this lock are stalled while the holder does I/O). The
@@ -26,7 +25,7 @@
 //!    async context; apply reduced severity.
 //! 3. Otherwise → assume sync mutex; apply high severity.
 
-use crate::types::{Violation, ViolationDetails};
+use crate::types::{Confidence, Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
 
 /// Mutex lock kind, inferred from usage/import patterns.
@@ -116,13 +115,7 @@ fn is_lock_assignment(line: &str) -> bool {
 }
 
 /// Infers whether the mutex in use is sync or async.
-///
-/// Priority:
-/// 1. If the lock-acquisition itself ends in `.await` → async mutex.
-/// 2. If the source file references async mutex types → async context.
-/// 3. Default → sync.
 fn classify_mutex_kind(source: &str, body_text: &str) -> MutexKind {
-    // Direct evidence: .lock().await on the acquisition line
     for line in body_text.lines() {
         let trimmed = line.trim();
         if is_lock_assignment(trimmed)
@@ -134,7 +127,6 @@ fn classify_mutex_kind(source: &str, body_text: &str) -> MutexKind {
         }
     }
 
-    // Contextual evidence: file imports async mutex types
     if has_async_mutex_import(source) {
         return MutexKind::Async;
     }
@@ -155,36 +147,46 @@ fn has_async_mutex_import(source: &str) -> bool {
 
 fn build_c03_violation(row: usize, fn_name: &str, kind: MutexKind) -> Violation {
     match kind {
-        MutexKind::Sync => Violation::with_details(
-            row,
-            format!("Sync MutexGuard may be held across `.await` in `{fn_name}`"),
-            "C03",
-            ViolationDetails {
-                function_name: Some(fn_name.to_string()),
-                analysis: vec![
-                    "Holding a sync guard across .await blocks the OS thread.".into(),
-                    "std::sync::Mutex is not async-aware — deadlock risk.".into(),
-                ],
-                suggestion: Some(
-                    "Use `tokio::sync::Mutex` or drop the guard before the await point.".into(),
-                ),
-            },
-        ),
-        MutexKind::Async => Violation::with_details(
-            row,
-            format!("Async MutexGuard held across `.await` in `{fn_name}` — HoL risk"),
-            "C03",
-            ViolationDetails {
-                function_name: Some(fn_name.to_string()),
-                analysis: vec![
-                    "Async mutexes yield on contention, but holding them across I/O".into(),
-                    "stalls other tasks waiting for this lock (head-of-line blocking).".into(),
-                ],
-                suggestion: Some(
-                    "Minimize work inside the lock scope; release before awaiting I/O.".into(),
-                ),
-            },
-        ),
+        MutexKind::Sync => {
+            // HIGH: sync mutex across await is a provable bug
+            Violation::with_details(
+                row,
+                format!("Sync MutexGuard may be held across `.await` in `{fn_name}`"),
+                "C03",
+                ViolationDetails {
+                    function_name: Some(fn_name.to_string()),
+                    analysis: vec![
+                        "Holding a sync guard across .await blocks the OS thread.".into(),
+                        "std::sync::Mutex is not async-aware — deadlock risk.".into(),
+                    ],
+                    suggestion: Some(
+                        "Use `tokio::sync::Mutex` or drop the guard before the await point.".into(),
+                    ),
+                },
+            )
+        }
+        MutexKind::Async => {
+            // MEDIUM: async mutex across await is a performance concern, not a bug
+            let mut v = Violation::with_details(
+                row,
+                format!("Async MutexGuard held across `.await` in `{fn_name}` — HoL risk"),
+                "C03",
+                ViolationDetails {
+                    function_name: Some(fn_name.to_string()),
+                    analysis: vec![
+                        "Async mutexes yield on contention, but holding them across I/O".into(),
+                        "stalls other tasks waiting for this lock (head-of-line blocking).".into(),
+                    ],
+                    suggestion: Some(
+                        "Minimize work inside the lock scope; release before awaiting I/O.".into(),
+                    ),
+                },
+            );
+            v.confidence = Confidence::Medium;
+            v.confidence_reason =
+                Some("async mutex — not a deadlock, but may cause head-of-line blocking".into());
+            v
+        }
     }
 }
 
@@ -234,12 +236,12 @@ mod tests {
         "#;
         let vs = parse_and_detect(code);
         if let Some(v) = vs.iter().find(|v| v.law == "C03") {
-            // Should mention HoL, not deadlock
             assert!(
                 v.message.contains("HoL") || v.message.contains("Async"),
                 "Async mutex should get HoL message, got: {}",
                 v.message
             );
+            assert_eq!(v.confidence, Confidence::Medium);
         }
     }
 
@@ -255,8 +257,6 @@ mod tests {
                 process(data).await;
             }
         "#;
-        // Guard is dropped before await — no violation
-        // (lock_spans_await returns false because the block resets lock_active)
         let vs = parse_and_detect(code);
         assert!(vs.iter().all(|v| v.law != "C03"));
     }

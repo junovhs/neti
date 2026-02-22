@@ -31,7 +31,7 @@
 //! routinely does small-collection linear scans for verification purposes.
 
 use super::get_capture_node;
-use crate::types::{Violation, ViolationDetails};
+use crate::types::{Confidence, Violation, ViolationDetails};
 use std::path::Path;
 use tree_sitter::{Node, Query, QueryCursor};
 
@@ -95,11 +95,6 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
 }
 
 /// Returns `true` if the node is inside a `#[test]` function or `#[cfg(test)]` module.
-///
-/// Walks up the ancestor chain looking for:
-/// - A `function_item` with a `#[test]` attribute
-/// - A `mod_item` with a `#[cfg(test)]` attribute
-/// - Source text containing `#[test]` or `#[cfg(test)]` in the ancestor's attributes
 fn is_test_context(source: &str, node: Node) -> bool {
     let mut cur = node;
     for _ in 0..30 {
@@ -127,7 +122,6 @@ fn is_test_context(source: &str, node: Node) -> bool {
 
 /// Checks if a function node has a `#[test]` attribute.
 fn has_test_attribute(source: &str, fn_node: Node) -> bool {
-    // Check sibling attributes (tree-sitter places attributes as previous siblings)
     if let Some(parent) = fn_node.parent() {
         let mut cursor = parent.walk();
         let mut prev_was_attr = false;
@@ -146,7 +140,6 @@ fn has_test_attribute(source: &str, fn_node: Node) -> bool {
         }
     }
 
-    // Fallback: check the text just before the function for #[test]
     let fn_start = fn_node.start_byte();
     if fn_start > 100 {
         let prefix = &source[fn_start.saturating_sub(100)..fn_start];
@@ -156,10 +149,8 @@ fn has_test_attribute(source: &str, fn_node: Node) -> bool {
     } else if fn_start > 0 {
         let prefix = &source[..fn_start];
         if prefix.contains("#[test]") {
-            // Make sure it's close (within last few lines)
             if let Some(pos) = prefix.rfind("#[test]") {
                 let between = &prefix[pos..];
-                // Only whitespace and other attributes between #[test] and fn
                 let non_attr = between.lines().skip(1).any(|l| {
                     let t = l.trim();
                     !t.is_empty()
@@ -180,7 +171,6 @@ fn has_test_attribute(source: &str, fn_node: Node) -> bool {
 
 /// Checks if a module node has a `#[cfg(test)]` attribute.
 fn has_cfg_test_attribute(source: &str, mod_node: Node) -> bool {
-    // Check sibling attributes
     if let Some(parent) = mod_node.parent() {
         let mut cursor = parent.walk();
         let mut prev_was_cfg_test = false;
@@ -199,7 +189,6 @@ fn has_cfg_test_attribute(source: &str, mod_node: Node) -> bool {
         }
     }
 
-    // Fallback: check text before the mod
     let mod_start = mod_node.start_byte();
     let look_back = mod_start.min(50);
     if look_back > 0 {
@@ -229,7 +218,6 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
         };
         let recv = get_capture_node(&m, idx_recv).and_then(|c| c.utf8_text(source.as_bytes()).ok());
 
-        // Arc::clone / Rc::clone — cheap ref-count, never escalate
         let call_text = call.utf8_text(source.as_bytes()).unwrap_or("");
         if is_arc_or_rc_clone(call_text) {
             continue;
@@ -239,13 +227,26 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
             continue;
         }
 
-        // Determine if the cloned receiver is likely heap-owning
         let recv_text = recv.unwrap_or("");
         if !looks_heap_owning(recv_text) {
-            continue; // Skip cheap clones
+            continue;
         }
 
-        out.push(Violation::with_details(
+        // Determine confidence: if receiver contains `[` (indexed access) or
+        // starts with `self.`, the type is ambiguous — could be generic
+        let (confidence, reason) = if recv_text.contains('[') || recv_text.contains("self.") {
+            (
+                Confidence::Medium,
+                Some(
+                    "clone is on an indexed or field expression — type may be cheap to clone"
+                        .to_string(),
+                ),
+            )
+        } else {
+            (Confidence::High, None)
+        };
+
+        let mut v = Violation::with_details(
             call.start_position().row + 1,
             "Detected `.clone()` inside a loop".into(),
             "P01",
@@ -259,12 +260,14 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
                     "Hoist clone before the loop, or use Arc if shared ownership is needed.".into(),
                 ),
             },
-        ));
+        );
+        v.confidence = confidence;
+        v.confidence_reason = reason;
+        out.push(v);
     }
 }
 
-/// Returns `true` for `Arc::clone(x)` and `Rc::clone(x)` — free from an
-/// allocation standpoint.
+/// Returns `true` for `Arc::clone(x)` and `Rc::clone(x)`.
 fn is_arc_or_rc_clone(call_text: &str) -> bool {
     call_text.starts_with("Arc::clone")
         || call_text.starts_with("Rc::clone")
@@ -273,9 +276,6 @@ fn is_arc_or_rc_clone(call_text: &str) -> bool {
 }
 
 /// Returns `true` if the receiver name looks like a heap-owning type.
-///
-/// Heuristic: types known to own heap memory, or capitalized identifiers
-/// (likely struct instances that derive Clone and may hold owned data).
 fn looks_heap_owning(recv: &str) -> bool {
     let r = recv.trim();
     if r.is_empty() {
@@ -310,7 +310,6 @@ fn looks_heap_owning(recv: &str) -> bool {
         return true;
     }
 
-    // Default to true for any variable longer than 2 chars, to be safe.
     r.len() > 2
 }
 
@@ -372,7 +371,6 @@ fn check_p02(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
 
         let Some(call) = call else { continue };
 
-        // Skip conversion of the loop variable itself — caller intent
         if let (Some(r), Some(v)) = (recv, loop_var) {
             if r.trim() == v || r.contains(&format!("{v}.")) {
                 continue;
@@ -404,7 +402,7 @@ fn check_p04(body: Node, out: &mut Vec<Violation>) {
             child.kind(),
             "for_expression" | "while_expression" | "loop_expression"
         ) {
-            out.push(Violation::with_details(
+            let mut v = Violation::with_details(
                 child.start_position().row + 1,
                 "Nested loop (O(n²)) detected".into(),
                 "P04",
@@ -413,7 +411,10 @@ fn check_p04(body: Node, out: &mut Vec<Violation>) {
                     analysis: vec!["Quadratic complexity — scales poorly with input size.".into()],
                     suggestion: Some("Refactor with a lookup map to achieve O(n).".into()),
                 },
-            ));
+            );
+            v.confidence = Confidence::Medium;
+            v.confidence_reason = Some("inner loop may be bounded to a small constant".into());
+            out.push(v);
         }
     }
 }
@@ -428,7 +429,7 @@ fn check_p06(source: &str, body: Node, out: &mut Vec<Violation>) {
 
     for m in cursor.matches(&query, body, source.as_bytes()) {
         if let Some(cap) = m.captures.first() {
-            out.push(Violation::with_details(
+            let mut v = Violation::with_details(
                 cap.node.start_position().row + 1,
                 "Linear search inside loop — O(n·m) complexity".into(),
                 "P06",
@@ -437,7 +438,11 @@ fn check_p06(source: &str, body: Node, out: &mut Vec<Violation>) {
                     analysis: vec!["Each outer iteration performs a full inner scan.".into()],
                     suggestion: Some("Pre-build a HashSet or HashMap for O(1) lookup.".into()),
                 },
-            ));
+            );
+            v.confidence = Confidence::Medium;
+            v.confidence_reason =
+                Some("linear scan may be intentional algorithm or bounded collection".into());
+            out.push(v);
         }
     }
 }

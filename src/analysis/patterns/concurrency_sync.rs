@@ -1,7 +1,6 @@
-// src/analysis/v2/patterns/concurrency_sync.rs
 //! C04: Undocumented synchronization primitives
 
-use crate::types::{Violation, ViolationDetails};
+use crate::types::{Confidence, Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
 
 /// C04: Arc<Mutex<T>> without documentation
@@ -17,7 +16,7 @@ fn detect_sync_fields(source: &str, root: Node, out: &mut Vec<Violation>) {
     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
         return;
     };
-    
+
     let mut cursor = QueryCursor::new();
     for m in cursor.matches(&query, root, source.as_bytes()) {
         if let Some(v) = check_sync_field(source, &m) {
@@ -29,17 +28,20 @@ fn detect_sync_fields(source: &str, root: Node, out: &mut Vec<Violation>) {
 fn check_sync_field(source: &str, m: &tree_sitter::QueryMatch) -> Option<Violation> {
     let field_cap = m.captures.iter().find(|c| c.index == 1)?;
     let field_text = field_cap.node.utf8_text(source.as_bytes()).ok()?;
-    
+
     if !has_sync_type(field_text) {
         return None;
     }
-    
+
     if has_doc_comment(source, field_cap.node) {
         return None;
     }
-    
+
     let name = get_field_name(source, field_cap.node)?;
-    Some(build_c04_violation(field_cap.node.start_position().row, &name))
+    Some(build_c04_violation(
+        field_cap.node.start_position().row,
+        &name,
+    ))
 }
 
 fn has_sync_type(text: &str) -> bool {
@@ -52,7 +54,8 @@ fn has_doc_comment(source: &str, node: Node) -> bool {
         return false;
     }
     let lines: Vec<&str> = source.lines().collect();
-    lines.get(row - 1)
+    lines
+        .get(row - 1)
         .is_some_and(|l| l.trim().starts_with("///") || l.trim().starts_with("//"))
 }
 
@@ -66,7 +69,8 @@ fn get_field_name(source: &str, field_node: Node) -> Option<String> {
 }
 
 fn build_c04_violation(row: usize, name: &str) -> Violation {
-    Violation::with_details(
+    // MEDIUM: heuristic — may already be documented elsewhere, or obvious from context
+    let mut v = Violation::with_details(
         row,
         format!("Undocumented sync field `{name}`"),
         "C04",
@@ -78,5 +82,8 @@ fn build_c04_violation(row: usize, name: &str) -> Violation {
             ],
             suggestion: Some("Add a `///` doc comment explaining what the lock protects.".into()),
         },
-    )
+    );
+    v.confidence = Confidence::Medium;
+    v.confidence_reason = Some("documentation may exist elsewhere (module docs, README)".into());
+    v
 }

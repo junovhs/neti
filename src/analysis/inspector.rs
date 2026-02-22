@@ -1,9 +1,9 @@
 //! Inspection logic for scopes (Metrics application).
 
-use super::structural; // Updated import
 use super::scope;
+use super::structural;
 use crate::config::RuleConfig;
-use crate::types::{Violation, ViolationDetails};
+use crate::types::{Confidence, Violation, ViolationDetails};
 
 pub struct Inspector<'a> {
     config: &'a RuleConfig,
@@ -28,18 +28,14 @@ impl<'a> Inspector<'a> {
         if scope.is_enum() || !scope.has_behavior() {
             return;
         }
-        if !scope
-            .methods()
-            .values()
-            .any(|m| !m.field_access.is_empty())
-        {
+        if !scope.methods().values().any(|m| !m.field_access.is_empty()) {
             return;
         }
         if scope.methods().len() < 4 {
             return;
         }
 
-        let lcom4 = structural::ScopeMetrics::calculate_lcom4(scope); // Updated module
+        let lcom4 = structural::ScopeMetrics::calculate_lcom4(scope);
         if lcom4 > self.config.max_lcom4 {
             out.push(build_lcom4_violation(scope, lcom4));
         }
@@ -62,15 +58,15 @@ impl<'a> Inspector<'a> {
             return;
         }
 
-        let ahf = structural::ScopeMetrics::calculate_ahf(scope); // Updated module
+        let ahf = structural::ScopeMetrics::calculate_ahf(scope);
         if ahf < self.config.min_ahf {
             out.push(build_ahf_violation(scope, ahf, self.config.min_ahf));
         }
     }
 
     fn check_coupling(&self, scope: &scope::Scope, out: &mut Vec<Violation>) {
-        let cbo = structural::ScopeMetrics::calculate_cbo(scope); // Updated module
-        let sfout = structural::ScopeMetrics::calculate_max_sfout(scope); // Updated module
+        let cbo = structural::ScopeMetrics::calculate_cbo(scope);
+        let sfout = structural::ScopeMetrics::calculate_max_sfout(scope);
 
         if cbo > self.config.max_cbo {
             out.push(build_cbo_violation(scope, cbo));
@@ -101,7 +97,8 @@ fn is_simple_container(scope: &scope::Scope) -> bool {
 }
 
 fn build_lcom4_violation(scope: &scope::Scope, lcom4: usize) -> Violation {
-    Violation::with_details(
+    // MEDIUM: accurate measurement but may be expected for trait-heavy types
+    let mut v = Violation::with_details(
         scope.row(),
         format!(
             "Class '{}' has low cohesion (LCOM4: {})",
@@ -122,16 +119,17 @@ fn build_lcom4_violation(scope: &scope::Scope, lcom4: usize) -> Violation {
                 lcom4
             )),
         },
-    )
+    );
+    v.confidence = Confidence::Medium;
+    v.confidence_reason =
+        Some("accurate metric, but may be expected for types implementing multiple traits".into());
+    v
 }
 
 fn build_ahf_violation(scope: &scope::Scope, ahf: f64, limit: f64) -> Violation {
-    let private_count = scope
-        .fields()
-        .values()
-        .filter(|f| !f.is_public)
-        .count();
-    Violation::with_details(
+    // MEDIUM: libraries intentionally expose fields
+    let private_count = scope.fields().values().filter(|f| !f.is_public).count();
+    let mut v = Violation::with_details(
         scope.row(),
         format!(
             "Class '{}' exposes too much state (AHF: {:.1}%)",
@@ -151,28 +149,34 @@ fn build_ahf_violation(scope: &scope::Scope, ahf: f64, limit: f64) -> Violation 
             ],
             suggestion: Some("Encapsulate fields with accessors.".into()),
         },
-    )
+    );
+    v.confidence = Confidence::Medium;
+    v.confidence_reason =
+        Some("public fields may be intentional API surface (data structs, config)".into());
+    v
 }
 
 fn build_cbo_violation(scope: &scope::Scope, cbo: usize) -> Violation {
-    Violation::with_details(
+    // MEDIUM: accurate measurement but expected for core/hub types
+    let mut v = Violation::with_details(
         scope.row(),
-        format!(
-            "Class '{}' is tightly coupled (CBO: {})",
-            scope.name(),
-            cbo
-        ),
+        format!("Class '{}' is tightly coupled (CBO: {})", scope.name(), cbo),
         "CBO",
         ViolationDetails {
             function_name: Some(scope.name().to_string()),
             analysis: vec![format!("External dependencies: {cbo}")],
             suggestion: Some("Reduce dependencies. Consider facade pattern.".into()),
         },
-    )
+    );
+    v.confidence = Confidence::Medium;
+    v.confidence_reason =
+        Some("accurate measurement, but may be expected for central/hub types".into());
+    v
 }
 
 fn build_sfout_violation(scope: &scope::Scope, sfout: usize) -> Violation {
-    Violation::with_details(
+    // MEDIUM: high fan-out may be intentional for orchestration functions
+    let mut v = Violation::with_details(
         scope.row(),
         format!(
             "Class '{}' has high fan-out (SFOUT: {})",
@@ -185,5 +189,9 @@ fn build_sfout_violation(scope: &scope::Scope, sfout: usize) -> Violation {
             analysis: vec![format!("Max outgoing calls: {sfout}")],
             suggestion: Some("Delegate to helper functions.".into()),
         },
-    )
+    );
+    v.confidence = Confidence::Medium;
+    v.confidence_reason =
+        Some("high fan-out may be intentional for orchestrator/coordinator functions".into());
+    v
 }
