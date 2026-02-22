@@ -19,6 +19,14 @@
 //! - When the clone goes into an ownership sink (`.push`, `.insert`, `.extend`)
 //! - Any clone inside `#[test]` functions or `#[cfg(test)]` modules
 //!
+//! ## P01 Confidence
+//!
+//! When `looks_heap_owning` returns true, P01 must distinguish:
+//!
+//! - **Known heap type keyword** (string, vec, map, etc.) or uppercase name → High
+//! - **Generic long variable name** (no heap keyword match) → Medium
+//!   ("Type inference incomplete")
+//!
 //! ## P02 — String conversion in loop
 //!
 //! Only escalate for `.to_string()` / `.to_owned()` when the receiver is
@@ -34,6 +42,22 @@ use super::get_capture_node;
 use crate::types::{Confidence, Violation, ViolationDetails};
 use std::path::Path;
 use tree_sitter::{Node, Query, QueryCursor};
+
+/// Heap-type keywords used for High confidence classification.
+const HEAP_KEYWORDS: &[&str] = &[
+    "string",
+    "vec",
+    "map",
+    "set",
+    "box",
+    "rc",
+    "bufwriter",
+    "bytes",
+    "buffer",
+];
+
+/// Heuristic keywords that suggest heap ownership but are less certain.
+const HEURISTIC_KEYWORDS: &[&str] = &["name", "text", "data", "list", "array", "items", "cache"];
 
 #[must_use]
 pub fn detect(source: &str, root: Node, path: &Path) -> Vec<Violation> {
@@ -232,19 +256,7 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
             continue;
         }
 
-        // Determine confidence: if receiver contains `[` (indexed access) or
-        // starts with `self.`, the type is ambiguous — could be generic
-        let (confidence, reason) = if recv_text.contains('[') || recv_text.contains("self.") {
-            (
-                Confidence::Medium,
-                Some(
-                    "clone is on an indexed or field expression — type may be cheap to clone"
-                        .to_string(),
-                ),
-            )
-        } else {
-            (Confidence::High, None)
-        };
+        let (confidence, reason) = classify_p01_confidence(recv_text);
 
         let mut v = Violation::with_details(
             call.start_position().row + 1,
@@ -267,6 +279,58 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
     }
 }
 
+/// Classify P01 confidence based on how certain we are the receiver is heap-owning.
+///
+/// - Uppercase name (likely a struct type) → High
+/// - Contains a known heap-type keyword (string, vec, map, etc.) → High
+/// - Indexed expression or `self.` field → Medium (type ambiguous, could be generic)
+/// - Long variable name with only heuristic keywords → Medium
+/// - Long variable name with no keyword match at all → Medium
+fn classify_p01_confidence(recv: &str) -> (Confidence, Option<String>) {
+    let r = recv.trim();
+
+    // Indexed access or field expression — type is ambiguous
+    if r.contains('[') || r.contains("self.") {
+        return (
+            Confidence::Medium,
+            Some(
+                "clone is on an indexed or field expression — type may be cheap to clone"
+                    .to_string(),
+            ),
+        );
+    }
+
+    // Uppercase receiver — likely a struct, probably heap-owning
+    if r.chars().next().is_some_and(|c| c.is_uppercase()) {
+        return (Confidence::High, None);
+    }
+
+    let lower = r.to_lowercase();
+
+    // Known heap-type keyword — strong signal
+    if HEAP_KEYWORDS.iter().any(|&k| lower.contains(k)) {
+        return (Confidence::High, None);
+    }
+
+    // Heuristic keyword — weaker signal, still worth flagging but not as error
+    if HEURISTIC_KEYWORDS.iter().any(|&k| lower.contains(k)) {
+        return (
+            Confidence::Medium,
+            Some(format!(
+                "receiver `{r}` matches a heuristic keyword but type is unverified"
+            )),
+        );
+    }
+
+    // Passed looks_heap_owning only due to length (> 2 chars), no keyword match
+    (
+        Confidence::Medium,
+        Some(format!(
+            "receiver `{r}` has no known heap-type indicator — type inference incomplete"
+        )),
+    )
+}
+
 /// Returns `true` for `Arc::clone(x)` and `Rc::clone(x)`.
 fn is_arc_or_rc_clone(call_text: &str) -> bool {
     call_text.starts_with("Arc::clone")
@@ -287,26 +351,12 @@ fn looks_heap_owning(recv: &str) -> bool {
     }
 
     let lower = r.to_lowercase();
-    let heap_keywords = [
-        "string",
-        "vec",
-        "map",
-        "set",
-        "box",
-        "rc",
-        "bufwriter",
-        "bytes",
-        "name",
-        "text",
-        "data",
-        "list",
-        "array",
-        "items",
-        "buffer",
-        "cache",
-    ];
 
-    if heap_keywords.iter().any(|&k| lower.contains(k)) {
+    if HEAP_KEYWORDS.iter().any(|&k| lower.contains(k)) {
+        return true;
+    }
+
+    if HEURISTIC_KEYWORDS.iter().any(|&k| lower.contains(k)) {
         return true;
     }
 
@@ -564,5 +614,95 @@ mod tests {
         assert!(looks_heap_owning("SomeStruct"));
         assert!(!looks_heap_owning("i"));
         assert!(!looks_heap_owning("x"));
+    }
+
+    // ── P01 confidence tiers ─────────────────────────────────────────────
+
+    #[test]
+    fn p01_high_confidence_for_known_heap_keyword() {
+        let code = r#"
+            fn f() {
+                for _ in 0..10 {
+                    let s = name_string.clone();
+                    process(s);
+                }
+            }
+        "#;
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "P01")
+            .collect();
+        assert!(!violations.is_empty());
+        assert_eq!(
+            violations[0].confidence,
+            Confidence::High,
+            "receiver with 'string' keyword should be High"
+        );
+    }
+
+    #[test]
+    fn p01_medium_confidence_for_generic_long_name() {
+        let code = r#"
+            fn f() {
+                for _ in 0..10 {
+                    let s = cumulative_weight.clone();
+                    process(s);
+                }
+            }
+        "#;
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "P01")
+            .collect();
+        assert!(!violations.is_empty());
+        assert_eq!(
+            violations[0].confidence,
+            Confidence::Medium,
+            "receiver with no heap keyword should be Medium"
+        );
+    }
+
+    #[test]
+    fn p01_medium_confidence_for_indexed_access() {
+        let code = r#"
+            fn f(items: &[String]) {
+                for i in 0..10 {
+                    let s = self.weights[i].clone();
+                    process(s);
+                }
+            }
+        "#;
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "P01")
+            .collect();
+        assert!(!violations.is_empty());
+        assert_eq!(
+            violations[0].confidence,
+            Confidence::Medium,
+            "indexed receiver should be Medium"
+        );
+    }
+
+    #[test]
+    fn p01_high_confidence_for_uppercase_receiver() {
+        let code = r#"
+            fn f() {
+                for _ in 0..10 {
+                    let s = MyStruct.clone();
+                    process(s);
+                }
+            }
+        "#;
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "P01")
+            .collect();
+        assert!(!violations.is_empty());
+        assert_eq!(
+            violations[0].confidence,
+            Confidence::High,
+            "uppercase receiver should be High"
+        );
     }
 }

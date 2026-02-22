@@ -32,6 +32,14 @@
 //!   let seed = [0u8; 32]; seed[0] = 1;  // cannot panic
 //!   self.s[0]  // where s: [u32; 4]     // cannot panic
 //!   ```
+//!
+//! # L03 Confidence
+//!
+//! When `is_fixed_size_array_access` fails, L03 must distinguish:
+//!
+//! - **Found declaration, confirmed not a fixed array** → High (provably unsafe)
+//! - **Cannot find declaration at all** → Medium ("Cannot verify variable origin")
+//! - **Receiver is `self.field` or method call** → Medium (cross-scope)
 
 use crate::types::{Confidence, Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
@@ -187,18 +195,9 @@ fn detect_index_zero(source: &str, root: Node, out: &mut Vec<Violation>) {
             continue;
         }
 
-        // We get here when we can't prove it's safe. Determine confidence:
-        // if receiver contains `self.` or is a complex expression, we likely
-        // can't see the declaration — downgrade to Medium
+        // Determine confidence based on what we can prove about the receiver
         let receiver = extract_receiver(text);
-        let (confidence, reason) = if receiver.contains("self.") || receiver.contains('(') {
-            (
-                Confidence::Medium,
-                Some("cannot trace type through field access or method return".to_string()),
-            )
-        } else {
-            (Confidence::High, None)
-        };
+        let (confidence, reason) = classify_l03_confidence(source, idx_node, receiver);
 
         let mut v = Violation::with_details(
             idx_node.start_position().row + 1,
@@ -216,6 +215,147 @@ fn detect_index_zero(source: &str, root: Node, out: &mut Vec<Violation>) {
         v.confidence_reason = reason;
         out.push(v);
     }
+}
+
+/// Determine L03 confidence by distinguishing three epistemic states:
+///
+/// 1. Receiver is `self.field` or contains a method call → Medium (cross-scope)
+/// 2. Receiver is a simple local variable and we found its declaration → High
+///    (we know it's not a fixed array, so it's Vec/slice/dynamic)
+/// 3. Receiver is a simple local variable but we can't find a declaration →
+///    Medium ("Cannot verify variable origin")
+fn classify_l03_confidence(
+    source: &str,
+    node: Node,
+    receiver: &str,
+) -> (Confidence, Option<String>) {
+    // Cross-scope: field access or method return — can't trace type
+    if receiver.contains("self.") || receiver.contains('(') {
+        return (
+            Confidence::Medium,
+            Some("cannot trace type through field access or method return".to_string()),
+        );
+    }
+
+    // Simple local variable — check if we can find its declaration
+    if !receiver.contains('.') {
+        if can_find_local_declaration(source, node, receiver) {
+            // We found the declaration and it's NOT a fixed-size array
+            // (is_fixed_size_array_access already returned false above).
+            // This means it's a Vec, slice, or other dynamic collection.
+            return (Confidence::High, None);
+        }
+        // Variable exists but we can't find where it was declared —
+        // could be a closure parameter, destructured binding, macro output, etc.
+        return (
+            Confidence::Medium,
+            Some("cannot find variable declaration to verify type".to_string()),
+        );
+    }
+
+    // Dotted access on something other than self (e.g. `foo.bar[0]`)
+    (
+        Confidence::Medium,
+        Some("cannot trace type through field access".to_string()),
+    )
+}
+
+/// Check whether a `let` declaration for `var_name` exists in any enclosing
+/// scope. This does NOT check the type — only whether we can see the binding.
+fn can_find_local_declaration(source: &str, node: Node, var_name: &str) -> bool {
+    if var_name.contains('.') {
+        return false;
+    }
+
+    let mut cur = node;
+    for _ in 0..30 {
+        let Some(p) = cur.parent() else { break };
+
+        if matches!(p.kind(), "block" | "function_item" | "source_file") {
+            let mut child_cursor = p.walk();
+            for child in p.children(&mut child_cursor) {
+                if child.kind() != "let_declaration" {
+                    continue;
+                }
+                if child.start_byte() >= node.start_byte() {
+                    continue;
+                }
+                let decl_text = child.utf8_text(source.as_bytes()).unwrap_or("");
+                if decl_matches_variable(decl_text, var_name) {
+                    return true;
+                }
+            }
+        }
+
+        // Also check function parameters
+        if p.kind() == "function_item" {
+            if has_matching_parameter(source, p, var_name) {
+                return true;
+            }
+            break;
+        }
+
+        if p.kind() == "source_file" {
+            break;
+        }
+
+        cur = p;
+    }
+    false
+}
+
+/// Check if a function's parameter list contains a parameter with the given name.
+fn has_matching_parameter(source: &str, fn_node: Node, var_name: &str) -> bool {
+    let fn_text = fn_node.utf8_text(source.as_bytes()).unwrap_or("");
+
+    // Find the parameter list between first `(` and its matching `)`
+    let Some(paren_start) = fn_text.find('(') else {
+        return false;
+    };
+
+    let mut depth = 0;
+    let mut paren_end = None;
+    for (i, c) in fn_text[paren_start..].char_indices() {
+        match c {
+            '(' => depth += 1,
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    paren_end = Some(paren_start + i);
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let Some(end) = paren_end else {
+        return false;
+    };
+
+    let params = &fn_text[paren_start + 1..end];
+
+    // Check each parameter segment for the variable name
+    for param in params.split(',') {
+        let trimmed = param.trim();
+        // Strip leading `mut ` or `&mut ` or `&`
+        let clean = trimmed
+            .strip_prefix("mut ")
+            .or_else(|| trimmed.strip_prefix("&mut "))
+            .or_else(|| trimmed.strip_prefix('&'))
+            .unwrap_or(trimmed)
+            .trim();
+
+        // Parameter name is everything before the `:`
+        if let Some(colon_pos) = clean.find(':') {
+            let param_name = clean[..colon_pos].trim();
+            if param_name == var_name {
+                return true;
+            }
+        }
+    }
+
+    false
 }
 
 fn detect_first_last_unwrap(source: &str, root: Node, out: &mut Vec<Violation>) {
@@ -662,7 +802,13 @@ mod tests {
     #[test]
     fn l03_flag_index_zero() {
         let code = "fn f(v: &[i32]) -> i32 { v[0] }";
-        assert!(parse_and_detect(code).iter().any(|v| v.law == "L03"));
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "L03")
+            .collect();
+        assert!(!violations.is_empty());
+        // v is a parameter we CAN find — should be High
+        assert_eq!(violations[0].confidence, Confidence::High);
     }
 
     #[test]
@@ -774,5 +920,86 @@ mod tests {
             parse_and_detect(code).iter().any(|v| v.law == "L03"),
             "v[0] on &[i32] should still be flagged"
         );
+    }
+
+    // ── L03 confidence tiers ─────────────────────────────────────────────
+
+    #[test]
+    fn l03_medium_confidence_for_unfound_variable() {
+        // Variable `data` is not declared in visible scope — came from somewhere
+        // we can't trace. Should be Medium, not High.
+        let code = r"
+            fn f() -> i32 {
+                data[0]
+            }
+        ";
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "L03")
+            .collect();
+        assert!(!violations.is_empty(), "should flag data[0]");
+        assert_eq!(
+            violations[0].confidence,
+            Confidence::Medium,
+            "undeclared variable should be Medium confidence"
+        );
+    }
+
+    #[test]
+    fn l03_high_confidence_for_found_vec() {
+        // Variable `v` is declared as Vec — we found it and confirmed it's not
+        // a fixed array. Should be High.
+        let code = r"
+            fn f() -> i32 {
+                let v = vec![1, 2, 3];
+                v[0]
+            }
+        ";
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "L03")
+            .collect();
+        assert!(!violations.is_empty(), "should flag v[0]");
+        assert_eq!(
+            violations[0].confidence,
+            Confidence::High,
+            "known Vec should be High confidence"
+        );
+    }
+
+    #[test]
+    fn l03_medium_confidence_for_self_field() {
+        // self.items[0] — can't trace type across struct boundary
+        let code = r"
+            struct Foo { items: Vec<i32> }
+            impl Foo {
+                fn first(&self) -> i32 {
+                    self.items[0]
+                }
+            }
+        ";
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "L03")
+            .collect();
+        assert!(!violations.is_empty(), "should flag self.items[0]");
+        assert_eq!(
+            violations[0].confidence,
+            Confidence::Medium,
+            "self.field access should be Medium confidence"
+        );
+    }
+
+    #[test]
+    fn l03_high_confidence_for_param_slice() {
+        // Parameter `v: &[i32]` — we can find the declaration and it's not
+        // a fixed array. Should be High.
+        let code = "fn f(v: &[i32]) -> i32 { v[0] }";
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "L03")
+            .collect();
+        assert!(!violations.is_empty());
+        assert_eq!(violations[0].confidence, Confidence::High);
     }
 }
