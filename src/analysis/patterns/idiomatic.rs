@@ -1,5 +1,12 @@
 //! Idiomatic patterns: I01, I02.
 //!
+//! # I01 Design
+//!
+//! I01 detects manual `From` implementations that could potentially use
+//! `derive_more::From`. However, this is a STYLE suggestion, not a
+//! correctness issue. Many foundational crates intentionally avoid proc-macro
+//! dependencies. I01 is reported as a suggestion, not an error.
+//!
 //! # I02 Design
 //!
 //! I02 detects match arms with duplicate bodies that could be combined using
@@ -30,6 +37,9 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
 /// We avoid relying on tree-sitter field names (`type:`, `trait:`) because
 /// they vary across grammar versions. Instead we do a text-based check on
 /// the impl header, which is simple and robust.
+///
+/// Reported as a style suggestion — many crates intentionally avoid
+/// proc-macro dependencies and manual From impls are perfectly valid.
 fn detect_i01(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"(impl_item) @impl";
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
@@ -59,29 +69,29 @@ fn detect_i01(source: &str, root: Node, out: &mut Vec<Violation>) {
 
         out.push(Violation::with_details(
             impl_node.start_position().row + 1,
-            "Manual `From` impl".into(),
+            "Manual `From` impl — consider derive_more if already using proc macros".into(),
             "I01",
             ViolationDetails {
                 function_name: None,
-                analysis: vec!["Consider `#[derive(From)]` from derive_more.".into()],
-                suggestion: Some("Use derive_more::From if applicable.".into()),
+                analysis: vec![
+                    "This `From` impl could be generated with `#[derive(From)]`.".into(),
+                    "Note: many crates intentionally avoid proc-macro dependencies.".into(),
+                ],
+                suggestion: Some(
+                    "Use derive_more::From if your crate already uses proc macros. Otherwise this is fine as-is.".into(),
+                ),
             },
         ));
     }
 }
 
 /// Checks if an impl header line is a `From` impl.
-/// Matches patterns like:
-/// - `impl From<String> for MyType {`
-/// - `impl From<Vec<u32>> for IndexVec {`
 fn is_from_impl(header: &str) -> bool {
     let trimmed = header.trim();
-    // Must start with `impl`
     let after_impl = match trimmed.strip_prefix("impl") {
         Some(rest) => rest.trim_start(),
         None => return false,
     };
-    // Next token must be `From<` or `From `
     after_impl.starts_with("From<") || after_impl.starts_with("From ")
 }
 
@@ -150,11 +160,8 @@ fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut V
             continue;
         }
 
-        // Get the patterns that share this body
         let patterns = arm_patterns.get(body).unwrap_or(&Vec::new()).clone();
 
-        // Check if these patterns destructure enum variants with bindings
-        // that likely have incompatible types
         if patterns_have_incompatible_types(&patterns) {
             continue;
         }
@@ -184,28 +191,23 @@ fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut V
 /// Handles two forms:
 /// 1. Simple: `Enum::VariantA(v)` vs `Enum::VariantB(v)`
 /// 2. Tuple:  `(Enum::A(x), Enum::A(y))` vs `(Enum::B(x), Enum::B(y))`
-///
-/// Heuristic: if all patterns destructure named enum variants AND the variant
-/// names differ across arms, assume the inner types differ.
 fn patterns_have_incompatible_types(patterns: &[String]) -> bool {
     if patterns.len() < 2 {
         return false;
     }
 
-    // Try to extract variant names from each pattern
     let mut per_arm_variants: Vec<Vec<&str>> = Vec::new();
 
     for pat in patterns {
         let trimmed = pat.trim();
 
-        // Must contain destructuring
         if !trimmed.contains('(') {
-            return false; // Literal or wildcard pattern — always fuseable
+            return false;
         }
 
         let variants = extract_variant_names(trimmed);
         if variants.is_empty() {
-            return false; // Could not parse — assume fuseable
+            return false;
         }
 
         per_arm_variants.push(variants);
@@ -215,14 +217,11 @@ fn patterns_have_incompatible_types(patterns: &[String]) -> bool {
         return false;
     }
 
-    // All arms must have the same number of variant references
     let expected_count = per_arm_variants[0].len();
     if !per_arm_variants.iter().all(|v| v.len() == expected_count) {
         return false;
     }
 
-    // For each "slot" (position), check if the variant names differ across arms.
-    // If ANY slot has all-different variant names, the types are likely incompatible.
     for slot in 0..expected_count {
         let names_in_slot: Vec<&str> = per_arm_variants.iter().map(|v| v[slot]).collect();
 
@@ -233,7 +232,6 @@ fn patterns_have_incompatible_types(patterns: &[String]) -> bool {
             sorted.len()
         };
 
-        // Every arm uses a different variant in this slot → incompatible types
         if unique_count == names_in_slot.len() && unique_count >= 2 {
             return true;
         }
@@ -243,22 +241,15 @@ fn patterns_have_incompatible_types(patterns: &[String]) -> bool {
 }
 
 /// Extracts enum variant names from a pattern string.
-///
-/// For `IndexVec::U32(v)` → `["U32"]`
-/// For `(U32(v1), U32(v2))` → `["U32", "U32"]`
-/// For `(Idx::U32(v1), Idx::U32(v2))` → `["U32", "U32"]`
 fn extract_variant_names(pattern: &str) -> Vec<&str> {
     let trimmed = pattern.trim();
 
-    // Tuple pattern: starts with `(`
     if trimmed.starts_with('(') {
-        // Strip outer parens
         let inner = trimmed
             .strip_prefix('(')
             .and_then(|s| s.strip_suffix(')'))
             .unwrap_or(trimmed);
 
-        // Split on `,` respecting nesting depth
         let parts = split_top_level_commas(inner);
         let mut names = Vec::new();
         for part in &parts {
@@ -270,7 +261,6 @@ fn extract_variant_names(pattern: &str) -> Vec<&str> {
         return names;
     }
 
-    // Simple pattern: `Enum::Variant(binding)` or `Variant(binding)`
     if let Some(name) = extract_single_variant_name(trimmed) {
         return vec![name];
     }
@@ -278,8 +268,7 @@ fn extract_variant_names(pattern: &str) -> Vec<&str> {
     Vec::new()
 }
 
-/// Extracts a single variant name from a pattern like `Enum::Variant(x)` or `Variant(x)`.
-/// Returns the variant name (the part just before `(`).
+/// Extracts a single variant name from a pattern like `Enum::Variant(x)`.
 fn extract_single_variant_name(pattern: &str) -> Option<&str> {
     let paren_pos = pattern.find('(')?;
     let path = pattern[..paren_pos].trim();
@@ -288,11 +277,10 @@ fn extract_single_variant_name(pattern: &str) -> Option<&str> {
         return None;
     }
 
-    // Get the last segment after `::`
     Some(path.rsplit("::").next().unwrap_or(path))
 }
 
-/// Splits a string on commas, but only at the top level (not inside parentheses).
+/// Splits a string on commas at the top level only (not inside parentheses).
 fn split_top_level_commas(s: &str) -> Vec<&str> {
     let mut parts = Vec::new();
     let mut depth = 0;
@@ -313,7 +301,7 @@ fn split_top_level_commas(s: &str) -> Vec<&str> {
     parts
 }
 
-/// Extracts the body text from a match arm, handling both `=> expr` and `=> { ... }`.
+/// Extracts the body text from a match arm.
 fn arm_body_text(source: &str, arm: Node) -> Option<String> {
     let child_count = arm.child_count();
     if child_count == 0 {
@@ -368,6 +356,21 @@ mod tests {
             }
         "#;
         assert!(parse_and_detect(code).iter().all(|v| v.law != "I01"));
+    }
+
+    #[test]
+    fn i01_message_is_suggestion_not_error() {
+        let code = r#"
+            impl From<String> for MyType {
+                fn from(s: String) -> Self { MyType(s) }
+            }
+        "#;
+        let violations = parse_and_detect(code);
+        let i01 = violations.iter().find(|v| v.law == "I01").unwrap();
+        assert!(
+            i01.message.contains("consider"),
+            "I01 message should be suggestive, not imperative"
+        );
     }
 
     #[test]

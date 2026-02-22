@@ -1,4 +1,3 @@
-// src/analysis/patterns/performance.rs
 //! Performance anti-patterns: P01, P02, P04, P06
 //!
 //! # Escalation Philosophy
@@ -18,12 +17,18 @@
 //! - `Rc::clone(...)` — same, single-threaded
 //! - Cloning the loop variable itself (owned iteration pattern)
 //! - When the clone goes into an ownership sink (`.push`, `.insert`, `.extend`)
+//! - Any clone inside `#[test]` functions or `#[cfg(test)]` modules
 //!
 //! ## P02 — String conversion in loop
 //!
 //! Only escalate for `.to_string()` / `.to_owned()` when the receiver is
 //! statically likely to allocate (e.g., a `&str` literal or a field with a
 //! string type). Conversions on loop variables are often the caller's intent.
+//!
+//! ## P06 — Linear search in loop
+//!
+//! Skipped inside `#[test]` functions or `#[cfg(test)]` modules — test code
+//! routinely does small-collection linear scans for verification purposes.
 
 use super::get_capture_node;
 use crate::types::{Violation, ViolationDetails};
@@ -76,11 +81,135 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
             continue;
         };
 
-        check_p01(source, body, loop_var.as_deref(), out);
+        let in_test = is_test_context(source, body);
+
+        if !in_test {
+            check_p01(source, body, loop_var.as_deref(), out);
+        }
         check_p02(source, body, loop_var.as_deref(), out);
         check_p04(body, out);
-        check_p06(source, body, out);
+        if !in_test {
+            check_p06(source, body, out);
+        }
     }
+}
+
+/// Returns `true` if the node is inside a `#[test]` function or `#[cfg(test)]` module.
+///
+/// Walks up the ancestor chain looking for:
+/// - A `function_item` with a `#[test]` attribute
+/// - A `mod_item` with a `#[cfg(test)]` attribute
+/// - Source text containing `#[test]` or `#[cfg(test)]` in the ancestor's attributes
+fn is_test_context(source: &str, node: Node) -> bool {
+    let mut cur = node;
+    for _ in 0..30 {
+        let Some(p) = cur.parent() else { break };
+
+        match p.kind() {
+            "function_item" => {
+                if has_test_attribute(source, p) {
+                    return true;
+                }
+            }
+            "mod_item" => {
+                if has_cfg_test_attribute(source, p) {
+                    return true;
+                }
+            }
+            "source_file" => break,
+            _ => {}
+        }
+
+        cur = p;
+    }
+    false
+}
+
+/// Checks if a function node has a `#[test]` attribute.
+fn has_test_attribute(source: &str, fn_node: Node) -> bool {
+    // Check sibling attributes (tree-sitter places attributes as previous siblings)
+    if let Some(parent) = fn_node.parent() {
+        let mut cursor = parent.walk();
+        let mut prev_was_attr = false;
+        for child in parent.children(&mut cursor) {
+            if child.id() == fn_node.id() && prev_was_attr {
+                return true;
+            }
+            if child.kind() == "attribute_item" {
+                let text = child.utf8_text(source.as_bytes()).unwrap_or("");
+                if text.contains("#[test]") {
+                    prev_was_attr = true;
+                    continue;
+                }
+            }
+            prev_was_attr = false;
+        }
+    }
+
+    // Fallback: check the text just before the function for #[test]
+    let fn_start = fn_node.start_byte();
+    if fn_start > 100 {
+        let prefix = &source[fn_start.saturating_sub(100)..fn_start];
+        if prefix.contains("#[test]") {
+            return true;
+        }
+    } else if fn_start > 0 {
+        let prefix = &source[..fn_start];
+        if prefix.contains("#[test]") {
+            // Make sure it's close (within last few lines)
+            if let Some(pos) = prefix.rfind("#[test]") {
+                let between = &prefix[pos..];
+                // Only whitespace and other attributes between #[test] and fn
+                let non_attr = between.lines().skip(1).any(|l| {
+                    let t = l.trim();
+                    !t.is_empty()
+                        && !t.starts_with("#[")
+                        && !t.starts_with("fn ")
+                        && !t.starts_with("pub ")
+                        && !t.starts_with("async ")
+                });
+                if !non_attr {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
+
+/// Checks if a module node has a `#[cfg(test)]` attribute.
+fn has_cfg_test_attribute(source: &str, mod_node: Node) -> bool {
+    // Check sibling attributes
+    if let Some(parent) = mod_node.parent() {
+        let mut cursor = parent.walk();
+        let mut prev_was_cfg_test = false;
+        for child in parent.children(&mut cursor) {
+            if child.id() == mod_node.id() && prev_was_cfg_test {
+                return true;
+            }
+            if child.kind() == "attribute_item" {
+                let text = child.utf8_text(source.as_bytes()).unwrap_or("");
+                if text.contains("#[cfg(test)]") {
+                    prev_was_cfg_test = true;
+                    continue;
+                }
+            }
+            prev_was_cfg_test = false;
+        }
+    }
+
+    // Fallback: check text before the mod
+    let mod_start = mod_node.start_byte();
+    let look_back = mod_start.min(50);
+    if look_back > 0 {
+        let prefix = &source[mod_start - look_back..mod_start];
+        if prefix.contains("#[cfg(test)]") {
+            return true;
+        }
+    }
+
+    false
 }
 
 fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Violation>) {
@@ -250,9 +379,6 @@ fn check_p02(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
             }
         }
 
-        // Removed is_ownership_sink check here for P02!
-        // Calling to_string() in a loop allocations even if pushed directly.
-
         let recv_text = recv.unwrap_or("<expr>");
         out.push(Violation::with_details(
             call.start_position().row + 1,
@@ -357,6 +483,59 @@ mod tests {
         assert!(
             parse_and_detect(code).iter().all(|v| v.law != "P01"),
             "Arc::clone is a ref-count increment and must not be flagged"
+        );
+    }
+
+    #[test]
+    fn p01_skipped_in_test_function() {
+        let code = r#"
+            #[test]
+            fn test_sampling() {
+                for _ in 0..1000 {
+                    let picked = iter.clone().choose(r).unwrap();
+                    process(picked);
+                }
+            }
+        "#;
+        assert!(
+            parse_and_detect(code).iter().all(|v| v.law != "P01"),
+            "P01 must not fire inside #[test] functions"
+        );
+    }
+
+    #[test]
+    fn p01_skipped_in_cfg_test_module() {
+        let code = r#"
+            #[cfg(test)]
+            mod tests {
+                fn helper() {
+                    for _ in 0..10 {
+                        let s = name.clone();
+                        process(s);
+                    }
+                }
+            }
+        "#;
+        assert!(
+            parse_and_detect(code).iter().all(|v| v.law != "P01"),
+            "P01 must not fire inside #[cfg(test)] modules"
+        );
+    }
+
+    #[test]
+    fn p06_skipped_in_test_function() {
+        let code = r#"
+            #[test]
+            fn test_position() {
+                for i in 0..4 {
+                    let pos = arr.iter().position(|&x| x == i).unwrap();
+                    assert!(pos < 4);
+                }
+            }
+        "#;
+        assert!(
+            parse_and_detect(code).iter().all(|v| v.law != "P06"),
+            "P06 must not fire inside #[test] functions"
         );
     }
 
