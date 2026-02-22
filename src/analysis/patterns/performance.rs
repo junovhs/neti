@@ -5,40 +5,9 @@
 //! P01/P02 must only fire when we can make a reasonable argument that the
 //! allocation is *material*. Blanket "clone in loop" flags generate lint spam
 //! and train developers to ignore Neti. The goal is signal, not volume.
-//!
-//! ## P01 — Clone in loop
-//!
-//! Only escalate when the cloned type is likely heap-owning:
-//! - `String`, `Vec`, `HashMap`, `HashSet`, `Box`, `Rc`, `BTreeMap`
-//! - Structs heuristically identified by a capitalized receiver name
-//!
-//! Do NOT escalate for:
-//! - `Arc::clone(...)` — cheap reference count increment
-//! - `Rc::clone(...)` — same, single-threaded
-//! - Cloning the loop variable itself (owned iteration pattern)
-//! - When the clone goes into an ownership sink (`.push`, `.insert`, `.extend`)
-//! - Any clone inside `#[test]` functions or `#[cfg(test)]` modules
-//!
-//! ## P01 Confidence
-//!
-//! When `looks_heap_owning` returns true, P01 must distinguish:
-//!
-//! - **Known heap type keyword** (string, vec, map, etc.) or uppercase name → High
-//! - **Generic long variable name** (no heap keyword match) → Medium
-//!   ("Type inference incomplete")
-//!
-//! ## P02 — String conversion in loop
-//!
-//! Only escalate for `.to_string()` / `.to_owned()` when the receiver is
-//! statically likely to allocate (e.g., a `&str` literal or a field with a
-//! string type). Conversions on loop variables are often the caller's intent.
-//!
-//! ## P06 — Linear search in loop
-//!
-//! Skipped inside `#[test]` functions or `#[cfg(test)]` modules — test code
-//! routinely does small-collection linear scans for verification purposes.
 
 use super::get_capture_node;
+use super::performance_test_ctx::is_test_context;
 use crate::types::{Confidence, Violation, ViolationDetails};
 use std::path::Path;
 use tree_sitter::{Node, Query, QueryCursor};
@@ -118,112 +87,7 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
     }
 }
 
-/// Returns `true` if the node is inside a `#[test]` function or `#[cfg(test)]` module.
-fn is_test_context(source: &str, node: Node) -> bool {
-    let mut cur = node;
-    for _ in 0..30 {
-        let Some(p) = cur.parent() else { break };
-
-        match p.kind() {
-            "function_item" => {
-                if has_test_attribute(source, p) {
-                    return true;
-                }
-            }
-            "mod_item" => {
-                if has_cfg_test_attribute(source, p) {
-                    return true;
-                }
-            }
-            "source_file" => break,
-            _ => {}
-        }
-
-        cur = p;
-    }
-    false
-}
-
-/// Checks if a function node has a `#[test]` attribute.
-fn has_test_attribute(source: &str, fn_node: Node) -> bool {
-    if let Some(parent) = fn_node.parent() {
-        let mut cursor = parent.walk();
-        let mut prev_was_attr = false;
-        for child in parent.children(&mut cursor) {
-            if child.id() == fn_node.id() && prev_was_attr {
-                return true;
-            }
-            if child.kind() == "attribute_item" {
-                let text = child.utf8_text(source.as_bytes()).unwrap_or("");
-                if text.contains("#[test]") {
-                    prev_was_attr = true;
-                    continue;
-                }
-            }
-            prev_was_attr = false;
-        }
-    }
-
-    let fn_start = fn_node.start_byte();
-    if fn_start > 100 {
-        let prefix = &source[fn_start.saturating_sub(100)..fn_start];
-        if prefix.contains("#[test]") {
-            return true;
-        }
-    } else if fn_start > 0 {
-        let prefix = &source[..fn_start];
-        if prefix.contains("#[test]") {
-            if let Some(pos) = prefix.rfind("#[test]") {
-                let between = &prefix[pos..];
-                let non_attr = between.lines().skip(1).any(|l| {
-                    let t = l.trim();
-                    !t.is_empty()
-                        && !t.starts_with("#[")
-                        && !t.starts_with("fn ")
-                        && !t.starts_with("pub ")
-                        && !t.starts_with("async ")
-                });
-                if !non_attr {
-                    return true;
-                }
-            }
-        }
-    }
-
-    false
-}
-
-/// Checks if a module node has a `#[cfg(test)]` attribute.
-fn has_cfg_test_attribute(source: &str, mod_node: Node) -> bool {
-    if let Some(parent) = mod_node.parent() {
-        let mut cursor = parent.walk();
-        let mut prev_was_cfg_test = false;
-        for child in parent.children(&mut cursor) {
-            if child.id() == mod_node.id() && prev_was_cfg_test {
-                return true;
-            }
-            if child.kind() == "attribute_item" {
-                let text = child.utf8_text(source.as_bytes()).unwrap_or("");
-                if text.contains("#[cfg(test)]") {
-                    prev_was_cfg_test = true;
-                    continue;
-                }
-            }
-            prev_was_cfg_test = false;
-        }
-    }
-
-    let mod_start = mod_node.start_byte();
-    let look_back = mod_start.min(50);
-    if look_back > 0 {
-        let prefix = &source[mod_start - look_back..mod_start];
-        if prefix.contains("#[cfg(test)]") {
-            return true;
-        }
-    }
-
-    false
-}
+// ── P01 ─────────────────────────────────────────────────────────────────────
 
 fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Violation>) {
     let q = r#"(call_expression function: (field_expression
@@ -246,7 +110,6 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
         if is_arc_or_rc_clone(call_text) {
             continue;
         }
-
         if should_skip_clone(source, call, recv, loop_var) {
             continue;
         }
@@ -280,16 +143,9 @@ fn check_p01(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
 }
 
 /// Classify P01 confidence based on how certain we are the receiver is heap-owning.
-///
-/// - Uppercase name (likely a struct type) → High
-/// - Contains a known heap-type keyword (string, vec, map, etc.) → High
-/// - Indexed expression or `self.` field → Medium (type ambiguous, could be generic)
-/// - Long variable name with only heuristic keywords → Medium
-/// - Long variable name with no keyword match at all → Medium
 fn classify_p01_confidence(recv: &str) -> (Confidence, Option<String>) {
     let r = recv.trim();
 
-    // Indexed access or field expression — type is ambiguous
     if r.contains('[') || r.contains("self.") {
         return (
             Confidence::Medium,
@@ -300,19 +156,16 @@ fn classify_p01_confidence(recv: &str) -> (Confidence, Option<String>) {
         );
     }
 
-    // Uppercase receiver — likely a struct, probably heap-owning
     if r.chars().next().is_some_and(|c| c.is_uppercase()) {
         return (Confidence::High, None);
     }
 
     let lower = r.to_lowercase();
 
-    // Known heap-type keyword — strong signal
     if HEAP_KEYWORDS.iter().any(|&k| lower.contains(k)) {
         return (Confidence::High, None);
     }
 
-    // Heuristic keyword — weaker signal, still worth flagging but not as error
     if HEURISTIC_KEYWORDS.iter().any(|&k| lower.contains(k)) {
         return (
             Confidence::Medium,
@@ -322,7 +175,6 @@ fn classify_p01_confidence(recv: &str) -> (Confidence, Option<String>) {
         );
     }
 
-    // Passed looks_heap_owning only due to length (> 2 chars), no keyword match
     (
         Confidence::Medium,
         Some(format!(
@@ -345,21 +197,16 @@ fn looks_heap_owning(recv: &str) -> bool {
     if r.is_empty() {
         return true;
     }
-
     if r.chars().next().is_some_and(|c| c.is_uppercase()) {
         return true;
     }
-
     let lower = r.to_lowercase();
-
     if HEAP_KEYWORDS.iter().any(|&k| lower.contains(k)) {
         return true;
     }
-
     if HEURISTIC_KEYWORDS.iter().any(|&k| lower.contains(k)) {
         return true;
     }
-
     r.len() > 2
 }
 
@@ -404,6 +251,8 @@ fn is_ownership_sink(source: &str, node: Node) -> bool {
     false
 }
 
+// ── P02 ─────────────────────────────────────────────────────────────────────
+
 fn check_p02(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Violation>) {
     let q = r#"(call_expression function: (field_expression
         value: (_) @recv field: (field_identifier) @m)
@@ -445,9 +294,15 @@ fn check_p02(source: &str, body: Node, loop_var: Option<&str>, out: &mut Vec<Vio
     }
 }
 
+// ── P04 ─────────────────────────────────────────────────────────────────────
+
 fn check_p04(body: Node, out: &mut Vec<Violation>) {
-    let mut cursor = body.walk();
-    for child in body.children(&mut cursor) {
+    find_nested_loops(body, out);
+}
+
+fn find_nested_loops(node: Node, out: &mut Vec<Violation>) {
+    let mut cursor = node.walk();
+    for child in node.children(&mut cursor) {
         if matches!(
             child.kind(),
             "for_expression" | "while_expression" | "loop_expression"
@@ -465,9 +320,13 @@ fn check_p04(body: Node, out: &mut Vec<Violation>) {
             v.confidence = Confidence::Medium;
             v.confidence_reason = Some("inner loop may be bounded to a small constant".into());
             out.push(v);
+        } else {
+            find_nested_loops(child, out);
         }
     }
 }
+
+// ── P06 ─────────────────────────────────────────────────────────────────────
 
 fn check_p06(source: &str, body: Node, out: &mut Vec<Violation>) {
     let q = r#"(call_expression function: (field_expression
@@ -511,6 +370,8 @@ mod tests {
         detect(code, tree.root_node(), Path::new("src/lib.rs"))
     }
 
+    // ── P01 basics ───────────────────────────────────────────────────────
+
     #[test]
     fn p01_flags_string_clone_in_loop() {
         let code = r#"
@@ -535,9 +396,40 @@ mod tests {
                 }
             }
         "#;
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "P01"));
+    }
+
+    #[test]
+    fn p01_does_not_flag_rc_clone() {
+        let code = r#"
+            use std::rc::Rc;
+            fn f(shared: Rc<Data>) {
+                for _ in 0..10 {
+                    let handle = Rc::clone(&shared);
+                    use_it(handle);
+                }
+            }
+        "#;
         assert!(
             parse_and_detect(code).iter().all(|v| v.law != "P01"),
-            "Arc::clone is a ref-count increment and must not be flagged"
+            "Rc::clone is a ref-count increment and must not be flagged"
+        );
+    }
+
+    #[test]
+    fn p01_does_not_flag_short_receiver() {
+        // "x" is 1 char — looks_heap_owning returns false for len <= 2
+        let code = r#"
+            fn f() {
+                for _ in 0..10 {
+                    let y = x.clone();
+                    process(y);
+                }
+            }
+        "#;
+        assert!(
+            parse_and_detect(code).iter().all(|v| v.law != "P01"),
+            "single-char receiver must not trigger P01"
         );
     }
 
@@ -552,10 +444,7 @@ mod tests {
                 }
             }
         "#;
-        assert!(
-            parse_and_detect(code).iter().all(|v| v.law != "P01"),
-            "P01 must not fire inside #[test] functions"
-        );
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "P01"));
     }
 
     #[test]
@@ -571,49 +460,55 @@ mod tests {
                 }
             }
         "#;
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "P01"));
+    }
+
+    #[test]
+    fn p01_skipped_when_clone_into_push() {
+        let code = r#"
+            fn f(items: &[String]) {
+                let mut out = vec![];
+                for _ in 0..10 {
+                    out.push(name_string.clone());
+                }
+            }
+        "#;
         assert!(
             parse_and_detect(code).iter().all(|v| v.law != "P01"),
-            "P01 must not fire inside #[cfg(test)] modules"
+            ".push() is an ownership sink — clone into push should be skipped"
         );
     }
 
     #[test]
-    fn p06_skipped_in_test_function() {
+    fn p01_skipped_when_clone_into_entry() {
         let code = r#"
-            #[test]
-            fn test_position() {
-                for i in 0..4 {
-                    let pos = arr.iter().position(|&x| x == i).unwrap();
-                    assert!(pos < 4);
+            fn f() {
+                let mut map = std::collections::HashMap::new();
+                for _ in 0..10 {
+                    map.entry(name_string.clone());
                 }
             }
         "#;
         assert!(
-            parse_and_detect(code).iter().all(|v| v.law != "P06"),
-            "P06 must not fire inside #[test] functions"
+            parse_and_detect(code).iter().all(|v| v.law != "P01"),
+            ".entry() is an ownership sink — clone into entry should be skipped"
         );
     }
 
     #[test]
-    fn p02_flags_to_string_in_loop() {
+    fn p01_skipped_when_clone_into_extend() {
         let code = r#"
-            fn f(label: &str) -> Vec<String> {
+            fn f() {
                 let mut out = vec![];
-                for i in 0..10 {
-                    out.push(label.to_string());
+                for _ in 0..10 {
+                    out.extend(name_list.clone());
                 }
-                out
             }
         "#;
-        assert!(parse_and_detect(code).iter().any(|v| v.law == "P02"));
-    }
-
-    #[test]
-    fn looks_heap_owning_identifies_string() {
-        assert!(looks_heap_owning("name_string"));
-        assert!(looks_heap_owning("SomeStruct"));
-        assert!(!looks_heap_owning("i"));
-        assert!(!looks_heap_owning("x"));
+        assert!(
+            parse_and_detect(code).iter().all(|v| v.law != "P01"),
+            ".extend() is an ownership sink — clone into extend should be skipped"
+        );
     }
 
     // ── P01 confidence tiers ─────────────────────────────────────────────
@@ -633,11 +528,7 @@ mod tests {
             .filter(|v| v.law == "P01")
             .collect();
         assert!(!violations.is_empty());
-        assert_eq!(
-            violations[0].confidence,
-            Confidence::High,
-            "receiver with 'string' keyword should be High"
-        );
+        assert_eq!(violations[0].confidence, Confidence::High);
     }
 
     #[test]
@@ -655,11 +546,7 @@ mod tests {
             .filter(|v| v.law == "P01")
             .collect();
         assert!(!violations.is_empty());
-        assert_eq!(
-            violations[0].confidence,
-            Confidence::Medium,
-            "receiver with no heap keyword should be Medium"
-        );
+        assert_eq!(violations[0].confidence, Confidence::Medium);
     }
 
     #[test]
@@ -677,11 +564,7 @@ mod tests {
             .filter(|v| v.law == "P01")
             .collect();
         assert!(!violations.is_empty());
-        assert_eq!(
-            violations[0].confidence,
-            Confidence::Medium,
-            "indexed receiver should be Medium"
-        );
+        assert_eq!(violations[0].confidence, Confidence::Medium);
     }
 
     #[test]
@@ -699,10 +582,111 @@ mod tests {
             .filter(|v| v.law == "P01")
             .collect();
         assert!(!violations.is_empty());
-        assert_eq!(
-            violations[0].confidence,
-            Confidence::High,
-            "uppercase receiver should be High"
+        assert_eq!(violations[0].confidence, Confidence::High);
+    }
+
+    // ── P02 ──────────────────────────────────────────────────────────────
+
+    #[test]
+    fn p02_flags_to_string_in_loop() {
+        let code = r#"
+            fn f(label: &str) -> Vec<String> {
+                let mut out = vec![];
+                for i in 0..10 {
+                    out.push(label.to_string());
+                }
+                out
+            }
+        "#;
+        assert!(parse_and_detect(code).iter().any(|v| v.law == "P02"));
+    }
+
+    // ── P04 ──────────────────────────────────────────────────────────────
+
+    #[test]
+    fn p04_flags_nested_loop() {
+        let code = r#"
+            fn f(matrix: &[Vec<i32>]) {
+                for row in matrix {
+                    for val in row {
+                        process(val);
+                    }
+                }
+            }
+        "#;
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "P04")
+            .collect();
+        assert!(!violations.is_empty(), "nested loop must trigger P04");
+        assert_eq!(violations[0].confidence, Confidence::Medium);
+    }
+
+    // ── P06 ──────────────────────────────────────────────────────────────
+
+    #[test]
+    fn p06_flags_find_in_loop() {
+        let code = r#"
+            fn f(needles: &[i32], haystack: &[i32]) {
+                for needle in needles {
+                    let found = haystack.iter().find(|&&x| x == *needle);
+                    process(found);
+                }
+            }
+        "#;
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "P06")
+            .collect();
+        assert!(!violations.is_empty(), "find() in loop must trigger P06");
+        assert_eq!(violations[0].confidence, Confidence::Medium);
+    }
+
+    #[test]
+    fn p06_flags_position_in_loop() {
+        let code = r#"
+            fn f(values: &[i32]) {
+                for i in 0..10 {
+                    let pos = values.iter().position(|&x| x == i);
+                    process(pos);
+                }
+            }
+        "#;
+        assert!(
+            parse_and_detect(code).iter().any(|v| v.law == "P06"),
+            "position() in loop must trigger P06"
         );
+    }
+
+    #[test]
+    fn p06_skipped_in_test_function() {
+        let code = r#"
+            #[test]
+            fn test_position() {
+                for i in 0..4 {
+                    let pos = arr.iter().position(|&x| x == i).unwrap();
+                    assert!(pos < 4);
+                }
+            }
+        "#;
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "P06"));
+    }
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn looks_heap_owning_identifies_string() {
+        assert!(looks_heap_owning("name_string"));
+        assert!(looks_heap_owning("SomeStruct"));
+        assert!(!looks_heap_owning("i"));
+        assert!(!looks_heap_owning("x"));
+    }
+
+    #[test]
+    fn is_arc_or_rc_detects_variants() {
+        assert!(is_arc_or_rc_clone("Arc::clone(&x)"));
+        assert!(is_arc_or_rc_clone("Rc::clone(&x)"));
+        assert!(is_arc_or_rc_clone("std::sync::Arc::clone(&x)"));
+        assert!(!is_arc_or_rc_clone("name.clone()"));
     }
 }

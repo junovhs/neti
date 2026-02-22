@@ -1,5 +1,5 @@
 [rules]
-max_file_tokens = 82000
+max_file_tokens = 2000
 max_cognitive_complexity = 25
 max_nesting_depth = 3
 max_function_args = 5

@@ -1,7 +1,5 @@
 # project -- Semantic Map
 
-**Purpose:** architectural linter and code quality CI gate
-
 ## Legend
 
 `[ENTRY]` Application entry point
@@ -176,7 +174,7 @@ Concurrency pattern detection: C03, C04. Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/concurrency_lock.rs`
-C03: `MutexGuard` held across `.await`  # Severity Tiers  Not all "lock held across await" patterns carry the same risk:  **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH severity** Holding a sync guard across `.await` is a *bug*: it blocks the OS thread, starving the executor, and can deadlock if another task on the same thread tries to acquire the same lock. Supports application functionality.
+C03: `MutexGuard` held across `.await`  # Severity Tiers  Not all "lock held across await" patterns carry the same risk:  **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH confidence** Holding a sync guard across `.await` is a *bug*: it blocks the OS thread, starving the executor, and can deadlock if another task on the same thread tries to acquire the same lock. Supports application functionality.
 → Exports: detect_c03
 
 `src/analysis/patterns/concurrency_sync.rs`
@@ -436,8 +434,8 @@ The tokenizer encoding (`cl100k_base`, used by GPT-4/3.5-turbo). Supports applic
 → Exports: Tokenizer, count, exceeds_limit, is_available
 
 `src/types.rs`
-A single violation detected during analysis. Defines domain data structures.
-→ Exports: CheckReport, CommandResult, FileReport, ScanReport, Violation, ViolationDetails, clean_file_count, has_errors, is_clean, is_small_codebase, simple, violation_count, with_details
+Confidence level for a violation — how certain Neti is that this is a real problem. Defines domain data structures.
+→ Exports: CheckReport, CommandResult, Confidence, FileReport, ScanReport, Violation, ViolationDetails, clean_file_count, error_count, has_blocking_errors, has_errors, is_clean, is_small_codebase, label, prefix, simple, suggestion_count, violation_count, warning_count, with_details
 
 `src/verification/runner.rs`
 Command execution and output capture. Supports application functionality.

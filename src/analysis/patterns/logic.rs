@@ -1,48 +1,16 @@
 //! Logic boundary patterns: L02 (off-by-one risk), L03 (unchecked index).
 //!
-//! # L02 Design
-//!
-//! L02 flags `<=`/`>=` comparisons with `.len()` that risk an off-by-one
-//! panic. Crucially, it must NOT flag canonical bounds guards:
-//!
-//!   ```ignore
-//!   if idx >= v.len() { return None; } // safe guard — do NOT flag
-//!   ```
-//!
-//! Only the dangerous direction (where idx could reach len as an array index)
-//! should produce a violation:
-//!
-//!   ```ignore
-//!   if i <= v.len() { process(v[i]); } // idx could equal len — DO flag
-//!   ```
-//!
-//! # L03 Design
-//!
-//! L03 flags `[0]` and `.first().unwrap()` without a bounds proof. It must
-//! NOT flag indexing that is provably safe due to iterator invariants:
-//!
-//!   ```ignore
-//!   slice.chunks_exact(2).map(|a| u16::from_le_bytes([a[0], a[1]]));
-//!   //                                                  ^^^^  safe
-//!   ```
-//!
-//! L03 also must NOT flag constant indexing into fixed-size arrays:
-//!
-//!   ```ignore
-//!   let seed = [0u8; 32]; seed[0] = 1;  // cannot panic
-//!   self.s[0]  // where s: [u32; 4]     // cannot panic
-//!   ```
-//!
-//! # L03 Confidence
-//!
-//! When `is_fixed_size_array_access` fails, L03 must distinguish:
-//!
-//! - **Found declaration, confirmed not a fixed array** → High (provably unsafe)
-//! - **Cannot find declaration at all** → Medium ("Cannot verify variable origin")
-//! - **Receiver is `self.field` or method call** → Medium (cross-scope)
+//! See `logic_helpers` for shared utilities and `logic_proof` for
+//! fixed-size array proof logic.
 
 use crate::types::{Confidence, Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
+
+use super::logic_helpers::{
+    can_find_local_declaration, has_chunks_exact_context, has_explicit_guard, is_index_variable,
+    is_literal,
+};
+use super::logic_proof::{extract_receiver, is_fixed_size_array_access};
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
@@ -54,7 +22,6 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
 
 // ── L02 ─────────────────────────────────────────────────────────────────────
 
-/// L02: Boundary ambiguity — `<=` or `>=` with `.len()` in the dangerous direction.
 fn detect_l02(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"(binary_expression) @cmp";
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
@@ -74,7 +41,6 @@ fn detect_l02(source: &str, root: Node, out: &mut Vec<Violation>) {
         if !text.contains("<=") && !text.contains(">=") {
             continue;
         }
-
         if is_safe_boundary(cmp, source) {
             continue;
         }
@@ -139,27 +105,8 @@ fn extract_op(full_text: &str) -> &str {
     }
 }
 
-fn is_literal(node: Option<Node>) -> bool {
-    node.is_some_and(|n| n.kind() == "integer_literal" || n.kind() == "float_literal")
-}
-
-fn is_index_variable(name: &str) -> bool {
-    let n = name.trim();
-    n == "i"
-        || n == "j"
-        || n == "k"
-        || n == "n"
-        || n == "idx"
-        || n.contains("index")
-        || n.contains("pos")
-        || n.contains("ptr")
-        || n.contains("offset")
-        || n.contains("cursor")
-}
-
 // ── L03 ─────────────────────────────────────────────────────────────────────
 
-/// L03: Unchecked `[0]` or `.first()/.last().unwrap()`.
 fn detect_l03(source: &str, root: Node, out: &mut Vec<Violation>) {
     detect_index_zero(source, root, out);
     detect_first_last_unwrap(source, root, out);
@@ -181,21 +128,16 @@ fn detect_index_zero(source: &str, root: Node, out: &mut Vec<Violation>) {
         if !text.ends_with("[0]") {
             continue;
         }
-
         if has_explicit_guard(source, idx_node) {
             continue;
         }
-
         if has_chunks_exact_context(source, idx_node) {
             continue;
         }
-
-        // If we proved it's a fixed-size array, skip entirely (HIGH confidence safe)
         if is_fixed_size_array_access(source, idx_node, root) {
             continue;
         }
 
-        // Determine confidence based on what we can prove about the receiver
         let receiver = extract_receiver(text);
         let (confidence, reason) = classify_l03_confidence(source, idx_node, receiver);
 
@@ -221,15 +163,12 @@ fn detect_index_zero(source: &str, root: Node, out: &mut Vec<Violation>) {
 ///
 /// 1. Receiver is `self.field` or contains a method call → Medium (cross-scope)
 /// 2. Receiver is a simple local variable and we found its declaration → High
-///    (we know it's not a fixed array, so it's Vec/slice/dynamic)
-/// 3. Receiver is a simple local variable but we can't find a declaration →
-///    Medium ("Cannot verify variable origin")
+/// 3. Receiver is a simple local variable but we can't find a declaration → Medium
 fn classify_l03_confidence(
     source: &str,
     node: Node,
     receiver: &str,
 ) -> (Confidence, Option<String>) {
-    // Cross-scope: field access or method return — can't trace type
     if receiver.contains("self.") || receiver.contains('(') {
         return (
             Confidence::Medium,
@@ -237,125 +176,20 @@ fn classify_l03_confidence(
         );
     }
 
-    // Simple local variable — check if we can find its declaration
     if !receiver.contains('.') {
         if can_find_local_declaration(source, node, receiver) {
-            // We found the declaration and it's NOT a fixed-size array
-            // (is_fixed_size_array_access already returned false above).
-            // This means it's a Vec, slice, or other dynamic collection.
             return (Confidence::High, None);
         }
-        // Variable exists but we can't find where it was declared —
-        // could be a closure parameter, destructured binding, macro output, etc.
         return (
             Confidence::Medium,
             Some("cannot find variable declaration to verify type".to_string()),
         );
     }
 
-    // Dotted access on something other than self (e.g. `foo.bar[0]`)
     (
         Confidence::Medium,
         Some("cannot trace type through field access".to_string()),
     )
-}
-
-/// Check whether a `let` declaration for `var_name` exists in any enclosing
-/// scope. This does NOT check the type — only whether we can see the binding.
-fn can_find_local_declaration(source: &str, node: Node, var_name: &str) -> bool {
-    if var_name.contains('.') {
-        return false;
-    }
-
-    let mut cur = node;
-    for _ in 0..30 {
-        let Some(p) = cur.parent() else { break };
-
-        if matches!(p.kind(), "block" | "function_item" | "source_file") {
-            let mut child_cursor = p.walk();
-            for child in p.children(&mut child_cursor) {
-                if child.kind() != "let_declaration" {
-                    continue;
-                }
-                if child.start_byte() >= node.start_byte() {
-                    continue;
-                }
-                let decl_text = child.utf8_text(source.as_bytes()).unwrap_or("");
-                if decl_matches_variable(decl_text, var_name) {
-                    return true;
-                }
-            }
-        }
-
-        // Also check function parameters
-        if p.kind() == "function_item" {
-            if has_matching_parameter(source, p, var_name) {
-                return true;
-            }
-            break;
-        }
-
-        if p.kind() == "source_file" {
-            break;
-        }
-
-        cur = p;
-    }
-    false
-}
-
-/// Check if a function's parameter list contains a parameter with the given name.
-fn has_matching_parameter(source: &str, fn_node: Node, var_name: &str) -> bool {
-    let fn_text = fn_node.utf8_text(source.as_bytes()).unwrap_or("");
-
-    // Find the parameter list between first `(` and its matching `)`
-    let Some(paren_start) = fn_text.find('(') else {
-        return false;
-    };
-
-    let mut depth = 0;
-    let mut paren_end = None;
-    for (i, c) in fn_text[paren_start..].char_indices() {
-        match c {
-            '(' => depth += 1,
-            ')' => {
-                depth -= 1;
-                if depth == 0 {
-                    paren_end = Some(paren_start + i);
-                    break;
-                }
-            }
-            _ => {}
-        }
-    }
-
-    let Some(end) = paren_end else {
-        return false;
-    };
-
-    let params = &fn_text[paren_start + 1..end];
-
-    // Check each parameter segment for the variable name
-    for param in params.split(',') {
-        let trimmed = param.trim();
-        // Strip leading `mut ` or `&mut ` or `&`
-        let clean = trimmed
-            .strip_prefix("mut ")
-            .or_else(|| trimmed.strip_prefix("&mut "))
-            .or_else(|| trimmed.strip_prefix('&'))
-            .unwrap_or(trimmed)
-            .trim();
-
-        // Parameter name is everything before the `:`
-        if let Some(colon_pos) = clean.find(':') {
-            let param_name = clean[..colon_pos].trim();
-            if param_name == var_name {
-                return true;
-            }
-        }
-    }
-
-    false
 }
 
 fn detect_first_last_unwrap(source: &str, root: Node, out: &mut Vec<Violation>) {
@@ -371,7 +205,8 @@ fn detect_first_last_unwrap(source: &str, root: Node, out: &mut Vec<Violation>) 
         };
 
         let text = call.utf8_text(source.as_bytes()).unwrap_or("");
-        if !text.contains(".first()") && !text.contains(".last()") {
+        let has_first_or_last = text.contains(".first()") || text.contains(".last()");
+        if !has_first_or_last {
             continue;
         }
         if !text.contains(".unwrap()") {
@@ -392,352 +227,6 @@ fn detect_first_last_unwrap(source: &str, root: Node, out: &mut Vec<Violation>) 
             },
         ));
     }
-}
-
-fn has_explicit_guard(source: &str, node: Node) -> bool {
-    let mut cur = node;
-    for _ in 0..10 {
-        let Some(p) = cur.parent() else { break };
-        let text = p.utf8_text(source.as_bytes()).unwrap_or("");
-        if text.contains(".len()") || text.contains(".is_empty()") {
-            return true;
-        }
-        if p.kind() == "if_expression" && text.contains('!') && text.contains("is_empty") {
-            return true;
-        }
-        cur = p;
-    }
-    false
-}
-
-/// Returns `true` if the node is inside a `chunks_exact(N)` or `array_chunks()`
-/// iterator.
-///
-/// ```ignore
-/// data.chunks_exact(2).map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]));
-/// ```
-fn has_chunks_exact_context(source: &str, node: Node) -> bool {
-    let mut cur = node;
-    for _ in 0..25 {
-        let Some(p) = cur.parent() else { break };
-        let text = p.utf8_text(source.as_bytes()).unwrap_or("");
-        if text.contains("chunks_exact(") || text.contains("array_chunks(") {
-            return true;
-        }
-        if p.kind() == "source_file" {
-            break;
-        }
-        cur = p;
-    }
-    false
-}
-
-// ── Fixed-size array proof ──────────────────────────────────────────────────
-
-fn is_fixed_size_array_access(source: &str, idx_node: Node, root: Node) -> bool {
-    let text = idx_node.utf8_text(source.as_bytes()).unwrap_or("");
-
-    let Some(index_val) = extract_constant_index(text) else {
-        return false;
-    };
-
-    let receiver = extract_receiver(text);
-
-    if let Some(size) = find_local_array_size(source, idx_node, receiver) {
-        return index_val < size;
-    }
-
-    if let Some(field_name) = receiver.strip_prefix("self.") {
-        if !field_name.contains('.') {
-            if let Some(size) = find_struct_field_array_size(source, idx_node, root, field_name) {
-                return index_val < size;
-            }
-        }
-    }
-
-    if let Some(size) = find_param_array_size(source, idx_node, receiver) {
-        return index_val < size;
-    }
-
-    false
-}
-
-fn extract_constant_index(text: &str) -> Option<usize> {
-    let bracket_start = text.rfind('[')?;
-    let bracket_end = text.rfind(']')?;
-    if bracket_end <= bracket_start {
-        return None;
-    }
-    let inner = text[bracket_start + 1..bracket_end].trim();
-    inner.parse::<usize>().ok()
-}
-
-fn extract_receiver(text: &str) -> &str {
-    text.rfind('[').map_or(text, |pos| text[..pos].trim())
-}
-
-fn find_local_array_size(source: &str, node: Node, receiver: &str) -> Option<usize> {
-    if receiver.contains('.') {
-        return None;
-    }
-
-    let mut cur = node;
-    for _ in 0..30 {
-        let Some(p) = cur.parent() else { break };
-
-        if matches!(p.kind(), "block" | "function_item" | "source_file") {
-            let mut child_cursor = p.walk();
-            for child in p.children(&mut child_cursor) {
-                if child.kind() != "let_declaration" {
-                    continue;
-                }
-                if child.start_byte() >= node.start_byte() {
-                    continue;
-                }
-                let decl_text = child.utf8_text(source.as_bytes()).unwrap_or("");
-                if !decl_matches_variable(decl_text, receiver) {
-                    continue;
-                }
-                if let Some(size) = extract_array_size_from_decl(decl_text) {
-                    return Some(size);
-                }
-            }
-            if matches!(p.kind(), "function_item" | "source_file") {
-                break;
-            }
-        }
-        cur = p;
-    }
-    None
-}
-
-fn decl_matches_variable(decl_text: &str, var_name: &str) -> bool {
-    let after_let = decl_text.strip_prefix("let").unwrap_or(decl_text).trim();
-    let after_mut = after_let.strip_prefix("mut").unwrap_or(after_let).trim();
-    after_mut.starts_with(var_name) && after_mut[var_name.len()..].starts_with([' ', ':', '=', ';'])
-}
-
-fn extract_array_size_from_decl(decl_text: &str) -> Option<usize> {
-    if let Some(size) = extract_repeat_array_size(decl_text) {
-        return Some(size);
-    }
-    if let Some(size) = extract_type_array_size(decl_text) {
-        return Some(size);
-    }
-    extract_literal_array_size(decl_text)
-}
-
-fn extract_repeat_array_size(text: &str) -> Option<usize> {
-    let eq_pos = text.find('=')?;
-    let after_eq = text[eq_pos + 1..].trim();
-
-    if !after_eq.starts_with('[') {
-        return None;
-    }
-    let bracket_end = after_eq.find(']')?;
-    let inner = &after_eq[1..bracket_end];
-
-    let semi_pos = inner.rfind(';')?;
-    let size_str = inner[semi_pos + 1..].trim();
-    parse_size_literal(size_str)
-}
-
-fn extract_type_array_size(text: &str) -> Option<usize> {
-    let colon_pos = text.find(':')?;
-    let after_colon = &text[colon_pos + 1..];
-
-    let eq_pos = after_colon.find('=').unwrap_or(after_colon.len());
-    let type_region = &after_colon[..eq_pos];
-
-    let bracket_start = type_region.find('[')?;
-    let bracket_end = type_region.find(']')?;
-    if bracket_end <= bracket_start {
-        return None;
-    }
-    let inner = &type_region[bracket_start + 1..bracket_end];
-    let semi_pos = inner.rfind(';')?;
-    let size_str = inner[semi_pos + 1..].trim();
-    parse_size_literal(size_str)
-}
-
-fn extract_literal_array_size(text: &str) -> Option<usize> {
-    let eq_pos = text.find('=')?;
-    let after_eq = text[eq_pos + 1..].trim();
-
-    if !after_eq.starts_with('[') {
-        return None;
-    }
-    let bracket_end = after_eq.find(']')?;
-    let inner = &after_eq[1..bracket_end];
-
-    if inner.contains(';') {
-        return None;
-    }
-
-    let trimmed = inner.trim();
-    if trimmed.is_empty() {
-        return Some(0);
-    }
-
-    Some(trimmed.split(',').count())
-}
-
-fn parse_size_literal(s: &str) -> Option<usize> {
-    let cleaned = s
-        .trim()
-        .trim_end_matches("usize")
-        .trim_end_matches("u32")
-        .trim_end_matches("u64")
-        .trim_end_matches("i32")
-        .trim_end_matches("i64")
-        .trim();
-    cleaned.parse::<usize>().ok()
-}
-
-fn find_struct_field_array_size(
-    source: &str,
-    node: Node,
-    root: Node,
-    field_name: &str,
-) -> Option<usize> {
-    let type_name = find_enclosing_impl_type(source, node)?;
-
-    let mut cursor = root.walk();
-    for child in root.children(&mut cursor) {
-        if child.kind() != "struct_item" {
-            continue;
-        }
-        let struct_text = child.utf8_text(source.as_bytes()).unwrap_or("");
-
-        if !struct_text.contains(&format!("struct {type_name}"))
-            && !struct_text.contains(&format!("struct {type_name}<"))
-        {
-            continue;
-        }
-
-        for line in struct_text.lines() {
-            if let Some(size) = extract_field_array_size(line, field_name) {
-                return Some(size);
-            }
-        }
-    }
-    None
-}
-
-fn find_enclosing_impl_type<'a>(source: &'a str, node: Node) -> Option<&'a str> {
-    let mut cur = node;
-    for _ in 0..30 {
-        let Some(p) = cur.parent() else { break };
-        if p.kind() == "impl_item" {
-            let impl_text = p.utf8_text(source.as_bytes()).unwrap_or("");
-            return extract_impl_type_name(impl_text);
-        }
-        if p.kind() == "source_file" {
-            break;
-        }
-        cur = p;
-    }
-    None
-}
-
-fn extract_impl_type_name(impl_text: &str) -> Option<&str> {
-    let first_line = impl_text.lines().next()?;
-    let after_impl = first_line.strip_prefix("impl")?.trim();
-
-    let after_generics = if after_impl.starts_with('<') {
-        let mut depth = 0;
-        let mut end = 0;
-        for (i, c) in after_impl.char_indices() {
-            match c {
-                '<' => depth += 1,
-                '>' => {
-                    depth -= 1;
-                    if depth == 0 {
-                        end = i + 1;
-                        break;
-                    }
-                }
-                _ => {}
-            }
-        }
-        after_impl[end..].trim()
-    } else {
-        after_impl
-    };
-
-    let type_part = if let Some(pos) = after_generics.find(" for ") {
-        after_generics[pos + 5..].trim()
-    } else {
-        after_generics
-    };
-
-    let name = type_part
-        .split(|c: char| c == '<' || c == '{' || c.is_whitespace())
-        .next()?;
-
-    if name.is_empty() {
-        None
-    } else {
-        Some(name)
-    }
-}
-
-fn extract_field_array_size(line: &str, field_name: &str) -> Option<usize> {
-    let trimmed = line.trim();
-    let after_pub = trimmed.strip_prefix("pub ").unwrap_or(trimmed).trim();
-
-    if !after_pub.starts_with(field_name) {
-        return None;
-    }
-    let after_name = &after_pub[field_name.len()..];
-    if !after_name.starts_with(':') {
-        return None;
-    }
-    let type_str = after_name[1..].trim();
-
-    if !type_str.starts_with('[') {
-        return None;
-    }
-    let bracket_end = type_str.find(']')?;
-    let inner = &type_str[1..bracket_end];
-    let semi_pos = inner.rfind(';')?;
-    let size_str = inner[semi_pos + 1..].trim().trim_end_matches(',');
-    size_str.parse::<usize>().ok()
-}
-
-fn find_param_array_size(source: &str, node: Node, receiver: &str) -> Option<usize> {
-    if receiver.contains('.') {
-        return None;
-    }
-
-    let mut cur = node;
-    for _ in 0..20 {
-        let Some(p) = cur.parent() else { break };
-
-        if matches!(p.kind(), "function_item" | "closure_expression") {
-            let fn_text = p.utf8_text(source.as_bytes()).unwrap_or("");
-            let pattern = format!("{receiver}:");
-            if let Some(pos) = fn_text.find(&pattern) {
-                let after = fn_text[pos + pattern.len()..].trim();
-                if after.starts_with('[') {
-                    if let Some(bracket_end) = after.find(']') {
-                        let inner = &after[1..bracket_end];
-                        if let Some(semi_pos) = inner.rfind(';') {
-                            let size_str = inner[semi_pos + 1..].trim();
-                            if let Ok(size) = size_str.parse::<usize>() {
-                                return Some(size);
-                            }
-                        }
-                    }
-                }
-            }
-            if p.kind() == "function_item" {
-                break;
-            }
-        }
-        cur = p;
-    }
-    None
 }
 
 #[cfg(test)]
@@ -797,7 +286,7 @@ mod tests {
         );
     }
 
-    // ── L03 ──────────────────────────────────────────────────────────────
+    // ── L03 basics ───────────────────────────────────────────────────────
 
     #[test]
     fn l03_flag_index_zero() {
@@ -807,7 +296,6 @@ mod tests {
             .filter(|v| v.law == "L03")
             .collect();
         assert!(!violations.is_empty());
-        // v is a parameter we CAN find — should be High
         assert_eq!(violations[0].confidence, Confidence::High);
     }
 
@@ -818,9 +306,36 @@ mod tests {
     }
 
     #[test]
+    fn l03_skip_with_len_check() {
+        let code = "fn f(v: &[i32]) -> i32 { if v.len() > 0 { v[0] } else { 0 } }";
+        assert!(
+            parse_and_detect(code).iter().all(|v| v.law != "L03"),
+            "v.len() guard must suppress L03"
+        );
+    }
+
+    #[test]
     fn l03_flag_first_unwrap() {
         let code = "fn f(v: &[i32]) -> i32 { *v.first().unwrap() }";
         assert!(parse_and_detect(code).iter().any(|v| v.law == "L03"));
+    }
+
+    #[test]
+    fn l03_flag_last_unwrap() {
+        let code = "fn f(v: &[i32]) -> i32 { *v.last().unwrap() }";
+        assert!(
+            parse_and_detect(code).iter().any(|v| v.law == "L03"),
+            ".last().unwrap() must be flagged"
+        );
+    }
+
+    #[test]
+    fn l03_no_flag_without_unwrap() {
+        let code = "fn f(v: &[i32]) -> Option<&i32> { v.first() }";
+        assert!(
+            parse_and_detect(code).iter().all(|v| v.law != "L03"),
+            ".first() without .unwrap() must not be flagged"
+        );
     }
 
     #[test]
@@ -832,10 +347,7 @@ mod tests {
                     .collect()
             }
         ";
-        assert!(
-            parse_and_detect(code).iter().all(|v| v.law != "L03"),
-            "chunks_exact indexing is provably safe and must not be flagged"
-        );
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "L03"));
     }
 
     // ── L03 fixed-size array ─────────────────────────────────────────────
@@ -848,10 +360,7 @@ mod tests {
                 seed[0] = 1;
             }
         ";
-        assert!(
-            parse_and_detect(code).iter().all(|v| v.law != "L03"),
-            "seed[0] on [0u8; 32] is provably safe"
-        );
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "L03"));
     }
 
     #[test]
@@ -862,10 +371,7 @@ mod tests {
                 arr[0]
             }
         ";
-        assert!(
-            parse_and_detect(code).iter().all(|v| v.law != "L03"),
-            "arr[0] on [1, 2, 3] is provably safe"
-        );
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "L03"));
     }
 
     #[test]
@@ -881,10 +387,7 @@ mod tests {
                 }
             }
         ";
-        assert!(
-            parse_and_detect(code).iter().all(|v| v.law != "L03"),
-            "self.s[0] on [u32; 4] is provably safe"
-        );
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "L03"));
     }
 
     #[test]
@@ -894,10 +397,7 @@ mod tests {
                 buf[0]
             }
         ";
-        assert!(
-            parse_and_detect(code).iter().all(|v| v.law != "L03"),
-            "buf[0] on [u8; 4] parameter is provably safe"
-        );
+        assert!(parse_and_detect(code).iter().all(|v| v.law != "L03"));
     }
 
     #[test]
@@ -907,27 +407,19 @@ mod tests {
                 v[0]
             }
         ";
-        assert!(
-            parse_and_detect(code).iter().any(|v| v.law == "L03"),
-            "v[0] on Vec<i32> should still be flagged"
-        );
+        assert!(parse_and_detect(code).iter().any(|v| v.law == "L03"));
     }
 
     #[test]
     fn l03_still_flags_slice_index() {
         let code = "fn f(v: &[i32]) -> i32 { v[0] }";
-        assert!(
-            parse_and_detect(code).iter().any(|v| v.law == "L03"),
-            "v[0] on &[i32] should still be flagged"
-        );
+        assert!(parse_and_detect(code).iter().any(|v| v.law == "L03"));
     }
 
     // ── L03 confidence tiers ─────────────────────────────────────────────
 
     #[test]
     fn l03_medium_confidence_for_unfound_variable() {
-        // Variable `data` is not declared in visible scope — came from somewhere
-        // we can't trace. Should be Medium, not High.
         let code = r"
             fn f() -> i32 {
                 data[0]
@@ -938,17 +430,11 @@ mod tests {
             .filter(|v| v.law == "L03")
             .collect();
         assert!(!violations.is_empty(), "should flag data[0]");
-        assert_eq!(
-            violations[0].confidence,
-            Confidence::Medium,
-            "undeclared variable should be Medium confidence"
-        );
+        assert_eq!(violations[0].confidence, Confidence::Medium);
     }
 
     #[test]
     fn l03_high_confidence_for_found_vec() {
-        // Variable `v` is declared as Vec — we found it and confirmed it's not
-        // a fixed array. Should be High.
         let code = r"
             fn f() -> i32 {
                 let v = vec![1, 2, 3];
@@ -959,17 +445,12 @@ mod tests {
             .into_iter()
             .filter(|v| v.law == "L03")
             .collect();
-        assert!(!violations.is_empty(), "should flag v[0]");
-        assert_eq!(
-            violations[0].confidence,
-            Confidence::High,
-            "known Vec should be High confidence"
-        );
+        assert!(!violations.is_empty());
+        assert_eq!(violations[0].confidence, Confidence::High);
     }
 
     #[test]
     fn l03_medium_confidence_for_self_field() {
-        // self.items[0] — can't trace type across struct boundary
         let code = r"
             struct Foo { items: Vec<i32> }
             impl Foo {
@@ -982,18 +463,12 @@ mod tests {
             .into_iter()
             .filter(|v| v.law == "L03")
             .collect();
-        assert!(!violations.is_empty(), "should flag self.items[0]");
-        assert_eq!(
-            violations[0].confidence,
-            Confidence::Medium,
-            "self.field access should be Medium confidence"
-        );
+        assert!(!violations.is_empty());
+        assert_eq!(violations[0].confidence, Confidence::Medium);
     }
 
     #[test]
     fn l03_high_confidence_for_param_slice() {
-        // Parameter `v: &[i32]` — we can find the declaration and it's not
-        // a fixed array. Should be High.
         let code = "fn f(v: &[i32]) -> i32 { v[0] }";
         let violations: Vec<_> = parse_and_detect(code)
             .into_iter()
@@ -1001,5 +476,20 @@ mod tests {
             .collect();
         assert!(!violations.is_empty());
         assert_eq!(violations[0].confidence, Confidence::High);
+    }
+
+    #[test]
+    fn l03_medium_confidence_for_method_return() {
+        let code = "fn f() -> i32 { get_data()[0] }";
+        let violations: Vec<_> = parse_and_detect(code)
+            .into_iter()
+            .filter(|v| v.law == "L03")
+            .collect();
+        assert!(!violations.is_empty(), "should flag method return indexing");
+        assert_eq!(
+            violations[0].confidence,
+            Confidence::Medium,
+            "method return receiver should be Medium"
+        );
     }
 }
