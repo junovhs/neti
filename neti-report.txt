@@ -1,106 +1,117 @@
 $ cargo clippy --all-targets --no-deps -- -D warnings
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.09s
+    Checking neti v1.6.6 (/home/juno/neti)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.98s
 
 $ cargo test
 
-running 95 tests
+running 105 tests
 test analysis::checks::syntax::tests::test_c_string_literal_recognized ... ok
-test analysis::checks::syntax::tests::test_open_range_pattern_recognized ... ok
 test analysis::checks::syntax::tests::test_inner_attribute_recognized ... ok
+test analysis::checks::syntax::tests::test_open_range_pattern_recognized ... ok
 test analysis::checks::syntax::tests::test_suffixed_literal_recognized ... ok
 test analysis::checks::syntax::tests::test_rust_error ... ok
 test analysis::checks::syntax::tests::test_valid_rust ... ok
-test analysis::cognitive::tests::test_else_if_flattening ... ok
+test analysis::checks::syntax::tests::test_inner_attribute_content_suppressed ... ok
 test analysis::cognitive::tests::test_boolean_ops ... ok
-test analysis::cognitive::tests::test_if_statement ... ok
+test analysis::cognitive::tests::test_else_if_flattening ... ok
 test analysis::cognitive::tests::test_linear_flow ... ok
+test analysis::cognitive::tests::test_if_statement ... ok
 test analysis::cognitive::tests::test_nested_if ... ok
 test analysis::patterns::concurrency_lock::tests::classify_async_by_body_pattern ... ok
 test analysis::patterns::concurrency_lock::tests::classify_async_by_import ... ok
 test analysis::patterns::concurrency_lock::tests::classify_sync_by_default ... ok
-test analysis::patterns::performance::tests::looks_heap_owning_identifies_string ... ok
-test analysis::patterns::security::tests::is_shell_invocation_detects_shell_vars ... ok
-test analysis::patterns::concurrency_lock::tests::c03_no_violation_without_await_span ... ok
-test analysis::patterns::concurrency_lock::tests::c03_async_mutex_gets_hol_message ... ok
 test analysis::patterns::concurrency_lock::tests::c03_flags_sync_mutex_across_await ... ok
-test analysis::patterns::resource::tests::r07_skip_returned_writer ... ok
-test analysis::patterns::resource::tests::r07_flag_missing_flush ... ok
-test analysis::patterns::resource::tests::r07_skip_with_flush ... ok
-test analysis::patterns::idiomatic::tests::i01_flag_simple_from ... ok
+test analysis::patterns::concurrency_lock::tests::c03_async_mutex_gets_hol_message ... ok
+test analysis::patterns::concurrency_lock::tests::c03_no_violation_without_await_span ... ok
+test analysis::patterns::performance::tests::looks_heap_owning_identifies_string ... ok
 test analysis::patterns::idiomatic::tests::i01_skip_error_from ... ok
+test analysis::patterns::idiomatic::tests::i02_still_flags_same_variant_duplicates ... ok
+test analysis::patterns::idiomatic::tests::i01_flag_simple_from ... ok
 test analysis::patterns::idiomatic::tests::i02_flag_duplicate_arms ... ok
-test branch::tests::test_work_branch_name ... ok
-test file_class::tests::html_is_asset_not_governed ... ok
-test file_class::tests::json_is_config_not_governed ... ok
+test analysis::patterns::idiomatic::tests::i02_skip_different_variant_types ... ok
 test analysis::patterns::idiomatic::tests::i02_skip_unique_arms ... ok
+test analysis::patterns::security::tests::is_shell_invocation_detects_shell_vars ... ok
+test analysis::patterns::idiomatic::tests::i02_skip_tuple_match_different_variants ... ok
+test analysis::patterns::logic::tests::l02_flag_lte_len ... ok
+test analysis::patterns::logic::tests::l02_skip_guard_idx_gte_len ... ok
+test analysis::patterns::logic::tests::l03_skip_typed_param_array ... ok
+test analysis::patterns::logic::tests::l02_skip_guard_len_lte_idx ... ok
+test analysis::patterns::logic::tests::l02_skip_max_var ... ok
+test analysis::patterns::logic::tests::l03_skip_fixed_array_repeat ... ok
+test analysis::patterns::logic::tests::l02_flag_len_gte_idx ... ok
+test analysis::patterns::logic::tests::l03_skip_fixed_array_literal ... ok
+test branch::tests::test_work_branch_name ... ok
+test analysis::patterns::logic::tests::l03_flag_first_unwrap ... ok
+test analysis::patterns::logic::tests::l03_flag_index_zero ... ok
+test analysis::patterns::logic::tests::l03_still_flags_vec_index ... ok
+test analysis::patterns::logic::tests::l02_skip_threshold ... ok
 test file_class::tests::lock_files_are_other ... ok
 test file_class::tests::markdown_is_other ... ok
 test file_class::tests::minified_js_is_asset ... ok
+test file_class::tests::json_is_config_not_governed ... ok
+test file_class::tests::html_is_asset_not_governed ... ok
 test file_class::tests::source_files_are_governed ... ok
 test file_class::tests::svg_is_asset ... ok
 test file_class::tests::toml_is_config ... ok
-test analysis::patterns::logic::tests::l02_skip_max_var ... ok
-test analysis::patterns::logic::tests::l02_skip_guard_idx_gte_len ... ok
-test analysis::patterns::logic::tests::l02_skip_threshold ... ok
-test analysis::patterns::logic::tests::l02_flag_len_gte_idx ... ok
-test graph::defs::extract::tests::test_python_defs ... ok
 test graph::locality::classifier::tests::test_deadwood ... ok
-test graph::locality::classifier::tests::test_stable_hub ... ok
-test analysis::patterns::logic::tests::l02_flag_lte_len ... ok
-test analysis::patterns::logic::tests::l02_skip_guard_len_lte_idx ... ok
-test graph::locality::coupling::tests::test_compute_coupling ... ok
-test graph::locality::classifier::tests::test_volatile_leaf ... ok
 test graph::locality::classifier::tests::test_god_module ... ok
+test graph::locality::classifier::tests::test_stable_hub ... ok
+test graph::locality::classifier::tests::test_volatile_leaf ... ok
+test analysis::patterns::logic::tests::l03_still_flags_slice_index ... ok
+test graph::locality::coupling::tests::test_compute_coupling ... ok
 test graph::locality::distance::tests::test_deep_hierarchy ... ok
 test graph::locality::cycles::tests::test_cycle_content ... ok
 test graph::locality::distance::tests::test_same_directory ... ok
 test graph::locality::distance::tests::test_sibling_directories ... ok
 test graph::locality::exemptions::tests::test_crate_root ... ok
 test graph::locality::cycles::tests::test_cycle_detection_logic ... ok
-test analysis::patterns::logic::tests::l03_skip_with_empty_check ... ok
-test analysis::patterns::logic::tests::l03_flag_first_unwrap ... ok
-test graph::locality::tests::integration::test_encapsulation_allows_mod_rs_import ... ok
-test graph::locality::tests::integration::test_distance_boundary_condition ... ok
+test analysis::patterns::resource::tests::r07_skip_returned_writer ... ok
 test graph::locality::exemptions::tests::test_parent_reexport ... ok
 test graph::locality::exemptions::tests::test_shared_infrastructure ... ok
-test graph::locality::tests::integration::test_encapsulation_breach_detects_internal_import ... ok
 test graph::locality::exemptions::tests::test_vertical_routing ... ok
 test graph::locality::tests::integration::test_cycle_detection_three_node ... ok
+test graph::locality::tests::integration::test_distance_boundary_condition ... ok
+test graph::locality::tests::integration::test_encapsulation_allows_mod_rs_import ... ok
+test analysis::patterns::logic::tests::l03_skip_chunks_exact_index ... ok
+test graph::locality::tests::integration::test_encapsulation_breach_detects_internal_import ... ok
 test graph::locality::tests::integration::test_upward_dep_categorization_with_manual_layers ... ok
 test graph::locality::tests::integration::test_lib_rs_exempt_from_all_rules ... ok
+test analysis::patterns::logic::tests::l03_skip_with_empty_check ... ok
+test graph::locality::tests::integration::test_hub_exemption_ignores_distance ... ok
+test analysis::patterns::resource::tests::r07_skip_with_flush ... ok
 test graph::rank::pagerank::tests::test_helpers_table ... ok
 test graph::tsconfig::tests::test_match_pattern ... ok
+test graph::locality::tests::integration::test_vertical_routing_same_module ... ok
 test graph::tsconfig::tests::test_strip_comments ... ok
 test lang::tests::test_from_ext ... ok
-test graph::locality::tests::integration::test_vertical_routing_same_module ... ok
-test graph::locality::tests::integration::test_hub_exemption_ignores_distance ... ok
 test mutate::mutations::tests::test_boolean_mutations ... ok
-test mutate::mutations::tests::test_comparison_mutations ... ok
-test mutate::mutations::tests::test_logical_mutations ... ok
 test mutate::discovery::tests::test_discover_finds_operators ... ok
+test analysis::patterns::resource::tests::r07_flag_missing_flush ... ok
+test mutate::mutations::tests::test_comparison_mutations ... ok
+test analysis::patterns::logic::tests::l03_skip_struct_field_array ... ok
+test mutate::mutations::tests::test_logical_mutations ... ok
 test mutate::mutations::tests::test_no_mutation ... ok
+test graph::rank::pagerank::tests::test_compute_logic ... ok
 test skeleton::tests::test_filter_nested_ranges_logic ... ok
 test skeleton::tests::test_replace_ranges_logic ... ok
-test graph::rank::pagerank::tests::test_compute_logic ... ok
+test graph::defs::extract::tests::test_python_defs ... ok
 test graph::defs::extract::tests::test_rust_defs ... ok
-test analysis::patterns::logic::tests::l03_flag_index_zero ... ok
-test analysis::patterns::logic::tests::l03_skip_chunks_exact_index ... ok
-test analysis::patterns::semantic::tests::m03_skip_getter_without_mut ... ok
-test analysis::patterns::performance::tests::p01_does_not_flag_arc_clone ... ok
-test analysis::patterns::semantic::tests::m04_skip_is_returning_bool ... ok
-test analysis::patterns::semantic::tests::m03_flag_getter_with_mut ... ok
-test analysis::patterns::semantic::tests::m05_flag_calculate_with_mut ... ok
-test analysis::patterns::security::tests::x02_direct_exec_with_args_is_provenance_not_injection ... ok
 test analysis::patterns::semantic::tests::m04_flag_is_returning_string ... ok
+test analysis::patterns::semantic::tests::m03_flag_getter_with_mut ... ok
+test analysis::patterns::semantic::tests::m03_skip_getter_without_mut ... ok
 test analysis::patterns::security::tests::x02_flags_shell_invocation ... ok
+test analysis::patterns::semantic::tests::m04_skip_is_returning_bool ... ok
+test analysis::patterns::semantic::tests::m05_flag_calculate_with_mut ... ok
 test analysis::patterns::security::tests::x01_flags_sql_format ... ok
 test analysis::patterns::performance::tests::p02_flags_to_string_in_loop ... ok
+test analysis::patterns::performance::tests::p01_does_not_flag_arc_clone ... ok
 test analysis::patterns::security::tests::x02_const_binary_is_safe ... ok
 test analysis::patterns::performance::tests::p01_flags_string_clone_in_loop ... ok
+test analysis::patterns::security::tests::x02_direct_exec_with_args_is_provenance_not_injection ... ok
 test skeleton::tests::test_clean_integration ... ok
 test graph::imports::tests::test_extract_imports ... ok
 
-test result: ok. 95 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+test result: ok. 105 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
 
 
 running 0 tests
@@ -108,17 +119,19 @@ running 0 tests
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
 
-running 5 tests
-test src/analysis/patterns/logic.rs - analysis::patterns::logic (line 16) ... ignored
-test src/analysis/patterns/logic.rs - analysis::patterns::logic (line 25) ... ignored
-test src/analysis/patterns/logic.rs - analysis::patterns::logic (line 9) ... ignored
-test src/analysis/patterns/logic.rs - analysis::patterns::logic::has_chunks_exact_context (line 274) ... ignored
+running 6 tests
+test src/analysis/patterns/logic.rs - analysis::patterns::logic (line 15) ... ignored
+test src/analysis/patterns/logic.rs - analysis::patterns::logic (line 24) ... ignored
+test src/analysis/patterns/logic.rs - analysis::patterns::logic (line 31) ... ignored
+test src/analysis/patterns/logic.rs - analysis::patterns::logic (line 8) ... ignored
+test src/analysis/patterns/logic.rs - analysis::patterns::logic::has_chunks_exact_context (line 285) ... ignored
 test src/mutate/mod.rs - mutate (line 17) ... ignored
 
-test result: ok. 0 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 0 passed; 0 failed; 6 ignored; 0 measured; 0 filtered out; finished in 0.00s
 
 
-    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.09s
+   Compiling neti v1.6.6 (/home/juno/neti)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.66s
      Running unittests src/lib.rs (target/debug/deps/neti_core-52033bb6a1b9141d)
      Running unittests src/bin/neti.rs (target/debug/deps/neti-ea6688cec1c7c921)
    Doc-tests neti_core

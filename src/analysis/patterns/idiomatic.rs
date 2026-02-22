@@ -1,9 +1,18 @@
-// src/analysis/v2/patterns/idiomatic.rs
-//! Idiomatic patterns: I01, I02
+//! Idiomatic patterns: I01, I02.
+//!
+//! # I02 Design
+//!
+//! I02 detects match arms with duplicate bodies that could be combined using
+//! `A | B => body`. However, this is ONLY valid when the arm bindings have
+//! compatible types. Enum variants wrapping different inner types (e.g.,
+//! `Foo::U32(v)` vs `Foo::U64(v)`) produce textually identical bodies
+//! that CANNOT be fused because `v` has a different type in each arm.
+//!
+//! I02 must detect this case and suppress the suggestion.
 
 use crate::types::{Violation, ViolationDetails};
+use std::collections::HashMap;
 use tree_sitter::{Node, Query, QueryCursor};
-use super::get_capture_node;
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
@@ -13,20 +22,40 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
     out
 }
 
-/// I01: Manual From impl that could use derive
+// ── I01 ─────────────────────────────────────────────────────────────────────
+
+/// Detects manual `From` implementations by scanning for `impl_item` nodes
+/// whose text matches the `impl From<...> for ...` pattern.
+///
+/// We avoid relying on tree-sitter field names (`type:`, `trait:`) because
+/// they vary across grammar versions. Instead we do a text-based check on
+/// the impl header, which is simple and robust.
 fn detect_i01(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"(impl_item) @impl";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+        return;
+    };
+
     let mut cursor = QueryCursor::new();
-
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let Some(impl_node) = m.captures.first().map(|c| c.node) else { continue };
+        let Some(impl_node) = m.captures.first().map(|c| c.node) else {
+            continue;
+        };
 
-        let text = impl_node.utf8_text(source.as_bytes()).unwrap_or("");
-        if !text.contains("impl From<") || !text.contains("for ") { continue }
-        if text.contains("Error") { continue }
-        if text.contains("if ") || text.contains("match ") { continue }
-        if text.matches(';').count() > 2 { continue }
+        let impl_text = impl_node.utf8_text(source.as_bytes()).unwrap_or("");
+
+        // Extract the first line to check the impl header
+        let header = impl_text.lines().next().unwrap_or("");
+
+        // Must be `impl From<...> for ...`
+        if !is_from_impl(header) {
+            continue;
+        }
+
+        // Skip Error → Self From impls (idiomatic for error types)
+        if is_error_from_impl(impl_text) {
+            continue;
+        }
 
         out.push(Violation::with_details(
             impl_node.start_position().row + 1,
@@ -36,62 +65,276 @@ fn detect_i01(source: &str, root: Node, out: &mut Vec<Violation>) {
                 function_name: None,
                 analysis: vec!["Consider `#[derive(From)]` from derive_more.".into()],
                 suggestion: Some("Use derive_more::From if applicable.".into()),
-            }
+            },
         ));
     }
 }
 
-/// I02: Match arms with duplicate bodies
+/// Checks if an impl header line is a `From` impl.
+/// Matches patterns like:
+/// - `impl From<String> for MyType {`
+/// - `impl From<Vec<u32>> for IndexVec {`
+fn is_from_impl(header: &str) -> bool {
+    let trimmed = header.trim();
+    // Must start with `impl`
+    let after_impl = match trimmed.strip_prefix("impl") {
+        Some(rest) => rest.trim_start(),
+        None => return false,
+    };
+    // Next token must be `From<` or `From `
+    after_impl.starts_with("From<") || after_impl.starts_with("From ")
+}
+
+fn is_error_from_impl(impl_text: &str) -> bool {
+    let lower = impl_text.to_lowercase();
+    lower.contains("error") || lower.contains("err")
+}
+
+// ── I02 ─────────────────────────────────────────────────────────────────────
+
 fn detect_i02(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"(match_expression body: (match_block) @block) @match";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+        return;
+    };
     let idx_match = query.capture_index_for_name("match");
     let idx_block = query.capture_index_for_name("block");
-    
+
     let mut cursor = QueryCursor::new();
-
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let match_node = get_capture_node(&m, idx_match);
-        let block = get_capture_node(&m, idx_block);
+        let Some(match_node) =
+            idx_match.and_then(|i| m.captures.iter().find(|c| c.index == i).map(|c| c.node))
+        else {
+            continue;
+        };
+        let Some(block) =
+            idx_block.and_then(|i| m.captures.iter().find(|c| c.index == i).map(|c| c.node))
+        else {
+            continue;
+        };
 
-        let (Some(match_node), Some(block)) = (match_node, block) else { continue };
-
-        if let Some(dup) = find_dup_arms(source, block) {
-            out.push(Violation::with_details(
-                match_node.start_position().row + 1,
-                "Duplicate match arm bodies".into(),
-                "I02",
-                ViolationDetails {
-                    function_name: None,
-                    analysis: vec![format!("Duplicate: `{}`", truncate(&dup, 30))],
-                    suggestion: Some("Combine: `A | B => body`".into()),
-                }
-            ));
-        }
+        check_duplicate_arms(source, match_node, block, out);
     }
 }
 
-fn find_dup_arms(source: &str, block: Node) -> Option<String> {
-    let mut bodies: Vec<String> = Vec::new();
+fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut Vec<Violation>) {
+    let mut arm_bodies: HashMap<String, usize> = HashMap::new();
+    let mut arm_patterns: HashMap<String, Vec<String>> = HashMap::new();
+
     let mut cursor = block.walk();
-
     for child in block.children(&mut cursor) {
-        if child.kind() != "match_arm" { continue }
-        if let Some(body) = child.child_by_field_name("value") {
-            let text = body.utf8_text(source.as_bytes()).unwrap_or("");
-            let norm = text.split_whitespace().collect::<Vec<_>>().join(" ");
-            if norm.len() < 5 { continue }
-            // P06: Linear search here is unavoidable as `bodies` is small (match arms)
-            // and we need value equality check.
-            if bodies.contains(&norm) { return Some(norm) }
-            bodies.push(norm);
+        if child.kind() != "match_arm" {
+            continue;
+        }
+
+        let pattern_node = child.child_by_field_name("pattern");
+        let body = arm_body_text(source, child);
+
+        let pattern_text = pattern_node
+            .and_then(|n| n.utf8_text(source.as_bytes()).ok())
+            .unwrap_or("")
+            .to_string();
+
+        if let Some(body_text) = body {
+            let trimmed = body_text.trim().to_string();
+            if trimmed.is_empty() || trimmed == "_" {
+                continue;
+            }
+            *arm_bodies.entry(trimmed.clone()).or_insert(0) += 1;
+            arm_patterns.entry(trimmed).or_default().push(pattern_text);
         }
     }
-    None
+
+    for (body, count) in &arm_bodies {
+        if *count < 2 {
+            continue;
+        }
+
+        // Get the patterns that share this body
+        let patterns = arm_patterns.get(body).unwrap_or(&Vec::new()).clone();
+
+        // Check if these patterns destructure enum variants with bindings
+        // that likely have incompatible types
+        if patterns_have_incompatible_types(&patterns) {
+            continue;
+        }
+
+        let truncated = if body.len() > 30 {
+            format!("{}...", &body[..30])
+        } else {
+            body.clone()
+        };
+
+        out.push(Violation::with_details(
+            match_node.start_position().row + 1,
+            "Duplicate match arm bodies".into(),
+            "I02",
+            ViolationDetails {
+                function_name: None,
+                analysis: vec![format!("Duplicate: `{truncated}`")],
+                suggestion: Some("Combine: `A | B => body`".into()),
+            },
+        ));
+    }
 }
 
-fn truncate(s: &str, max: usize) -> String {
-    if s.len() <= max { s.to_string() } else { format!("{}...", &s[..max]) }
+/// Returns `true` if the set of patterns destructure enum variants that likely
+/// have incompatible inner types, making arm fusion impossible.
+///
+/// Handles two forms:
+/// 1. Simple: `Enum::VariantA(v)` vs `Enum::VariantB(v)`
+/// 2. Tuple:  `(Enum::A(x), Enum::A(y))` vs `(Enum::B(x), Enum::B(y))`
+///
+/// Heuristic: if all patterns destructure named enum variants AND the variant
+/// names differ across arms, assume the inner types differ.
+fn patterns_have_incompatible_types(patterns: &[String]) -> bool {
+    if patterns.len() < 2 {
+        return false;
+    }
+
+    // Try to extract variant names from each pattern
+    let mut per_arm_variants: Vec<Vec<&str>> = Vec::new();
+
+    for pat in patterns {
+        let trimmed = pat.trim();
+
+        // Must contain destructuring
+        if !trimmed.contains('(') {
+            return false; // Literal or wildcard pattern — always fuseable
+        }
+
+        let variants = extract_variant_names(trimmed);
+        if variants.is_empty() {
+            return false; // Could not parse — assume fuseable
+        }
+
+        per_arm_variants.push(variants);
+    }
+
+    if per_arm_variants.len() < 2 {
+        return false;
+    }
+
+    // All arms must have the same number of variant references
+    let expected_count = per_arm_variants[0].len();
+    if !per_arm_variants.iter().all(|v| v.len() == expected_count) {
+        return false;
+    }
+
+    // For each "slot" (position), check if the variant names differ across arms.
+    // If ANY slot has all-different variant names, the types are likely incompatible.
+    for slot in 0..expected_count {
+        let names_in_slot: Vec<&str> = per_arm_variants.iter().map(|v| v[slot]).collect();
+
+        let unique_count = {
+            let mut sorted = names_in_slot.clone();
+            sorted.sort();
+            sorted.dedup();
+            sorted.len()
+        };
+
+        // Every arm uses a different variant in this slot → incompatible types
+        if unique_count == names_in_slot.len() && unique_count >= 2 {
+            return true;
+        }
+    }
+
+    false
+}
+
+/// Extracts enum variant names from a pattern string.
+///
+/// For `IndexVec::U32(v)` → `["U32"]`
+/// For `(U32(v1), U32(v2))` → `["U32", "U32"]`
+/// For `(Idx::U32(v1), Idx::U32(v2))` → `["U32", "U32"]`
+fn extract_variant_names(pattern: &str) -> Vec<&str> {
+    let trimmed = pattern.trim();
+
+    // Tuple pattern: starts with `(`
+    if trimmed.starts_with('(') {
+        // Strip outer parens
+        let inner = trimmed
+            .strip_prefix('(')
+            .and_then(|s| s.strip_suffix(')'))
+            .unwrap_or(trimmed);
+
+        // Split on `,` respecting nesting depth
+        let parts = split_top_level_commas(inner);
+        let mut names = Vec::new();
+        for part in &parts {
+            let part = part.trim();
+            if let Some(name) = extract_single_variant_name(part) {
+                names.push(name);
+            }
+        }
+        return names;
+    }
+
+    // Simple pattern: `Enum::Variant(binding)` or `Variant(binding)`
+    if let Some(name) = extract_single_variant_name(trimmed) {
+        return vec![name];
+    }
+
+    Vec::new()
+}
+
+/// Extracts a single variant name from a pattern like `Enum::Variant(x)` or `Variant(x)`.
+/// Returns the variant name (the part just before `(`).
+fn extract_single_variant_name(pattern: &str) -> Option<&str> {
+    let paren_pos = pattern.find('(')?;
+    let path = pattern[..paren_pos].trim();
+
+    if path.is_empty() {
+        return None;
+    }
+
+    // Get the last segment after `::`
+    Some(path.rsplit("::").next().unwrap_or(path))
+}
+
+/// Splits a string on commas, but only at the top level (not inside parentheses).
+fn split_top_level_commas(s: &str) -> Vec<&str> {
+    let mut parts = Vec::new();
+    let mut depth = 0;
+    let mut start = 0;
+
+    for (i, c) in s.char_indices() {
+        match c {
+            '(' | '[' => depth += 1,
+            ')' | ']' => depth -= 1,
+            ',' if depth == 0 => {
+                parts.push(&s[start..i]);
+                start = i + 1;
+            }
+            _ => {}
+        }
+    }
+    parts.push(&s[start..]);
+    parts
+}
+
+/// Extracts the body text from a match arm, handling both `=> expr` and `=> { ... }`.
+fn arm_body_text(source: &str, arm: Node) -> Option<String> {
+    let child_count = arm.child_count();
+    if child_count == 0 {
+        return None;
+    }
+
+    let mut found_arrow = false;
+    let mut cursor = arm.walk();
+    for child in arm.children(&mut cursor) {
+        if child.kind() == "=>" {
+            found_arrow = true;
+            continue;
+        }
+        if found_arrow {
+            let text = child.utf8_text(source.as_bytes()).ok()?;
+            let trimmed = text.trim().trim_end_matches(',').trim();
+            return Some(trimmed.to_string());
+        }
+    }
+
+    None
 }
 
 #[cfg(test)]
@@ -109,25 +352,107 @@ mod tests {
 
     #[test]
     fn i01_flag_simple_from() {
-        let code = "impl From<String> for MyType { fn from(s: String) -> Self { Self { v: s } } }";
+        let code = r#"
+            impl From<String> for MyType {
+                fn from(s: String) -> Self { MyType(s) }
+            }
+        "#;
         assert!(parse_and_detect(code).iter().any(|v| v.law == "I01"));
     }
 
     #[test]
     fn i01_skip_error_from() {
-        let code = "impl From<io::Error> for MyError { fn from(e: io::Error) -> Self { Self(e) } }";
+        let code = r#"
+            impl From<IoError> for MyError {
+                fn from(e: IoError) -> Self { MyError::Io(e) }
+            }
+        "#;
         assert!(parse_and_detect(code).iter().all(|v| v.law != "I01"));
     }
 
     #[test]
     fn i02_flag_duplicate_arms() {
-        let code = "fn f(x: i32) { match x { 1 => do_thing(), 2 => do_thing(), _ => other() } }";
+        let code = r#"
+            fn f(x: Option<i32>) -> &str {
+                match x {
+                    Some(_) => "yes",
+                    None => "yes",
+                }
+            }
+        "#;
         assert!(parse_and_detect(code).iter().any(|v| v.law == "I02"));
     }
 
     #[test]
     fn i02_skip_unique_arms() {
-        let code = "fn f(x: i32) { match x { 1 => one(), 2 => two(), _ => other() } }";
+        let code = r#"
+            fn f(x: Option<i32>) -> &str {
+                match x {
+                    Some(_) => "yes",
+                    None => "no",
+                }
+            }
+        "#;
         assert!(parse_and_detect(code).iter().all(|v| v.law != "I02"));
     }
-}
+
+    #[test]
+    fn i02_skip_different_variant_types() {
+        let code = r#"
+            enum IndexVec {
+                U32(Vec<u32>),
+                U64(Vec<u64>),
+            }
+            impl IndexVec {
+                fn len(&self) -> usize {
+                    match self {
+                        IndexVec::U32(v) => v.len(),
+                        IndexVec::U64(v) => v.len(),
+                    }
+                }
+            }
+        "#;
+        assert!(
+            parse_and_detect(code).iter().all(|v| v.law != "I02"),
+            "Different variant types must not be flagged as fuseable"
+        );
+    }
+
+    #[test]
+    fn i02_skip_tuple_match_different_variants() {
+        let code = r#"
+            enum Idx { U32(Vec<u32>), U64(Vec<u64>) }
+            impl PartialEq for Idx {
+                fn eq(&self, other: &Self) -> bool {
+                    use Idx::*;
+                    match (self, other) {
+                        (U32(v1), U32(v2)) => v1 == v2,
+                        (U64(v1), U64(v2)) => v1 == v2,
+                        _ => false,
+                    }
+                }
+            }
+        "#;
+        assert!(
+            parse_and_detect(code).iter().all(|v| v.law != "I02"),
+            "Tuple match with different variant types must not be flagged"
+        );
+    }
+
+    #[test]
+    fn i02_still_flags_same_variant_duplicates() {
+        let code = r#"
+            fn f(x: i32) -> &str {
+                match x {
+                    1 => "same",
+                    2 => "same",
+                    _ => "other",
+                }
+            }
+        "#;
+        assert!(
+            parse_and_detect(code).iter().any(|v| v.law == "I02"),
+            "Literal patterns with same body should still be flagged"
+        );
+    }
+}

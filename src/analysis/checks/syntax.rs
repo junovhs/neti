@@ -1,4 +1,3 @@
-// src/analysis/checks/syntax.rs
 //! AST-level syntax error and malformed node detection.
 //!
 //! # Soundness Contract
@@ -44,8 +43,6 @@ fn traverse_for_errors(node: Node, source: &str, is_rust: bool, out: &mut Vec<Vi
 
 fn handle_error_node(node: Node, source: &str, is_rust: bool, out: &mut Vec<Violation>) {
     if is_rust && is_known_unsupported_construct(node, source) {
-        // Suppress: this is a grammar-version limitation, not a code defect.
-        // See module-level doc for the soundness contract.
         return;
     }
     let row = node.start_position().row + 1;
@@ -65,9 +62,10 @@ fn report_missing(node: Node, out: &mut Vec<Violation>) {
 /// Returns `true` if the error node represents a valid modern-Rust construct
 /// that the bundled tree-sitter grammar version cannot parse.
 ///
-/// If you are seeing "Syntax error detected" on valid Rust, the pattern that
-/// triggered it likely belongs here. Add the smallest possible recognizer and
-/// document which Rust version stabilized it.
+/// Checks both the error node's own text AND the surrounding context (ancestor
+/// nodes), because tree-sitter may break a valid construct into sub-nodes where
+/// the error lands on an interior fragment (e.g., the key-value pairs inside
+/// `#![doc(html_logo_url = "...")]`).
 fn is_known_unsupported_construct(node: Node, source: &str) -> bool {
     let text = node.utf8_text(source.as_bytes()).unwrap_or("").trim();
 
@@ -76,28 +74,88 @@ fn is_known_unsupported_construct(node: Node, source: &str) -> bool {
         return true;
     }
 
-    // Open-ended range patterns: 0.. 24.. (as match arm patterns, stabilized Rust 1.26+)
-    // These sometimes parse as errors in older grammars when used in pattern position.
+    // Open-ended range patterns: 0.. 24.. (stabilized Rust 1.26+)
     if is_open_range_pattern(text) {
         return true;
     }
 
-    // Numeric literals with type suffixes used in range pattern context: 24u8, 100usize, etc.
+    // Numeric literals with type suffixes in pattern context: 24u8, 100usize
     if is_suffixed_numeric_literal(text) {
         return true;
     }
 
-    // Inner attributes inside function bodies: #![doc(...)] etc.
-    // Standard inner attributes at file level parse fine; function-body ones may not.
+    // Inner attributes: #![...] — check the error node text directly
     if text.starts_with("#![") {
+        return true;
+    }
+
+    // Inner attribute context: the error node is INSIDE an inner attribute.
+    // Tree-sitter may parse `#![doc(` successfully but choke on the contents,
+    // producing an error node for `html_logo_url = "..."` rather than the
+    // whole `#![doc(...)]`. Walk up to check if we're inside an attribute.
+    if is_inside_inner_attribute(node, source) {
         return true;
     }
 
     false
 }
 
+/// Returns `true` if the error node is inside an inner attribute (`#![...]`).
+///
+/// Tree-sitter sometimes parses the outer `#![name(` successfully but produces
+/// error nodes for the attribute's interior content (e.g., key-value arguments).
+/// We walk up the ancestor chain looking for an `attribute_item` parent or
+/// for `#![` in a nearby ancestor's text.
+fn is_inside_inner_attribute(node: Node, source: &str) -> bool {
+    let mut cur = node;
+    for _ in 0..10 {
+        let Some(p) = cur.parent() else { break };
+
+        // tree-sitter node kind for inner attributes
+        if p.kind() == "attribute_item" || p.kind() == "inner_attribute_item" {
+            return true;
+        }
+
+        // Fallback: check if parent text starts with `#![`
+        let parent_text = p.utf8_text(source.as_bytes()).unwrap_or("");
+        if parent_text.trim_start().starts_with("#![") {
+            return true;
+        }
+
+        // Also handle the case where the attribute is a `token_tree` or
+        // `meta_arguments` inside an attribute
+        if matches!(p.kind(), "token_tree" | "meta_arguments") {
+            // Check grandparent
+            if let Some(gp) = p.parent() {
+                let gp_text = gp.utf8_text(source.as_bytes()).unwrap_or("");
+                if gp_text.trim_start().starts_with("#![")
+                    || gp.kind() == "attribute_item"
+                    || gp.kind() == "inner_attribute_item"
+                {
+                    return true;
+                }
+            }
+        }
+
+        // Stop at item boundaries — don't walk past function/struct/mod
+        if matches!(
+            p.kind(),
+            "function_item"
+                | "struct_item"
+                | "enum_item"
+                | "impl_item"
+                | "mod_item"
+                | "source_file"
+        ) {
+            break;
+        }
+
+        cur = p;
+    }
+    false
+}
+
 /// Recognizes C-string literals introduced in Rust 1.77.
-/// Patterns: c"...", c'...', cr"..."
 fn is_c_string_literal(text: &str) -> bool {
     text.starts_with("c\"")
         || text.starts_with("c'")
@@ -105,19 +163,16 @@ fn is_c_string_literal(text: &str) -> bool {
         || text.starts_with("cr#\"")
 }
 
-/// Recognizes open-ended range pattern suffixes: `0..`, `24..`, `n..`
-/// The text will be just the start-of-range expression with trailing `..`.
+/// Recognizes open-ended range pattern suffixes: `0..`, `24..`
 fn is_open_range_pattern(text: &str) -> bool {
     let Some(prefix) = text.strip_suffix("..") else {
         return false;
     };
-    // Must be a numeric literal (with optional suffix) or simple identifier
     let bare = strip_numeric_suffix(prefix.trim());
     bare.chars().all(|c| c.is_ascii_digit() || c == '_')
 }
 
-/// Recognizes numeric literals with Rust type suffixes: 24u8, 100usize, 5i32, etc.
-/// These appear as isolated error nodes when in unsupported pattern contexts.
+/// Recognizes numeric literals with Rust type suffixes: 24u8, 100usize, etc.
 fn is_suffixed_numeric_literal(text: &str) -> bool {
     const SUFFIXES: &[&str] = &[
         "u8", "u16", "u32", "u64", "u128", "usize", "i8", "i16", "i32", "i64", "i128", "isize",
@@ -125,7 +180,6 @@ fn is_suffixed_numeric_literal(text: &str) -> bool {
     ];
     SUFFIXES.iter().any(|s| {
         if let Some(digits) = text.strip_suffix(s) {
-            // Must be non-empty and all digits/underscores
             !digits.is_empty() && digits.chars().all(|c| c.is_ascii_digit() || c == '_')
         } else {
             false
@@ -213,10 +267,32 @@ mod tests {
     #[test]
     fn test_inner_attribute_recognized() {
         assert!(is_known_unsupported_construct_from_text("#![doc(hidden)]"));
+        assert!(is_known_unsupported_construct_from_text(
+            "#![doc(html_logo_url = \"https://example.com\")]"
+        ));
+    }
+
+    #[test]
+    fn test_inner_attribute_content_suppressed() {
+        // Simulate what tree-sitter does with #![doc(html_logo_url = "...")]
+        // — it may parse the outer structure but error on the interior.
+        // The key-value content should be suppressed via ancestor walk.
+        let code = r#"
+#![doc(
+    html_logo_url = "https://www.rust-lang.org/logos/rust-logo-128x128-blk.png",
+    html_favicon_url = "https://www.rust-lang.org/favicon.ico"
+)]
+
+fn main() {}
+"#;
+        let violations = run_syntax_check(code, "test.rs");
+        assert!(
+            violations.is_empty(),
+            "Inner attribute #![doc(...)] content must not produce syntax errors, got: {violations:?}"
+        );
     }
 
     fn is_known_unsupported_construct_from_text(text: &str) -> bool {
-        // Build a fake node test by checking the text-only path
         is_c_string_literal(text)
             || is_open_range_pattern(text)
             || is_suffixed_numeric_literal(text)
