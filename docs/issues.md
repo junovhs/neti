@@ -567,3 +567,7 @@ The project is not broken. It's 8 files away from being language-agnostic.
 Eight files. That's the gap. Not the architecture, not the graph engine, not the config system, not the CLI, not the reporting pipeline. Eight detector files have hardcoded Rust vocabulary where they should query a table.
 
 Phase 0 fixes the noise. Phase 1 builds the table. Phase 2 fills it in for Python and TypeScript. Phase 3 proves it works.
+
+
+
+REGRESSION ALERT - NEED TO INVESTIGATE - IS 'neti-report.txt' compromised? it seems as though maybe its not updating with the correct information....
