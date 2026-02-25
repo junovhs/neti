@@ -1,5 +1,7 @@
 # project -- Semantic Map
 
+**Purpose:** architectural linter and code quality gate for CI
+
 ## Legend
 
 `[ENTRY]` Application entry point
@@ -19,7 +21,7 @@ Rust package manifest and dependencies. Centralizes project configuration.
 Configuration for neti. Centralizes project configuration.
 
 `src/cli/config_ui/editor.rs`
-Runs the interactive editor. Centralizes project configuration.
+Module providing `ConfigEditor`, `EditResult`, `EventResult`. Centralizes project configuration.
 → Exports: ConfigEditor, EditResult, EventResult, config, config_mut, items, new, run, run_config_editor, selected, set_modified, set_selected
 
 `src/cli/config_ui/items.rs`
@@ -27,18 +29,18 @@ Configuration items that can be edited. Centralizes project configuration.
 → Exports: ConfigItem, all, cycle_enum, get_number, get_value, label, set_number, toggle_boolean
 
 `src/cli/config_ui/logic.rs`
-Runs the editor event loop. Centralizes project configuration.
+Module providing `move_selection`, `run_editor`. Centralizes project configuration.
 → Exports: move_selection, run_editor
 
 `src/cli/config_ui/mod.rs`
 Orchestrates `editor`. Centralizes project configuration.
 
 `src/cli/config_ui/render.rs`
-Renders the configuration UI  # Errors Returns error if terminal manipulation fails. Centralizes project configuration.
+Module providing `draw`. Centralizes project configuration.
 → Exports: draw
 
 `src/config/io.rs`
-Saves the configuration to the file system. Centralizes project configuration.
+Module providing `apply_project_defaults`, `load_ignore_file`, `load_toml_config`. Centralizes project configuration.
 → Exports: apply_project_defaults, load_ignore_file, load_toml_config, parse_toml, process_ignore_line, save_to_file
 
 `src/config/locality.rs`
@@ -46,7 +48,7 @@ Configuration for the Law of Locality enforcement. Centralizes project configura
 → Exports: LocalityConfig, is_enabled, is_error_mode, to_validator_config
 
 `src/config/mod.rs`
-Creates a new config and loads local settings (`neti.toml`, `.netiignore`). Centralizes project configuration.
+Module providing `load`, `load_local_config`, `new`. Centralizes project configuration.
 → Exports: load, load_local_config, new, parse_toml, process_ignore_line, save, save_to_file, validate
 
 `src/config/types.rs`
@@ -70,7 +72,7 @@ AST pattern detection for violations. Supports application functionality.
 Orchestrates `clap`, `colored`, `neti_core`. Defines command-line interface.
 
 `src/cli/args.rs`
-Run structural checks on the codebase. Defines command-line interface.
+Module providing `Cli`, `Commands`. Defines command-line interface.
 → Exports: Cli, Commands
 
 `src/cli/handlers/mod.rs`
@@ -166,7 +168,7 @@ Rust impl/method extraction logic. Supports application functionality.
 → Exports: extract
 
 `src/analysis/metrics.rs`
-Calculates the nesting depth of a node. Supports application functionality.
+Module providing `calculate_complexity`, `calculate_max_depth`, `count_arguments`. Supports application functionality.
 → Exports: calculate_complexity, calculate_max_depth, count_arguments
 
 `src/analysis/patterns/concurrency.rs`
@@ -174,7 +176,7 @@ Concurrency pattern detection: C03, C04. Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/concurrency_lock.rs`
-C03: `MutexGuard` held across `.await`  # Severity Tiers  Not all "lock held across await" patterns carry the same risk:  **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH confidence** Holding a sync guard across `.await` is a *bug*: it blocks the OS thread, starving the executor, and can deadlock if another task on the same thread tries to acquire the same lock. Supports application functionality.
+C03: `MutexGuard` held across `.await`  Severity Tiers  Not all "lock held across await" patterns carry the same risk:  **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH confidence** Holding a sync guard across `.await` is a *bug*: it blocks the OS thread, starving the executor, and can deadlock if another task on the same thread tries to acquire the same lock. Supports application functionality.
 → Exports: detect_c03
 
 `src/analysis/patterns/concurrency_sync.rs`
@@ -198,7 +200,7 @@ Fixed-size array proof helpers for L03. Supports application functionality.
 → Exports: extract_receiver, is_fixed_size_array_access
 
 `src/analysis/patterns/performance.rs`
-Performance anti-patterns: P01, P02, P04, P06  # Escalation Philosophy  P01/P02 must only fire when we can make a reasonable argument that the allocation is *material*. Supports application functionality.
+Performance anti-patterns: P01, P02, P04, P06  Escalation Philosophy  P01/P02 must only fire when we can make a reasonable argument that the allocation is *material*. Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/resource.rs`
@@ -206,7 +208,7 @@ Resource patterns: R07 (missing flush). Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/security.rs`
-Security patterns: X01, X02, X03  # X02 Design  The original X02 rule flagged any `Command::new(variable)` as "command injection." This is over-broad and generates false positives on idiomatic `tokio::process::Command` usage in Dioxus/CLI tools. Supports application functionality.
+Security patterns: X01, X02, X03  X02 Design  The original X02 rule flagged any `Command::new(variable)` as "command injection." This is over-broad and generates false positives on idiomatic `tokio::process::Command` usage in Dioxus/CLI tools. Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/semantic.rs`
@@ -218,11 +220,11 @@ State pattern detection: S01, S02, S03. Supports application functionality.
 → Exports: detect
 
 `src/analysis/safety.rs`
-Checks for unsafe blocks and ensures they have justification comments. Supports application functionality.
+Module providing `check_safety`. Supports application functionality.
 → Exports: check_safety
 
 `src/analysis/scope.rs`
-Represents a cohesion and coupling scope (Class, Struct+Impl, Enum). Supports application functionality.
+Module providing `FieldInfo`, `Method`, `Scope`. Supports application functionality.
 → Exports: FieldInfo, Method, Scope, add_derive, add_field, add_method, derives, fields, has_behavior, has_derives, is_enum, methods, name, new, new_enum, row, validate_record
 
 `src/analysis/structural.rs`
@@ -242,7 +244,7 @@ Git branch workflow for AI agents. Supports application functionality.
 → Exports: BranchResult, PromoteResult, abort, count_modified_files, init_branch, on_work_branch, promote, work_branch_name
 
 `src/clean.rs`
-Runs the clean command: removes context.txt and ensures gitignore. Supports application functionality.
+Module providing `run`. Supports application functionality.
 → Exports: run
 
 `src/cli/audit.rs`
@@ -259,14 +261,14 @@ Handlers for Git-based workflow operations (branch, promote, abort). Supports ap
 
 `src/cli/handlers/scan_report.rs`
 Scan report display formatting. Supports application functionality.
-→ Exports: aggregate_by_law, print
+→ Exports: aggregate_by_law, build_summary_string, print
 
 `src/cli/locality.rs`
 Handler for locality scanning. Supports application functionality.
 → Exports: LocalityResult, check_locality_silent, handle_locality, is_locality_blocking, run_locality_check
 
 `src/cli/mutate_handler.rs`
-Handles the mutate command. Supports application functionality.
+Module providing `handle_mutate`. Supports application functionality.
 → Exports: handle_mutate
 
 `src/constants.rs`
@@ -278,7 +280,7 @@ Detects build systems. Supports application functionality.
 → Exports: BuildSystemType, Detector, detect_build_systems, new
 
 `src/discovery.rs`
-Runs the file discovery pipeline. Parses input into structured data.
+Module providing `discover`, `group_by_directory`. Parses input into structured data.
 → Exports: discover, group_by_directory
 
 `src/events.rs`
@@ -294,7 +296,7 @@ File classification: distinguishes source code from config, assets, and data. Su
 → Exports: FileKind, classify, is_governed, secrets_applicable
 
 `src/graph/defs/extract.rs`
-A symbol definition found in source code. Supports application functionality.
+Module providing `DefKind`, `Definition`, `extract`. Supports application functionality.
 → Exports: DefKind, Definition, extract
 
 `src/graph/defs/queries.rs`
@@ -302,7 +304,7 @@ Module providing `DefExtractor`, `get_config`. Supports application functionalit
 → Exports: DefExtractor, get_config
 
 `src/graph/imports.rs`
-Extracts raw import strings from the given file content. Supports application functionality.
+Module providing `extract`. Supports application functionality.
 → Exports: extract
 
 `src/graph/locality/analysis/metrics.rs`
@@ -374,7 +376,7 @@ Tag types representing definitions and references. Supports application function
 → Exports: Tag, TagKind
 
 `src/graph/resolver.rs`
-Resolves an import string to a likely file path on disk. Supports application functionality.
+Module providing `resolve`. Supports application functionality.
 → Exports: resolve
 
 `src/lang.rs`
@@ -403,7 +405,7 @@ Detects project type from current directory. Supports application functionality.
 
 `src/reporting.rs`
 Console output formatting for scan results. Supports application functionality.
-→ Exports: format_report_string, print_json, print_report
+→ Exports: build_rich_report, format_report_string, print_json, print_report
 
 `src/skeleton.rs`
 Reduces code to its structural skeleton (signatures only). Supports application functionality.
@@ -452,7 +454,7 @@ Shared helpers for L02/L03 logic pattern detection. Provides reusable helper fun
 → Exports: can_find_local_declaration, decl_matches_variable, has_chunks_exact_context, has_explicit_guard, has_matching_parameter, is_index_variable, is_literal
 
 `src/utils.rs`
-Computes SHA256 hash of content with normalized line endings. Provides reusable helper functions.
+Module providing `compute_sha256`. Provides reusable helper functions.
 → Exports: compute_sha256
 
 ## Layer 4 -- Tests

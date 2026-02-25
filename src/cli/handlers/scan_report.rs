@@ -4,16 +4,14 @@
 use crate::types::ScanReport;
 use crate::analysis::Engine;
 use colored::Colorize;
-use std::cmp::Reverse;
 use std::collections::HashMap;
 
-/// Prints a formatted scan report to stdout.
+/// Prints a formatted scan report to stdout (Succinct for Console).
 pub fn print(report: &ScanReport) {
     println!();
     print_header(report);
     print_small_codebase_note(report);
-    print_complexity_summary(report);
-    print_size_summary(report);
+    print_violating_files_summary(report, 5); // Max 5 lines in console
     println!();
 }
 
@@ -46,60 +44,49 @@ fn print_small_codebase_note(report: &ScanReport) {
     }
 }
 
-fn print_complexity_summary(report: &ScanReport) {
-    let mut complexity: Vec<_> = report
-        .files
-        .iter()
-        .filter(|f| f.complexity_score > 0)
-        .map(|f| (&f.path, f.complexity_score))
-        .collect();
+fn print_violating_files_summary(report: &ScanReport, limit: usize) {
+    let mut violators: Vec<_> = report.files.iter().filter(|f| !f.is_clean()).collect();
+    if violators.is_empty() { return; }
 
-    if complexity.is_empty() {
-        return;
+    violators.sort_by_key(|f| std::cmp::Reverse(f.violations.len()));
+
+    println!("\n{}", "Violating files:".dimmed());
+    let count = violators.len();
+    for f in violators.iter().take(limit) {
+        let v_count = f.violations.len();
+        let color = if v_count > 5 { format!("{v_count:>3}").red() } else { format!("{v_count:>3}").yellow() };
+        println!("  {} {}", color, f.path.display().to_string().dimmed());
     }
 
-    complexity.sort_by_key(|(_, c)| Reverse(*c));
-
-    println!("\n{}", "Top Complexity:".dimmed());
-    for (path, score) in complexity.iter().take(5) {
-        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("?");
-        let color = if *score > 15 {
-            format!("{score:>3}").red()
-        } else if *score > 10 {
-            format!("{score:>3}").yellow()
-        } else {
-            format!("{score:>3}").normal()
-        };
-        println!("  {} {}", color, name.dimmed());
+    if count > limit {
+        println!("  ... and {} more. See {} for full detail.", count - limit, "neti-report.txt".yellow());
     }
 }
 
-fn print_size_summary(report: &ScanReport) {
-    let mut sizes: Vec<_> = report
-        .files
-        .iter()
-        .filter(|f| f.token_count > 1000)
-        .map(|f| (&f.path, f.token_count))
-        .collect();
+/// Builds a plain-text summary of the scan report for file logging (Full Detail).
+#[must_use]
+pub fn build_summary_string(report: &ScanReport) -> String {
+    use std::fmt::Write;
+    let mut out = String::new();
 
-    if sizes.is_empty() {
-        return;
+    let status = if report.has_errors() {
+        format!("{} violations", report.total_violations)
+    } else {
+        "Clean".to_string()
+    };
+
+    let _ = writeln!(out, "SCAN SUMMARY: {} files | {} tokens | {}", report.files.len(), report.total_tokens, status);
+
+    let mut violators: Vec<_> = report.files.iter().filter(|f| !f.is_clean()).collect();
+    if !violators.is_empty() {
+        violators.sort_by_key(|f| std::cmp::Reverse(f.violations.len()));
+        let _ = writeln!(out, "\nALL VIOLATING FILES:");
+        for f in violators {
+            let _ = writeln!(out, "  {:>3} violations | {}", f.violations.len(), f.path.display());
+        }
     }
 
-    sizes.sort_by_key(|(_, t)| Reverse(*t));
-
-    println!("\n{}", "Largest Files:".dimmed());
-    for (path, tokens) in sizes.iter().take(5) {
-        let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("?");
-        let color = if *tokens > 2000 {
-            format!("{tokens:>5}").red()
-        } else if *tokens > 1500 {
-            format!("{tokens:>5}").yellow()
-        } else {
-            format!("{tokens:>5}").normal()
-        };
-        println!("  {} {}", color, name.dimmed());
-    }
+    out
 }
 
 /// Aggregates violations by law type for summary display.

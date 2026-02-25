@@ -63,8 +63,14 @@ Description of the task.
 ## [7] Heuristic sharpening: Default to Medium confidence for untrackable variables
 **Status:** DONE
 **Files:** `src/analysis/patterns/logic.rs`, `src/analysis/patterns/performance.rs`
-
 **Resolution:** Split logic.rs into `logic.rs` + `logic_helpers.rs` + `logic_proof.rs`. Split performance.rs into `performance.rs` + `performance_test_ctx.rs`. Implemented three-state L03 confidence classification (cross-scope → Medium, found declaration → High, not found → Medium). Implemented P01 confidence split (heap keyword → High, heuristic keyword → Medium, long-name-only → Medium). Fixed `check_p04` to walk descendants (was only checking direct children). Added 15+ mutant-killing tests. Ran cargo-mutants, triaged survivors, killed all meaningful logic-gap mutants.
+
+---
+
+## [16] HOTFIX: `neti-report.txt` regression and pipeline integration
+**Status:** DONE
+**Files:** `src/cli/handlers/mod.rs`, `src/cli/handlers/scan_report.rs`, `src/reporting.rs`
+**Resolution:** Fixed the regression where `neti check` was overwriting `neti-report.txt` exclusively with external linter output. `neti check` now correctly acts as the master verification pipeline, running `neti scan` (AST/structural checks) first, then running the external verification commands. Formatted output for both passes is cleanly appended in memory and written in high fidelity to `neti-report.txt`.
 
 ---
 
@@ -186,10 +192,6 @@ Note: violation count increased from 14 to 23 because `check_p04` descendant wal
 6. **[11] Language parity**
 7. **[12] Regression suite**
 
-
-
-Let me go through every detector systematically.
-
 ## Fully language-specific (would need rewrite for each language)
 
 **`syntax.rs`** — `is_inside_inner_attribute` is pure Rust AST node checking. The `&raw const` fix will be too. Python/TS have completely different syntax error patterns. This one is inherently per-language and that's fine — syntax checking *should* be language-specific.
@@ -247,10 +249,6 @@ Let me go through every detector systematically.
 
 The biggest structural debt is that `performance.rs` is about 60% Rust-specific heuristics pretending to be general logic. The cleanest path for [11] would be to define a trait or config on `Lang` that provides: test context detection, heap type keywords, cheap clone patterns, allocation method names, and length method names. Then the detectors become genuinely language-agnostic and each language just fills in its table.
 
-
-
-
-```markdown
 # issues.md — Language Agnosticism Retrofit
 
 ## STATUS OVERVIEW
@@ -263,25 +261,13 @@ This is a refactor, not a rewrite.
 
 ---
 
-## FORMAT (DO NOT MODIFY)
-**Status values:** `OPEN`, `IN PROGRESS`, `DONE`, `DESCOPED`
-**Issue format:**
-```
-## [N] Title
-**Status:** OPEN
-**Files:** list of files to modify
-Description of the task.
-**Resolution:** (fill when DONE) What was done, any notes.
-```
----
-
 ## PHASE 0 — Precision fixes (Rust-only, no architecture change)
 
 These kill false positives NOW and teach us which code is inherently per-language.
 
 ---
 
-## [1] Syntax false positives on `&raw const` / `&raw mut` (Rust 1.82+)
+## [13] Syntax false positives on `&raw const` / `&raw mut` (Rust 1.82+)
 **Status:** OPEN
 **Files:** `src/analysis/checks/syntax.rs`
 
@@ -292,7 +278,7 @@ Same pattern as the `#![doc(...)]` fix — detect error nodes inside `&raw const
 
 ---
 
-## [2] L03 volume: deduplicate `self.field[N]` indexing
+## [14] L03 volume: deduplicate `self.field[N]` indexing
 **Status:** OPEN
 **Files:** `src/analysis/patterns/logic.rs`, `src/analysis/patterns/logic_helpers.rs`
 
@@ -303,7 +289,7 @@ Deduplicate per-field per-struct: report `self.regs[N]` once, back-reference sub
 
 ---
 
-## [3] P04 false positives on 2D numeric iteration
+## [15] P04 false positives on 2D numeric iteration
 **Status:** OPEN
 **Files:** `src/analysis/patterns/performance.rs`
 
@@ -314,7 +300,7 @@ If both loops use numeric range bounds, downgrade to Info or skip.
 
 ---
 
-## [4] Safety rule: recognize nearby SAFETY justifications
+## [8] Safety rule: recognize nearby SAFETY justifications
 **Status:** OPEN
 **Files:** `src/analysis/safety.rs`
 
@@ -330,7 +316,7 @@ This is the structural fix. Define `LangSemantics` so detectors query language-p
 
 ---
 
-## [5] Define `LangSemantics` trait and Rust implementation
+## [17] Define `LangSemantics` trait and Rust implementation
 **Status:** OPEN
 **Files:** `src/lang.rs` (modify), `src/lang/semantics.rs` (new)
 
@@ -373,7 +359,7 @@ Add `Lang::semantics(&self) -> &LangSemantics`.
 
 ---
 
-## [6] Wire `LangSemantics` into performance detectors
+## [18] Wire `LangSemantics` into performance detectors
 **Status:** OPEN
 **Files:** `src/analysis/patterns/performance.rs`, `src/analysis/patterns/performance_test_ctx.rs`
 
@@ -391,7 +377,7 @@ Delete `should_skip()` entirely. If findings are false positives, fix heuristics
 
 ---
 
-## [7] Wire `LangSemantics` into logic detectors
+## [19] Wire `LangSemantics` into logic detectors
 **Status:** OPEN
 **Files:** `src/analysis/patterns/logic.rs`, `src/analysis/patterns/logic_helpers.rs`
 
@@ -406,7 +392,7 @@ Leave `logic_proof.rs` alone — it's a Rust-only precision enhancer and that's 
 
 ---
 
-## [8] Wire `LangSemantics` into remaining detectors
+## [20] Wire `LangSemantics` into remaining detectors
 **Status:** OPEN
 **Files:** `src/analysis/patterns/semantic.rs`, `src/analysis/patterns/concurrency.rs`, `src/analysis/patterns/concurrency_lock.rs`, `src/analysis/patterns/concurrency_sync.rs`
 
@@ -423,7 +409,7 @@ With the abstraction in place, adding a language is just filling in a table.
 
 ---
 
-## [9] Python `LangSemantics` table
+## [21] Python `LangSemantics` table
 **Status:** OPEN
 **Files:** `src/lang/semantics.rs` (add Python table)
 
@@ -451,7 +437,7 @@ pub static PYTHON: LangSemantics = LangSemantics {
 
 ---
 
-## [10] TypeScript `LangSemantics` table
+## [22] TypeScript `LangSemantics` table
 **Status:** OPEN
 **Files:** `src/lang/semantics.rs` (add TypeScript table)
 
@@ -484,7 +470,7 @@ pub static TYPESCRIPT: LangSemantics = LangSemantics {
 
 ---
 
-## [11] Cross-language regression suite
+## [12] Cross-language regression suite
 **Status:** OPEN
 **Files:** `tests/` (new)
 
@@ -496,78 +482,3 @@ Create test fixtures for each language:
 Each fixture file should trigger exactly the same rule set (P01, P04, L03, etc.) to prove detectors are language-agnostic.
 
 **Acceptance:** `cargo test` runs all three language fixtures. Same rules fire on equivalent patterns across languages.
-
----
-
-## [12] Locality integration into standard scan pipeline
-**Status:** OPEN
-**Files:** `src/graph/locality/` (all), `src/cli/locality.rs`, `src/config/locality.rs`
-
-Locality analysis already works across languages (it operates on import graphs, not AST). Wire it into the default `neti scan` output when `locality.enabled = true` in config.
-
-**Acceptance:** `neti scan` shows locality violations alongside analysis violations in a unified report.
-
----
-
-## [13] Governance-grade clippy integration
-**Status:** OPEN
-**Files:** `src/verification/runner.rs`, `src/cli/audit.rs`, `src/config/types.rs`
-
-For Rust projects, integrate clippy findings into the verification pipeline. For Python, integrate ruff/mypy. For TypeScript, integrate eslint/tsc. The verification runner should dispatch to the appropriate external tool based on detected project type.
-
-**Acceptance:** `neti audit` runs the language-appropriate external linter and includes results in the verification report.
-
----
-
-## DEPENDENCY GRAPH
-
-```
-[1] [2] [3] [4]          ← Phase 0: independent, parallel
-       \  |  /
-        [5]               ← Phase 1: foundation
-       / | \
-    [6] [7] [8]           ← Phase 1: parallel rewiring
-       \ | /
-     [9] [10]             ← Phase 2: parallel tables
-        |
-   [11] [12] [13]        ← Phase 3: parallel infrastructure
-```
-
-## WHAT IS ALREADY LANGUAGE-AGNOSTIC (no work needed)
-
-| Subsystem | Why it's fine |
-|---|---|
-| Graph / imports / resolver | Operates on file paths and string matching |
-| Locality / coupling / cycles | Operates on import graph topology |
-| PageRank / ranking | Pure graph algorithm |
-| Config / TOML / CLI | Language-independent |
-| Spinner / HUD | Pure UI |
-| Reporting / events | Consumes `Violation` structs, doesn't care about source |
-| Structural metrics (LCOM4, CBO) | Computed from `Scope` abstraction |
-| Mutation testing | Already has per-language runners |
-| Discovery / file classification | Extension-based, already multi-language |
-| `logic_proof.rs` | Intentionally Rust-only precision enhancer, gated correctly |
-| `safety.rs` | Intentionally Rust-only rule, no equivalent in other languages |
-| `syntax.rs` | Inherently per-language, correct as-is |
-
-## EFFORT ESTIMATE
-
-| Phase | Issues | Estimated effort | Risk |
-|---|---|---|---|
-| 0 — Precision fixes | [1]-[4] | 2-3 days | Low — isolated changes |
-| 1 — Abstraction layer | [5]-[8] | 3-4 days | Medium — refactor touching 8 files |
-| 2 — Language tables | [9]-[10] | 1-2 days | Low — just filling in tables |
-| 3 — Infrastructure | [11]-[13] | 3-5 days | Medium — test fixtures, integration |
-
-**Total: ~10-14 days of focused work.**
-
-The project is not broken. It's 8 files away from being language-agnostic.
-```
-
-Eight files. That's the gap. Not the architecture, not the graph engine, not the config system, not the CLI, not the reporting pipeline. Eight detector files have hardcoded Rust vocabulary where they should query a table.
-
-Phase 0 fixes the noise. Phase 1 builds the table. Phase 2 fills it in for Python and TypeScript. Phase 3 proves it works.
-
-
-
-REGRESSION ALERT - NEED TO INVESTIGATE - IS 'neti-report.txt' compromised? it seems as though maybe its not updating with the correct information....

@@ -375,3 +375,197 @@ pub fn print_json<T: serde::Serialize>(data: &T) -> Result<()> {
     println!("{json}");
     Ok(())
 }
+
+/// Builds a rich, multi-line report string without ANSI colors for file logging.
+/// This matches the exact fidelity of the console output.
+pub fn build_rich_report(report: &ScanReport) -> Result<String> {
+    let mut out = String::new();
+    let mut all: Vec<(&Path, &Violation)> = Vec::new();
+    for file in &report.files {
+        for v in &file.violations {
+            all.push((&file.path, v));
+        }
+    }
+
+    let mut rule_counts: HashMap<&str, usize> = HashMap::new();
+    for (_, v) in &all {
+        *rule_counts.entry(v.law).or_insert(0) += 1;
+    }
+
+    let mut rule_shown: HashMap<&str, usize> = HashMap::new();
+
+    for (path, v) in &all {
+        let total = rule_counts.get(v.law).copied().unwrap_or(1);
+        let occurrence = {
+            let entry = rule_shown.entry(v.law).or_insert(0);
+            *entry += 1;
+            *entry
+        };
+
+        if occurrence == 1 {
+            write_violation_full(&mut out, path, v, occurrence, total)?;
+        } else {
+            write_violation_compact(&mut out, path, v, occurrence, total)?;
+        }
+    }
+
+    write_summary(&mut out, report)?;
+    Ok(out)
+}
+
+fn write_violation_full(
+    out: &mut String,
+    path: &Path,
+    v: &Violation,
+    occurrence: usize,
+    total: usize,
+) -> Result<()> {
+    let path_str = path.display().to_string();
+    let prefix = v.confidence.prefix();
+
+    let count_label = if total > 1 {
+        format!(" [{occurrence} of {total}]")
+    } else {
+        String::new()
+    };
+
+    writeln!(out, "{prefix}:{count_label} {}", v.message)?;
+    writeln!(out, "  --> {}:{}", path_str, v.row)?;
+
+    write_snippet(out, path, v.row)?;
+
+    let confidence_suffix = match v.confidence {
+        Confidence::High => v.confidence.label().to_string(),
+        Confidence::Medium => {
+            let reason = v
+                .confidence_reason
+                .as_deref()
+                .unwrap_or("pattern match without proof");
+            format!("{} — {reason}", v.confidence.label())
+        }
+        Confidence::Info => v.confidence.label().to_string(),
+    };
+    writeln!(out, "   = {}: {}", v.law, confidence_suffix)?;
+
+    if let Some(ref details) = v.details {
+        if !details.analysis.is_empty() {
+            writeln!(out, "   |")?;
+            writeln!(out, "   = ANALYSIS:")?;
+            for line in &details.analysis {
+                writeln!(out, "   |   {line}")?;
+            }
+        }
+    }
+
+    if let Some(guidance) = get_guidance(v.law) {
+        writeln!(out, "   |")?;
+        writeln!(out, "   = WHY: {}", guidance.why)?;
+        writeln!(out, "   |")?;
+        writeln!(out, "   = FIX: {}", guidance.fix)?;
+    }
+
+    writeln!(out, "   |")?;
+    writeln!(
+        out,
+        "   = SUPPRESS: // neti:allow({}) on the line, or {} = \"warn\" in neti.toml [rules]",
+        v.law, v.law
+    )?;
+    writeln!(out)?;
+    Ok(())
+}
+
+fn write_violation_compact(
+    out: &mut String,
+    path: &Path,
+    v: &Violation,
+    occurrence: usize,
+    total: usize,
+) -> Result<()> {
+    let path_str = path.display().to_string();
+    let prefix = v.confidence.prefix();
+
+    writeln!(out, "{prefix}: [{occurrence} of {total}] {}", v.message)?;
+    writeln!(out, "  --> {}:{}", path_str, v.row)?;
+
+    if let Some(ref details) = v.details {
+        if !details.analysis.is_empty() {
+            let brief = details.analysis.first().map_or("", String::as_str);
+            writeln!(out, "   = {}: {} — see first {} above", v.law, brief, v.law)?;
+        } else {
+            writeln!(out, "   = {}: see first {} above", v.law, v.law)?;
+        }
+    } else {
+        writeln!(out, "   = {}: see first {} above", v.law, v.law)?;
+    }
+    writeln!(out)?;
+    Ok(())
+}
+
+fn write_snippet(out: &mut String, path: &Path, row: usize) -> Result<()> {
+    let Ok(content) = fs::read_to_string(path) else {
+        return Ok(());
+    };
+    let lines: Vec<&str> = content.lines().collect();
+
+    let idx = row.saturating_sub(1);
+    let start = idx.saturating_sub(1);
+    let end = (idx + 1).min(lines.len().saturating_sub(1));
+
+    writeln!(out, "   |")?;
+
+    for i in start..=end {
+        if let Some(line) = lines.get(i) {
+            let line_num = i + 1;
+            let gutter = format!("{line_num:3} |");
+
+            if i == idx {
+                writeln!(out, "   {} {}", gutter, line)?;
+                let trimmed = line.trim_start();
+                let padding = line.len() - trimmed.len();
+                let underline_len = trimmed.len().max(1);
+                let spaces = " ".repeat(padding);
+                let carets = "^".repeat(underline_len);
+                writeln!(out, "   | {}{}", spaces, carets)?;
+            } else {
+                writeln!(out, "   {} {}", gutter, line)?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn write_summary(out: &mut String, report: &ScanReport) -> Result<()> {
+    let duration = Duration::from_millis(report.duration_ms as u64);
+    let errors = report.error_count();
+    let warnings = report.warning_count();
+    let suggestions = report.suggestion_count();
+
+    if errors == 0 && warnings == 0 && suggestions == 0 {
+        writeln!(out, "OK No violations found in {duration:?}.")?;
+        return Ok(());
+    }
+
+    let mut parts: Vec<String> = Vec::new();
+    if errors > 0 {
+        parts.push(format!("{} {}", errors, pluralize("error", errors)));
+    }
+    if warnings > 0 {
+        parts.push(format!("{} {}", warnings, pluralize("warning", warnings)));
+    }
+    if suggestions > 0 {
+        parts.push(format!(
+            "{} {}",
+            suggestions,
+            pluralize("suggestion", suggestions)
+        ));
+    }
+
+    let summary = parts.join(", ");
+
+    if errors > 0 {
+        writeln!(out, "X Neti found {summary} ({duration:?}).")?;
+    } else {
+        writeln!(out, "~ Neti found {summary} ({duration:?}).")?;
+    }
+    Ok(())
+}
