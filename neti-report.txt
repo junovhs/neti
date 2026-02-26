@@ -2,7 +2,7 @@
 NETI SCAN REPORT
 ========================================
 
-SCAN SUMMARY: 194 files | 216564 tokens | Clean
+SCAN SUMMARY: 194 files | 217496 tokens | Clean
 
 
 
@@ -11,8 +11,8 @@ NETI COMMANDS REPORT
 ========================================
 
 $ cargo clippy --all-targets --no-deps -- -D warnings
-> PASS (221ms)
+> PASS (206ms)
 
 $ cargo test
-> PASS (456ms)
+> PASS (442ms)
 

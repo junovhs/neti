@@ -115,7 +115,7 @@ Triptych HUD (Head-Up Display) for process execution feedback. Supports applicat
 
 `src/verification/mod.rs`
 External command verification pipeline. Supports application functionality.
-→ Exports: CommandResult, VerificationReport, error_count, failed_count, new, passed_count, run, total_commands, total_errors, total_warnings, warning_count
+→ Exports: CommandResult, VerificationReport, command, duration_ms, error_count, exit_code, failed_count, new, output, passed, passed_count, run, total_commands, total_errors, total_warnings, warning_count
 
 ## Layer 2 -- Domain
 
@@ -157,7 +157,7 @@ Deep analysis runner. Supports application functionality.
 
 `src/analysis/engine.rs`
 Main execution logic for the `Neti` analysis engine. Supports application functionality.
-→ Exports: Engine, new, scan, scan_with_progress
+→ Exports: Engine, scan, scan_with_progress
 
 `src/analysis/extract.rs`
 Rust scope extraction logic (Structs/Enums/Fields). Supports application functionality.
@@ -497,19 +497,46 @@ Command execution and output capture. Supports application functionality.
 Shared helpers for L02/L03 logic pattern detection. Provides reusable helper functions.
 → Exports: can_find_local_declaration, decl_matches_variable, has_chunks_exact_context, has_explicit_guard, has_matching_parameter, is_index_variable, is_literal
 
+`src/analysis/patterns/logic_proof_helpers.rs`
+Helper routines for extracting and verifying array sizes in scope boundaries. Provides reusable helper functions.
+
 `src/utils.rs`
 Module providing `compute_sha256`. Provides reusable helper functions.
 → Exports: compute_sha256
 
 ## Layer 4 -- Tests
 
+`src/analysis/checks/syntax_test.rs`
+Orchestrates `crate`, `super`, `tree_sitter`. Verifies correctness.
+
 `src/analysis/inspector.rs`
 Inspection logic for scopes (Metrics application). Verifies correctness.
 → Exports: Inspector, inspect, new
 
+`src/analysis/patterns/concurrency_lock_test.rs`
+Orchestrates `super`, `tokio`, `tree_sitter`. Verifies correctness.
+
+`src/analysis/patterns/idiomatic_i02_test.rs`
+Orchestrates `Idx`, `super`, `tree_sitter`. Verifies correctness.
+
+`src/analysis/patterns/logic_helpers_test.rs`
+Orchestrates `super`, `tree_sitter`. Verifies correctness.
+
+`src/analysis/patterns/logic_l03_test.rs`
+Orchestrates `super`, `tree_sitter`. Verifies correctness.
+
+`src/analysis/patterns/logic_proof_test.rs`
+Orchestrates `super`, `tree_sitter`. Verifies correctness.
+
+`src/analysis/patterns/performance_p01_test.rs`
+Orchestrates `crate`, `super`, `tree_sitter`. Verifies correctness.
+
 `src/analysis/patterns/performance_test_ctx.rs`
 Test context detection for pattern detectors. Verifies correctness.
 → Exports: is_test_context
+
+`src/analysis/patterns/security_x02_test.rs`
+Orchestrates `super`, `tree_sitter`. Verifies correctness.
 
 `src/graph/locality/tests.rs`
 Integration tests for locality analysis — part 1. Verifies correctness.

@@ -126,16 +126,14 @@ Requiring `// SAFETY:` is good, but the rule should recognize nearby justificati
 ---
 
 ## [13] Syntax false positives on `&raw const` / `&raw mut` (Rust 1.82+)
-**Status:** OPEN
+**Status:** DONE
 **Files:** `src/analysis/checks/syntax.rs`
-Neti's tree-sitter grammar doesn't recognize `&raw const` and `&raw mut` pointer syntax introduced in Rust 1.82. This produces 42 false positive syntax errors on the lazuli emulator scan. Same pattern as [3] — tree-sitter error nodes on valid modern syntax.
-
-Required behavior:
-* Detect error nodes inside `&raw const expr` / `&raw mut expr` patterns
-* Suppress the syntax violation for these nodes
-* Similar approach to `is_inside_inner_attribute()` from [3]
-
-**Resolution:**
+Added `is_raw_pointer_syntax()` with three detection strategies: error node text
+starts with `raw const`/`raw mut`; lone `raw` token whose parent contains the
+full pattern; ancestor walk (≤5 levels, stops at statement/item boundaries)
+finding a node whose text contains `&raw const`/`&raw mut`. Wired into
+`is_known_unsupported_construct`. lazuli syntax errors drop from 42 to 0.
+**Resolution:** Added `is_raw_pointer_syntax()` with three detection strategies: error node text starts with `raw const`/`raw mut`; lone `raw` token whose parent contains the full pattern; ancestor walk (≤5 levels, stops at statement/item boundaries) finding a node whose text contains `&raw const`/`&raw mut`. Wired into `is_known_unsupported_construct`. lazuli syntax errors: 42 → 0.
 
 ---
 

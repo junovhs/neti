@@ -83,6 +83,64 @@ fn is_known_unsupported_construct(node: Node, source: &str) -> bool {
     if is_inside_inner_attribute(node, source) {
         return true;
     }
+    if is_raw_pointer_syntax(node, source) {
+        return true;
+    }
+
+    false
+}
+
+/// Returns `true` if the error node is part of a `&raw const` or `&raw mut`
+/// raw-pointer expression (stabilized in Rust 1.82, not yet recognized by the
+/// bundled tree-sitter-rust grammar).
+///
+/// Tree-sitter parses `&raw const <expr>` in two possible ways depending on
+/// where the grammar fails:
+///
+/// 1. The error node covers `raw const <expr>` (the `&` is consumed as a
+///    unary reference operator and the remainder is an ERROR child).
+/// 2. The error node covers only `raw` and a sibling error covers `const`.
+///
+/// We handle both by checking whether the node text starts with `raw const`
+/// or `raw mut`, AND by walking one level up to see if the parent reference
+/// expression contains a `raw` token immediately after the `&`.
+fn is_raw_pointer_syntax(node: Node, source: &str) -> bool {
+    let text = node.utf8_text(source.as_bytes()).unwrap_or("").trim();
+
+    // Case 1: error node text starts with "raw const" or "raw mut"
+    if text.starts_with("raw const") || text.starts_with("raw mut") {
+        return true;
+    }
+
+    // Case 2: the node is a lone "raw" identifier inside a reference expression
+    // whose next sibling is "const" or "mut".
+    if text == "raw" {
+        if let Some(parent) = node.parent() {
+            let parent_text = parent.utf8_text(source.as_bytes()).unwrap_or("");
+            if parent_text.contains("&raw const") || parent_text.contains("&raw mut") {
+                return true;
+            }
+        }
+    }
+
+    // Case 3: walk up to find a reference_expression containing "&raw"
+    // (handles deeply nested error children)
+    let mut cur = node;
+    for _ in 0..5 {
+        let Some(p) = cur.parent() else { break };
+        let parent_text = p.utf8_text(source.as_bytes()).unwrap_or("");
+        if parent_text.contains("&raw const") || parent_text.contains("&raw mut") {
+            return true;
+        }
+        // Stop climbing at statement/item boundaries
+        if matches!(
+            p.kind(),
+            "function_item" | "let_declaration" | "expression_statement" | "block" | "source_file"
+        ) {
+            break;
+        }
+        cur = p;
+    }
 
     false
 }
