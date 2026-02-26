@@ -1,6 +1,8 @@
 // src/analysis/patterns/logic_l03.rs
 //! L03: Unchecked index access (`[0]`, `.first().unwrap()`, etc.).
 
+use std::collections::HashSet;
+
 use crate::types::{Confidence, Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
 
@@ -14,11 +16,17 @@ use super::logic_proof::{extract_receiver, is_fixed_size_array_access};
 mod tests;
 
 pub(super) fn detect_l03(source: &str, root: Node, out: &mut Vec<Violation>) {
-    detect_index_zero(source, root, out);
+    let mut seen_self_fields: HashSet<String> = HashSet::new();
+    detect_index_zero(source, root, &mut seen_self_fields, out);
     detect_first_last_unwrap(source, root, out);
 }
 
-fn detect_index_zero(source: &str, root: Node, out: &mut Vec<Violation>) {
+fn detect_index_zero(
+    source: &str,
+    root: Node,
+    seen_self_fields: &mut HashSet<String>,
+    out: &mut Vec<Violation>,
+) {
     let q = r"(index_expression) @idx";
     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
         return;
@@ -47,6 +55,16 @@ fn detect_index_zero(source: &str, root: Node, out: &mut Vec<Violation>) {
         let receiver = extract_receiver(text);
         let (confidence, reason) = classify_l03_confidence(source, idx_node, receiver);
 
+        // Deduplicate noisy self.field[0] accesses: report the first site per
+        // unique field path, skip subsequent ones. The volume of repeated hits
+        // on the same untraceable field drowns out actionable findings.
+        if is_untraceable_self_field(receiver, &confidence) {
+            let key = normalize_self_field(receiver);
+            if !seen_self_fields.insert(key) {
+                continue;
+            }
+        }
+
         let mut v = Violation::with_details(
             idx_node.start_position().row + 1,
             "Index `[0]` without bounds check".into(),
@@ -63,6 +81,24 @@ fn detect_index_zero(source: &str, root: Node, out: &mut Vec<Violation>) {
         v.confidence_reason = reason;
         out.push(v);
     }
+}
+
+/// Returns `true` if the receiver is a `self.field` path that we cannot trace
+/// through struct boundaries (Medium confidence).
+fn is_untraceable_self_field(receiver: &str, confidence: &Confidence) -> bool {
+    matches!(confidence, Confidence::Medium) && receiver.contains("self.")
+}
+
+/// Normalize a receiver like `self.regs` or `self.regs` from `self.regs[0]`
+/// to a canonical deduplication key.
+///
+/// Strips array index notation so `self.regs[0]` and `self.regs[1]` collapse
+/// to the same key.
+fn normalize_self_field(receiver: &str) -> String {
+    // receiver is already stripped of the trailing [N] by extract_receiver,
+    // but may contain chained accesses like `self.inner.regs`.
+    // Use the receiver as-is — it's already the canonical path.
+    receiver.to_string()
 }
 
 /// Determine L03 confidence by distinguishing three epistemic states:

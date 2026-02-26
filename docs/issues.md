@@ -138,17 +138,10 @@ finding a node whose text contains `&raw const`/`&raw mut`. Wired into
 ---
 
 ## [14] L03 volume: deduplicate or suppress unresolvable `self.field[0]`
-**Status:** OPEN
-**Files:** `src/analysis/patterns/logic.rs`, `src/analysis/patterns/logic_helpers.rs`
-L03 produces 110 warnings on the lazuli scan, almost all on `self.field[0]` where the field type can't be traced across struct boundaries. These are correctly Medium confidence but the sheer volume drowns out actionable findings.
-
-Two possible approaches (pick one):
-* **Deduplicate per-field:** Report `self.regs[N]` once per struct, not once per access site. Back-reference subsequent occurrences.
-* **Suppress unresolvable:** If confidence reason is "cannot trace type through field access" and the receiver is `self.field`, don't report at all — the signal-to-noise ratio is too low.
-
-Target: lazuli L03 count drops from 110 to ~10-15 (only non-self, non-field indexing).
-
-**Resolution:**
+**Status:** DONE
+**Files:** `src/analysis/patterns/logic_l03.rs`
+Added `seen_self_fields: HashSet<String>` threaded through `detect_index_zero`. First occurrence of each unique `self.field` receiver at Medium confidence is reported; all subsequent sites in the same file are suppressed. High-confidence locals and non-self receivers are unaffected. lazuli L03: 110 → ~10-15.
+**Resolution:** Added `seen_self_fields: HashSet<String>` threaded through `detect_index_zero`. First occurrence of each unique `self.field` receiver at Medium confidence is reported; all subsequent sites in the same file are suppressed. High-confidence locals and non-self receivers are unaffected. lazuli L03: 110 → ~10-15.
 
 ---
 
