@@ -81,6 +81,14 @@ Description of the task.
 
 ---
 
+## [24] Root src/ cleanup and Domain consolidation
+**Status:** OPEN
+**Files:** `src/discovery.rs`, `src/file_class.rs`, `src/project.rs`, `src/detection.rs`, `src/constants.rs`, `src/reporting.rs`, `src/lib.rs`, `src/workspace/mod.rs`
+Consolidate filesystem/project discovery files into a `workspace` module. Move `src/reporting.rs` to `src/reporting/mod.rs` for module style consistency.
+**Resolution:**
+
+---
+
 ## [8] Safety rule robustness: recognize SAFETY justifications
 **Status:** OPEN
 **Files:** `src/analysis/safety.rs`, tests
