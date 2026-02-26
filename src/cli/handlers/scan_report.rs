@@ -11,7 +11,7 @@ pub fn print(report: &ScanReport) {
     println!();
     print_header(report);
     print_small_codebase_note(report);
-    print_violating_files_summary(report, 5); // Max 5 lines in console
+    print_violating_files_summary(report, 5);
     println!();
 }
 
@@ -120,11 +120,10 @@ pub fn build_summary_string(report: &ScanReport) -> String {
 #[must_use]
 pub fn aggregate_by_law(report: &ScanReport) -> HashMap<&'static str, usize> {
     let mut counts: HashMap<&'static str, usize> = HashMap::new();
-    for file in &report.files {
-        for v in &file.violations {
-            // neti:allow(P04)
-            *counts.entry(v.law).or_insert(0) += 1;
-        }
+    let all_violations: Vec<_> = report.files.iter().flat_map(|f| &f.violations).collect();
+
+    for v in all_violations {
+        *counts.entry(v.law).or_insert(0) += 1;
     }
     counts
 }

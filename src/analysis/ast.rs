@@ -85,44 +85,6 @@ impl Analyzer {
         }
     }
 
-    fn process_function_node(
-        node: tree_sitter::Node,
-        ctx: &CheckContext,
-        out: &mut Vec<Violation>,
-    ) -> usize {
-        let kind = node.kind();
-        if !matches!(
-            kind,
-            "function_item" | "function_definition" | "method_definition" | "function_declaration"
-        ) {
-            return 0;
-        }
-
-        let score = CognitiveAnalyzer::calculate(node, ctx.source);
-
-        if score > ctx.config.max_cognitive_complexity {
-            let name = node
-                .child_by_field_name("name")
-                .and_then(|n| n.utf8_text(ctx.source.as_bytes()).ok())
-                .unwrap_or("<anonymous>");
-
-            out.push(Violation::with_details(
-                node.start_position().row + 1,
-                format!(
-                    "Function '{name}' has cognitive complexity {score} (Max: {})",
-                    ctx.config.max_cognitive_complexity
-                ),
-                "LAW OF COMPLEXITY",
-                ViolationDetails {
-                    function_name: Some(name.to_string()),
-                    analysis: vec![format!("Cognitive score: {score}")],
-                    suggestion: Some("Break logic into smaller, linear functions.".into()),
-                },
-            ));
-        }
-        score
-    }
-
     fn check_rust_specifics(grammar: &Language, ctx: &CheckContext, out: &mut Vec<Violation>) {
         let banned_query_str = r"
             (call_expression
@@ -139,6 +101,45 @@ impl Analyzer {
     }
 }
 
+fn score_capture(
+    cap: &tree_sitter::QueryCapture,
+    ctx: &CheckContext,
+    violations: &mut Vec<Violation>,
+) -> usize {
+    let node = cap.node;
+    let kind = node.kind();
+    if !matches!(
+        kind,
+        "function_item" | "function_definition" | "method_definition" | "function_declaration"
+    ) {
+        return 0;
+    }
+
+    let score = CognitiveAnalyzer::calculate(node, ctx.source);
+
+    if score > ctx.config.max_cognitive_complexity {
+        let name = node
+            .child_by_field_name("name")
+            .and_then(|n| n.utf8_text(ctx.source.as_bytes()).ok())
+            .unwrap_or("<anonymous>");
+
+        violations.push(Violation::with_details(
+            node.start_position().row + 1,
+            format!(
+                "Function '{name}' has cognitive complexity {score} (Max: {})",
+                ctx.config.max_cognitive_complexity
+            ),
+            "LAW OF COMPLEXITY",
+            ViolationDetails {
+                function_name: Some(name.to_string()),
+                analysis: vec![format!("Cognitive score: {score}")],
+                suggestion: Some("Break logic into smaller, linear functions.".into()),
+            },
+        ));
+    }
+    score
+}
+
 fn compute_max_complexity(
     grammar: &Language,
     lang: Lang,
@@ -149,18 +150,16 @@ fn compute_max_complexity(
         return 0;
     };
     let mut cursor = QueryCursor::new();
-    let matches: Vec<_> = cursor
+    let captures: Vec<_> = cursor
         .matches(&q_defs, ctx.root, ctx.source.as_bytes())
+        .flat_map(|m| m.captures.iter().copied())
         .collect();
 
     let mut max_complexity = 0;
-    for m in &matches {
-        for cap in m.captures {
-            // neti:allow(P04)
-            let score = Analyzer::process_function_node(cap.node, ctx, violations);
-            if score > max_complexity {
-                max_complexity = score;
-            }
+    for cap in &captures {
+        let score = score_capture(cap, ctx, violations);
+        if score > max_complexity {
+            max_complexity = score;
         }
     }
     max_complexity

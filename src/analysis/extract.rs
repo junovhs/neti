@@ -21,7 +21,6 @@ impl RustExtractor {
             "(enum_item name: (type_identifier) @name)",
             true,
         );
-        // Delegate impl extraction to separate module
         super::extract_impl::extract(source, root, out);
     }
 
@@ -35,13 +34,13 @@ impl RustExtractor {
             return;
         };
         let mut cursor = QueryCursor::new();
-        let matches: Vec<_> = cursor.matches(&query, root, source.as_bytes()).collect();
+        let nodes: Vec<_> = cursor
+            .matches(&query, root, source.as_bytes())
+            .flat_map(|m| m.captures.iter().map(|c| c.node))
+            .collect();
 
-        for m in &matches {
-            for cap in m.captures {
-                // neti:allow(P04)
-                Self::process_field_node(source, cap.node, out);
-            }
+        for node in nodes {
+            Self::process_field_node(source, node, out);
         }
     }
 

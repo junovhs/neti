@@ -24,13 +24,11 @@ impl ScopeMetrics {
     /// Calculates CBO (Coupling Between Objects).
     #[must_use]
     pub fn calculate_cbo(scope: &Scope) -> usize {
-        let mut unique_deps = HashSet::new();
-        for method in scope.methods().values() {
-            for call in &method.external_calls {
-                // neti:allow(P04)
-                unique_deps.insert(call);
-            }
-        }
+        let unique_deps: HashSet<_> = scope
+            .methods()
+            .values()
+            .flat_map(|m| &m.external_calls)
+            .collect();
         unique_deps.len()
     }
 
@@ -71,23 +69,30 @@ fn build_adjacency_graph<'a>(
     }
 
     let methods = scope.methods();
-    for (i, name_a) in method_names.iter().enumerate() {
-        let method_a = &methods[*name_a];
-        for name_b in method_names.iter().skip(i + 1) {
-            // neti:allow(P04)
-            let method_b = &methods[*name_b];
+    let pairs = method_name_pairs(method_names);
 
-            if are_connected(method_a, method_b) {
-                if let Some(vec_a) = adj.get_mut(*name_a) {
-                    vec_a.push(*name_b);
-                }
-                if let Some(vec_b) = adj.get_mut(*name_b) {
-                    vec_b.push(*name_a);
-                }
+    for (name_a, name_b) in &pairs {
+        let method_a = &methods[*name_a];
+        let method_b = &methods[*name_b];
+
+        if are_connected(method_a, method_b) {
+            if let Some(vec_a) = adj.get_mut(*name_a) {
+                vec_a.push(*name_b);
+            }
+            if let Some(vec_b) = adj.get_mut(*name_b) {
+                vec_b.push(*name_a);
             }
         }
     }
     adj
+}
+
+fn method_name_pairs<'a>(names: &[&'a String]) -> Vec<(&'a String, &'a String)> {
+    names
+        .iter()
+        .enumerate()
+        .flat_map(|(i, a)| names[i + 1..].iter().map(move |b| (*a, *b)))
+        .collect()
 }
 
 fn count_components<'a>(names: &[&'a String], adj: &HashMap<&'a String, Vec<&'a String>>) -> usize {
@@ -126,11 +131,6 @@ fn traverse<'a>(
             continue;
         };
 
-        for neighbor in neighbors {
-            // neti:allow(P04)
-            if visited.insert(neighbor) {
-                stack.push(neighbor);
-            }
-        }
+        stack.extend(neighbors.iter().filter(|n| visited.insert(n)).copied());
     }
 }

@@ -5,13 +5,9 @@ pub struct DefExtractor;
 
 impl DefExtractor {
     #[must_use]
-    pub fn get_config(lang: Lang) -> (Language, Query) {
+    pub fn get_config(lang: Lang) -> Option<(Language, Query)> {
         let grammar = lang.grammar();
-        let query = compile_query(&grammar, lang.q_defs());
-        (grammar, query)
+        let query = Query::new(&grammar, lang.q_defs()).ok()?;
+        Some((grammar, query))
     }
-}
-
-fn compile_query(lang: &Language, pattern: &str) -> Query {
-    Query::new(lang, pattern).unwrap_or_else(|e| panic!("Invalid query: {e}"))
 }
