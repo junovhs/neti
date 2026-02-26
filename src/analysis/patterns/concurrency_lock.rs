@@ -33,7 +33,7 @@ pub fn detect_c03(source: &str, root: Node) -> Vec<Violation> {
     let mut violations = Vec::new();
     let query_str = r"(function_item (function_modifiers) @mods body: (block) @body) @fn";
 
-    let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), query_str) else {
         return violations;
     };
 

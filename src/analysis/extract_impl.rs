@@ -1,3 +1,4 @@
+// src/analysis/extract_impl.rs
 //! Rust impl/method extraction logic.
 //! Separated from extract.rs to satisfy Law of Atomicity (token limit).
 
@@ -9,7 +10,7 @@ use tree_sitter::{Node, Query, QueryCursor, TreeCursor};
 #[allow(clippy::implicit_hasher)]
 pub fn extract(source: &str, root: Node, out: &mut HashMap<String, Scope>) {
     let q_str = "(impl_item type: (type_identifier) @name body: (declaration_list) @body)";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q_str) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q_str) else {
         return;
     };
     let mut cursor = QueryCursor::new();

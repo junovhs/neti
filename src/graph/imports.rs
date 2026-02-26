@@ -22,12 +22,12 @@ pub fn extract(path: &Path, content: &str) -> Vec<String> {
     };
 
     let grammar = lang.grammar();
-    let query = compile_query(grammar, lang.q_imports());
+    let query = compile_query(&grammar, lang.q_imports());
 
-    run_query(content, grammar, &query)
+    run_query(content, &grammar, &query)
 }
 
-fn run_query(source: &str, lang: Language, query: &Query) -> Vec<String> {
+fn run_query(source: &str, lang: &Language, query: &Query) -> Vec<String> {
     let mut parser = Parser::new();
     if parser.set_language(lang).is_err() {
         return Vec::new();
@@ -56,7 +56,7 @@ fn clean_text(text: &str) -> String {
         .to_string()
 }
 
-fn compile_query(lang: Language, pattern: &str) -> Query {
+fn compile_query(lang: &Language, pattern: &str) -> Query {
     match Query::new(lang, pattern) {
         Ok(q) => q,
         Err(e) => panic!("Invalid import query: {e}"),

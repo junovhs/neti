@@ -1,9 +1,9 @@
-// src/analysis/v2/patterns/db_patterns.rs
+// src/analysis/patterns/db_patterns.rs
 //! Database anti-patterns: P03 (N+1 queries)
 
+use super::get_capture_node;
 use crate::types::{Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
-use super::get_capture_node;
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
@@ -19,18 +19,22 @@ fn detect_p03(source: &str, root: Node, out: &mut Vec<Violation>) {
         (while_expression body: (block) @body) @loop
     ";
 
-    let Ok(query) = Query::new(tree_sitter_rust::language(), loop_q) else { return };
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), loop_q) else {
+        return;
+    };
     let idx_pat = query.capture_index_for_name("pat");
     let idx_body = query.capture_index_for_name("body");
-    
+
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
         let loop_var_node = get_capture_node(&m, idx_pat);
         let body_node = get_capture_node(&m, idx_body);
 
-        let (Some(var_node), Some(body)) = (loop_var_node, body_node) else { continue };
-        
+        let (Some(var_node), Some(body)) = (loop_var_node, body_node) else {
+            continue;
+        };
+
         if let Ok(var_text) = var_node.utf8_text(source.as_bytes()) {
             let loop_var = extract_loop_var(var_text);
             check_db_calls(source, body, &loop_var, out);
@@ -39,7 +43,14 @@ fn detect_p03(source: &str, root: Node, out: &mut Vec<Violation>) {
 }
 
 fn extract_loop_var(pattern: &str) -> String {
-    pattern.trim().trim_start_matches('(').split(',').next().unwrap_or(pattern).trim().to_string()
+    pattern
+        .trim()
+        .trim_start_matches('(')
+        .split(',')
+        .next()
+        .unwrap_or(pattern)
+        .trim()
+        .to_string()
 }
 
 fn check_db_calls(source: &str, body: Node, loop_var: &str, out: &mut Vec<Violation>) {
@@ -57,19 +68,35 @@ fn check_db_calls(source: &str, body: Node, loop_var: &str, out: &mut Vec<Violat
     }
 }
 
-fn check_pattern(source: &str, body: Node, pattern: &str, loop_var: &str, out: &mut Vec<Violation>) {
-    let Ok(query) = Query::new(tree_sitter_rust::language(), pattern) else { return };
+fn check_pattern(
+    source: &str,
+    body: Node,
+    pattern: &str,
+    loop_var: &str,
+    out: &mut Vec<Violation>,
+) {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), pattern) else {
+        return;
+    };
     let idx_call = query.capture_index_for_name("call");
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, body, source.as_bytes()) {
-        let Some(call) = get_capture_node(&m, idx_call) else { continue };
+        let Some(call) = get_capture_node(&m, idx_call) else {
+            continue;
+        };
         let call_text = call.utf8_text(source.as_bytes()).unwrap_or("");
 
-        if !call_text.contains(loop_var) { continue }
-        if is_likely_safe_method(call_text) { continue }
+        if !call_text.contains(loop_var) {
+            continue;
+        }
+        if is_likely_safe_method(call_text) {
+            continue;
+        }
 
-        let method = call_text.split('.').next_back()
+        let method = call_text
+            .split('.')
+            .next_back()
             .and_then(|s| s.split('(').next())
             .unwrap_or("query");
 
@@ -84,18 +111,18 @@ fn check_pattern(source: &str, body: Node, pattern: &str, loop_var: &str, out: &
                     format!("Loop variable `{loop_var}` used in call."),
                 ],
                 suggestion: Some("Batch the query or use JOIN/IN.".into()),
-            }
+            },
         ));
     }
 }
 
 fn is_likely_safe_method(text: &str) -> bool {
-    text.contains(".iter()") ||
-    text.contains(".into_iter()") ||
-    text.contains(".chars()") ||
-    text.contains(".lines()") ||
-    text.contains(".unwrap_or") ||
-    text.contains(".map(") ||
-    text.contains(".get(") ||
-    text.contains(".find(")
-}
+    text.contains(".iter()")
+        || text.contains(".into_iter()")
+        || text.contains(".chars()")
+        || text.contains(".lines()")
+        || text.contains(".unwrap_or")
+        || text.contains(".map(")
+        || text.contains(".get(")
+        || text.contains(".find(")
+}

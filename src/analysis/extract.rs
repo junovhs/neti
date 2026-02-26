@@ -1,3 +1,4 @@
+// src/analysis/extract.rs
 //! Rust scope extraction logic (Structs/Enums/Fields).
 //! Method extraction moved to `extract_impl.rs` for Atomicity.
 
@@ -30,7 +31,7 @@ impl RustExtractor {
         out: &mut std::collections::HashMap<String, Scope>,
     ) {
         let query_str = "(field_declaration) @field";
-        let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
+        let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), query_str) else {
             return;
         };
         let mut cursor = QueryCursor::new();
@@ -142,7 +143,7 @@ impl RustExtractor {
         query_str: &str,
         is_enum: bool,
     ) {
-        let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
+        let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), query_str) else {
             return;
         };
         let mut cursor = QueryCursor::new();

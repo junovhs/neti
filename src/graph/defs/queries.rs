@@ -1,4 +1,3 @@
-// src/graph/defs/queries.rs
 use crate::lang::Lang;
 use tree_sitter::{Language, Query};
 
@@ -8,11 +7,11 @@ impl DefExtractor {
     #[must_use]
     pub fn get_config(lang: Lang) -> (Language, Query) {
         let grammar = lang.grammar();
-        let query = compile_query(grammar, lang.q_defs());
+        let query = compile_query(&grammar, lang.q_defs());
         (grammar, query)
     }
 }
 
-fn compile_query(lang: Language, pattern: &str) -> Query {
+fn compile_query(lang: &Language, pattern: &str) -> Query {
     Query::new(lang, pattern).unwrap_or_else(|e| panic!("Invalid query: {e}"))
 }

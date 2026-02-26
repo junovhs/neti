@@ -1,4 +1,3 @@
-// src/graph/defs/extract.rs
 use std::collections::HashMap;
 use std::path::Path;
 use std::sync::LazyLock;
@@ -7,7 +6,6 @@ use tree_sitter::{Language, Parser, Query, QueryCursor};
 use super::queries::DefExtractor;
 use crate::lang::Lang;
 
-/// A symbol definition found in source code.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Definition {
     pub name: String,
@@ -35,19 +33,21 @@ static KIND_MAP: LazyLock<HashMap<&'static str, DefKind>> = LazyLock::new(|| {
         ("struct_item", DefKind::Struct),
         ("enum_item", DefKind::Enum),
         ("enum_declaration", DefKind::Enum),
+        ("struct_declaration", DefKind::Struct),
         ("trait_item", DefKind::Trait),
         ("impl_item", DefKind::Impl),
         ("const_item", DefKind::Constant),
         ("static_item", DefKind::Constant),
         ("type_item", DefKind::Type),
         ("type_alias_declaration", DefKind::Type),
+        ("typealias_declaration", DefKind::Type),
         ("class_definition", DefKind::Class),
         ("class_declaration", DefKind::Class),
         ("interface_declaration", DefKind::Interface),
+        ("protocol_declaration", DefKind::Interface),
     ])
 });
 
-/// Extracts all symbol definitions from source code.
 #[must_use]
 pub fn extract(path: &Path, content: &str) -> Vec<Definition> {
     let Some(ext) = path.extension().and_then(|s| s.to_str()) else {
@@ -56,12 +56,12 @@ pub fn extract(path: &Path, content: &str) -> Vec<Definition> {
     let Some(lang) = Lang::from_ext(ext) else {
         return Vec::new();
     };
-    
+
     let (grammar, query) = DefExtractor::get_config(lang);
-    run_extraction(content, grammar, &query)
+    run_extraction(content, &grammar, &query)
 }
 
-fn run_extraction(source: &str, lang: Language, query: &Query) -> Vec<Definition> {
+fn run_extraction(source: &str, lang: &Language, query: &Query) -> Vec<Definition> {
     let Some(tree) = parse_source(source, lang) else {
         return Vec::new();
     };
@@ -77,7 +77,7 @@ fn run_extraction(source: &str, lang: Language, query: &Query) -> Vec<Definition
         .collect()
 }
 
-fn parse_source(source: &str, lang: Language) -> Option<tree_sitter::Tree> {
+fn parse_source(source: &str, lang: &Language) -> Option<tree_sitter::Tree> {
     let mut parser = Parser::new();
     parser.set_language(lang).ok()?;
     parser.parse(source, None)
@@ -149,5 +149,13 @@ mod tests {
         let defs = extract(Path::new("service.py"), code);
         assert!(defs.iter().any(|d| d.name == "UserService"));
         assert!(defs.iter().any(|d| d.name == "helper"));
+    }
+
+    #[test]
+    fn test_swift_defs() {
+        let code = "public struct User {}\npublic func greet(name: String) -> String { name }";
+        let defs = extract(Path::new("User.swift"), code);
+        assert!(defs.iter().any(|d| d.name == "User"));
+        assert!(defs.iter().any(|d| d.name == "greet"));
     }
 }

@@ -1,3 +1,4 @@
+// src/analysis/patterns/concurrency_sync.rs
 //! C04: Undocumented synchronization primitives
 
 use crate::types::{Confidence, Violation, ViolationDetails};
@@ -13,7 +14,7 @@ pub fn detect_c04(source: &str, root: Node) -> Vec<Violation> {
 
 fn detect_sync_fields(source: &str, root: Node, out: &mut Vec<Violation>) {
     let query_str = r"(field_declaration name: (field_identifier) @name) @field";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), query_str) else {
         return;
     };
 

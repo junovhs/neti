@@ -24,12 +24,12 @@ pub fn clean(path: &Path, content: &str) -> String {
     let query_str = lang.q_skeleton();
     let replacement = lang.skeleton_replacement();
     let grammar = lang.grammar();
-    let query = compile_query(grammar, query_str);
+    let query = compile_query(&grammar, query_str);
 
-    apply_skeleton(content, grammar, &query, replacement)
+    apply_skeleton(content, &grammar, &query, replacement)
 }
 
-fn apply_skeleton(source: &str, lang: Language, query: &Query, replacement: &str) -> String {
+fn apply_skeleton(source: &str, lang: &Language, query: &Query, replacement: &str) -> String {
     let mut parser = Parser::new();
     if parser.set_language(lang).is_err() {
         return source.to_string();
@@ -104,7 +104,7 @@ fn replace_ranges(source: &str, ranges: &[std::ops::Range<usize>], replacement: 
     result
 }
 
-fn compile_query(lang: Language, pattern: &str) -> Query {
+fn compile_query(lang: &Language, pattern: &str) -> Query {
     match Query::new(lang, pattern) {
         Ok(q) => q,
         Err(e) => panic!("Invalid skeleton query: {e}"),

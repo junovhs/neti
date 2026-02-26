@@ -72,7 +72,7 @@ pub fn scan_file(path: &Path, config: &Config) -> FileReport {
     };
 
     let mut parser = Parser::new();
-    if parser.set_language(lang.grammar()).is_err() {
+    if parser.set_language(&lang.grammar()).is_err() {
         return report;
     }
 
