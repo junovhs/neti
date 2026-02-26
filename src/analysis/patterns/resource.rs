@@ -18,7 +18,7 @@ fn detect_r07(source: &str, root: Node, out: &mut Vec<Violation>) {
         function: (scoped_identifier path: (identifier) @type name: (identifier) @method)
         (#eq? @type "BufWriter") (#eq? @method "new")) @call"#;
 
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else { return };
     let idx_call = query.capture_index_for_name("call");
     let mut cursor = QueryCursor::new();
 
@@ -60,7 +60,7 @@ mod tests {
 
     fn parse_and_detect(code: &str) -> Vec<Violation> {
         let mut parser = Parser::new();
-        parser.set_language(tree_sitter_rust::language()).unwrap();
+        parser.set_language(&tree_sitter_rust::LANGUAGE.into()).unwrap();
         let tree = parser.parse(code, None).unwrap();
         detect(code, tree.root_node())
     }
@@ -82,4 +82,4 @@ mod tests {
         let code = "fn make() -> BufWriter<File> { Ok(BufWriter::new(f)) }";
         assert!(parse_and_detect(code).iter().all(|v| v.law != "R07"));
     }
-}
+}

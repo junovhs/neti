@@ -70,7 +70,7 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
         (while_expression body: (block) @body) @loop
         (loop_expression body: (block) @body) @loop
     ";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
     let idx_pat = query.capture_index_for_name("pat");

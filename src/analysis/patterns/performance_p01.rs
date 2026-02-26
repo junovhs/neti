@@ -19,7 +19,7 @@ pub(super) fn check_p01(
     let q = r#"(call_expression function: (field_expression
         value: (_) @recv field: (field_identifier) @m)
         (#eq? @m "clone")) @call"#;
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
     let idx_call = query.capture_index_for_name("call");

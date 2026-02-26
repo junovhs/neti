@@ -101,4 +101,4 @@ fn count_camel_words(name: &str) -> usize {
         prev_upper = c.is_uppercase();
     }
     count + 1
-}
+}

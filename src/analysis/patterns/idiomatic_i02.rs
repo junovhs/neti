@@ -15,7 +15,7 @@ mod tests;
 
 pub(super) fn detect_i02(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"(match_expression body: (match_block) @block) @match";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
     let idx_match = query.capture_index_for_name("match");
@@ -23,14 +23,19 @@ pub(super) fn detect_i02(source: &str, root: Node, out: &mut Vec<Violation>) {
 
     let mut cursor = QueryCursor::new();
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let Some(match_node) =
-            idx_match.and_then(|i| m.captures.iter().find(|c| c.index == i).map(|c| c.node))
-        else {
-            continue;
-        };
-        let Some(block) =
-            idx_block.and_then(|i| m.captures.iter().find(|c| c.index == i).map(|c| c.node))
-        else {
+        let mut match_node = None;
+        let mut block = None;
+
+        for cap in m.captures {
+            if Some(cap.index) == idx_match {
+                match_node = Some(cap.node);
+            }
+            if Some(cap.index) == idx_block {
+                block = Some(cap.node);
+            }
+        }
+
+        let (Some(match_node), Some(block)) = (match_node, block) else {
             continue;
         };
 
@@ -39,8 +44,8 @@ pub(super) fn detect_i02(source: &str, root: Node, out: &mut Vec<Violation>) {
 }
 
 fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut Vec<Violation>) {
-    let mut arm_bodies: HashMap<String, usize> = HashMap::new();
-    let mut arm_patterns: HashMap<String, Vec<String>> = HashMap::new();
+    let mut arm_bodies: HashMap<&str, usize> = HashMap::new();
+    let mut arm_patterns: HashMap<&str, Vec<&str>> = HashMap::new();
 
     let mut cursor = block.walk();
     for child in block.children(&mut cursor) {
@@ -53,34 +58,34 @@ fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut V
 
         let pattern_text = pattern_node
             .and_then(|n| n.utf8_text(source.as_bytes()).ok())
-            .unwrap_or("")
-            .to_string();
+            .unwrap_or("");
 
         if let Some(body_text) = body {
-            let trimmed = body_text.trim().to_string();
+            let trimmed = body_text.trim();
             if trimmed.is_empty() || trimmed == "_" {
                 continue;
             }
-            *arm_bodies.entry(trimmed.clone()).or_insert(0) += 1;
+            *arm_bodies.entry(trimmed).or_insert(0) += 1;
             arm_patterns.entry(trimmed).or_default().push(pattern_text);
         }
     }
 
+    let empty_patterns = Vec::new();
     for (body, count) in &arm_bodies {
         if *count < 2 {
             continue;
         }
 
-        let patterns = arm_patterns.get(body).unwrap_or(&Vec::new()).clone();
+        let patterns = arm_patterns.get(body).unwrap_or(&empty_patterns);
 
-        if patterns_have_incompatible_types(&patterns) {
+        if patterns_have_incompatible_types(patterns) {
             continue;
         }
 
         let truncated = if body.len() > 30 {
             format!("{}...", &body[..30])
         } else {
-            body.clone()
+            body.to_string()
         };
 
         out.push(Violation::with_details(
@@ -96,7 +101,7 @@ fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut V
     }
 }
 
-fn patterns_have_incompatible_types(patterns: &[String]) -> bool {
+fn patterns_have_incompatible_types(patterns: &[&str]) -> bool {
     if patterns.len() < 2 {
         return false;
     }
@@ -203,7 +208,7 @@ fn split_top_level_commas(s: &str) -> Vec<&str> {
     parts
 }
 
-fn arm_body_text(source: &str, arm: Node) -> Option<String> {
+fn arm_body_text<'a>(source: &'a str, arm: Node) -> Option<&'a str> {
     let child_count = arm.child_count();
     if child_count == 0 {
         return None;
@@ -219,7 +224,7 @@ fn arm_body_text(source: &str, arm: Node) -> Option<String> {
         if found_arrow {
             let text = child.utf8_text(source.as_bytes()).ok()?;
             let trimmed = text.trim().trim_end_matches(',').trim();
-            return Some(trimmed.to_string());
+            return Some(trimmed);
         }
     }
 

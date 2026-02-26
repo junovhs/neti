@@ -2,10 +2,10 @@
 NETI SCAN REPORT
 ========================================
 
-SCAN SUMMARY: 195 files | 219269 tokens | 24 violations
+SCAN SUMMARY: 195 files | 219348 tokens | 19 violations
 
 ALL VIOLATING FILES:
-    8 violations | src\analysis\patterns\idiomatic_i02.rs
+    3 violations | src\analysis\patterns\idiomatic_i02.rs
     3 violations | src\analysis\patterns\semantic.rs
     3 violations | src\analysis\structural.rs
     2 violations | src\analysis\extract.rs
@@ -18,7 +18,7 @@ ALL VIOLATING FILES:
     1 violations | src\cli\handlers\scan_report.rs
     1 violations | src\lang.rs
 
-warn: [1 of 7] Nested loop (O(n²)) detected
+warn: [1 of 8] Nested loop (O(n²)) detected
   --> src\analysis\ast.rs:80
    |
     79 |             for m in matches {
@@ -36,7 +36,7 @@ warn: [1 of 7] Nested loop (O(n²)) detected
    |
    = SUPPRESS: // neti:allow(P04) on the line, or P04 = "warn" in neti.toml [rules]
 
-error: [1 of 10] String conversion inside loop
+error: [1 of 8] String conversion inside loop
   --> src\analysis\checks\naming.rs:32
    |
     31 |                 let details = ViolationDetails {
@@ -54,28 +54,55 @@ error: [1 of 10] String conversion inside loop
    |
    = SUPPRESS: // neti:allow(P02) on the line, or P02 = "warn" in neti.toml [rules]
 
-warn: [2 of 7] Nested loop (O(n²)) detected
+warn: [2 of 8] Nested loop (O(n²)) detected
   --> src\analysis\extract.rs:40
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
-error: [2 of 10] String conversion inside loop
+error: [2 of 8] String conversion inside loop
   --> src\analysis\extract.rs:155
    = P02: `name.to_string()` allocates a new String on every iteration. — see first P02 above
 
-error: [3 of 10] String conversion inside loop
+error: [3 of 8] String conversion inside loop
   --> src\analysis\extract_impl.rs:30
    = P02: `cap
                 .node
                 .utf8_text(source.as_bytes())
                 .unwrap_or("").to_string()` allocates a new String on every iteration. — see first P02 above
 
-warn: [1 of 3] Linear search inside loop — O(n·m) complexity
-  --> src\analysis\patterns\idiomatic_i02.rs:27
+warn: [3 of 8] Nested loop (O(n²)) detected
+  --> src\analysis\patterns\idiomatic_i02.rs:29
+   = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
+
+error: [4 of 8] String conversion inside loop
+  --> src\analysis\patterns\idiomatic_i02.rs:88
+   = P02: `body.to_string()` allocates a new String on every iteration. — see first P02 above
+
+warn: Detected `.clone()` inside a loop
+  --> src\analysis\patterns\idiomatic_i02.rs:139
    |
-    26 |         let Some(match_node) =
-    27 |             idx_match.and_then(|i| m.captures.iter().find(|c| c.index == i).map(|c| c.node))
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    28 |         else {
+   138 |         let unique_count = {
+   139 |             let mut sorted = names_in_slot.clone();
+   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   140 |             sorted.sort();
+   = P01: Review recommended — receiver `names_in_slot` matches a heuristic keyword but type is unverified
+   |
+   = ANALYSIS:
+   |   Receiver `names_in_slot` appears to be a heap-owning type.
+   |   Clone inside a loop allocates on every iteration.
+   |
+   = WHY: Cloning/copying inside a loop allocates on every iteration, scaling linearly with iteration count.
+   |
+   = FIX: Hoist the allocation before the loop, use a reference or borrow, or confirm the copy is cheap (primitives, small structs, reference-counted pointers).
+   |
+   = SUPPRESS: // neti:allow(P01) on the line, or P01 = "warn" in neti.toml [rules]
+
+warn: Linear search inside loop — O(n·m) complexity
+  --> src\analysis\patterns\logic_helpers.rs:173
+   |
+   172 | 
+   173 |         if let Some(colon_pos) = clean.find(':') {
+   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   174 |             let param_name = clean[..colon_pos].trim();
    = P06: Review recommended — linear scan may be intentional algorithm or bounded collection
    |
    = ANALYSIS:
@@ -87,88 +114,39 @@ warn: [1 of 3] Linear search inside loop — O(n·m) complexity
    |
    = SUPPRESS: // neti:allow(P06) on the line, or P06 = "warn" in neti.toml [rules]
 
-warn: [2 of 3] Linear search inside loop — O(n·m) complexity
-  --> src\analysis\patterns\idiomatic_i02.rs:32
-   = P06: Each outer iteration performs a full inner scan. — see first P06 above
-
-error: [4 of 10] String conversion inside loop
-  --> src\analysis\patterns\idiomatic_i02.rs:54
-   = P02: `pattern_node
-            .and_then(|n| n.utf8_text(source.as_bytes()).ok())
-            .unwrap_or("").to_string()` allocates a new String on every iteration. — see first P02 above
-
-error: [5 of 10] String conversion inside loop
-  --> src\analysis\patterns\idiomatic_i02.rs:60
-   = P02: `body_text.trim().to_string()` allocates a new String on every iteration. — see first P02 above
-
-error: [1 of 3] Detected `.clone()` inside a loop
-  --> src\analysis\patterns\idiomatic_i02.rs:74
-   |
-    73 | 
-    74 |         let patterns = arm_patterns.get(body).unwrap_or(&Vec::new()).clone();
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    75 | 
-   = P01: Fix required
-   |
-   = ANALYSIS:
-   |   Receiver `arm_patterns.get(body).unwrap_or(&Vec::new())` appears to be a heap-owning type.
-   |   Clone inside a loop allocates on every iteration.
-   |
-   = WHY: Cloning/copying inside a loop allocates on every iteration, scaling linearly with iteration count.
-   |
-   = FIX: Hoist the allocation before the loop, use a reference or borrow, or confirm the copy is cheap (primitives, small structs, reference-counted pointers).
-   |
-   = SUPPRESS: // neti:allow(P01) on the line, or P01 = "warn" in neti.toml [rules]
-
-warn: [2 of 3] Detected `.clone()` inside a loop
-  --> src\analysis\patterns\idiomatic_i02.rs:83
-   = P01: Receiver `body` appears to be a heap-owning type. — see first P01 above
-
-warn: [3 of 3] Detected `.clone()` inside a loop
-  --> src\analysis\patterns\idiomatic_i02.rs:134
-   = P01: Receiver `names_in_slot` appears to be a heap-owning type. — see first P01 above
-
-error: [6 of 10] String conversion inside loop
-  --> src\analysis\patterns\idiomatic_i02.rs:222
-   = P02: `trimmed.to_string()` allocates a new String on every iteration. — see first P02 above
-
-warn: [3 of 3] Linear search inside loop — O(n·m) complexity
-  --> src\analysis\patterns\logic_helpers.rs:173
-   = P06: Each outer iteration performs a full inner scan. — see first P06 above
-
-warn: [3 of 7] Nested loop (O(n²)) detected
+warn: [4 of 8] Nested loop (O(n²)) detected
   --> src\analysis\patterns\logic_proof_helpers.rs:25
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
-error: [7 of 10] String conversion inside loop
+error: [5 of 8] String conversion inside loop
   --> src\analysis\patterns\performance.rs:83
    = P02: `s.split([',', '(']).next().unwrap_or(s).trim().to_string()` allocates a new String on every iteration. — see first P02 above
 
-error: [8 of 10] String conversion inside loop
+error: [6 of 8] String conversion inside loop
   --> src\analysis\patterns\semantic.rs:47
    = P02: `name.to_string()` allocates a new String on every iteration. — see first P02 above
 
-error: [9 of 10] String conversion inside loop
+error: [7 of 8] String conversion inside loop
   --> src\analysis\patterns\semantic.rs:85
    = P02: `name.to_string()` allocates a new String on every iteration. — see first P02 above
 
-error: [10 of 10] String conversion inside loop
+error: [8 of 8] String conversion inside loop
   --> src\analysis\patterns\semantic.rs:123
    = P02: `name.to_string()` allocates a new String on every iteration. — see first P02 above
 
-warn: [4 of 7] Nested loop (O(n²)) detected
+warn: [5 of 8] Nested loop (O(n²)) detected
   --> src\analysis\structural.rs:29
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
-warn: [5 of 7] Nested loop (O(n²)) detected
+warn: [6 of 8] Nested loop (O(n²)) detected
   --> src\analysis\structural.rs:74
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
-warn: [6 of 7] Nested loop (O(n²)) detected
+warn: [7 of 8] Nested loop (O(n²)) detected
   --> src\analysis\structural.rs:129
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
-warn: [7 of 7] Nested loop (O(n²)) detected
+warn: [8 of 8] Nested loop (O(n²)) detected
   --> src\cli\handlers\scan_report.rs:97
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
@@ -187,7 +165,7 @@ error: Potential N+1 query: `query` in loop
    |
    = SUPPRESS: // neti:allow(P03) on the line, or P03 = "warn" in neti.toml [rules]
 
-X Neti found 12 errors, 12 warnings (1.445s).
+X Neti found 9 errors, 10 warnings (1.555s).
 
 
 ========================================
@@ -195,392 +173,25 @@ NETI COMMANDS REPORT
 ========================================
 
 $ cargo clippy --all-targets --no-deps -- -D warnings
-> FAIL (1897ms)
+> FAIL (2413ms)
 Checking neti v1.6.6 (C:\Users\SpencerNunamakerTrav\neti)
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\idiomatic_i01.rs:12:50
-   |
-12 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\idiomatic_i02.rs:18:50
-   |
-18 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\logic_l02.rs:11:50
-   |
-11 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\logic_l03.rs:31:50
-   |
-31 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\logic_l03.rs:139:50
+error[E0308]: mismatched types
+   --> src\analysis\checks\syntax_test.rs:10:25
     |
-139 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-    |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
+ 10 |     parser.set_language(Lang::Rust.grammar()).unwrap();
+    |            ------------ ^^^^^^^^^^^^^^^^^^^^ expected `&Language`, found `Language`
+    |            |
+    |            arguments to this method are incorrect
     |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
+note: method defined here
+   --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-0.23.2\binding_rust\lib.rs:474:12
     |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p01.rs:22:50
-   |
-22 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p02.rs:17:50
-   |
-17 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p04p06.rs:44:50
-   |
-44 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance.rs:73:50
-   |
-73 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\resource.rs:21:50
-   |
-21 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\security_x01.rs:10:50
-   |
-10 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\security_x02.rs:22:50
-   |
-22 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\security_x03.rs:16:50
-   |
-16 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\semantic.rs:24:50
-   |
-24 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\semantic.rs:62:50
-   |
-62 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\semantic.rs:100:50
+474 |     pub fn set_language(&mut self, language: &Language) -> Result<(), LanguageError> {
+    |            ^^^^^^^^^^^^
+help: consider borrowing here
     |
-100 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
-    |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\state.rs:20:50
-   |
-20 |     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\state.rs:58:50
-   |
-58 |     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\state.rs:121:50
-    |
-121 |     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
-    |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\cognitive.rs:120:45
-    |
-120 |             .set_language(tree_sitter_rust::language())
-    |                                             ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\concurrency_lock_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\idiomatic_i01.rs:75:47
-   |
-75 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\idiomatic_i02_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\logic_l02.rs:100:47
-    |
-100 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-    |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\logic_l03_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\logic_helpers_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\logic_proof_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p01_test.rs:10:43
-   |
-10 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p02.rs:63:47
-   |
-63 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p04p06.rs:78:47
-   |
-78 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\performance_test_ctx.rs:101:47
-    |
-101 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-    |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\resource.rs:63:47
-   |
-63 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\security_x01.rs:53:47
-   |
-53 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\security_x02_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\semantic.rs:139:47
-    |
-139 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-    |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
+ 10 |     parser.set_language(&Lang::Rust.grammar()).unwrap();
+    |                         +
 
 error[E0308]: mismatched types
    --> src\analysis\patterns\mod.rs:57:25
@@ -598,24 +209,6 @@ note: method defined here
 help: consider borrowing here
     |
  57 |     parser.set_language(&lang.grammar()).ok()?;
-    |                         +
-
-error[E0308]: mismatched types
-   --> src\analysis\checks\syntax_test.rs:10:25
-    |
- 10 |     parser.set_language(Lang::Rust.grammar()).unwrap();
-    |            ------------ ^^^^^^^^^^^^^^^^^^^^ expected `&Language`, found `Language`
-    |            |
-    |            arguments to this method are incorrect
-    |
-note: method defined here
-   --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-0.23.2\binding_rust\lib.rs:474:12
-    |
-474 |     pub fn set_language(&mut self, language: &Language) -> Result<(), LanguageError> {
-    |            ^^^^^^^^^^^^
-help: consider borrowing here
-    |
- 10 |     parser.set_language(&Lang::Rust.grammar()).unwrap();
     |                         +
 
 error[E0308]: mismatched types
@@ -654,401 +247,15 @@ help: consider borrowing here
 108 |         parser.set_language(&Lang::Rust.grammar()).ok();
     |                             +
 
-Some errors have detailed explanations: E0308, E0425.
-For more information about an error, try `rustc --explain E0308`.
-error: could not compile `neti` (lib) due to 21 previous errors
+For more information about this error, try `rustc --explain E0308`.
+error: could not compile `neti` (lib) due to 2 previous errors
 warning: build failed, waiting for other jobs to finish...
-error: could not compile `neti` (lib test) due to 39 previous errors
+error: could not compile `neti` (lib test) due to 4 previous errors
 [exit code: 101]
 
 $ cargo test
-> FAIL (1903ms)
+> FAIL (1976ms)
 Compiling neti v1.6.6 (C:\Users\SpencerNunamakerTrav\neti)
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\idiomatic_i01.rs:12:50
-   |
-12 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\idiomatic_i02.rs:18:50
-   |
-18 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\logic_l02.rs:11:50
-   |
-11 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\logic_l03.rs:31:50
-   |
-31 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\logic_l03.rs:139:50
-    |
-139 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-    |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p01.rs:22:50
-   |
-22 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p02.rs:17:50
-   |
-17 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p04p06.rs:44:50
-   |
-44 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance.rs:73:50
-   |
-73 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\resource.rs:21:50
-   |
-21 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\security_x01.rs:10:50
-   |
-10 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\security_x02.rs:22:50
-   |
-22 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\security_x03.rs:16:50
-   |
-16 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\semantic.rs:24:50
-   |
-24 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\semantic.rs:62:50
-   |
-62 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\semantic.rs:100:50
-    |
-100 |     let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
-    |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\state.rs:20:50
-   |
-20 |     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\state.rs:58:50
-   |
-58 |     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
-   |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\state.rs:121:50
-    |
-121 |     let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
-    |                                                  ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\cognitive.rs:120:45
-    |
-120 |             .set_language(tree_sitter_rust::language())
-    |                                             ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\concurrency_lock_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\idiomatic_i01.rs:75:47
-   |
-75 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\idiomatic_i02_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\logic_l02.rs:100:47
-    |
-100 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-    |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\logic_l03_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\logic_helpers_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\logic_proof_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p01_test.rs:10:43
-   |
-10 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p02.rs:63:47
-   |
-63 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\performance_p04p06.rs:78:47
-   |
-78 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\performance_test_ctx.rs:101:47
-    |
-101 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-    |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\resource.rs:63:47
-   |
-63 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\security_x01.rs:53:47
-   |
-53 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-  --> src\analysis\patterns\security_x02_test.rs:8:43
-   |
- 8 |     parser.set_language(tree_sitter_rust::language()).unwrap();
-   |                                           ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-   |
-  ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-   |
-35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-   | ------------------------------ similarly named constant `LANGUAGE` defined here
-
-error[E0425]: cannot find function `language` in crate `tree_sitter_rust`
-   --> src\analysis\patterns\semantic.rs:139:47
-    |
-139 |         parser.set_language(tree_sitter_rust::language()).unwrap();
-    |                                               ^^^^^^^^ help: a constant with a similar name exists: `LANGUAGE`
-    |
-   ::: C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-rust-0.23.3\bindings\rust\lib.rs:35:1
-    |
- 35 | pub const LANGUAGE: LanguageFn = unsafe { LanguageFn::from_raw(tree_sitter_rust) };
-    | ------------------------------ similarly named constant `LANGUAGE` defined here
-
 error[E0308]: mismatched types
    --> src\analysis\checks\syntax_test.rs:10:25
     |
@@ -1121,10 +328,9 @@ help: consider borrowing here
 108 |         parser.set_language(&Lang::Rust.grammar()).ok();
     |                             +
 
-Some errors have detailed explanations: E0308, E0425.
-For more information about an error, try `rustc --explain E0308`.
-error: could not compile `neti` (lib) due to 21 previous errors
+For more information about this error, try `rustc --explain E0308`.
+error: could not compile `neti` (lib) due to 2 previous errors
 warning: build failed, waiting for other jobs to finish...
-error: could not compile `neti` (lib test) due to 39 previous errors
+error: could not compile `neti` (lib test) due to 4 previous errors
 [exit code: 101]
 

@@ -5,7 +5,7 @@ use tree_sitter::Parser;
 
 fn parse_and_detect(code: &str) -> Vec<Violation> {
     let mut parser = Parser::new();
-    parser.set_language(tree_sitter_rust::language()).unwrap();
+    parser.set_language(&tree_sitter_rust::LANGUAGE.into()).unwrap();
     let tree = parser.parse(code, None).unwrap();
     let mut violations = Vec::new();
     detect_x02_command(code, tree.root_node(), &mut violations);

@@ -172,4 +172,4 @@ fn process_number_key(code: KeyCode, value: &mut usize) -> EditResult {
         KeyCode::Esc => EditResult::Cancel,
         _ => EditResult::Continue
     }
-}
+}

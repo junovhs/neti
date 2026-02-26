@@ -19,7 +19,7 @@ pub(super) fn detect_x02_command(source: &str, root: Node, out: &mut Vec<Violati
         arguments: (arguments (identifier) @arg)
         (#eq? @method "new")) @call"#;
 
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
     let idx_call = query.capture_index_for_name("call");

@@ -17,7 +17,7 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
 /// S01: Global mutable declaration - `static mut`
 fn detect_s01(source: &str, root: Node, out: &mut Vec<Violation>) {
     let query_str = r"(static_item (mutable_specifier) @mut) @item";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), query_str) else {
         return;
     };
     let idx_mut = query.capture_index_for_name("mut");
@@ -55,7 +55,7 @@ fn build_s01_violation(row: usize, text: &str) -> Violation {
 /// S02: Exported mutable - `pub static` (non-const)
 fn detect_s02(source: &str, root: Node, out: &mut Vec<Violation>) {
     let query_str = r"(static_item (visibility_modifier) @vis name: (identifier) @name) @item";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), query_str) else {
         return;
     };
     let idx_vis = query.capture_index_for_name("vis");
@@ -118,7 +118,7 @@ fn build_s02_violation(row: usize, name: &str) -> Violation {
 fn detect_s03(source: &str, root: Node, out: &mut Vec<Violation>) {
     let query_str =
         r#"(macro_invocation macro: (identifier) @mac (#match? @mac "^lazy_static$")) @item"#;
-    let Ok(query) = Query::new(tree_sitter_rust::language(), query_str) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), query_str) else {
         return;
     };
     let idx_item = query.capture_index_for_name("item");

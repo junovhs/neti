@@ -134,4 +134,4 @@ pub fn npx_cmd() -> &'static str {
     } else {
         "npx"
     }
-}
+}

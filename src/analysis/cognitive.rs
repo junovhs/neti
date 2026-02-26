@@ -117,7 +117,7 @@ mod tests {
     fn parse(code: &str) -> tree_sitter::Tree {
         let mut parser = Parser::new();
         parser
-            .set_language(tree_sitter_rust::language())
+            .set_language(&tree_sitter_rust::LANGUAGE.into())
             .expect("Failed to set language");
         parser.parse(code, None).expect("Failed to parse code")
     }

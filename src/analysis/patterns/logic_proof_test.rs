@@ -5,7 +5,7 @@ use tree_sitter::Parser;
 
 fn parse_rust(code: &str) -> tree_sitter::Tree {
     let mut parser = Parser::new();
-    parser.set_language(tree_sitter_rust::language()).unwrap();
+    parser.set_language(&tree_sitter_rust::LANGUAGE.into()).unwrap();
     parser.parse(code, None).unwrap()
 }
 

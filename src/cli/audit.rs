@@ -111,4 +111,4 @@ fn enabled_str(enabled: bool) -> colored::ColoredString {
     } else {
         "disabled".dimmed()
     }
-}
+}

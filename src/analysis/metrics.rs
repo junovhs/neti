@@ -64,4 +64,4 @@ pub fn count_arguments(node: Node) -> usize {
         }
     }
     0
-}
+}

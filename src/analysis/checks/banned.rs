@@ -64,4 +64,4 @@ fn add_violation(text: &str, row: usize, out: &mut Vec<Violation>) {
         "LAW OF PARANOIA",
         details,
     ));
-}
+}

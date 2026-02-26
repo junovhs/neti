@@ -7,7 +7,7 @@ use tree_sitter::Parser;
 
 fn parse_and_detect(code: &str) -> Vec<Violation> {
     let mut parser = Parser::new();
-    parser.set_language(tree_sitter_rust::language()).unwrap();
+    parser.set_language(&tree_sitter_rust::LANGUAGE.into()).unwrap();
     let tree = parser.parse(code, None).unwrap();
     super::super::detect(code, tree.root_node(), Path::new("src/lib.rs"))
 }

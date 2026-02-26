@@ -28,7 +28,7 @@ fn detect_index_zero(
     out: &mut Vec<Violation>,
 ) {
     let q = r"(index_expression) @idx";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
     let mut cursor = QueryCursor::new();
@@ -136,7 +136,7 @@ fn classify_l03_confidence(
 
 fn detect_first_last_unwrap(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"(call_expression) @call";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
     let mut cursor = QueryCursor::new();

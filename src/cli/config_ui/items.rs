@@ -173,4 +173,4 @@ impl ConfigItem {
 
 fn checkbox(checked: bool) -> String {
     if checked { "[x]".to_string() } else { "[ ]".to_string() }
-}
+}

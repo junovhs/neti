@@ -9,7 +9,7 @@ use tree_sitter::{Node, Query, QueryCursor};
 /// Detects manual `From` implementations. Reported as INFO — style suggestion.
 pub(super) fn detect_i01(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r"(impl_item) @impl";
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
 
@@ -72,7 +72,9 @@ mod tests {
 
     fn parse_and_detect(code: &str) -> Vec<Violation> {
         let mut parser = Parser::new();
-        parser.set_language(tree_sitter_rust::language()).unwrap();
+        parser
+            .set_language(&tree_sitter_rust::LANGUAGE.into())
+            .unwrap();
         let tree = parser.parse(code, None).unwrap();
         super::super::detect(code, tree.root_node())
     }

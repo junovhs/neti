@@ -41,7 +41,7 @@ fn find_nested_loops(node: Node, out: &mut Vec<Violation>) {
 pub(super) fn check_p06(source: &str, body: Node, out: &mut Vec<Violation>) {
     let q = r#"(call_expression function: (field_expression
         field: (field_identifier) @m) (#match? @m "^(find|position)$")) @call"#;
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
     let mut cursor = QueryCursor::new();
@@ -75,7 +75,7 @@ mod tests {
 
     fn parse_and_detect(code: &str) -> Vec<Violation> {
         let mut parser = Parser::new();
-        parser.set_language(tree_sitter_rust::language()).unwrap();
+        parser.set_language(&tree_sitter_rust::LANGUAGE.into()).unwrap();
         let tree = parser.parse(code, None).unwrap();
         super::super::detect(code, tree.root_node(), Path::new("src/lib.rs"))
     }

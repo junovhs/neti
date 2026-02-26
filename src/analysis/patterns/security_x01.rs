@@ -7,7 +7,7 @@ use tree_sitter::{Node, Query, QueryCursor};
 
 pub(super) fn detect_x01_sql(source: &str, root: Node, out: &mut Vec<Violation>) {
     let q = r#"(macro_invocation macro: (identifier) @mac (token_tree) @args (#eq? @mac "format")) @fmt"#;
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
     let idx_args = query.capture_index_for_name("args");
@@ -50,7 +50,7 @@ mod tests {
 
     fn parse_and_detect(code: &str) -> Vec<Violation> {
         let mut parser = Parser::new();
-        parser.set_language(tree_sitter_rust::language()).unwrap();
+        parser.set_language(&tree_sitter_rust::LANGUAGE.into()).unwrap();
         let tree = parser.parse(code, None).unwrap();
         super::super::detect(code, tree.root_node())
     }

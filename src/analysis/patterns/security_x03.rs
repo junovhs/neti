@@ -13,7 +13,7 @@ pub(super) fn detect_x03_secrets(source: &str, root: Node, out: &mut Vec<Violati
             (#match? @name "(?i)(key|secret|token|password|auth)")) @const
     "#;
 
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else {
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
     let idx_value = query.capture_index_for_name("value");

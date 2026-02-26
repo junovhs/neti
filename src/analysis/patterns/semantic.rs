@@ -21,7 +21,7 @@ fn detect_m03(source: &str, root: Node, out: &mut Vec<Violation>) {
         parameters: (parameters (self_parameter) @self)
         (#match? @name "^(get_|is_|has_)")) @fn"#;
 
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else { return };
     let idx_fn = query.capture_index_for_name("fn");
     let idx_name = query.capture_index_for_name("name");
     let idx_self = query.capture_index_for_name("self");
@@ -59,7 +59,7 @@ fn detect_m04(source: &str, root: Node, out: &mut Vec<Violation>) {
         return_type: (_) @ret
         (#match? @name "^(is_|has_|can_|should_)")) @fn"#;
 
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else { return };
     let idx_fn = query.capture_index_for_name("fn");
     let idx_name = query.capture_index_for_name("name");
     let idx_ret = query.capture_index_for_name("ret");
@@ -97,7 +97,7 @@ fn detect_m05(source: &str, root: Node, out: &mut Vec<Violation>) {
         parameters: (parameters (self_parameter) @self)
         (#match? @name "^(calculate_|compute_|count_|sum_)")) @fn"#;
 
-    let Ok(query) = Query::new(tree_sitter_rust::language(), q) else { return };
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else { return };
     let idx_fn = query.capture_index_for_name("fn");
     let idx_name = query.capture_index_for_name("name");
     let idx_self = query.capture_index_for_name("self");
@@ -136,7 +136,7 @@ mod tests {
 
     fn parse_and_detect(code: &str) -> Vec<Violation> {
         let mut parser = Parser::new();
-        parser.set_language(tree_sitter_rust::language()).unwrap();
+        parser.set_language(&tree_sitter_rust::LANGUAGE.into()).unwrap();
         let tree = parser.parse(code, None).unwrap();
         detect(code, tree.root_node())
     }
@@ -170,4 +170,4 @@ mod tests {
         let code = "impl X { fn calculate_avg(&mut self) -> f64 { 0.0 } }";
         assert!(parse_and_detect(code).iter().any(|v| v.law == "M05"));
     }
-}
+}
