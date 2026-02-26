@@ -13,16 +13,17 @@ pub use runner::run_commands;
 /// Result of a single command execution.
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct CommandResult {
-    /// The command that was executed.
-    pub command: String,
-    /// Whether the command succeeded (exit code 0).
-    pub passed: bool,
-    /// Exit code, if available.
-    pub exit_code: Option<i32>,
-    /// Combined stdout and stderr output.
-    pub output: String,
-    /// Execution time in milliseconds.
-    pub duration_ms: u64,
+    #[serde(flatten)]
+    inner: CommandResultInner,
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+struct CommandResultInner {
+    command: String,
+    passed: bool,
+    exit_code: Option<i32>,
+    output: String,
+    duration_ms: u64,
 }
 
 impl CommandResult {
@@ -35,18 +36,51 @@ impl CommandResult {
         duration_ms: u64,
     ) -> Self {
         Self {
-            command,
-            passed,
-            exit_code,
-            output,
-            duration_ms,
+            inner: CommandResultInner {
+                command,
+                passed,
+                exit_code,
+                output,
+                duration_ms,
+            },
         }
+    }
+
+    /// The command that was executed.
+    #[must_use]
+    pub fn command(&self) -> &str {
+        &self.inner.command
+    }
+
+    /// Whether the command succeeded (exit code 0).
+    #[must_use]
+    pub fn passed(&self) -> bool {
+        self.inner.passed
+    }
+
+    /// Exit code, if available.
+    #[must_use]
+    pub fn exit_code(&self) -> Option<i32> {
+        self.inner.exit_code
+    }
+
+    /// Combined stdout and stderr output.
+    #[must_use]
+    pub fn output(&self) -> &str {
+        &self.inner.output
+    }
+
+    /// Execution time in milliseconds.
+    #[must_use]
+    pub fn duration_ms(&self) -> u64 {
+        self.inner.duration_ms
     }
 
     /// Count error lines in output.
     #[must_use]
     pub fn error_count(&self) -> usize {
-        self.output
+        self.inner
+            .output
             .lines()
             .filter(|line| {
                 let lower = line.to_lowercase();
@@ -58,7 +92,8 @@ impl CommandResult {
     /// Count warning lines in output.
     #[must_use]
     pub fn warning_count(&self) -> usize {
-        self.output
+        self.inner
+            .output
             .lines()
             .filter(|line| {
                 let lower = line.to_lowercase();
@@ -108,13 +143,13 @@ impl VerificationReport {
     /// Number of commands that passed.
     #[must_use]
     pub fn passed_count(&self) -> usize {
-        self.commands.iter().filter(|c| c.passed).count()
+        self.commands.iter().filter(|c| c.passed()).count()
     }
 
     /// Number of commands that failed.
     #[must_use]
     pub fn failed_count(&self) -> usize {
-        self.commands.iter().filter(|c| !c.passed).count()
+        self.commands.iter().filter(|c| !c.passed()).count()
     }
 
     /// Total errors across all command outputs.

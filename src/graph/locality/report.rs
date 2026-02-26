@@ -39,10 +39,7 @@ fn print_summary(report: &ValidationReport) {
         report.total_edges() - report.failed().len(),
         report.total_edges()
     );
-    println!(
-        "  Violations:   {}",
-        format_count(report.failed().len())
-    );
+    println!("  Violations:   {}", format_count(report.failed().len()));
 }
 
 fn format_count(n: usize) -> String {
@@ -78,14 +75,14 @@ fn print_violations_by_category(analysis: &TopologyAnalysis) {
                 kind.description()
             );
 
-            for v in violations {
+            violations.iter().for_each(|v| {
                 println!(
                     "    {} -> {}",
                     v.edge.from.display(),
                     v.edge.to.display().to_string().red()
                 );
                 println!("      {}", v.suggestion.dimmed());
-            }
+            });
         }
     }
 }
@@ -102,9 +99,9 @@ fn print_god_modules(analysis: &TopologyAnalysis) {
             gm.path.display().to_string().red(),
             gm.outbound_violations
         );
-        for target in &gm.targets {
+        gm.targets.iter().for_each(|target| {
             println!("      -> {}", target.display());
-        }
+        });
     }
 }
 
@@ -115,7 +112,9 @@ fn print_hub_candidates(analysis: &TopologyAnalysis) {
 
     println!(
         "\n{}",
-        "HUB CANDIDATES (frequently imported, not yet Hub)".yellow().bold()
+        "HUB CANDIDATES (frequently imported, not yet Hub)"
+            .yellow()
+            .bold()
     );
     for hc in &analysis.hub_candidates {
         println!(
@@ -165,17 +164,20 @@ fn print_layers(report: &ValidationReport) {
     }
 
     println!("\n{}", "LAYER ARCHITECTURE".cyan().bold());
-    
-    // Group modules by layer
-    let mut layers: std::collections::HashMap<usize, Vec<String>> = std::collections::HashMap::new();
+
+    // Use &str to avoid String conversion inside loop
+    let mut layers: std::collections::HashMap<usize, Vec<&str>> = std::collections::HashMap::new();
     for (path, layer) in report.layers() {
-        let name = path.file_stem().and_then(|s| s.to_str()).unwrap_or("?");
-        let name = if name == "mod" {
-             path.parent().and_then(|p| p.file_name()).and_then(|s| s.to_str()).unwrap_or("mod")
+        let raw = path.file_stem().and_then(|s| s.to_str()).unwrap_or("?");
+        let display_name = if raw == "mod" {
+            path.parent()
+                .and_then(|p| p.file_name())
+                .and_then(|s| s.to_str())
+                .unwrap_or("mod")
         } else {
-             name
+            raw
         };
-        layers.entry(*layer).or_default().push(name.to_string());
+        layers.entry(*layer).or_default().push(display_name);
     }
 
     // Sort layers
@@ -183,18 +185,21 @@ fn print_layers(report: &ValidationReport) {
     sorted_layers.sort_by_key(|(l, _)| *l);
 
     let max_bar = 30;
-    let max_files = sorted_layers.iter().map(|(_, m)| m.len()).max().unwrap_or(1);
+    let max_files = sorted_layers
+        .iter()
+        .map(|(_, m)| m.len())
+        .max()
+        .unwrap_or(1);
 
     for (layer, modules) in sorted_layers {
         let mut mods = modules;
-        // Deduplicate and sort
         mods.sort();
         mods.dedup();
-        
+
         let count = mods.len();
         let bar_len = (count * max_bar) / max_files;
         let bar = "█".repeat(bar_len.max(1));
-        
+
         let role = if layer == 0 { "(leaf)" } else { "" };
 
         println!("  L{layer} {role:<6} {bar} {count} files");

@@ -1,32 +1,22 @@
+// src/analysis/patterns/concurrency_lock.rs
 //! C03: `MutexGuard` held across `.await`
 //!
 //! # Severity Tiers
 //!
-//! Not all "lock held across await" patterns carry the same risk:
-//!
 //! **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH confidence**
-//! Holding a sync guard across `.await` is a *bug*: it blocks the OS thread,
-//! starving the executor, and can deadlock if another task on the same thread
-//! tries to acquire the same lock. This is the original C03 intent.
+//! Holding a sync guard across `.await` blocks the OS thread, starving the
+//! executor, and can deadlock if another task tries to acquire the same lock.
 //!
 //! **Async mutex (tokio::sync::Mutex, futures::lock::Mutex) — MEDIUM confidence**
-//! Async mutexes yield to the executor when contended. Holding them across
-//! `.await` is not a deadlock, but it may cause head-of-line blocking (other
-//! tasks waiting for this lock are stalled while the holder does I/O). The
-//! guidance is different: minimize work inside the lock scope, not "use a
-//! different mutex."
-//!
-//! # Detection Heuristic
-//!
-//! We cannot do full type inference. The heuristic:
-//! 1. If the lock-acquisition line itself contains `.lock().await` (or
-//!    `.read().await`, `.write().await`) → async mutex.
-//! 2. Else if the source file imports `tokio::sync::*` or equivalent →
-//!    async context; apply reduced severity.
-//! 3. Otherwise → assume sync mutex; apply high severity.
+//! Async mutexes yield on contention. Holding them across `.await` causes
+//! head-of-line blocking rather than deadlock.
 
 use crate::types::{Confidence, Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
+
+#[cfg(test)]
+#[path = "concurrency_lock_test.rs"]
+mod tests;
 
 /// Mutex lock kind, inferred from usage/import patterns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -147,26 +137,22 @@ fn has_async_mutex_import(source: &str) -> bool {
 
 fn build_c03_violation(row: usize, fn_name: &str, kind: MutexKind) -> Violation {
     match kind {
-        MutexKind::Sync => {
-            // HIGH: sync mutex across await is a provable bug
-            Violation::with_details(
-                row,
-                format!("Sync MutexGuard may be held across `.await` in `{fn_name}`"),
-                "C03",
-                ViolationDetails {
-                    function_name: Some(fn_name.to_string()),
-                    analysis: vec![
-                        "Holding a sync guard across .await blocks the OS thread.".into(),
-                        "std::sync::Mutex is not async-aware — deadlock risk.".into(),
-                    ],
-                    suggestion: Some(
-                        "Use `tokio::sync::Mutex` or drop the guard before the await point.".into(),
-                    ),
-                },
-            )
-        }
+        MutexKind::Sync => Violation::with_details(
+            row,
+            format!("Sync MutexGuard may be held across `.await` in `{fn_name}`"),
+            "C03",
+            ViolationDetails {
+                function_name: Some(fn_name.to_string()),
+                analysis: vec![
+                    "Holding a sync guard across .await blocks the OS thread.".into(),
+                    "std::sync::Mutex is not async-aware — deadlock risk.".into(),
+                ],
+                suggestion: Some(
+                    "Use `tokio::sync::Mutex` or drop the guard before the await point.".into(),
+                ),
+            },
+        ),
         MutexKind::Async => {
-            // MEDIUM: async mutex across await is a performance concern, not a bug
             let mut v = Violation::with_details(
                 row,
                 format!("Async MutexGuard held across `.await` in `{fn_name}` — HoL risk"),
@@ -196,92 +182,4 @@ fn get_fn_name(source: &str, fn_node: Node) -> Option<String> {
         .utf8_text(source.as_bytes())
         .ok()
         .map(String::from)
-}
-
-#[cfg(test)]
-#[allow(clippy::unwrap_used)]
-mod tests {
-    use super::*;
-    use tree_sitter::Parser;
-
-    fn parse_and_detect(code: &str) -> Vec<Violation> {
-        let mut parser = Parser::new();
-        parser.set_language(tree_sitter_rust::language()).unwrap();
-        let tree = parser.parse(code, None).unwrap();
-        detect_c03(code, tree.root_node())
-    }
-
-    #[test]
-    fn c03_flags_sync_mutex_across_await() {
-        let code = r#"
-            async fn handler(state: Arc<Mutex<Vec<u8>>>) {
-                let guard = state.lock().unwrap();
-                do_io().await;
-                drop(guard);
-            }
-        "#;
-        let vs = parse_and_detect(code);
-        assert!(vs.iter().any(|v| v.law == "C03"));
-    }
-
-    #[test]
-    fn c03_async_mutex_gets_hol_message() {
-        let code = r#"
-            use tokio::sync::Mutex;
-            async fn handler(state: Arc<Mutex<Vec<u8>>>) {
-                let guard = state.lock().await;
-                do_io().await;
-                drop(guard);
-            }
-        "#;
-        let vs = parse_and_detect(code);
-        if let Some(v) = vs.iter().find(|v| v.law == "C03") {
-            assert!(
-                v.message.contains("HoL") || v.message.contains("Async"),
-                "Async mutex should get HoL message, got: {}",
-                v.message
-            );
-            assert_eq!(v.confidence, Confidence::Medium);
-        }
-    }
-
-    #[test]
-    fn c03_no_violation_without_await_span() {
-        let code = r#"
-            async fn handler(state: Arc<Mutex<Vec<u8>>>) {
-                let data = {
-                    let guard = state.lock().unwrap();
-                    guard.clone()
-                };
-                do_io().await;
-                process(data).await;
-            }
-        "#;
-        let vs = parse_and_detect(code);
-        assert!(vs.iter().all(|v| v.law != "C03"));
-    }
-
-    #[test]
-    fn classify_sync_by_default() {
-        assert_eq!(
-            classify_mutex_kind("", "let g = m.lock().unwrap();\n"),
-            MutexKind::Sync
-        );
-    }
-
-    #[test]
-    fn classify_async_by_body_pattern() {
-        assert_eq!(
-            classify_mutex_kind("", "let g = m.lock().await;\n"),
-            MutexKind::Async
-        );
-    }
-
-    #[test]
-    fn classify_async_by_import() {
-        assert_eq!(
-            classify_mutex_kind("use tokio::sync::Mutex;", "let g = m.lock().unwrap();\n"),
-            MutexKind::Async
-        );
-    }
 }

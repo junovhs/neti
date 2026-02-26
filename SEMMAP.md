@@ -32,9 +32,6 @@ Configuration items that can be edited. Centralizes project configuration.
 Module providing `move_selection`, `run_editor`. Centralizes project configuration.
 → Exports: move_selection, run_editor
 
-`src/cli/config_ui/mod.rs`
-Orchestrates `editor`. Centralizes project configuration.
-
 `src/cli/config_ui/render.rs`
 Module providing `draw`. Centralizes project configuration.
 → Exports: draw
@@ -46,10 +43,6 @@ Module providing `apply_project_defaults`, `load_ignore_file`, `load_toml_config
 `src/config/locality.rs`
 Configuration for the Law of Locality enforcement. Centralizes project configuration.
 → Exports: LocalityConfig, is_enabled, is_error_mode, to_validator_config
-
-`src/config/mod.rs`
-Module providing `load`, `load_local_config`, `new`. Centralizes project configuration.
-→ Exports: load, load_local_config, new, parse_toml, process_ignore_line, save, save_to_file, validate
 
 `src/config/types.rs`
 Module providing `CommandEntry`, `Config`, `NetiToml`. Centralizes project configuration.
@@ -75,12 +68,19 @@ Orchestrates `clap`, `colored`, `neti_core`. Defines command-line interface.
 Module providing `Cli`, `Commands`. Defines command-line interface.
 → Exports: Cli, Commands
 
+`src/cli/config_ui/mod.rs`
+Orchestrates `editor`. Centralizes project configuration.
+
 `src/cli/handlers/mod.rs`
 Core analysis command handlers. Supports application functionality.
 → Exports: get_repo_root, handle_check, handle_scan
 
 `src/cli/mod.rs`
 CLI command handlers. Supports application functionality.
+
+`src/config/mod.rs`
+Module providing `load`, `load_local_config`, `new`. Centralizes project configuration.
+→ Exports: load, load_local_config, new, parse_toml, process_ignore_line, save, save_to_file, validate
 
 `src/graph/defs/mod.rs`
 Extracts symbol DEFINITIONS from source files using tree-sitter. Supports application functionality.
@@ -176,7 +176,7 @@ Concurrency pattern detection: C03, C04. Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/concurrency_lock.rs`
-C03: `MutexGuard` held across `.await`  Severity Tiers  Not all "lock held across await" patterns carry the same risk:  **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH confidence** Holding a sync guard across `.await` is a *bug*: it blocks the OS thread, starving the executor, and can deadlock if another task on the same thread tries to acquire the same lock. Supports application functionality.
+C03: `MutexGuard` held across `.await`  Severity Tiers  **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH confidence** Holding a sync guard across `.await` blocks the OS thread, starving the executor, and can deadlock if another task tries to acquire the same lock. Supports application functionality.
 → Exports: detect_c03
 
 `src/analysis/patterns/concurrency_sync.rs`
@@ -191,9 +191,21 @@ Database anti-patterns: P03 (N+1 queries). Supports application functionality.
 Idiomatic patterns: I01, I02. Supports application functionality.
 → Exports: detect
 
+`src/analysis/patterns/idiomatic_i01.rs`
+I01: Manual `From` implementations that could use `derive_more::From`. Supports application functionality.
+
+`src/analysis/patterns/idiomatic_i02.rs`
+I02: Duplicate match arm bodies that could be combined using `A | B => body`. Supports application functionality.
+
 `src/analysis/patterns/logic.rs`
 Logic boundary patterns: L02 (off-by-one risk), L03 (unchecked index). Supports application functionality.
 → Exports: detect
+
+`src/analysis/patterns/logic_l02.rs`
+L02: Boundary uses `<=`/`>=` with `.len()` — possible off-by-one. Supports application functionality.
+
+`src/analysis/patterns/logic_l03.rs`
+L03: Unchecked index access (`[0]`, `.first().unwrap()`, etc.). Supports application functionality.
 
 `src/analysis/patterns/logic_proof.rs`
 Fixed-size array proof helpers for L03. Supports application functionality.
@@ -203,13 +215,31 @@ Fixed-size array proof helpers for L03. Supports application functionality.
 Performance anti-patterns: P01, P02, P04, P06  Escalation Philosophy  P01/P02 must only fire when we can make a reasonable argument that the allocation is *material*. Supports application functionality.
 → Exports: detect
 
+`src/analysis/patterns/performance_p01.rs`
+P01: `.clone()` inside a loop. Supports application functionality.
+
+`src/analysis/patterns/performance_p02.rs`
+P02: String conversion (`.to_string()` / `.to_owned()`) inside a loop. Supports application functionality.
+
+`src/analysis/patterns/performance_p04p06.rs`
+P04: Nested loop (O(n²)) and P06: linear search inside loop. Supports application functionality.
+
 `src/analysis/patterns/resource.rs`
 Resource patterns: R07 (missing flush). Supports application functionality.
 → Exports: detect
 
 `src/analysis/patterns/security.rs`
-Security patterns: X01, X02, X03  X02 Design  The original X02 rule flagged any `Command::new(variable)` as "command injection." This is over-broad and generates false positives on idiomatic `tokio::process::Command` usage in Dioxus/CLI tools. Supports application functionality.
+Security patterns: X01 (SQL injection), X02 (command injection), X03 (hardcoded secrets). Supports application functionality.
 → Exports: detect
+
+`src/analysis/patterns/security_x01.rs`
+X01: SQL Injection — format!() used to build SQL strings. Supports application functionality.
+
+`src/analysis/patterns/security_x02.rs`
+X02: Command / Shell Injection. Supports application functionality.
+
+`src/analysis/patterns/security_x03.rs`
+X03: Hardcoded secrets (keys, tokens, passwords) in let/const bindings. Supports application functionality.
 
 `src/analysis/patterns/semantic.rs`
 Semantic patterns: M03, M04, M05. Supports application functionality.
@@ -405,7 +435,21 @@ Detects project type from current directory. Supports application functionality.
 
 `src/reporting.rs`
 Console output formatting for scan results. Supports application functionality.
-→ Exports: build_rich_report, format_report_string, print_json, print_report
+→ Exports: print_json
+
+`src/reporting/console.rs`
+Prints a formatted scan report to stdout with confidence tiers and deduplication. Supports application functionality.
+→ Exports: print_report
+
+`src/reporting/guidance.rs`
+Static educational guidance per rule code. Supports application functionality.
+
+`src/reporting/rich.rs`
+Module providing `build_rich_report`, `format_report_string`. Supports application functionality.
+→ Exports: build_rich_report, format_report_string
+
+`src/reporting/shared.rs`
+Orchestrates `crate`. Supports application functionality.
 
 `src/skeleton.rs`
 Reduces code to its structural skeleton (signatures only). Supports application functionality.
@@ -468,5 +512,8 @@ Test context detection for pattern detectors. Verifies correctness.
 → Exports: is_test_context
 
 `src/graph/locality/tests.rs`
-Integration tests for locality analysis. Verifies correctness.
+Integration tests for locality analysis — part 1. Verifies correctness.
+
+`src/graph/locality/tests/part2.rs`
+Integration tests for locality analysis — part 2. Verifies correctness.
 

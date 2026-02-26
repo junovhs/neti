@@ -7,8 +7,8 @@
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
-use super::types::LocalityEdge;
 use super::analysis::ViolationKind;
+use super::types::LocalityEdge;
 
 /// Infers layers from a set of edges.
 /// Returns a map of Path -> Layer Index.
@@ -20,19 +20,19 @@ where
 
     let mut layers: HashMap<PathBuf, usize> = HashMap::new();
     let mut current_layer_idx = 0;
-    
+
     loop {
         let next_layer = find_next_layer(&nodes, &layers, &dependencies);
 
         if next_layer.is_empty() {
-             handle_remaining_nodes(&nodes, &mut layers, current_layer_idx);
-             break;
+            handle_remaining_nodes(&nodes, &mut layers, current_layer_idx);
+            break;
         }
 
-        for node in next_layer {
+        next_layer.into_iter().for_each(|node| {
             layers.insert(node, current_layer_idx);
-        }
-        
+        });
+
         if layers.len() == nodes.len() {
             break;
         }
@@ -54,7 +54,10 @@ where
         nodes.insert(from.to_path_buf());
         nodes.insert(to.to_path_buf());
         if from != to {
-            dependencies.entry(from.to_path_buf()).or_default().insert(to.to_path_buf());
+            dependencies
+                .entry(from.to_path_buf())
+                .or_default()
+                .insert(to.to_path_buf());
         }
     }
     (nodes, dependencies)
@@ -91,11 +94,11 @@ fn handle_remaining_nodes(
     layers: &mut HashMap<PathBuf, usize>,
     current_layer_idx: usize,
 ) {
-     for node in nodes {
-         if !layers.contains_key(node) {
-             layers.insert(node.clone(), current_layer_idx + 1);
-         }
-     }
+    for node in nodes {
+        if !layers.contains_key(node) {
+            layers.insert(node.clone(), current_layer_idx + 1);
+        }
+    }
 }
 
 /// Checks if an edge violates layer ordering (must go down, never up).

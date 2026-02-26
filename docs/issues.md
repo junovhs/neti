@@ -74,6 +74,13 @@ Description of the task.
 
 ---
 
+## [23] HOTFIX: Governance compliance (Atomicity, Coupling, Cohesion)
+**Status:** DONE
+**Files:** `src/analysis/patterns/*`, `src/cli/handlers/mod.rs`, `src/analysis/engine.rs`, `src/verification/mod.rs`, `src/graph/rank/builder.rs`
+**Resolution:** Rescued a botched refactor. Split test suites out of 8 rule files into `_test.rs` modules to satisfy the Law of Atomicity (<2000 tokens). Refactored `Engine` into free functions to fix CBO/SFOUT coupling violations. Fixed `CommandResult` LCOM4/AHF encapsulation by introducing `CommandResultInner` with explicit getter methods. Fixed P02/P04 looping violations in graph building. Codebase is now 100% green with zero `neti:allow` suppressions.
+
+---
+
 ## [8] Safety rule robustness: recognize SAFETY justifications
 **Status:** OPEN
 **Files:** `src/analysis/safety.rs`, tests

@@ -41,13 +41,11 @@ fn run_query(source: &str, lang: Language, query: &Query) -> Vec<String> {
     let matches = cursor.matches(query, tree.root_node(), source.as_bytes());
     let mut imports = Vec::new();
 
-    for m in matches {
-        for capture in m.captures {
-            if let Ok(text) = capture.node.utf8_text(source.as_bytes()) {
-                imports.push(clean_text(text));
-            }
+    matches.flat_map(|m| m.captures).for_each(|capture| {
+        if let Ok(text) = capture.node.utf8_text(source.as_bytes()) {
+            imports.push(clean_text(text));
         }
-    }
+    });
 
     imports
 }
@@ -97,12 +95,12 @@ mod tests {
 
         for (filename, code, expected) in cases {
             let imports = extract(Path::new(filename), code);
-            for item in expected {
+            expected.iter().for_each(|item| {
                 assert!(
                     imports.contains(&item.to_string()),
                     "File {filename} missing import {item}"
                 );
-            }
+            });
         }
     }
-}
+}

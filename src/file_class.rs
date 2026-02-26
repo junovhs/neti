@@ -82,21 +82,16 @@ fn classify_by_ext(ext: &str) -> FileKind {
         "rs" | "py" | "ts" | "tsx" | "js" | "jsx" => FileKind::SourceCode,
 
         // Config — structured data, no complexity rules
-        "toml" | "yaml" | "yml" | "ini" | "cfg" | "env" | "properties" => FileKind::Config,
-
         // JSON is tricky: generated schemas and lockfiles can be enormous.
         // Classify as Config so token limits do not apply.
-        "json" | "jsonc" => FileKind::Config,
+        "toml" | "yaml" | "yml" | "ini" | "cfg" | "env" | "properties" | "json" | "jsonc" => {
+            FileKind::Config
+        }
 
         // Assets — presentation and styling, no governance
         "html" | "htm" | "xml" | "svg" | "css" | "scss" | "sass" | "less" => FileKind::Asset,
 
-        // Docs and data
-        "md" | "mdx" | "txt" | "rst" | "adoc" | "asciidoc" => FileKind::Other,
-
-        // Lock files / generated
-        "lock" | "sum" | "snap" => FileKind::Other,
-
+        // Everything else: docs, data, lock files, generated artifacts
         _ => FileKind::Other,
     }
 }
@@ -162,4 +157,3 @@ mod tests {
         assert_eq!(classify(Path::new("Cargo.lock")), FileKind::Other);
     }
 }
-

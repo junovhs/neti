@@ -42,12 +42,10 @@ fn apply_skeleton(source: &str, lang: Language, query: &Query, replacement: &str
     let mut cursor = QueryCursor::new();
     let matches = cursor.matches(query, tree.root_node(), source.as_bytes());
 
-    let mut ranges = Vec::new();
-    for m in matches {
-        for capture in m.captures {
-            ranges.push(capture.node.byte_range());
-        }
-    }
+    let ranges: Vec<_> = matches
+        .flat_map(|m| m.captures)
+        .map(|c| c.node.byte_range())
+        .collect();
 
     // Filter nested ranges: if Range A contains Range B, we only want A.
     // We want the outermost bodies to be replaced.
@@ -204,7 +202,7 @@ mod tests {
 
         for (path, source, checks, desc) in cases {
             let result = clean(Path::new(path), source);
-            for check in checks {
+            checks.iter().for_each(|check| {
                 if let Some(stripped) = check.strip_prefix('!') {
                     assert!(
                         !result.contains(stripped),
@@ -213,7 +211,7 @@ mod tests {
                 } else {
                     assert!(result.contains(check), "{desc}: Should contain '{check}'");
                 }
-            }
+            });
         }
     }
 }

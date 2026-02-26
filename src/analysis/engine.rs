@@ -19,16 +19,9 @@ pub const SMALL_CODEBASE_THRESHOLD: usize = 10;
 
 /// The main analysis engine.
 /// Orchestrates file scanning, pattern detection, and structural analysis.
-pub struct Engine {
-    config: Config,
-}
+pub struct Engine;
 
 impl Engine {
-    #[must_use]
-    pub fn new(config: Config) -> Self {
-        Self { config }
-    }
-
     /// Returns the small codebase threshold for external display.
     #[must_use]
     pub const fn small_codebase_threshold() -> usize {
@@ -37,7 +30,7 @@ impl Engine {
 
     /// Entry point for scanning files with progress callbacks.
     pub fn scan_with_progress<F, S>(
-        &self,
+        config: &Config,
         files: &[PathBuf],
         on_progress: &F,
         on_status: &S,
@@ -55,7 +48,7 @@ impl Engine {
             .inspect(|path| {
                 on_progress(path);
             })
-            .map(|path| worker::scan_file(path, &self.config))
+            .map(|path| worker::scan_file(path, config))
             .collect();
 
         // Phase 2: Deep Analysis (Sequential/Aggregated)
@@ -63,53 +56,52 @@ impl Engine {
         on_status("Running Deep Analysis (LCOM4/CBO)...");
 
         if should_run_deep_analysis(&results) {
-            let deep_violations = self.run_deep_analysis(&results);
+            let deep_violations = run_deep_analysis(config, &results);
             merge_violations(&mut results, &deep_violations);
         }
 
-        ScanReport {
-            total_violations: results.iter().map(|r| r.violations.len()).sum(),
-            total_tokens: results.iter().map(|r| r.token_count).sum(),
-            files: results,
-            duration_ms: start.elapsed().as_millis(),
-        }
+        finalize_report(results, start)
     }
 
     /// Entry point for scanning files without progress callbacks.
     #[must_use]
-    pub fn scan(&self, files: &[PathBuf]) -> ScanReport {
+    pub fn scan(config: &Config, files: &[PathBuf]) -> ScanReport {
         let start = std::time::Instant::now();
 
         let mut results: Vec<FileReport> = files
             .par_iter()
-            .map(|path| worker::scan_file(path, &self.config))
+            .map(|path| worker::scan_file(path, config))
             .collect();
 
         if should_run_deep_analysis(&results) {
-            let deep_violations = self.run_deep_analysis(&results);
+            let deep_violations = run_deep_analysis(config, &results);
             merge_violations(&mut results, &deep_violations);
         }
 
-        ScanReport {
-            total_violations: results.iter().map(|r| r.violations.len()).sum(),
-            total_tokens: results.iter().map(|r| r.token_count).sum(),
-            files: results,
-            duration_ms: start.elapsed().as_millis(),
+        finalize_report(results, start)
+    }
+}
+
+fn run_deep_analysis(config: &Config, results: &[FileReport]) -> HashMap<PathBuf, Vec<Violation>> {
+    // Aggregate scopes from all files
+    let mut aggregator = Aggregator::new();
+    for report in results {
+        if let Some(analysis) = &report.analysis {
+            aggregator.ingest(&report.path, analysis);
         }
     }
 
-    fn run_deep_analysis(&self, results: &[FileReport]) -> HashMap<PathBuf, Vec<Violation>> {
-        // Aggregate scopes from all files
-        let mut aggregator = Aggregator::new();
-        for report in results {
-            if let Some(analysis) = &report.analysis {
-                aggregator.ingest(&report.path, analysis);
-            }
-        }
+    // Run deep inspector
+    let deep_analyzer = DeepAnalyzer::new(&config.rules);
+    deep_analyzer.compute_violations(&aggregator)
+}
 
-        // Run deep inspector
-        let deep_analyzer = DeepAnalyzer::new(&self.config.rules);
-        deep_analyzer.compute_violations(&aggregator)
+fn finalize_report(results: Vec<FileReport>, start: std::time::Instant) -> ScanReport {
+    ScanReport {
+        total_violations: results.iter().map(|r| r.violations.len()).sum(),
+        total_tokens: results.iter().map(|r| r.token_count).sum(),
+        files: results,
+        duration_ms: start.elapsed().as_millis(),
     }
 }
 

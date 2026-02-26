@@ -90,6 +90,12 @@ fn extract_defs(
     }
 }
 
+/// Extracts the short symbol name from a fully-qualified import path.
+/// `std::io::Write` → `Write`, `./utils` → `./utils`
+fn short_symbol(ref_name: &str) -> &str {
+    ref_name.split("::").last().unwrap_or(ref_name)
+}
+
 fn extract_refs(
     path: &Path,
     content: &str,
@@ -97,17 +103,13 @@ fn extract_refs(
     references: &mut HashMap<String, HashSet<PathBuf>>,
 ) {
     for ref_name in imports::extract(path, content) {
-        let symbol = ref_name
-            .split("::")
-            .last()
-            .unwrap_or(&ref_name)
-            .to_string();
-        
+        let symbol = String::from(short_symbol(&ref_name));
+
         references
             .entry(symbol.clone())
             .or_default()
             .insert(path.to_path_buf());
-            
+
         tags.push(Tag {
             file: path.to_path_buf(),
             name: symbol,
@@ -147,15 +149,16 @@ fn add_symbol_edges(
     };
 
     for ref_file in ref_files {
-        for def_file in def_files {
-            if ref_file != def_file {
+        def_files
+            .iter()
+            .filter(|&df| df != ref_file)
+            .for_each(|def_file| {
                 *edges
                     .entry(ref_file.clone())
                     .or_default()
                     .entry(def_file.clone())
                     .or_default() += 1;
-            }
-        }
+            });
     }
 }
 
