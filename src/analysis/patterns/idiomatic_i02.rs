@@ -22,18 +22,11 @@ pub(super) fn detect_i02(source: &str, root: Node, out: &mut Vec<Violation>) {
     let idx_block = query.capture_index_for_name("block");
 
     let mut cursor = QueryCursor::new();
-    for m in cursor.matches(&query, root, source.as_bytes()) {
-        let mut match_node = None;
-        let mut block = None;
+    let matches: Vec<_> = cursor.matches(&query, root, source.as_bytes()).collect();
 
-        for cap in m.captures {
-            if Some(cap.index) == idx_match {
-                match_node = Some(cap.node);
-            }
-            if Some(cap.index) == idx_block {
-                block = Some(cap.node);
-            }
-        }
+    for m in &matches {
+        let match_node = find_capture(m, idx_match);
+        let block = find_capture(m, idx_block);
 
         let (Some(match_node), Some(block)) = (match_node, block) else {
             continue;
@@ -41,6 +34,11 @@ pub(super) fn detect_i02(source: &str, root: Node, out: &mut Vec<Violation>) {
 
         check_duplicate_arms(source, match_node, block, out);
     }
+}
+
+fn find_capture<'a>(m: &tree_sitter::QueryMatch<'_, 'a>, idx: Option<u32>) -> Option<Node<'a>> {
+    let i = idx?;
+    m.captures.iter().find(|c| c.index == i).map(|c| c.node)
 }
 
 fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut Vec<Violation>) {
@@ -70,8 +68,17 @@ fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut V
         }
     }
 
+    emit_duplicates(&arm_bodies, &arm_patterns, match_node, out);
+}
+
+fn emit_duplicates(
+    arm_bodies: &HashMap<&str, usize>,
+    arm_patterns: &HashMap<&str, Vec<&str>>,
+    match_node: Node,
+    out: &mut Vec<Violation>,
+) {
     let empty_patterns = Vec::new();
-    for (body, count) in &arm_bodies {
+    for (body, count) in arm_bodies {
         if *count < 2 {
             continue;
         }
@@ -82,11 +89,7 @@ fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut V
             continue;
         }
 
-        let truncated = if body.len() > 30 {
-            format!("{}...", &body[..30])
-        } else {
-            body.to_string()
-        };
+        let truncated = truncate_body(body);
 
         out.push(Violation::with_details(
             match_node.start_position().row + 1,
@@ -101,32 +104,53 @@ fn check_duplicate_arms(source: &str, match_node: Node, block: Node, out: &mut V
     }
 }
 
+fn truncate_body(body: &str) -> String {
+    if body.len() > 30 {
+        format!("{}...", &body[..30])
+    } else {
+        body.to_string()
+    }
+}
+
 fn patterns_have_incompatible_types(patterns: &[&str]) -> bool {
     if patterns.len() < 2 {
         return false;
     }
 
+    let per_arm_variants = collect_per_arm_variants(patterns);
+    let Some(per_arm_variants) = per_arm_variants else {
+        return false;
+    };
+
+    if per_arm_variants.len() < 2 {
+        return false;
+    }
+
+    check_variant_incompatibility(&per_arm_variants)
+}
+
+fn collect_per_arm_variants<'a>(patterns: &[&'a str]) -> Option<Vec<Vec<&'a str>>> {
     let mut per_arm_variants: Vec<Vec<&str>> = Vec::new();
 
     for pat in patterns {
         let trimmed = pat.trim();
 
         if !trimmed.contains('(') {
-            return false;
+            return None;
         }
 
         let variants = extract_variant_names(trimmed);
         if variants.is_empty() {
-            return false;
+            return None;
         }
 
         per_arm_variants.push(variants);
     }
 
-    if per_arm_variants.len() < 2 {
-        return false;
-    }
+    Some(per_arm_variants)
+}
 
+fn check_variant_incompatibility(per_arm_variants: &[Vec<&str>]) -> bool {
     let expected_count = per_arm_variants[0].len();
     if !per_arm_variants.iter().all(|v| v.len() == expected_count) {
         return false;
@@ -135,12 +159,7 @@ fn patterns_have_incompatible_types(patterns: &[&str]) -> bool {
     for slot in 0..expected_count {
         let names_in_slot: Vec<&str> = per_arm_variants.iter().map(|v| v[slot]).collect();
 
-        let unique_count = {
-            let mut sorted = names_in_slot.clone();
-            sorted.sort();
-            sorted.dedup();
-            sorted.len()
-        };
+        let unique_count = count_unique(&names_in_slot);
 
         if unique_count == names_in_slot.len() && unique_count >= 2 {
             return true;
@@ -148,6 +167,13 @@ fn patterns_have_incompatible_types(patterns: &[&str]) -> bool {
     }
 
     false
+}
+
+fn count_unique(items: &[&str]) -> usize {
+    let mut sorted: Vec<&str> = items.to_vec();
+    sorted.sort_unstable();
+    sorted.dedup();
+    sorted.len()
 }
 
 fn extract_variant_names(pattern: &str) -> Vec<&str> {

@@ -26,25 +26,36 @@ pub fn check_naming(ctx: &CheckContext, query: &Query, out: &mut Vec<Violation>)
 fn process_match(m: &QueryMatch, ctx: &CheckContext, out: &mut Vec<Violation>) {
     for capture in m.captures {
         if let Ok(name) = capture.node.utf8_text(ctx.source.as_bytes()) {
-            let word_count = count_words(name);
-            if word_count > ctx.config.max_function_words {
-                let details = ViolationDetails {
-                    function_name: Some(name.to_string()),
-                    analysis: vec![format!("Name has {word_count} words")],
-                    suggestion: Some(suggest_shorter_name(name)),
-                };
-                out.push(Violation::with_details(
-                    capture.node.start_position().row + 1,
-                    format!(
-                        "Function name '{name}' has {word_count} words (Max: {})",
-                        ctx.config.max_function_words
-                    ),
-                    "LAW OF COMPLEXITY",
-                    details,
-                ));
-            }
+            check_word_count(name, capture.node, ctx, out);
         }
     }
+}
+
+fn check_word_count(
+    name: &str,
+    node: tree_sitter::Node,
+    ctx: &CheckContext,
+    out: &mut Vec<Violation>,
+) {
+    let word_count = count_words(name);
+    if word_count <= ctx.config.max_function_words {
+        return;
+    }
+    let owned_name = name.to_string();
+    let details = ViolationDetails {
+        function_name: Some(owned_name),
+        analysis: vec![format!("Name has {word_count} words")],
+        suggestion: Some(suggest_shorter_name(name)),
+    };
+    out.push(Violation::with_details(
+        node.start_position().row + 1,
+        format!(
+            "Function name '{name}' has {word_count} words (Max: {})",
+            ctx.config.max_function_words
+        ),
+        "LAW OF COMPLEXITY",
+        details,
+    ));
 }
 
 fn suggest_shorter_name(name: &str) -> String {

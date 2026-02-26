@@ -21,29 +21,26 @@ pub fn extract(source: &str, root: Node, out: &mut HashMap<String, Scope>) {
 }
 
 fn process_impl_match(source: &str, m: &tree_sitter::QueryMatch, out: &mut HashMap<String, Scope>) {
-    let mut name = String::new();
-    let mut body_node = None;
-    let mut name_row = 1;
+    let name_cap = m.captures.iter().find(|c| c.index == 0);
+    let body_cap = m.captures.iter().find(|c| c.index == 1);
 
-    for cap in m.captures {
-        if cap.index == 0 {
-            name = cap
-                .node
-                .utf8_text(source.as_bytes())
-                .unwrap_or("")
-                .to_string();
-            name_row = cap.node.start_position().row + 1;
-        } else if cap.index == 1 {
-            body_node = Some(cap.node);
-        }
-    }
+    let Some(name_node) = name_cap.map(|c| c.node) else {
+        return;
+    };
+    let name = name_node
+        .utf8_text(source.as_bytes())
+        .unwrap_or("")
+        .to_string();
+    let name_row = name_node.start_position().row + 1;
 
-    if let Some(body) = body_node {
-        let scope = out
-            .entry(name.clone())
-            .or_insert_with(|| Scope::new(&name, name_row));
-        process_impl_body(source, body, scope);
-    }
+    let Some(body) = body_cap.map(|c| c.node) else {
+        return;
+    };
+
+    let scope = out
+        .entry(name.clone())
+        .or_insert_with(|| Scope::new(&name, name_row));
+    process_impl_body(source, body, scope);
 }
 
 fn process_impl_body(source: &str, body: Node, scope: &mut Scope) {

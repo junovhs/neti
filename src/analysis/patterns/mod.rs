@@ -54,7 +54,7 @@ fn get_rust_lang(path: &Path) -> Option<Lang> {
 
 fn parse_source(source: &str, lang: Lang) -> Option<tree_sitter::Tree> {
     let mut parser = Parser::new();
-    parser.set_language(lang.grammar()).ok()?;
+    parser.set_language(&lang.grammar()).ok()?;
     parser.parse(source, None)
 }
 

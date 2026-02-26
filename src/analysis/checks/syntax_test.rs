@@ -7,7 +7,7 @@ use tree_sitter::Parser;
 
 fn run_syntax_check(code: &str, filename: &str) -> Vec<Violation> {
     let mut parser = Parser::new();
-    parser.set_language(Lang::Rust.grammar()).unwrap();
+    parser.set_language(&Lang::Rust.grammar()).unwrap();
     let tree = parser.parse(code, None).unwrap();
     let config = RuleConfig::default();
     let ctx = CheckContext {

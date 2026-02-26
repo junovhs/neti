@@ -2,29 +2,21 @@
 NETI SCAN REPORT
 ========================================
 
-SCAN SUMMARY: 195 files | 219348 tokens | 19 violations
+SCAN SUMMARY: 195 files | 220399 tokens | 6 violations
 
 ALL VIOLATING FILES:
-    3 violations | src\analysis\patterns\idiomatic_i02.rs
-    3 violations | src\analysis\patterns\semantic.rs
     3 violations | src\analysis\structural.rs
-    2 violations | src\analysis\extract.rs
     1 violations | src\analysis\ast.rs
-    1 violations | src\analysis\checks\naming.rs
-    1 violations | src\analysis\extract_impl.rs
-    1 violations | src\analysis\patterns\logic_helpers.rs
-    1 violations | src\analysis\patterns\logic_proof_helpers.rs
-    1 violations | src\analysis\patterns\performance.rs
+    1 violations | src\analysis\extract.rs
     1 violations | src\cli\handlers\scan_report.rs
-    1 violations | src\lang.rs
 
-warn: [1 of 8] Nested loop (O(n²)) detected
-  --> src\analysis\ast.rs:80
+warn: [1 of 6] Nested loop (O(n²)) detected
+  --> src\analysis\ast.rs:158
    |
-    79 |             for m in matches {
-    80 |                 for cap in m.captures {
-   |                 ^^^^^^^^^^^^^^^^^^^^^^^
-    81 |                     let score = Self::process_function_node(cap.node, &ctx, &mut violations);
+   157 |     for m in &matches {
+   158 |         for cap in m.captures {
+   |         ^^^^^^^^^^^^^^^^^^^^^^^
+   159 |             // neti:allow(P04)
    = P04: Review recommended — inner loop may be bounded to a small constant
    |
    = ANALYSIS:
@@ -36,136 +28,27 @@ warn: [1 of 8] Nested loop (O(n²)) detected
    |
    = SUPPRESS: // neti:allow(P04) on the line, or P04 = "warn" in neti.toml [rules]
 
-error: [1 of 8] String conversion inside loop
-  --> src\analysis\checks\naming.rs:32
-   |
-    31 |                 let details = ViolationDetails {
-    32 |                     function_name: Some(name.to_string()),
-   |                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-    33 |                     analysis: vec![format!("Name has {word_count} words")],
-   = P02: Fix required
-   |
-   = ANALYSIS:
-   |   `name.to_string()` allocates a new String on every iteration.
-   |
-   = WHY: String conversion inside a loop allocates a new String on every iteration.
-   |
-   = FIX: Hoist the conversion before the loop, or operate on borrowed string slices (&str).
-   |
-   = SUPPRESS: // neti:allow(P02) on the line, or P02 = "warn" in neti.toml [rules]
-
-warn: [2 of 8] Nested loop (O(n²)) detected
-  --> src\analysis\extract.rs:40
+warn: [2 of 6] Nested loop (O(n²)) detected
+  --> src\analysis\extract.rs:41
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
-error: [2 of 8] String conversion inside loop
-  --> src\analysis\extract.rs:155
-   = P02: `name.to_string()` allocates a new String on every iteration. — see first P02 above
-
-error: [3 of 8] String conversion inside loop
-  --> src\analysis\extract_impl.rs:30
-   = P02: `cap
-                .node
-                .utf8_text(source.as_bytes())
-                .unwrap_or("").to_string()` allocates a new String on every iteration. — see first P02 above
-
-warn: [3 of 8] Nested loop (O(n²)) detected
-  --> src\analysis\patterns\idiomatic_i02.rs:29
-   = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
-
-error: [4 of 8] String conversion inside loop
-  --> src\analysis\patterns\idiomatic_i02.rs:88
-   = P02: `body.to_string()` allocates a new String on every iteration. — see first P02 above
-
-warn: Detected `.clone()` inside a loop
-  --> src\analysis\patterns\idiomatic_i02.rs:139
-   |
-   138 |         let unique_count = {
-   139 |             let mut sorted = names_in_slot.clone();
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   140 |             sorted.sort();
-   = P01: Review recommended — receiver `names_in_slot` matches a heuristic keyword but type is unverified
-   |
-   = ANALYSIS:
-   |   Receiver `names_in_slot` appears to be a heap-owning type.
-   |   Clone inside a loop allocates on every iteration.
-   |
-   = WHY: Cloning/copying inside a loop allocates on every iteration, scaling linearly with iteration count.
-   |
-   = FIX: Hoist the allocation before the loop, use a reference or borrow, or confirm the copy is cheap (primitives, small structs, reference-counted pointers).
-   |
-   = SUPPRESS: // neti:allow(P01) on the line, or P01 = "warn" in neti.toml [rules]
-
-warn: Linear search inside loop — O(n·m) complexity
-  --> src\analysis\patterns\logic_helpers.rs:173
-   |
-   172 | 
-   173 |         if let Some(colon_pos) = clean.find(':') {
-   |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   174 |             let param_name = clean[..colon_pos].trim();
-   = P06: Review recommended — linear scan may be intentional algorithm or bounded collection
-   |
-   = ANALYSIS:
-   |   Each outer iteration performs a full inner scan.
-   |
-   = WHY: Linear search (.find/.position/.index) inside a loop produces O(n·m) complexity.
-   |
-   = FIX: Pre-build a lookup structure (HashSet/HashMap/dict/Set) for O(1) access, or confirm the inner collection is bounded to a small constant size.
-   |
-   = SUPPRESS: // neti:allow(P06) on the line, or P06 = "warn" in neti.toml [rules]
-
-warn: [4 of 8] Nested loop (O(n²)) detected
-  --> src\analysis\patterns\logic_proof_helpers.rs:25
-   = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
-
-error: [5 of 8] String conversion inside loop
-  --> src\analysis\patterns\performance.rs:83
-   = P02: `s.split([',', '(']).next().unwrap_or(s).trim().to_string()` allocates a new String on every iteration. — see first P02 above
-
-error: [6 of 8] String conversion inside loop
-  --> src\analysis\patterns\semantic.rs:47
-   = P02: `name.to_string()` allocates a new String on every iteration. — see first P02 above
-
-error: [7 of 8] String conversion inside loop
-  --> src\analysis\patterns\semantic.rs:85
-   = P02: `name.to_string()` allocates a new String on every iteration. — see first P02 above
-
-error: [8 of 8] String conversion inside loop
-  --> src\analysis\patterns\semantic.rs:123
-   = P02: `name.to_string()` allocates a new String on every iteration. — see first P02 above
-
-warn: [5 of 8] Nested loop (O(n²)) detected
+warn: [3 of 6] Nested loop (O(n²)) detected
   --> src\analysis\structural.rs:29
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
-warn: [6 of 8] Nested loop (O(n²)) detected
-  --> src\analysis\structural.rs:74
+warn: [4 of 6] Nested loop (O(n²)) detected
+  --> src\analysis\structural.rs:76
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
-warn: [7 of 8] Nested loop (O(n²)) detected
+warn: [5 of 6] Nested loop (O(n²)) detected
   --> src\analysis\structural.rs:129
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
-warn: [8 of 8] Nested loop (O(n²)) detected
-  --> src\cli\handlers\scan_report.rs:97
+warn: [6 of 6] Nested loop (O(n²)) detected
+  --> src\cli\handlers\scan_report.rs:124
    = P04: Quadratic complexity — scales poorly with input size. — see first P04 above
 
-error: Potential N+1 query: `query` in loop
-  --> src\lang.rs:114
-   |
-   113 |         ] {
-   114 |             let q = Lang::Swift.query(kind); // neti:allow(P03)
-   |             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-   115 |             let result = tree_sitter::Query::new(&lang, q);
-   = P03: Fix required
-   |
-   = ANALYSIS:
-   |   DB call inside loop causes N+1 queries.
-   |   Loop variable `kind` used in call.
-   |
-   = SUPPRESS: // neti:allow(P03) on the line, or P03 = "warn" in neti.toml [rules]
-
-X Neti found 9 errors, 10 warnings (1.555s).
+~ Neti found 6 warnings (1.485s).
 
 
 ========================================
@@ -173,164 +56,185 @@ NETI COMMANDS REPORT
 ========================================
 
 $ cargo clippy --all-targets --no-deps -- -D warnings
-> FAIL (2413ms)
-Checking neti v1.6.6 (C:\Users\SpencerNunamakerTrav\neti)
-error[E0308]: mismatched types
-   --> src\analysis\checks\syntax_test.rs:10:25
-    |
- 10 |     parser.set_language(Lang::Rust.grammar()).unwrap();
-    |            ------------ ^^^^^^^^^^^^^^^^^^^^ expected `&Language`, found `Language`
-    |            |
-    |            arguments to this method are incorrect
-    |
-note: method defined here
-   --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-0.23.2\binding_rust\lib.rs:474:12
-    |
-474 |     pub fn set_language(&mut self, language: &Language) -> Result<(), LanguageError> {
-    |            ^^^^^^^^^^^^
-help: consider borrowing here
-    |
- 10 |     parser.set_language(&Lang::Rust.grammar()).unwrap();
-    |                         +
-
-error[E0308]: mismatched types
-   --> src\analysis\patterns\mod.rs:57:25
-    |
- 57 |     parser.set_language(lang.grammar()).ok()?;
-    |            ------------ ^^^^^^^^^^^^^^ expected `&Language`, found `Language`
-    |            |
-    |            arguments to this method are incorrect
-    |
-note: method defined here
-   --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-0.23.2\binding_rust\lib.rs:474:12
-    |
-474 |     pub fn set_language(&mut self, language: &Language) -> Result<(), LanguageError> {
-    |            ^^^^^^^^^^^^
-help: consider borrowing here
-    |
- 57 |     parser.set_language(&lang.grammar()).ok()?;
-    |                         +
-
-error[E0308]: mismatched types
-   --> src\mutate\discovery.rs:28:23
-    |
- 28 |         .set_language(lang.grammar())
-    |          ------------ ^^^^^^^^^^^^^^ expected `&Language`, found `Language`
-    |          |
-    |          arguments to this method are incorrect
-    |
-note: method defined here
-   --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-0.23.2\binding_rust\lib.rs:474:12
-    |
-474 |     pub fn set_language(&mut self, language: &Language) -> Result<(), LanguageError> {
-    |            ^^^^^^^^^^^^
-help: consider borrowing here
-    |
- 28 |         .set_language(&lang.grammar())
-    |                       +
-
-error[E0308]: mismatched types
-   --> src\mutate\discovery.rs:108:29
-    |
-108 |         parser.set_language(Lang::Rust.grammar()).ok();
-    |                ------------ ^^^^^^^^^^^^^^^^^^^^ expected `&Language`, found `Language`
-    |                |
-    |                arguments to this method are incorrect
-    |
-note: method defined here
-   --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-0.23.2\binding_rust\lib.rs:474:12
-    |
-474 |     pub fn set_language(&mut self, language: &Language) -> Result<(), LanguageError> {
-    |            ^^^^^^^^^^^^
-help: consider borrowing here
-    |
-108 |         parser.set_language(&Lang::Rust.grammar()).ok();
-    |                             +
-
-For more information about this error, try `rustc --explain E0308`.
-error: could not compile `neti` (lib) due to 2 previous errors
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `neti` (lib test) due to 4 previous errors
-[exit code: 101]
+> PASS (1255ms)
 
 $ cargo test
-> FAIL (1976ms)
-Compiling neti v1.6.6 (C:\Users\SpencerNunamakerTrav\neti)
-error[E0308]: mismatched types
-   --> src\analysis\checks\syntax_test.rs:10:25
-    |
- 10 |     parser.set_language(Lang::Rust.grammar()).unwrap();
-    |            ------------ ^^^^^^^^^^^^^^^^^^^^ expected `&Language`, found `Language`
-    |            |
-    |            arguments to this method are incorrect
-    |
-note: method defined here
-   --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-0.23.2\binding_rust\lib.rs:474:12
-    |
-474 |     pub fn set_language(&mut self, language: &Language) -> Result<(), LanguageError> {
-    |            ^^^^^^^^^^^^
-help: consider borrowing here
-    |
- 10 |     parser.set_language(&Lang::Rust.grammar()).unwrap();
-    |                         +
+> FAIL (3583ms)
+running 149 tests
+test analysis::checks::syntax::tests::test_open_range_pattern_recognized ... ok
+test analysis::checks::syntax::tests::test_rust_error ... ok
+test analysis::checks::syntax::tests::test_inner_attribute_recognized ... ok
+test analysis::cognitive::tests::test_linear_flow ... ok
+test analysis::checks::syntax::tests::test_inner_attribute_content_suppressed ... ok
+test analysis::checks::syntax::tests::test_c_string_literal_recognized ... ok
+test analysis::cognitive::tests::test_else_if_flattening ... ok
+test analysis::cognitive::tests::test_if_statement ... ok
+test analysis::checks::syntax::tests::test_suffixed_literal_recognized ... ok
+test analysis::cognitive::tests::test_boolean_ops ... ok
+test analysis::patterns::concurrency_lock::tests::classify_async_by_body_pattern ... ok
+test analysis::patterns::concurrency_lock::tests::classify_sync_by_default ... ok
+test analysis::patterns::concurrency_lock::tests::classify_async_by_import ... ok
+test analysis::checks::syntax::tests::test_valid_rust ... ok
+test analysis::cognitive::tests::test_nested_if ... ok
+test analysis::patterns::concurrency_lock::tests::c03_no_violation_without_await_span ... ok
+test analysis::patterns::concurrency_lock::tests::c03_flags_sync_mutex_across_await ... ok
+test analysis::patterns::concurrency_lock::tests::c03_async_mutex_gets_hol_message ... ok
+test analysis::patterns::idiomatic::idiomatic_i02::tests::i02_still_flags_same_variant_duplicates ... ok
+test analysis::patterns::idiomatic::idiomatic_i02::tests::i02_skip_different_variant_types ... ok
+test analysis::patterns::idiomatic::idiomatic_i02::tests::i02_skip_unique_arms ... ok
+test analysis::patterns::idiomatic::idiomatic_i02::tests::i02_flag_duplicate_arms ... ok
+test analysis::patterns::idiomatic::idiomatic_i02::tests::i02_skip_tuple_match_different_variants ... ok
+test analysis::patterns::idiomatic::idiomatic_i01::tests::i01_flag_simple_from ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_flag_first_unwrap ... ok
+test analysis::patterns::idiomatic::idiomatic_i01::tests::i01_message_is_suggestion_not_error ... ok
+test analysis::patterns::idiomatic::idiomatic_i01::tests::i01_skip_error_from ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_flag_last_unwrap ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_flag_index_zero ... ok
+test analysis::patterns::logic::logic_l02::tests::l02_skip_guard_idx_gte_len ... ok
+test analysis::patterns::logic::logic_l02::tests::l02_skip_threshold ... ok
+test analysis::patterns::logic_helpers::tests::decl_matches_exact_name ... ok
+test analysis::patterns::logic_helpers::tests::decl_no_false_prefix_match ... ok
+test analysis::patterns::logic_helpers::tests::is_literal_detects_integer ... ok
+test analysis::patterns::logic::logic_l02::tests::l02_skip_max_var ... ok
+test analysis::patterns::logic_helpers::tests::is_literal_none_returns_false ... ok
+test analysis::patterns::logic_helpers::tests::is_literal_rejects_identifier ... ok
+test analysis::patterns::logic_helpers::tests::matches_mut_param ... ok
+test analysis::patterns::logic_helpers::tests::matches_ref_mut_param ... ok
+test analysis::patterns::logic_helpers::tests::matches_plain_param ... ok
+test analysis::patterns::logic_proof::tests::extract_receiver_simple ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_medium_confidence_for_method_return ... ok
+test analysis::patterns::logic::logic_l02::tests::l02_flag_lte_len ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_high_confidence_for_found_vec ... ok
+test analysis::patterns::logic_proof::tests::fixed_array_boundary_exact ... ok
+test analysis::patterns::logic_proof::tests::fixed_array_boundary_out_of_bounds ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_no_flag_without_unwrap ... ok
+test analysis::patterns::logic_proof::tests::generic_impl_type_extraction ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_high_confidence_for_param_slice ... ok
+test analysis::patterns::logic_proof::tests::pub_field_array_size ... ok
+test analysis::patterns::logic_proof::tests::trait_impl_type_extraction ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_medium_confidence_for_self_field ... ok
+test analysis::patterns::logic::logic_l02::tests::l02_skip_guard_len_lte_idx ... ok
+test analysis::patterns::performance::performance_p01::tests::is_arc_or_rc_detects_variants ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_medium_confidence_for_unfound_variable ... ok
+test analysis::patterns::logic::logic_l02::tests::l02_flag_len_gte_idx ... ok
+test analysis::patterns::performance::performance_p01::tests::looks_heap_owning_identifies_string ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_skip_chunks_exact_index ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_skip_fixed_array_literal ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_skip_fixed_array_repeat ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_skip_struct_field_array ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_skip_typed_param_array ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_skip_with_empty_check ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_skip_with_len_check ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_still_flags_slice_index ... ok
+test analysis::patterns::performance_test_ctx::tests::detects_cfg_test_module ... ok
+test analysis::patterns::performance_test_ctx::tests::detects_test_function ... ok
+test analysis::patterns::performance_test_ctx::tests::non_test_context ... ok
+test analysis::patterns::logic::logic_l03::tests::l03_still_flags_vec_index ... ok
+test analysis::patterns::resource::tests::r07_flag_missing_flush ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_skipped_in_cfg_test_module ... ok
+test analysis::patterns::resource::tests::r07_skip_returned_writer ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_skipped_in_test_function ... ok
+test analysis::patterns::security::security_x02::tests::is_shell_invocation_detects_shell_vars ... ok
+test analysis::patterns::performance::performance_p04p06::tests::p06_skipped_in_test_function ... ok
+test analysis::patterns::resource::tests::r07_skip_with_flush ... ok
+test analysis::patterns::security::security_x02::tests::x02_const_binary_is_safe ... ok
+test analysis::patterns::security::security_x02::tests::x02_direct_exec_with_args_is_provenance_not_injection ... ok
+test analysis::patterns::security::security_x02::tests::x02_flags_shell_invocation ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_skipped_when_clone_into_entry ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_skipped_when_clone_into_push ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_high_confidence_for_uppercase_receiver ... ok
+test branch::tests::test_work_branch_name ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_medium_confidence_for_generic_long_name ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_does_not_flag_arc_clone ... ok
+test file_class::tests::json_is_config_not_governed ... ok
+test file_class::tests::html_is_asset_not_governed ... ok
+test file_class::tests::lock_files_are_other ... ok
+test file_class::tests::minified_js_is_asset ... ok
+test file_class::tests::markdown_is_other ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_high_confidence_for_known_heap_keyword ... ok
+test file_class::tests::source_files_are_governed ... ok
+test file_class::tests::svg_is_asset ... ok
+test file_class::tests::toml_is_config ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_medium_confidence_for_indexed_access ... ok
+test graph::locality::classifier::tests::test_deadwood ... ok
+test graph::locality::classifier::tests::test_god_module ... ok
+test graph::defs::extract::tests::test_swift_defs ... FAILED
+test graph::locality::classifier::tests::test_stable_hub ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_does_not_flag_short_receiver ... ok
+test graph::locality::classifier::tests::test_volatile_leaf ... ok
+test graph::locality::coupling::tests::test_compute_coupling ... ok
+test graph::locality::cycles::tests::test_cycle_content ... ok
+test graph::locality::distance::tests::test_deep_hierarchy ... ok
+test graph::locality::distance::tests::test_same_directory ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_skipped_when_clone_into_extend ... ok
+test graph::locality::distance::tests::test_sibling_directories ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_flags_string_clone_in_loop ... ok
+test graph::locality::exemptions::tests::test_crate_root ... ok
+test graph::locality::cycles::tests::test_cycle_detection_logic ... ok
+test graph::locality::exemptions::tests::test_parent_reexport ... ok
+test graph::locality::exemptions::tests::test_shared_infrastructure ... ok
+test graph::locality::exemptions::tests::test_vertical_routing ... ok
+test graph::locality::tests::integration::test_encapsulation_allows_mod_rs_import ... ok
+test graph::locality::tests::integration::test_distance_boundary_condition ... ok
+test graph::locality::tests::integration::test_encapsulation_breach_detects_internal_import ... ok
+test graph::locality::tests::part2::integration2::test_cycle_detection_three_node ... ok
+test graph::locality::tests::part2::integration2::test_lib_rs_exempt_from_all_rules ... ok
+test graph::locality::tests::integration::test_hub_exemption_ignores_distance ... ok
+test graph::locality::tests::part2::integration2::test_upward_dep_categorization_with_manual_layers ... ok
+test graph::locality::tests::part2::integration2::test_vertical_routing_same_module ... ok
+test graph::rank::pagerank::tests::test_helpers_table ... ok
+test graph::tsconfig::tests::test_match_pattern ... ok
+test graph::tsconfig::tests::test_strip_comments ... ok
+test lang::tests::test_from_ext ... ok
+test lang::tests::test_swift_queries_compile ... FAILED
+test mutate::mutations::tests::test_boolean_mutations ... ok
+test mutate::mutations::tests::test_comparison_mutations ... ok
+test graph::rank::pagerank::tests::test_compute_logic ... ok
+test mutate::discovery::tests::test_discover_finds_operators ... ok
+test mutate::mutations::tests::test_logical_mutations ... ok
+test analysis::patterns::performance::performance_p01::tests::p01_does_not_flag_rc_clone ... ok
+test mutate::mutations::tests::test_no_mutation ... ok
+test skeleton::tests::test_filter_nested_ranges_logic ... ok
+test skeleton::tests::test_replace_ranges_logic ... ok
+test analysis::patterns::performance::performance_p02::tests::p02_flags_to_string_in_loop ... ok
+test graph::defs::extract::tests::test_python_defs ... ok
+test analysis::patterns::performance::performance_p04p06::tests::p06_flags_position_in_loop ... ok
+test analysis::patterns::performance::performance_p04p06::tests::p06_flags_find_in_loop ... ok
+test graph::defs::extract::tests::test_rust_defs ... ok
+test analysis::patterns::security::security_x01::tests::x01_flags_sql_format ... ok
+test analysis::patterns::semantic::tests::m03_flag_getter_with_mut ... ok
+test analysis::patterns::semantic::tests::m04_flag_is_returning_string ... ok
+test analysis::patterns::semantic::tests::m03_skip_getter_without_mut ... ok
+test analysis::patterns::semantic::tests::m04_skip_is_returning_bool ... ok
+test analysis::patterns::semantic::tests::m05_flag_calculate_with_mut ... ok
+test skeleton::tests::test_clean_integration ... ok
+test graph::imports::tests::test_extract_imports ... ok
+test analysis::patterns::performance::performance_p04p06::tests::p04_flags_nested_loop ... ok
 
-error[E0308]: mismatched types
-   --> src\analysis\patterns\mod.rs:57:25
-    |
- 57 |     parser.set_language(lang.grammar()).ok()?;
-    |            ------------ ^^^^^^^^^^^^^^ expected `&Language`, found `Language`
-    |            |
-    |            arguments to this method are incorrect
-    |
-note: method defined here
-   --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-0.23.2\binding_rust\lib.rs:474:12
-    |
-474 |     pub fn set_language(&mut self, language: &Language) -> Result<(), LanguageError> {
-    |            ^^^^^^^^^^^^
-help: consider borrowing here
-    |
- 57 |     parser.set_language(&lang.grammar()).ok()?;
-    |                         +
+failures:
 
-error[E0308]: mismatched types
-   --> src\mutate\discovery.rs:28:23
-    |
- 28 |         .set_language(lang.grammar())
-    |          ------------ ^^^^^^^^^^^^^^ expected `&Language`, found `Language`
-    |          |
-    |          arguments to this method are incorrect
-    |
-note: method defined here
-   --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-0.23.2\binding_rust\lib.rs:474:12
-    |
-474 |     pub fn set_language(&mut self, language: &Language) -> Result<(), LanguageError> {
-    |            ^^^^^^^^^^^^
-help: consider borrowing here
-    |
- 28 |         .set_language(&lang.grammar())
-    |                       +
+---- graph::defs::extract::tests::test_swift_defs stdout ----
 
-error[E0308]: mismatched types
-   --> src\mutate\discovery.rs:108:29
-    |
-108 |         parser.set_language(Lang::Rust.grammar()).ok();
-    |                ------------ ^^^^^^^^^^^^^^^^^^^^ expected `&Language`, found `Language`
-    |                |
-    |                arguments to this method are incorrect
-    |
-note: method defined here
-   --> C:\Users\SpencerNunamakerTrav\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\tree-sitter-0.23.2\binding_rust\lib.rs:474:12
-    |
-474 |     pub fn set_language(&mut self, language: &Language) -> Result<(), LanguageError> {
-    |            ^^^^^^^^^^^^
-help: consider borrowing here
-    |
-108 |         parser.set_language(&Lang::Rust.grammar()).ok();
-    |                             +
+thread 'graph::defs::extract::tests::test_swift_defs' panicked at src\graph\defs\queries.rs:16:50:
+Invalid query: Incompatible language version 15. Expected minimum 13, maximum 14
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
-For more information about this error, try `rustc --explain E0308`.
-error: could not compile `neti` (lib) due to 2 previous errors
-warning: build failed, waiting for other jobs to finish...
-error: could not compile `neti` (lib test) due to 4 previous errors
+---- lang::tests::test_swift_queries_compile stdout ----
+
+thread 'lang::tests::test_swift_queries_compile' panicked at src\lang.rs:118:9:
+Swift query failed for Naming: Some(QueryError { row: 0, column: 0, offset: 0, message: "Incompatible language version 15. Expected minimum 13, maximum 14", kind: Language })
+
+
+failures:
+    graph::defs::extract::tests::test_swift_defs
+    lang::tests::test_swift_queries_compile
+
+test result: FAILED. 147 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.14s
+
+
+   Compiling neti v1.6.6 (C:\Users\SpencerNunamakerTrav\neti)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.76s
+     Running unittests src\lib.rs (target\debug\deps\neti_core-49c5bbcd835586b1.exe)
+error: test failed, to rerun pass `--lib`
 [exit code: 101]
 

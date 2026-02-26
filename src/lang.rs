@@ -102,22 +102,23 @@ mod tests {
 
     #[test]
     fn test_swift_queries_compile() {
-        let lang = tree_sitter_swift::LANGUAGE.into();
-        for kind in [
-            QueryKind::Naming,
-            QueryKind::Complexity,
-            QueryKind::Imports,
-            QueryKind::Defs,
-            QueryKind::Exports,
-            QueryKind::Skeleton,
-        ] {
-            let q = Lang::Swift.query(kind); // neti:allow(P03)
-            let result = tree_sitter::Query::new(&lang, q);
-            assert!(
-                result.is_ok(),
-                "Swift query failed for {kind:?}: {:?}",
-                result.err()
-            );
-        }
+        let lang: Language = tree_sitter_swift::LANGUAGE.into();
+        validate_swift_query(&lang, QueryKind::Naming);
+        validate_swift_query(&lang, QueryKind::Complexity);
+        validate_swift_query(&lang, QueryKind::Imports);
+        validate_swift_query(&lang, QueryKind::Defs);
+        validate_swift_query(&lang, QueryKind::Exports);
+        validate_swift_query(&lang, QueryKind::Skeleton);
+    }
+
+    fn validate_swift_query(lang: &Language, kind: QueryKind) {
+        // neti:allow(P03)
+        let q = Lang::Swift.query(kind);
+        let result = tree_sitter::Query::new(lang, q);
+        assert!(
+            result.is_ok(),
+            "Swift query failed for {kind:?}: {:?}",
+            result.err()
+        );
     }
 }

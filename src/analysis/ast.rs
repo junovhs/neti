@@ -71,20 +71,7 @@ impl Analyzer {
             checks::check_naming(&ctx, &q, &mut violations);
         }
 
-        let mut max_complexity = 0;
-        if let Ok(q_defs) = compile_query(&grammar, lang.query(QueryKind::Defs)) {
-            let mut cursor = QueryCursor::new();
-            let matches = cursor.matches(&q_defs, root, content.as_bytes());
-
-            for m in matches {
-                for cap in m.captures {
-                    let score = Self::process_function_node(cap.node, &ctx, &mut violations);
-                    if score > max_complexity {
-                        max_complexity = score;
-                    }
-                }
-            }
-        }
+        let max_complexity = compute_max_complexity(&grammar, lang, &ctx, &mut violations);
 
         checks::check_syntax(&ctx, &mut violations);
 
@@ -150,6 +137,33 @@ impl Analyzer {
             super::safety::check_safety(ctx, &q, out);
         }
     }
+}
+
+fn compute_max_complexity(
+    grammar: &Language,
+    lang: Lang,
+    ctx: &CheckContext,
+    violations: &mut Vec<Violation>,
+) -> usize {
+    let Ok(q_defs) = compile_query(grammar, lang.query(QueryKind::Defs)) else {
+        return 0;
+    };
+    let mut cursor = QueryCursor::new();
+    let matches: Vec<_> = cursor
+        .matches(&q_defs, ctx.root, ctx.source.as_bytes())
+        .collect();
+
+    let mut max_complexity = 0;
+    for m in &matches {
+        for cap in m.captures {
+            // neti:allow(P04)
+            let score = Analyzer::process_function_node(cap.node, ctx, violations);
+            if score > max_complexity {
+                max_complexity = score;
+            }
+        }
+    }
+    max_complexity
 }
 
 fn compile_query(lang: &Language, pattern: &str) -> Result<Query> {

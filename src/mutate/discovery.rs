@@ -20,12 +20,12 @@ pub fn discover_mutations(path: &Path) -> Result<Vec<MutationPoint>> {
         return Ok(Vec::new()); // Skip unsupported files
     };
 
-    let source = fs::read_to_string(path)
-        .with_context(|| format!("Failed to read {}", path.display()))?;
+    let source =
+        fs::read_to_string(path).with_context(|| format!("Failed to read {}", path.display()))?;
 
     let mut parser = Parser::new();
     parser
-        .set_language(lang.grammar())
+        .set_language(&lang.grammar())
         .context("Failed to set parser language")?;
 
     let tree = parser
@@ -105,7 +105,7 @@ mod tests {
     fn test_discover_finds_operators() {
         let source = "fn test() { x == 1 && y > 2 }";
         let mut parser = Parser::new();
-        parser.set_language(Lang::Rust.grammar()).ok();
+        parser.set_language(&Lang::Rust.grammar()).ok();
         let tree = parser.parse(source, None).expect("parse");
 
         let mut points = Vec::new();

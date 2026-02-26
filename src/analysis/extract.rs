@@ -35,9 +35,11 @@ impl RustExtractor {
             return;
         };
         let mut cursor = QueryCursor::new();
+        let matches: Vec<_> = cursor.matches(&query, root, source.as_bytes()).collect();
 
-        for m in cursor.matches(&query, root, source.as_bytes()) {
+        for m in &matches {
             for cap in m.captures {
+                // neti:allow(P04)
                 Self::process_field_node(source, cap.node, out);
             }
         }
@@ -81,17 +83,7 @@ impl RustExtractor {
             return;
         };
 
-        let mut is_public = false;
-        let mut cursor = field_node.walk();
-        for child in field_node.children(&mut cursor) {
-            if child.kind() == "visibility_modifier" {
-                if let Ok(vis_text) = child.utf8_text(source.as_bytes()) {
-                    if vis_text.contains("pub") {
-                        is_public = true;
-                    }
-                }
-            }
-        }
+        let is_public = check_field_visibility(source, field_node);
 
         scope.add_field(
             field_name.to_string(),
@@ -148,19 +140,45 @@ impl RustExtractor {
         };
         let mut cursor = QueryCursor::new();
         for m in cursor.matches(&query, root, source.as_bytes()) {
-            if let Some(cap) = m.captures.first() {
-                if let Ok(name) = cap.node.utf8_text(source.as_bytes()) {
-                    let row = cap.node.start_position().row + 1;
-                    out.insert(
-                        name.to_string(),
-                        if is_enum {
-                            Scope::new_enum(name, row)
-                        } else {
-                            Scope::new(name, row)
-                        },
-                    );
+            extract_single_type_def(source, &m, out, is_enum);
+        }
+    }
+}
+
+fn extract_single_type_def(
+    source: &str,
+    m: &tree_sitter::QueryMatch,
+    out: &mut std::collections::HashMap<String, Scope>,
+    is_enum: bool,
+) {
+    let Some(cap) = m.captures.first() else {
+        return;
+    };
+    let Ok(name) = cap.node.utf8_text(source.as_bytes()) else {
+        return;
+    };
+    let row = cap.node.start_position().row + 1;
+    let name_str = name.to_string();
+    out.insert(
+        name_str,
+        if is_enum {
+            Scope::new_enum(name, row)
+        } else {
+            Scope::new(name, row)
+        },
+    );
+}
+
+fn check_field_visibility(source: &str, field_node: Node) -> bool {
+    let mut cursor = field_node.walk();
+    for child in field_node.children(&mut cursor) {
+        if child.kind() == "visibility_modifier" {
+            if let Ok(vis_text) = child.utf8_text(source.as_bytes()) {
+                if vis_text.contains("pub") {
+                    return true;
                 }
             }
         }
     }
+    false
 }

@@ -103,7 +103,7 @@ Orchestrates graph construction and ranking. Supports application functionality.
 Library root and public exports. Provides application entry point.
 
 `src/main.rs`
-Application entry point. Provides application entry point.
+Placeholder file. Provides application entry point.
 
 `src/mutate/mod.rs`
 Cross-language mutation testing [EXPERIMENTAL]. Supports application functionality.
@@ -412,6 +412,9 @@ Module providing `resolve`. Supports application functionality.
 `src/lang.rs`
 Module providing `Lang`, `QueryKind`, `from_ext`. Supports application functionality.
 → Exports: Lang, QueryKind, from_ext, grammar, q_complexity, q_defs, q_exports, q_imports, q_naming, q_skeleton, query, skeleton_replacement
+
+`src/lang_queries.rs`
+Implements lang queries. Supports application functionality.
 
 `src/mutate/discovery.rs`
 Discovers mutation points in source files using tree-sitter. Supports application functionality.

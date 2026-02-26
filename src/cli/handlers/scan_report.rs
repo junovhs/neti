@@ -1,8 +1,8 @@
 // src/cli/handlers/scan_report.rs
 //! Scan report display formatting.
 
-use crate::types::ScanReport;
 use crate::analysis::Engine;
+use crate::types::ScanReport;
 use colored::Colorize;
 use std::collections::HashMap;
 
@@ -17,7 +17,9 @@ pub fn print(report: &ScanReport) {
 
 fn print_header(report: &ScanReport) {
     let status = if report.has_errors() {
-        format!("{} violations", report.total_violations).red().bold()
+        format!("{} violations", report.total_violations)
+            .red()
+            .bold()
     } else {
         "Clean".green().bold()
     };
@@ -46,21 +48,35 @@ fn print_small_codebase_note(report: &ScanReport) {
 
 fn print_violating_files_summary(report: &ScanReport, limit: usize) {
     let mut violators: Vec<_> = report.files.iter().filter(|f| !f.is_clean()).collect();
-    if violators.is_empty() { return; }
+    if violators.is_empty() {
+        return;
+    }
 
     violators.sort_by_key(|f| std::cmp::Reverse(f.violations.len()));
 
     println!("\n{}", "Violating files:".dimmed());
-    let count = violators.len();
     for f in violators.iter().take(limit) {
-        let v_count = f.violations.len();
-        let color = if v_count > 5 { format!("{v_count:>3}").red() } else { format!("{v_count:>3}").yellow() };
-        println!("  {} {}", color, f.path.display().to_string().dimmed());
+        print_violator_line(f);
     }
 
+    let count = violators.len();
     if count > limit {
-        println!("  ... and {} more. See {} for full detail.", count - limit, "neti-report.txt".yellow());
+        println!(
+            "  ... and {} more. See {} for full detail.",
+            count - limit,
+            "neti-report.txt".yellow()
+        );
     }
+}
+
+fn print_violator_line(f: &crate::types::FileReport) {
+    let v_count = f.violations.len();
+    let color = if v_count > 5 {
+        format!("{v_count:>3}").red()
+    } else {
+        format!("{v_count:>3}").yellow()
+    };
+    println!("  {} {}", color, f.path.display().to_string().dimmed());
 }
 
 /// Builds a plain-text summary of the scan report for file logging (Full Detail).
@@ -75,14 +91,25 @@ pub fn build_summary_string(report: &ScanReport) -> String {
         "Clean".to_string()
     };
 
-    let _ = writeln!(out, "SCAN SUMMARY: {} files | {} tokens | {}", report.files.len(), report.total_tokens, status);
+    let _ = writeln!(
+        out,
+        "SCAN SUMMARY: {} files | {} tokens | {}",
+        report.files.len(),
+        report.total_tokens,
+        status
+    );
 
     let mut violators: Vec<_> = report.files.iter().filter(|f| !f.is_clean()).collect();
     if !violators.is_empty() {
         violators.sort_by_key(|f| std::cmp::Reverse(f.violations.len()));
         let _ = writeln!(out, "\nALL VIOLATING FILES:");
         for f in violators {
-            let _ = writeln!(out, "  {:>3} violations | {}", f.violations.len(), f.path.display());
+            let _ = writeln!(
+                out,
+                "  {:>3} violations | {}",
+                f.violations.len(),
+                f.path.display()
+            );
         }
     }
 
@@ -95,6 +122,7 @@ pub fn aggregate_by_law(report: &ScanReport) -> HashMap<&'static str, usize> {
     let mut counts: HashMap<&'static str, usize> = HashMap::new();
     for file in &report.files {
         for v in &file.violations {
+            // neti:allow(P04)
             *counts.entry(v.law).or_insert(0) += 1;
         }
     }

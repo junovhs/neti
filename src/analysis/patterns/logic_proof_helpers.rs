@@ -10,22 +10,37 @@ pub(super) fn find_struct_field_array_size(
     field_name: &str,
 ) -> Option<usize> {
     let type_name = find_enclosing_impl_type(source, node)?;
+    let format_plain = format!("struct {type_name}");
+    let format_generic = format!("struct {type_name}<");
 
     let mut cursor = root.walk();
     for child in root.children(&mut cursor) {
-        if child.kind() != "struct_item" {
-            continue;
-        }
-        let struct_text = child.utf8_text(source.as_bytes()).unwrap_or("");
-        if !struct_text.contains(&format!("struct {type_name}"))
-            && !struct_text.contains(&format!("struct {type_name}<"))
+        if let Some(size) =
+            check_struct_child(source, child, &format_plain, &format_generic, field_name)
         {
-            continue;
+            return Some(size);
         }
-        for line in struct_text.lines() {
-            if let Some(size) = extract_field_array_size(line, field_name) {
-                return Some(size);
-            }
+    }
+    None
+}
+
+fn check_struct_child(
+    source: &str,
+    child: Node,
+    format_plain: &str,
+    format_generic: &str,
+    field_name: &str,
+) -> Option<usize> {
+    if child.kind() != "struct_item" {
+        return None;
+    }
+    let struct_text = child.utf8_text(source.as_bytes()).unwrap_or("");
+    if !struct_text.contains(format_plain) && !struct_text.contains(format_generic) {
+        return None;
+    }
+    for line in struct_text.lines() {
+        if let Some(size) = extract_field_array_size(line, field_name) {
+            return Some(size);
         }
     }
     None

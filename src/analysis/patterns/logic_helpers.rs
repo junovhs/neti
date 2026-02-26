@@ -162,20 +162,26 @@ fn find_matching_paren(text: &str, start: usize) -> Option<usize> {
 /// Check if a comma-separated parameter list contains `var_name`.
 fn params_contain_name(params: &str, var_name: &str) -> bool {
     for param in params.split(',') {
-        let trimmed = param.trim();
-        let clean = trimmed
-            .strip_prefix("mut ")
-            .or_else(|| trimmed.strip_prefix("&mut "))
-            .or_else(|| trimmed.strip_prefix('&'))
-            .unwrap_or(trimmed)
-            .trim();
-
-        if let Some(colon_pos) = clean.find(':') {
-            let param_name = clean[..colon_pos].trim();
-            if param_name == var_name {
-                return true;
-            }
+        if param_matches_name(param, var_name) {
+            return true;
         }
+    }
+    false
+}
+
+fn param_matches_name(param: &str, var_name: &str) -> bool {
+    let trimmed = param.trim();
+    let clean = trimmed
+        .strip_prefix("mut ")
+        .or_else(|| trimmed.strip_prefix("&mut "))
+        .or_else(|| trimmed.strip_prefix('&'))
+        .unwrap_or(trimmed)
+        .trim();
+
+    // neti:allow(P06)
+    if let Some(colon_pos) = clean.find(':') {
+        let param_name = clean[..colon_pos].trim();
+        return param_name == var_name;
     }
     false
 }

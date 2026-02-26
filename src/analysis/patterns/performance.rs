@@ -78,9 +78,7 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
 
     let mut cursor = QueryCursor::new();
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let loop_var = get_capture_node(&m, idx_pat)
-            .and_then(|n| n.utf8_text(source.as_bytes()).ok())
-            .map(|s| s.split([',', '(']).next().unwrap_or(s).trim().to_string());
+        let loop_var = extract_loop_var(source, &m, idx_pat);
 
         let Some(body) = get_capture_node(&m, idx_body) else {
             continue;
@@ -97,4 +95,21 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
             performance_p04p06::check_p06(source, body, out);
         }
     }
+}
+
+fn extract_loop_var(
+    source: &str,
+    m: &tree_sitter::QueryMatch,
+    idx_pat: Option<u32>,
+) -> Option<String> {
+    use super::get_capture_node;
+    let node = get_capture_node(m, idx_pat)?;
+    let text = node.utf8_text(source.as_bytes()).ok()?;
+    Some(
+        text.split([',', '('])
+            .next()
+            .unwrap_or(text)
+            .trim()
+            .to_string(),
+    )
 }

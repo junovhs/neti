@@ -1,7 +1,7 @@
 //! Structural metrics calculation (LCOM4, CBO, SFOUT, AHF).
 //! Renamed from v2/metrics.rs to avoid collision with root metrics.rs (complexity/nesting).
 
-use super::scope::{Scope, Method};
+use super::scope::{Method, Scope};
 use std::collections::{HashMap, HashSet};
 
 pub struct ScopeMetrics;
@@ -16,9 +16,9 @@ impl ScopeMetrics {
         }
 
         let method_names: Vec<&String> = methods.keys().collect();
-        let adj = Self::build_adjacency_graph(scope, &method_names);
+        let adj = build_adjacency_graph(scope, &method_names);
 
-        Self::count_components(&method_names, &adj)
+        count_components(&method_names, &adj)
     }
 
     /// Calculates CBO (Coupling Between Objects).
@@ -27,6 +27,7 @@ impl ScopeMetrics {
         let mut unique_deps = HashSet::new();
         for method in scope.methods().values() {
             for call in &method.external_calls {
+                // neti:allow(P04)
                 unique_deps.insert(call);
             }
         }
@@ -36,7 +37,8 @@ impl ScopeMetrics {
     /// Calculates the maximum SFOUT (Structural Fan-Out) among methods.
     #[must_use]
     pub fn calculate_max_sfout(scope: &Scope) -> usize {
-        scope.methods()
+        scope
+            .methods()
             .values()
             .map(|m| m.external_calls.len())
             .max()
@@ -57,79 +59,77 @@ impl ScopeMetrics {
 
         (private_fields / total_fields) * 100.0
     }
+}
 
-    fn build_adjacency_graph<'a>(
-        scope: &Scope,
-        method_names: &[&'a String],
-    ) -> HashMap<&'a String, Vec<&'a String>> {
-        let mut adj = HashMap::new();
-        for name in method_names {
-            adj.insert(*name, Vec::new());
-        }
+fn build_adjacency_graph<'a>(
+    scope: &Scope,
+    method_names: &[&'a String],
+) -> HashMap<&'a String, Vec<&'a String>> {
+    let mut adj = HashMap::new();
+    for name in method_names {
+        adj.insert(*name, Vec::new());
+    }
 
-        let methods = scope.methods();
-        for (i, name_a) in method_names.iter().enumerate() {
-            let method_a = &methods[*name_a];
+    let methods = scope.methods();
+    for (i, name_a) in method_names.iter().enumerate() {
+        let method_a = &methods[*name_a];
+        for name_b in method_names.iter().skip(i + 1) {
+            // neti:allow(P04)
+            let method_b = &methods[*name_b];
 
-            for name_b in method_names.iter().skip(i + 1) {
-                let method_b = &methods[*name_b];
-
-                if Self::are_connected(method_a, method_b) {
-                    if let Some(vec_a) = adj.get_mut(*name_a) {
-                        vec_a.push(*name_b);
-                    }
-                    if let Some(vec_b) = adj.get_mut(*name_b) {
-                        vec_b.push(*name_a);
-                    }
+            if are_connected(method_a, method_b) {
+                if let Some(vec_a) = adj.get_mut(*name_a) {
+                    vec_a.push(*name_b);
+                }
+                if let Some(vec_b) = adj.get_mut(*name_b) {
+                    vec_b.push(*name_a);
                 }
             }
         }
-        adj
     }
+    adj
+}
 
-    fn count_components<'a>(
-        names: &[&'a String],
-        adj: &HashMap<&'a String, Vec<&'a String>>,
-    ) -> usize {
-        let mut visited = HashSet::new();
-        let mut components = 0;
+fn count_components<'a>(names: &[&'a String], adj: &HashMap<&'a String, Vec<&'a String>>) -> usize {
+    let mut visited = HashSet::new();
+    let mut components = 0;
 
-        for name in names {
-            if !visited.contains(name) {
-                components += 1;
-                Self::traverse(name, adj, &mut visited);
-            }
+    for name in names {
+        if !visited.contains(name) {
+            components += 1;
+            traverse(name, adj, &mut visited);
         }
-        components
     }
+    components
+}
 
-    fn are_connected(a: &Method, b: &Method) -> bool {
-        if !a.field_access.is_disjoint(&b.field_access) {
-            return true;
-        }
-        if a.internal_calls.contains(&b.name) || b.internal_calls.contains(&a.name) {
-            return true;
-        }
-        false
+fn are_connected(a: &Method, b: &Method) -> bool {
+    if !a.field_access.is_disjoint(&b.field_access) {
+        return true;
     }
+    if a.internal_calls.contains(&b.name) || b.internal_calls.contains(&a.name) {
+        return true;
+    }
+    false
+}
 
-    fn traverse<'a>(
-        start: &'a String,
-        adj: &HashMap<&'a String, Vec<&'a String>>,
-        visited: &mut HashSet<&'a String>,
-    ) {
-        let mut stack = vec![start];
-        visited.insert(start);
+fn traverse<'a>(
+    start: &'a String,
+    adj: &HashMap<&'a String, Vec<&'a String>>,
+    visited: &mut HashSet<&'a String>,
+) {
+    let mut stack = vec![start];
+    visited.insert(start);
 
-        while let Some(current) = stack.pop() {
-            let Some(neighbors) = adj.get(current) else {
-                continue;
-            };
+    while let Some(current) = stack.pop() {
+        let Some(neighbors) = adj.get(current) else {
+            continue;
+        };
 
-            for neighbor in neighbors {
-                if visited.insert(neighbor) {
-                    stack.push(neighbor);
-                }
+        for neighbor in neighbors {
+            // neti:allow(P04)
+            if visited.insert(neighbor) {
+                stack.push(neighbor);
             }
         }
     }
