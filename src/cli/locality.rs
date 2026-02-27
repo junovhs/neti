@@ -12,6 +12,7 @@ use crate::graph::locality::analysis::analyze;
 use crate::graph::locality::coupling::compute_coupling;
 use crate::graph::locality::report::print_full_report;
 use crate::graph::locality::{collect_edges, validate_graph, Coupling};
+use crate::types::{LocalityReport, LocalityViolation};
 
 /// Result of a locality check for use in verification pipeline.
 pub struct LocalityResult {
@@ -25,7 +26,7 @@ pub struct LocalityResult {
 /// Returns error if file discovery or import extraction fails.
 pub fn handle_locality() -> Result<NetiExit> {
     let result = run_locality_check(Path::new("."))?;
-    
+
     if result.passed {
         Ok(NetiExit::Success)
     } else {
@@ -39,9 +40,12 @@ pub fn handle_locality() -> Result<NetiExit> {
 /// Returns error if file discovery or graph construction fails.
 pub fn run_locality_check(cwd: &Path) -> Result<LocalityResult> {
     let config = Config::load();
-    
+
     if !config.rules.locality.is_enabled() {
-        return Ok(LocalityResult { passed: true, violations: 0 });
+        return Ok(LocalityResult {
+            passed: true,
+            violations: 0,
+        });
     }
 
     let locality_config = config.rules.locality.to_validator_config();
@@ -54,9 +58,8 @@ pub fn run_locality_check(cwd: &Path) -> Result<LocalityResult> {
     let files = discovery::discover(&config)?;
     let edges = collect_edges(&project_root, &files)?;
 
-    let couplings: HashMap<PathBuf, Coupling> = compute_coupling(
-        edges.iter().map(|(a, b)| (a.as_path(), b.as_path())),
-    );
+    let couplings: HashMap<PathBuf, Coupling> =
+        compute_coupling(edges.iter().map(|(a, b)| (a.as_path(), b.as_path())));
 
     let report = validate_graph(
         edges.iter().map(|(a, b)| (a.as_path(), b.as_path())),
@@ -70,19 +73,27 @@ pub fn run_locality_check(cwd: &Path) -> Result<LocalityResult> {
     print_full_report(&report, &analysis);
 
     let passed = is_clean || !config.rules.locality.is_error_mode();
-    
+
     Ok(LocalityResult { passed, violations })
 }
 
-/// Runs locality check silently, returning only pass/fail. For pipeline use.
+/// Runs locality check silently, returning a structured report. For pipeline use.
 ///
 /// # Errors
 /// Returns error if file discovery or graph construction fails.
-pub fn check_locality_silent(cwd: &Path) -> Result<(bool, usize)> {
-    let config = Config::load();
-    
+pub fn check_locality_silent(cwd: &Path, config: &Config) -> Result<LocalityReport> {
+    let mode = config.rules.locality.mode.clone();
+
     if !config.rules.locality.is_enabled() {
-        return Ok((true, 0));
+        return Ok(LocalityReport {
+            violation_count: 0,
+            violations: Vec::new(),
+            cycle_count: 0,
+            cycles: Vec::new(),
+            total_edges: 0,
+            mode,
+            passed: true,
+        });
     }
 
     let locality_config = config.rules.locality.to_validator_config();
@@ -92,7 +103,7 @@ pub fn check_locality_silent(cwd: &Path) -> Result<(bool, usize)> {
         cwd.to_path_buf()
     };
 
-    let files = discovery::discover(&config)?;
+    let files = discovery::discover(config)?;
     let edges = collect_edges(&project_root, &files)?;
 
     let report = validate_graph(
@@ -100,10 +111,32 @@ pub fn check_locality_silent(cwd: &Path) -> Result<(bool, usize)> {
         &locality_config,
     );
 
-    let violations = report.failed().len();
+    let violation_details: Vec<LocalityViolation> = report
+        .failed()
+        .iter()
+        .map(|edge| LocalityViolation {
+            from: edge.from.clone(),
+            to: edge.to.clone(),
+            distance: edge.distance,
+            target_role: edge.target_identity.label().to_string(),
+        })
+        .collect();
+
+    let violation_count = violation_details.len();
+    let cycle_paths: Vec<Vec<PathBuf>> = report.cycles().to_vec();
+    let cycle_count = cycle_paths.len();
+    let total_edges = report.total_edges();
     let passed = report.is_clean() || !config.rules.locality.is_error_mode();
-    
-    Ok((passed, violations))
+
+    Ok(LocalityReport {
+        violation_count,
+        violations: violation_details,
+        cycle_count,
+        cycles: cycle_paths,
+        total_edges,
+        mode,
+        passed,
+    })
 }
 
 /// Returns whether locality is in error mode (blocking).

@@ -4,7 +4,9 @@ use std::path::PathBuf;
 use crate::analysis::aggregator::FileAnalysis;
 
 mod command;
+mod locality;
 pub use command::CommandResult;
+pub use locality::{LocalityReport, LocalityViolation};
 
 /// Confidence level for a violation — how certain Neti is that this is a real problem.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize)]
@@ -185,5 +187,8 @@ impl ScanReport {
 pub struct CheckReport {
     pub scan: ScanReport,
     pub commands: Vec<CommandResult>,
+    /// Locality analysis results, if enabled.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub locality: Option<LocalityReport>,
     pub passed: bool,
 }

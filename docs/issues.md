@@ -56,7 +56,7 @@ Fix: Use shell-words parser, or support structured TOML form `argv = ["cargo", "
 `check_locality_silent()` exists "for pipeline use" but `handle_check` doesn't call it. The `[rules.locality]` config exists but isn't enforced.
 
 Required: Make locality a first-class stage in `neti check` gated by config mode (`off`/`warn`/`error`). Include locality results in JSON output and `neti-report.txt`.
-**Resolution:**
+**Resolution:** Made locality a first-class stage in neti check pipeline (Scan → Locality → Commands, 3 stages). Gated by [rules.locality] mode: "off" short-circuits, "warn" reports but doesn't block, "error" blocks on violations or cycles. Refactored check_locality_silent() to accept &Config and return a structured LocalityReport containing violation details (from → to, distance, target role) and cycle paths — not just counts. Added LocalityReport and LocalityViolation types in src/types/locality.rs. Added locality: Option<LocalityReport> to CheckReport JSON output. neti-report.txt now includes a NETI LOCALITY REPORT section showing mode, edge count, each violation with paths and distance, cycle paths, and pass/fail result. Interactive mode shows a locality scorecard with colored output. Extracted report-building and scorecard display into src/cli/handlers/check_report.rs to keep mod.rs under token limit. Twelve integration tests in tests/check_locality_test.rs verify JSON structure, field types, mode gating (off/warn/error), report file content, and overall pass/fail integration.
 
 ---
 
