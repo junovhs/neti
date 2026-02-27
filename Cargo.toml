@@ -37,6 +37,7 @@ serde_json = "1.0"
 toml = "0.8"
 sha2 = "0.10"
 chrono = "0.4"
+shell-words = "1.1"
 # Tokenization
 tiktoken-rs = "0.5"
 # UI / TUI

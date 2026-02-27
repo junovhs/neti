@@ -41,12 +41,12 @@ Consolidate to one canonical type with: `argv`, `exit_code: i32`, `stdout`, `std
 ---
 
 ## [28] Command execution uses naive `split_whitespace`
-**Status:** OPEN
+**Status:** DONE
 **Files:** `src/verification/runner.rs`, `src/config/types.rs`
 Commands with quoted arguments or spaces break. `run_single_command()` uses `split_whitespace()` which cannot handle `cargo clippy -- -D "some flag"`.
 
 Fix: Use shell-words parser, or support structured TOML form `argv = ["cargo", "clippy", "--all-targets"]`. Store exit code as data at execution time — don't parse it from output text.
-**Resolution:**
+**Resolution:** Added shell-words = "1.1" dependency and replaced naive split_whitespace() in run_single_command() with shell_words::split(), which implements POSIX shell-style word splitting (double quotes, single quotes, backslash escapes). Unclosed quotes now return a clear parse error with exit code -1 instead of silently mangling arguments. Commands like cargo clippy -- -D "some flag" are now parsed correctly. The existing CommandEntry::List TOML form continues to work unchanged. Split src/types.rs into src/types/mod.rs + src/types/command.rs to resolve a token-count governance violation. 15 unit tests in src/verification/runner.rs cover shell parsing edge cases (quoting styles, empty input, parse errors, pipeline behavior). 6 integration tests in tests/command_parsing_test.rs verify quoted commands end-to-end through the compiled binary via neti check --json.
 
 ---
 

@@ -17,6 +17,15 @@
 `Cargo.toml`
 Rust package manifest and dependencies. Centralizes project configuration.
 
+`mutants.out/lock.json`
+Configuration for lock. Centralizes project configuration.
+
+`mutants.out/mutants.json`
+Configuration for mutants. Centralizes project configuration.
+
+`mutants.out/outcomes.json`
+Configuration for outcomes. Centralizes project configuration.
+
 `neti.toml`
 Configuration for neti. Centralizes project configuration.
 
@@ -115,7 +124,7 @@ Triptych HUD (Head-Up Display) for process execution feedback. Supports applicat
 
 `src/verification/mod.rs`
 External command verification pipeline. Supports application functionality.
-→ Exports: CommandResult, VerificationReport, command, duration_ms, error_count, exit_code, failed_count, new, output, passed, passed_count, run, total_commands, total_errors, total_warnings, warning_count
+→ Exports: VerificationReport, failed_count, new, passed_count, run, total_commands, total_errors, total_warnings
 
 ## Layer 2 -- Domain
 
@@ -488,7 +497,7 @@ The tokenizer encoding (`cl100k_base`, used by GPT-4/3.5-turbo). Supports applic
 
 `src/types.rs`
 Confidence level for a violation — how certain Neti is that this is a real problem. Defines domain data structures.
-→ Exports: CheckReport, CommandResult, Confidence, FileReport, ScanReport, Violation, ViolationDetails, clean_file_count, error_count, has_blocking_errors, has_errors, is_clean, is_small_codebase, label, prefix, simple, suggestion_count, violation_count, warning_count, with_details
+→ Exports: CheckReport, CommandResult, Confidence, FileReport, ScanReport, Violation, ViolationDetails, clean_file_count, command, duration_ms, error_count, exit_code, has_blocking_errors, has_errors, is_clean, is_small_codebase, label, new, output, passed, prefix, simple, stderr, stdout, suggestion_count, violation_count, warning_count, with_details
 
 `src/verification/runner.rs`
 Command execution and output capture. Supports application functionality.
@@ -546,4 +555,7 @@ Integration tests for locality analysis — part 1. Verifies correctness.
 
 `src/graph/locality/tests/part2.rs`
 Integration tests for locality analysis — part 2. Verifies correctness.
+
+`tests/check_json_test.rs`
+Integration test: `neti check --json` must emit valid JSON to stdout. Verifies correctness.
 

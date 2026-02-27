@@ -2,32 +2,18 @@
 NETI SCAN REPORT
 ========================================
 
-SCAN SUMMARY: 199 files | 229837 tokens | 2 violations
+SCAN SUMMARY: 201 files | 232437 tokens | 1 violations
 
 ALL VIOLATING FILES:
-    2 violations | src/types.rs
-
-error: File size is 2854 tokens (Limit: 2000)
-  --> src/types.rs:1
-   |
-     1 | use serde::Serialize;
-   | ^^^^^^^^^^^^^^^^^^^^^
-     2 | use std::path::PathBuf;
-   = LAW OF ATOMICITY: Fix required
-   |
-   = WHY: Files beyond the token limit are too large for a single unit of work, increasing cognitive load and merge conflict risk.
-   |
-   = FIX: Split the file into smaller, focused modules. Extract related functions into their own files.
-   |
-   = SUPPRESS: // neti:allow(LAW OF ATOMICITY) on the line, or LAW OF ATOMICITY = "warn" in neti.toml [rules]
+    1 violations | src/types/command.rs
 
 warn: Class 'CommandResult' has low cohesion (LCOM4: 5)
-  --> src/types.rs:182
+  --> src/types/command.rs:7
    |
-   181 | #[derive(Debug, Clone, Serialize)]
-   182 | pub struct CommandResult {
+     6 | #[derive(Debug, Clone, Serialize)]
+     7 | pub struct CommandResult {
    | ^^^^^^^^^^^^^^^^^^^^^^^^^^
-   183 |     /// The command that was executed (display form).
+     8 |     // neti:allow(LCOM4) Record type — each accessor reads one field by design.
    = LCOM4: Review recommended — accurate metric, but may be expected for types implementing multiple traits
    |
    = ANALYSIS:
@@ -37,7 +23,7 @@ warn: Class 'CommandResult' has low cohesion (LCOM4: 5)
    |
    = SUPPRESS: // neti:allow(LCOM4) on the line, or LCOM4 = "warn" in neti.toml [rules]
 
-X Neti found 1 error, 1 warning (928ms).
+~ Neti found 1 warning (1s).
 
 
 ========================================
@@ -45,8 +31,8 @@ NETI COMMANDS REPORT
 ========================================
 
 $ cargo clippy --all-targets --no-deps -- -D warnings
-> PASS (1256ms)
+> PASS (1296ms)
 
 $ cargo test
-> PASS (1936ms)
+> PASS (2647ms)
 
