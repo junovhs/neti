@@ -21,22 +21,22 @@ Description of the task.
 # CRITICAL — Contract Bugs & Correctness
 
 ## [26] `neti check --json` must emit JSON to stdout
-**Status:** OPEN
+**Status:** DONE
 **Files:** `src/cli/handlers/mod.rs`, `src/types.rs`, `src/reporting.rs`
 The `--json` flag exists but `handle_check` writes text to `neti-report.txt` instead of emitting JSON to stdout. This breaks CI integrations and agent automation.
 
 Required: Output a coherent `CheckReport` JSON payload containing scan report, command results, overall pass/fail, and exit code. Keep `neti-report.txt` behavior unchanged for non-JSON mode.
-**Resolution:**
+**Resolution:** handle_check now constructs a CheckReport containing ScanReport, converted command results, and overall pass/fail, then emits it via reporting::print_json() to stdout when --json is passed. neti-report.txt is still written in both modes. Extracted shared helpers (build_report_text, convert_commands, append_command_result) and split handle_check into handle_check_json/handle_check_interactive to eliminate duplicated report-building code. Five integration tests in tests/check_json_test.rs verify JSON structure, required fields, type correctness, and exit code consistency — running in isolated temp directories with empty [commands] to prevent recursive cargo test invocation.
 
 ---
 
 ## [27] Unify duplicate `CommandResult` types
-**Status:** OPEN
+**Status:** DONE
 **Files:** `src/types.rs`, `src/verification/mod.rs`, `src/verification/runner.rs`
 Two different `CommandResult` structs exist: `types::CommandResult` (stdout/stderr separated, `exit_code: i32`) and `verification::CommandResult` (combined output, `exit_code: Option<i32>`, plus `passed`).
 
 Consolidate to one canonical type with: `argv`, `exit_code: i32`, `stdout`, `stderr`, `duration_ms`, `passed`. Remove status inference from formatted output text.
-**Resolution:**
+**Resolution:** Consolidated two duplicate CommandResult types into one canonical type in src/types.rs with fields: command, passed, exit_code: i32, stdout, stderr, duration_ms. The passed field is now derived from exit_code == 0 at construction time, not inferred from parsing output text. src/verification/mod.rs now re-exports crate::types::CommandResult instead of defining its own. src/verification/runner.rs captures stdout/stderr separately at execution time and gets exit code directly from output.status.code(). Removed the convert_commands() bridge function from src/cli/handlers/mod.rs — the unified type flows through directly. Removed orphaned output field from VerificationReport. Six integration tests verify field presence, type correctness, pass/fail derivation, stdout capture, and duration semantics.
 
 ---
 

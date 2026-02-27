@@ -8,110 +8,16 @@ mod runner;
 use std::path::Path;
 
 use crate::config::Config;
+
+// Re-export the canonical CommandResult from types
+pub use crate::types::CommandResult;
 pub use runner::run_commands;
-
-/// Result of a single command execution.
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct CommandResult {
-    #[serde(flatten)]
-    inner: CommandResultInner,
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
-struct CommandResultInner {
-    command: String,
-    passed: bool,
-    exit_code: Option<i32>,
-    output: String,
-    duration_ms: u64,
-}
-
-impl CommandResult {
-    #[must_use]
-    pub fn new(
-        command: String,
-        passed: bool,
-        exit_code: Option<i32>,
-        output: String,
-        duration_ms: u64,
-    ) -> Self {
-        Self {
-            inner: CommandResultInner {
-                command,
-                passed,
-                exit_code,
-                output,
-                duration_ms,
-            },
-        }
-    }
-
-    /// The command that was executed.
-    #[must_use]
-    pub fn command(&self) -> &str {
-        &self.inner.command
-    }
-
-    /// Whether the command succeeded (exit code 0).
-    #[must_use]
-    pub fn passed(&self) -> bool {
-        self.inner.passed
-    }
-
-    /// Exit code, if available.
-    #[must_use]
-    pub fn exit_code(&self) -> Option<i32> {
-        self.inner.exit_code
-    }
-
-    /// Combined stdout and stderr output.
-    #[must_use]
-    pub fn output(&self) -> &str {
-        &self.inner.output
-    }
-
-    /// Execution time in milliseconds.
-    #[must_use]
-    pub fn duration_ms(&self) -> u64 {
-        self.inner.duration_ms
-    }
-
-    /// Count error lines in output.
-    #[must_use]
-    pub fn error_count(&self) -> usize {
-        self.inner
-            .output
-            .lines()
-            .filter(|line| {
-                let lower = line.to_lowercase();
-                lower.contains("error:") || lower.contains("error[") || lower.starts_with("error")
-            })
-            .count()
-    }
-
-    /// Count warning lines in output.
-    #[must_use]
-    pub fn warning_count(&self) -> usize {
-        self.inner
-            .output
-            .lines()
-            .filter(|line| {
-                let lower = line.to_lowercase();
-                lower.contains("warning:")
-                    || lower.contains("warn:")
-                    || lower.starts_with("warning")
-            })
-            .count()
-    }
-}
 
 /// Result of running the verification pipeline.
 #[derive(Debug, serde::Serialize)]
 pub struct VerificationReport {
     /// Whether all commands passed.
     pub passed: bool,
-    /// Combined output from all commands.
-    pub output: String,
     /// Individual command results.
     pub commands: Vec<CommandResult>,
     /// Total execution time in milliseconds.
@@ -120,15 +26,9 @@ pub struct VerificationReport {
 
 impl VerificationReport {
     #[must_use]
-    pub fn new(
-        passed: bool,
-        output: String,
-        commands: Vec<CommandResult>,
-        duration_ms: u64,
-    ) -> Self {
+    pub fn new(passed: bool, commands: Vec<CommandResult>, duration_ms: u64) -> Self {
         Self {
             passed,
-            output,
             commands,
             duration_ms,
         }

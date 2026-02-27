@@ -1,0 +1,1712 @@
+[
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::warning_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 277,
+          "column": 5
+        },
+        "end": {
+          "line": 289,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 285,
+        "column": 21
+      },
+      "end": {
+        "line": 285,
+        "column": 23
+      }
+    },
+    "replacement": "&&",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::command",
+      "return_type": "-> &str",
+      "span": {
+        "start": {
+          "line": 217,
+          "column": 5
+        },
+        "end": {
+          "line": 221,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 220,
+        "column": 9
+      },
+      "end": {
+        "line": 220,
+        "column": 22
+      }
+    },
+    "replacement": "\"xyzzy\"",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::error_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 133,
+          "column": 5
+        },
+        "end": {
+          "line": 141,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 136,
+        "column": 9
+      },
+      "end": {
+        "line": 140,
+        "column": 21
+      }
+    },
+    "replacement": "1",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::has_blocking_errors",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 163,
+          "column": 5
+        },
+        "end": {
+          "line": 167,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 166,
+        "column": 9
+      },
+      "end": {
+        "line": 166,
+        "column": 31
+      }
+    },
+    "replacement": "true",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::stderr",
+      "return_type": "-> &str",
+      "span": {
+        "start": {
+          "line": 241,
+          "column": 5
+        },
+        "end": {
+          "line": 245,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 244,
+        "column": 9
+      },
+      "end": {
+        "line": 244,
+        "column": 21
+      }
+    },
+    "replacement": "\"\"",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::error_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 265,
+          "column": 5
+        },
+        "end": {
+          "line": 275,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 268,
+        "column": 9
+      },
+      "end": {
+        "line": 274,
+        "column": 21
+      }
+    },
+    "replacement": "1",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::error_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 133,
+          "column": 5
+        },
+        "end": {
+          "line": 141,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 136,
+        "column": 9
+      },
+      "end": {
+        "line": 140,
+        "column": 21
+      }
+    },
+    "replacement": "0",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "Confidence::label",
+      "return_type": "-> &'static str",
+      "span": {
+        "start": {
+          "line": 21,
+          "column": 5
+        },
+        "end": {
+          "line": 29,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 24,
+        "column": 9
+      },
+      "end": {
+        "line": 28,
+        "column": 10
+      }
+    },
+    "replacement": "\"\"",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::suggestion_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 153,
+          "column": 5
+        },
+        "end": {
+          "line": 161,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 159,
+        "column": 38
+      },
+      "end": {
+        "line": 159,
+        "column": 40
+      }
+    },
+    "replacement": "!=",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "FileReport::is_clean",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 107,
+          "column": 5
+        },
+        "end": {
+          "line": 110,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 109,
+        "column": 9
+      },
+      "end": {
+        "line": 109,
+        "column": 35
+      }
+    },
+    "replacement": "true",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::error_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 133,
+          "column": 5
+        },
+        "end": {
+          "line": 141,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 139,
+        "column": 38
+      },
+      "end": {
+        "line": 139,
+        "column": 40
+      }
+    },
+    "replacement": "!=",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::has_blocking_errors",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 163,
+          "column": 5
+        },
+        "end": {
+          "line": 167,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 166,
+        "column": 28
+      },
+      "end": {
+        "line": 166,
+        "column": 29
+      }
+    },
+    "replacement": "==",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::error_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 265,
+          "column": 5
+        },
+        "end": {
+          "line": 275,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 272,
+        "column": 70
+      },
+      "end": {
+        "line": 272,
+        "column": 72
+      }
+    },
+    "replacement": "&&",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::duration_ms",
+      "return_type": "-> u64",
+      "span": {
+        "start": {
+          "line": 259,
+          "column": 5
+        },
+        "end": {
+          "line": 263,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 262,
+        "column": 9
+      },
+      "end": {
+        "line": 262,
+        "column": 25
+      }
+    },
+    "replacement": "0",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "Violation::with_details",
+      "return_type": "-> Self",
+      "span": {
+        "start": {
+          "line": 77,
+          "column": 5
+        },
+        "end": {
+          "line": 92,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 84,
+        "column": 9
+      },
+      "end": {
+        "line": 91,
+        "column": 10
+      }
+    },
+    "replacement": "Default::default()",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::clean_file_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 169,
+          "column": 5
+        },
+        "end": {
+          "line": 172,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 171,
+        "column": 9
+      },
+      "end": {
+        "line": 171,
+        "column": 59
+      }
+    },
+    "replacement": "1",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::has_blocking_errors",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 163,
+          "column": 5
+        },
+        "end": {
+          "line": 167,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 166,
+        "column": 28
+      },
+      "end": {
+        "line": 166,
+        "column": 29
+      }
+    },
+    "replacement": "<",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "Confidence::label",
+      "return_type": "-> &'static str",
+      "span": {
+        "start": {
+          "line": 21,
+          "column": 5
+        },
+        "end": {
+          "line": 29,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 24,
+        "column": 9
+      },
+      "end": {
+        "line": 28,
+        "column": 10
+      }
+    },
+    "replacement": "\"xyzzy\"",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::has_errors",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 128,
+          "column": 5
+        },
+        "end": {
+          "line": 131,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 130,
+        "column": 9
+      },
+      "end": {
+        "line": 130,
+        "column": 34
+      }
+    },
+    "replacement": "true",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::warning_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 143,
+          "column": 5
+        },
+        "end": {
+          "line": 151,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 149,
+        "column": 38
+      },
+      "end": {
+        "line": 149,
+        "column": 40
+      }
+    },
+    "replacement": "!=",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::has_errors",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 128,
+          "column": 5
+        },
+        "end": {
+          "line": 131,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 130,
+        "column": 9
+      },
+      "end": {
+        "line": 130,
+        "column": 34
+      }
+    },
+    "replacement": "false",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::has_blocking_errors",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 163,
+          "column": 5
+        },
+        "end": {
+          "line": 167,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 166,
+        "column": 9
+      },
+      "end": {
+        "line": 166,
+        "column": 31
+      }
+    },
+    "replacement": "false",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::is_small_codebase",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 174,
+          "column": 5
+        },
+        "end": {
+          "line": 177,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 176,
+        "column": 61
+      },
+      "end": {
+        "line": 176,
+        "column": 63
+      }
+    },
+    "replacement": "<",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::passed",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 223,
+          "column": 5
+        },
+        "end": {
+          "line": 227,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 226,
+        "column": 9
+      },
+      "end": {
+        "line": 226,
+        "column": 20
+      }
+    },
+    "replacement": "true",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::suggestion_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 153,
+          "column": 5
+        },
+        "end": {
+          "line": 161,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 156,
+        "column": 9
+      },
+      "end": {
+        "line": 160,
+        "column": 21
+      }
+    },
+    "replacement": "1",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::suggestion_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 153,
+          "column": 5
+        },
+        "end": {
+          "line": 161,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 156,
+        "column": 9
+      },
+      "end": {
+        "line": 160,
+        "column": 21
+      }
+    },
+    "replacement": "0",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::exit_code",
+      "return_type": "-> i32",
+      "span": {
+        "start": {
+          "line": 229,
+          "column": 5
+        },
+        "end": {
+          "line": 233,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 232,
+        "column": 9
+      },
+      "end": {
+        "line": 232,
+        "column": 23
+      }
+    },
+    "replacement": "-1",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::has_errors",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 128,
+          "column": 5
+        },
+        "end": {
+          "line": 131,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 130,
+        "column": 31
+      },
+      "end": {
+        "line": 130,
+        "column": 32
+      }
+    },
+    "replacement": "<",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "FileReport::is_clean",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 107,
+          "column": 5
+        },
+        "end": {
+          "line": 110,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 109,
+        "column": 9
+      },
+      "end": {
+        "line": 109,
+        "column": 35
+      }
+    },
+    "replacement": "false",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::duration_ms",
+      "return_type": "-> u64",
+      "span": {
+        "start": {
+          "line": 259,
+          "column": 5
+        },
+        "end": {
+          "line": 263,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 262,
+        "column": 9
+      },
+      "end": {
+        "line": 262,
+        "column": 25
+      }
+    },
+    "replacement": "1",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::warning_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 277,
+          "column": 5
+        },
+        "end": {
+          "line": 289,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 286,
+        "column": 21
+      },
+      "end": {
+        "line": 286,
+        "column": 23
+      }
+    },
+    "replacement": "&&",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::stdout",
+      "return_type": "-> &str",
+      "span": {
+        "start": {
+          "line": 235,
+          "column": 5
+        },
+        "end": {
+          "line": 239,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 238,
+        "column": 9
+      },
+      "end": {
+        "line": 238,
+        "column": 21
+      }
+    },
+    "replacement": "\"\"",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::warning_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 277,
+          "column": 5
+        },
+        "end": {
+          "line": 289,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 280,
+        "column": 9
+      },
+      "end": {
+        "line": 288,
+        "column": 21
+      }
+    },
+    "replacement": "0",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::output",
+      "return_type": "-> String",
+      "span": {
+        "start": {
+          "line": 247,
+          "column": 5
+        },
+        "end": {
+          "line": 257,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 250,
+        "column": 9
+      },
+      "end": {
+        "line": 256,
+        "column": 10
+      }
+    },
+    "replacement": "\"xyzzy\".into()",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::clean_file_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 169,
+          "column": 5
+        },
+        "end": {
+          "line": 172,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 171,
+        "column": 9
+      },
+      "end": {
+        "line": 171,
+        "column": 59
+      }
+    },
+    "replacement": "0",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "FileReport::violation_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 112,
+          "column": 5
+        },
+        "end": {
+          "line": 115,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 114,
+        "column": 9
+      },
+      "end": {
+        "line": 114,
+        "column": 30
+      }
+    },
+    "replacement": "0",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::passed",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 223,
+          "column": 5
+        },
+        "end": {
+          "line": 227,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 226,
+        "column": 9
+      },
+      "end": {
+        "line": 226,
+        "column": 20
+      }
+    },
+    "replacement": "false",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::exit_code",
+      "return_type": "-> i32",
+      "span": {
+        "start": {
+          "line": 229,
+          "column": 5
+        },
+        "end": {
+          "line": 233,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 232,
+        "column": 9
+      },
+      "end": {
+        "line": 232,
+        "column": 23
+      }
+    },
+    "replacement": "0",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "Confidence::prefix",
+      "return_type": "-> &'static str",
+      "span": {
+        "start": {
+          "line": 31,
+          "column": 5
+        },
+        "end": {
+          "line": 39,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 34,
+        "column": 9
+      },
+      "end": {
+        "line": 38,
+        "column": 10
+      }
+    },
+    "replacement": "\"\"",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "Confidence::prefix",
+      "return_type": "-> &'static str",
+      "span": {
+        "start": {
+          "line": 31,
+          "column": 5
+        },
+        "end": {
+          "line": 39,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 34,
+        "column": 9
+      },
+      "end": {
+        "line": 38,
+        "column": 10
+      }
+    },
+    "replacement": "\"xyzzy\"",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::has_errors",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 128,
+          "column": 5
+        },
+        "end": {
+          "line": 131,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 130,
+        "column": 31
+      },
+      "end": {
+        "line": 130,
+        "column": 32
+      }
+    },
+    "replacement": ">=",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::warning_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 277,
+          "column": 5
+        },
+        "end": {
+          "line": 289,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 280,
+        "column": 9
+      },
+      "end": {
+        "line": 288,
+        "column": 21
+      }
+    },
+    "replacement": "1",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "Violation::simple",
+      "return_type": "-> Self",
+      "span": {
+        "start": {
+          "line": 65,
+          "column": 5
+        },
+        "end": {
+          "line": 75,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 67,
+        "column": 9
+      },
+      "end": {
+        "line": 74,
+        "column": 10
+      }
+    },
+    "replacement": "Default::default()",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::exit_code",
+      "return_type": "-> i32",
+      "span": {
+        "start": {
+          "line": 229,
+          "column": 5
+        },
+        "end": {
+          "line": 233,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 232,
+        "column": 9
+      },
+      "end": {
+        "line": 232,
+        "column": 23
+      }
+    },
+    "replacement": "1",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::output",
+      "return_type": "-> String",
+      "span": {
+        "start": {
+          "line": 247,
+          "column": 5
+        },
+        "end": {
+          "line": 257,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 250,
+        "column": 9
+      },
+      "end": {
+        "line": 256,
+        "column": 10
+      }
+    },
+    "replacement": "String::new()",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::is_small_codebase",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 174,
+          "column": 5
+        },
+        "end": {
+          "line": 177,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 176,
+        "column": 9
+      },
+      "end": {
+        "line": 176,
+        "column": 80
+      }
+    },
+    "replacement": "false",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::has_errors",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 128,
+          "column": 5
+        },
+        "end": {
+          "line": 131,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 130,
+        "column": 31
+      },
+      "end": {
+        "line": 130,
+        "column": 32
+      }
+    },
+    "replacement": "==",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::stdout",
+      "return_type": "-> &str",
+      "span": {
+        "start": {
+          "line": 235,
+          "column": 5
+        },
+        "end": {
+          "line": 239,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 238,
+        "column": 9
+      },
+      "end": {
+        "line": 238,
+        "column": 21
+      }
+    },
+    "replacement": "\"xyzzy\"",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::warning_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 143,
+          "column": 5
+        },
+        "end": {
+          "line": 151,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 146,
+        "column": 9
+      },
+      "end": {
+        "line": 150,
+        "column": 21
+      }
+    },
+    "replacement": "1",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::has_blocking_errors",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 163,
+          "column": 5
+        },
+        "end": {
+          "line": 167,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 166,
+        "column": 28
+      },
+      "end": {
+        "line": 166,
+        "column": 29
+      }
+    },
+    "replacement": ">=",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::stderr",
+      "return_type": "-> &str",
+      "span": {
+        "start": {
+          "line": 241,
+          "column": 5
+        },
+        "end": {
+          "line": 245,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 244,
+        "column": 9
+      },
+      "end": {
+        "line": 244,
+        "column": 21
+      }
+    },
+    "replacement": "\"xyzzy\"",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "FileReport::violation_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 112,
+          "column": 5
+        },
+        "end": {
+          "line": 115,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 114,
+        "column": 9
+      },
+      "end": {
+        "line": 114,
+        "column": 30
+      }
+    },
+    "replacement": "1",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::command",
+      "return_type": "-> &str",
+      "span": {
+        "start": {
+          "line": 217,
+          "column": 5
+        },
+        "end": {
+          "line": 221,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 220,
+        "column": 9
+      },
+      "end": {
+        "line": 220,
+        "column": 22
+      }
+    },
+    "replacement": "\"\"",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::error_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 265,
+          "column": 5
+        },
+        "end": {
+          "line": 275,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 272,
+        "column": 42
+      },
+      "end": {
+        "line": 272,
+        "column": 44
+      }
+    },
+    "replacement": "&&",
+    "genre": "BinaryOperator"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::warning_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 143,
+          "column": 5
+        },
+        "end": {
+          "line": 151,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 146,
+        "column": 9
+      },
+      "end": {
+        "line": 150,
+        "column": 21
+      }
+    },
+    "replacement": "0",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "CommandResult::error_count",
+      "return_type": "-> usize",
+      "span": {
+        "start": {
+          "line": 265,
+          "column": 5
+        },
+        "end": {
+          "line": 275,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 268,
+        "column": 9
+      },
+      "end": {
+        "line": 274,
+        "column": 21
+      }
+    },
+    "replacement": "0",
+    "genre": "FnValue"
+  },
+  {
+    "package": "neti",
+    "file": "src/types.rs",
+    "function": {
+      "function_name": "ScanReport::is_small_codebase",
+      "return_type": "-> bool",
+      "span": {
+        "start": {
+          "line": 174,
+          "column": 5
+        },
+        "end": {
+          "line": 177,
+          "column": 6
+        }
+      }
+    },
+    "span": {
+      "start": {
+        "line": 176,
+        "column": 9
+      },
+      "end": {
+        "line": 176,
+        "column": 80
+      }
+    },
+    "replacement": "true",
+    "genre": "FnValue"
+  }
+]

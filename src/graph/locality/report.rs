@@ -157,7 +157,6 @@ fn print_entropy(report: &ValidationReport) {
     println!("\n  Topological Entropy: {colored}");
 }
 
-#[allow(clippy::indexing_slicing)] // Guarded: mods.len() > 10 check before slice
 fn print_layers(report: &ValidationReport) {
     if report.layers().is_empty() {
         return;
@@ -165,7 +164,6 @@ fn print_layers(report: &ValidationReport) {
 
     println!("\n{}", "LAYER ARCHITECTURE".cyan().bold());
 
-    // Use &str to avoid String conversion inside loop
     let mut layers: std::collections::HashMap<usize, Vec<&str>> = std::collections::HashMap::new();
     for (path, layer) in report.layers() {
         let raw = path.file_stem().and_then(|s| s.to_str()).unwrap_or("?");
@@ -180,7 +178,6 @@ fn print_layers(report: &ValidationReport) {
         layers.entry(*layer).or_default().push(display_name);
     }
 
-    // Sort layers
     let mut sorted_layers: Vec<_> = layers.into_iter().collect();
     sorted_layers.sort_by_key(|(l, _)| *l);
 

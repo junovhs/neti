@@ -7,10 +7,11 @@ use crate::discovery;
 use crate::exit::NetiExit;
 use crate::reporting;
 use crate::spinner;
+use crate::types::CheckReport;
 use crate::verification;
 use anyhow::Result;
 use colored::Colorize;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub mod scan_report;
@@ -86,59 +87,52 @@ pub fn handle_check(json: bool) -> Result<NetiExit> {
     let config = Config::load();
 
     if json {
-        let files = discovery::discover(&config)?;
-        let scan_report = Engine::scan(&config, &files);
-        let verif_report = verification::run(&repo_root, |_, _, _| {});
-        let passed = !scan_report.has_errors() && verif_report.passed;
-
-        let mut report_text = String::new();
-        report_text.push_str("========================================\nNETI SCAN REPORT\n========================================\n\n");
-        report_text.push_str(&scan_report::build_summary_string(&scan_report));
-        report_text.push('\n');
-        if scan_report.has_errors() {
-            if let Ok(rich_str) = reporting::build_rich_report(&scan_report) {
-                report_text.push_str(&rich_str);
-            }
-        }
-        report_text.push_str("\n\n========================================\nNETI COMMANDS REPORT\n========================================\n\n");
-        for cmd in &verif_report.commands {
-            if cmd.passed() {
-                report_text.push_str(&format!(
-                    "$ {}\n> PASS ({}ms)\n\n",
-                    cmd.command(),
-                    cmd.duration_ms()
-                ));
-            } else {
-                report_text.push_str(&format!(
-                    "$ {}\n> FAIL ({}ms)\n{}\n\n",
-                    cmd.command(),
-                    cmd.duration_ms(),
-                    cmd.output().trim()
-                ));
-            }
-        }
-
-        std::fs::write("neti-report.txt", &report_text)?;
-        return Ok(if passed {
-            NetiExit::Success
-        } else {
-            NetiExit::CheckFailed
-        });
+        return handle_check_json(&repo_root, &config);
     }
 
+    handle_check_interactive(&repo_root, &config)
+}
+
+/// JSON mode: emit `CheckReport` to stdout, write `neti-report.txt`.
+fn handle_check_json(repo_root: &Path, config: &Config) -> Result<NetiExit> {
+    let files = discovery::discover(config)?;
+    let scan_report = Engine::scan(config, &files);
+    let verif_report = verification::run(repo_root, |_, _, _| {});
+    let passed = !scan_report.has_errors() && verif_report.passed;
+
+    let report_text = build_report_text(&scan_report, &verif_report);
+    std::fs::write("neti-report.txt", &report_text)?;
+
+    let check_report = CheckReport {
+        scan: scan_report,
+        commands: verif_report.commands,
+        passed,
+    };
+    reporting::print_json(&check_report)?;
+
+    Ok(if passed {
+        NetiExit::Success
+    } else {
+        NetiExit::CheckFailed
+    })
+}
+
+/// Interactive mode: spinner UI, write `neti-report.txt`, print scorecard.
+fn handle_check_interactive(repo_root: &Path, config: &Config) -> Result<NetiExit> {
     let (client, mut controller) = spinner::start("neti check");
 
     client.set_macro_step(1, 2, "Static Analysis");
-    let files = discovery::discover(&config)?;
+    let files = discovery::discover(config)?;
     let counter = AtomicUsize::new(0);
+    let file_count = files.len();
     let scan_report = Engine::scan_with_progress(
-        &config,
+        config,
         &files,
         &|path| {
             let i = counter.fetch_add(1, Ordering::Relaxed) + 1;
             client.step_micro_progress(
                 i,
-                files.len(),
+                file_count,
                 format!(
                     "Scanning {}",
                     path.file_name().and_then(|n| n.to_str()).unwrap_or("file")
@@ -151,43 +145,16 @@ pub fn handle_check(json: bool) -> Result<NetiExit> {
     );
 
     client.set_macro_step(2, 2, "Verification Commands");
-    let verif_report = verification::run(&repo_root, |cmd, current, total| {
+    let verif_report = verification::run(repo_root, |cmd, current, total| {
         client.step_micro_progress(current, total, format!("Running: {cmd}"));
     });
 
     let passed = !scan_report.has_errors() && verif_report.passed;
     controller.stop(passed);
 
-    // Write neti-report.txt (The high-detail "Manual")
-    let mut report_text = String::new();
-    report_text.push_str("========================================\nNETI SCAN REPORT\n========================================\n\n");
-    report_text.push_str(&scan_report::build_summary_string(&scan_report));
-    report_text.push('\n');
-    if scan_report.has_errors() {
-        if let Ok(rich_str) = reporting::build_rich_report(&scan_report) {
-            report_text.push_str(&rich_str);
-        }
-    }
-    report_text.push_str("\n\n========================================\nNETI COMMANDS REPORT\n========================================\n\n");
-    for cmd in &verif_report.commands {
-        if cmd.passed() {
-            report_text.push_str(&format!(
-                "$ {}\n> PASS ({}ms)\n\n",
-                cmd.command(),
-                cmd.duration_ms()
-            ));
-        } else {
-            report_text.push_str(&format!(
-                "$ {}\n> FAIL ({}ms)\n{}\n\n",
-                cmd.command(),
-                cmd.duration_ms(),
-                cmd.output().trim()
-            ));
-        }
-    }
+    let report_text = build_report_text(&scan_report, &verif_report);
     std::fs::write("neti-report.txt", &report_text)?;
 
-    // TERMINAL OUTPUT (Succinct Scoreboard)
     scan_report::print(&scan_report);
     print_check_scorecard(&verif_report);
 
@@ -196,6 +163,55 @@ pub fn handle_check(json: bool) -> Result<NetiExit> {
     } else {
         NetiExit::CheckFailed
     })
+}
+
+/// Builds the plain-text report written to `neti-report.txt`.
+fn build_report_text(
+    scan_report: &crate::types::ScanReport,
+    verif_report: &verification::VerificationReport,
+) -> String {
+    let mut out = String::new();
+    out.push_str(
+        "========================================\n\
+         NETI SCAN REPORT\n\
+         ========================================\n\n",
+    );
+    out.push_str(&scan_report::build_summary_string(scan_report));
+    out.push('\n');
+
+    if scan_report.has_errors() {
+        if let Ok(rich_str) = reporting::build_rich_report(scan_report) {
+            out.push_str(&rich_str);
+        }
+    }
+
+    out.push_str(
+        "\n\n========================================\n\
+         NETI COMMANDS REPORT\n\
+         ========================================\n\n",
+    );
+    for cmd in &verif_report.commands {
+        append_command_result(&mut out, cmd);
+    }
+    out
+}
+
+/// Appends a single command result to the report text.
+fn append_command_result(out: &mut String, cmd: &crate::types::CommandResult) {
+    if cmd.passed() {
+        out.push_str(&format!(
+            "$ {}\n> PASS ({}ms)\n\n",
+            cmd.command(),
+            cmd.duration_ms()
+        ));
+    } else {
+        out.push_str(&format!(
+            "$ {}\n> FAIL ({}ms)\n{}\n\n",
+            cmd.command(),
+            cmd.duration_ms(),
+            cmd.output().trim()
+        ));
+    }
 }
 
 fn print_check_scorecard(report: &verification::VerificationReport) {
