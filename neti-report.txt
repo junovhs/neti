@@ -2,7 +2,7 @@
 NETI SCAN REPORT
 ========================================
 
-SCAN SUMMARY: 204 files | 235520 tokens | 1 violations
+SCAN SUMMARY: 204 files | 235522 tokens | 1 violations
 
 ALL VIOLATING FILES:
     1 violations | src/types/command.rs
@@ -23,7 +23,7 @@ warn: Class 'CommandResult' has low cohesion (LCOM4: 5)
    |
    = SUPPRESS: // neti:allow(LCOM4) on the line, or LCOM4 = "warn" in neti.toml [rules]
 
-~ Neti found 1 warning (1.064s).
+~ Neti found 1 warning (979ms).
 
 
 ========================================
@@ -44,8 +44,8 @@ NETI COMMANDS REPORT
 ========================================
 
 $ cargo clippy --all-targets --no-deps -- -D warnings
-> PASS (241ms)
+> PASS (221ms)
 
 $ cargo test
-> PASS (2628ms)
+> PASS (2610ms)
 

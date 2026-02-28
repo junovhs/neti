@@ -51,7 +51,7 @@ Fix: Use shell-words parser, or support structured TOML form `argv = ["cargo", "
 ---
 
 ## [9] Locality integration into `neti check` pipeline
-**Status:** OPEN
+**Status:** DONE
 **Files:** `src/graph/locality/mod.rs`, `src/cli/locality.rs`, `src/cli/handlers/mod.rs`, `src/config/locality.rs`, `src/reporting.rs`
 `check_locality_silent()` exists "for pipeline use" but `handle_check` doesn't call it. The `[rules.locality]` config exists but isn't enforced.
 
@@ -357,30 +357,82 @@ Final state: 0 errors, 0 warnings, 149 tests passing. Only 2 legitimate `neti:al
 
 ---
 
-# CALIBRATION DATA
+## [38] HTML monolith analysis and split recommendations
+**Status:** OPEN
+**Files:** `src/cli/args.rs`, `src/cli/handlers/mod.rs`, `src/analysis/html.rs` (new), `src/graph/locality/` (extend)
 
-### rand v0.10.0
+Single-file HTML applications with inline `<script>` and `<style>` blocks are common entry points for projects that outgrow their structure. Neti should analyze these monoliths and recommend splits.
 
-| Round | Errors | Warnings | Suggestions | Total |
-|-------|--------|----------|-------------|-------|
-| Initial | 57 | 0 | 0 | 57 |
-| Config tuning | 38 | 0 | 0 | 38 |
-| False positive fixes | 19 | 0 | 0 | 19 |
-| Test skipping | 14 | 0 | 0 | 14 |
-| Confidence Tiers | 6 | 6 | 2 | 14 |
-| Heuristic Sharpening | 4 | 17 | 2 | 23 |
+**Required:**
+1. Parse HTML with tree-sitter-html, extract `<script>` and `<style>` blocks
+2. Run existing JS/TS definition extraction on script content
+3. Cluster functions by shared variable access (reuse coupling analysis)
+4. Cluster CSS rules by selector patterns (layout vs components vs theme)
+5. Emit split recommendations with rationale
 
-### lazuli emulator
+**Command:** `neti split <file.html>`
 
-| Category | Count | Assessment |
-|----------|-------|------------|
-| LAW OF PARANOIA | 43 | Actionable |
-| LAW OF INTEGRITY | 0 | Fixed by [13] |
-| L03 | ~12 | Fixed by [14] |
-| P04 | 34 | Noisy — [15] pending |
-| I02 | 28 | Real but low-priority |
-| Structural | ~80 | Expected for domain |
-| M03/M04 | 12 | Actionable |
-| P02/R07 | 9 | Actionable |
-| Complexity | 10 | Actionable |
-| Atomicity | 17 | Real |
+**Output format:**
+```
+Analysis:
+  <script> block: 847 lines, 12 functions, 3 cohesion clusters
+  <style> block: 234 lines, 2 distinct concerns
+
+Recommended structure:
+  src/
+    js/
+      auth.js      ← login(), logout(), checkSession() [share userState]
+      ui.js        ← render(), update() [share domRefs]
+    css/
+      layout.css   ← structural selectors
+      components.css ← .btn, .card, .modal
+    index.html     ← markup only
+```
+
+**Resolution:**
+
+---
+
+## [39] Inline script/style analysis without split recommendation
+**Status:** OPEN
+**Files:** `src/analysis/engine.rs`, `src/analysis/html.rs` (new)
+
+Before full split recommendations ([38]), support basic `neti scan` on HTML files:
+- Extract `<script>` content, run JS/TS pattern detectors
+- Report violations with correct line offsets (HTML line + script offset)
+- Flag monolith size thresholds (e.g., >200 lines of inline JS triggers suggestion)
+
+This enables governance on legacy HTML without requiring immediate refactoring.
+
+**Resolution:**
+
+---
+
+## [40] CSS cohesion analysis
+**Status:** OPEN
+**Files:** `src/analysis/css.rs` (new), `src/lang.rs`
+
+Add tree-sitter-css support for:
+- Selector clustering (group by prefix: `.nav-*`, `.btn-*`, layout selectors)
+- Specificity warnings (overly specific selectors indicate coupling)
+- Dead code detection (selectors with no HTML match in same file)
+- Variable locality (`--var` definitions and usage proximity)
+
+Required for [38] split recommendations and standalone CSS governance.
+
+**Resolution:**
+
+---
+
+## [41] SWUM-style identifier expansion for JS/TS
+**Status:** OPEN
+**Files:** `src/analysis/naming.rs` (extend), `src/lang.rs`
+
+Port SEMMAP's SWUM identifier expansion to Neti for:
+- Naming convention checks (camelCase vs snake_case consistency)
+- Verb-first function name suggestions
+- Acronym detection and expansion hints
+
+Low priority — nice-to-have for style governance.
+
+**Resolution:**

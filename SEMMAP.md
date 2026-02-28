@@ -15,547 +15,565 @@
 ## Layer 0 -- Config
 
 `Cargo.toml`
-Rust package manifest and dependencies. Centralizes project configuration.
+Rust package manifest and dependencies.
 
 `mutants.out/lock.json`
-Configuration for lock. Centralizes project configuration.
+Configuration for lock.
 
 `mutants.out/mutants.json`
-Configuration for mutants. Centralizes project configuration.
+Configuration for mutants.
 
 `mutants.out/outcomes.json`
-Configuration for outcomes. Centralizes project configuration.
+Configuration for outcomes.
 
 `neti.toml`
-Configuration for neti. Centralizes project configuration.
+Configuration for neti.
 
 `src/cli/config_ui/editor.rs`
-Module providing `ConfigEditor`, `EditResult`, `EventResult`. Centralizes project configuration.
-→ Exports: ConfigEditor, EditResult, EventResult, config, config_mut, items, new, run, run_config_editor, selected, set_modified, set_selected
+Implements config editor.
+→ Exports: run_config_editor, EditResult, EventResult, set_modified
 
 `src/cli/config_ui/items.rs`
-Configuration items that can be edited. Centralizes project configuration.
-→ Exports: ConfigItem, all, cycle_enum, get_number, get_value, label, set_number, toggle_boolean
+Configuration items that can be edited.
+→ Exports: ConfigItem, cycle_enum, toggle_boolean, get_value
 
 `src/cli/config_ui/logic.rs`
-Module providing `move_selection`, `run_editor`. Centralizes project configuration.
+Processes editor.
 → Exports: move_selection, run_editor
 
 `src/cli/config_ui/render.rs`
-Module providing `draw`. Centralizes project configuration.
+Implements draw functionality.
 → Exports: draw
 
 `src/config/io.rs`
-Module providing `apply_project_defaults`, `load_ignore_file`, `load_toml_config`. Centralizes project configuration.
-→ Exports: apply_project_defaults, load_ignore_file, load_toml_config, parse_toml, process_ignore_line, save_to_file
+Gets the toml config.
+→ Exports: apply_project_defaults, process_ignore_line, save_to_file, load_toml_config
 
 `src/config/locality.rs`
-Configuration for the Law of Locality enforcement. Centralizes project configuration.
-→ Exports: LocalityConfig, is_enabled, is_error_mode, to_validator_config
+Configuration for the Law of Locality enforcement.
+→ Exports: is_error_mode, to_validator_config, LocalityConfig, is_enabled
 
 `src/config/types.rs`
-Module providing `CommandEntry`, `Config`, `NetiToml`. Centralizes project configuration.
-→ Exports: CommandEntry, Config, NetiToml, Preferences, RuleConfig, SafetyConfig, into_vec
+Implements rule config.
+→ Exports: CommandEntry, NetiToml, into_vec, RuleConfig
 
 `src/graph/tsconfig.rs`
-Parser for tsconfig.json / jsconfig.json path mappings. Centralizes project configuration.
+Parser for tsconfig.json / jsconfig.json path mappings.
 → Exports: TsConfig, load, resolve
 
 ## Layer 1 -- Core
 
 `src/analysis/mod.rs`
-Core analysis logic (The "Rule Engine"). Supports application functionality.
+Core analysis logic (The "Rule Engine").
 
 `src/analysis/patterns/mod.rs`
-AST pattern detection for violations. Supports application functionality.
-→ Exports: detect_all, get_capture_node
+AST pattern detection for violations.
+→ Exports: get_capture_node, detect_all
 
 `src/bin/neti.rs`
-Orchestrates `clap`, `colored`, `neti_core`. Defines command-line interface.
+Orchestrates `clap`, `colored`, `neti_core`.
 
 `src/cli/args.rs`
-Module providing `Cli`, `Commands`. Defines command-line interface.
+Implements cli functionality.
 → Exports: Cli, Commands
 
 `src/cli/config_ui/mod.rs`
-Orchestrates `editor`. Centralizes project configuration.
+Orchestrates `editor`.
 
 `src/cli/handlers/mod.rs`
-Core analysis command handlers. Supports application functionality.
+Core analysis command handlers.
 → Exports: get_repo_root, handle_check, handle_scan
 
 `src/cli/mod.rs`
-CLI command handlers. Supports application functionality.
+CLI command handlers.
 
 `src/config/mod.rs`
-Module providing `load`, `load_local_config`, `new`. Centralizes project configuration.
-→ Exports: load, load_local_config, new, parse_toml, process_ignore_line, save, save_to_file, validate
+Gets the local config.
+→ Exports: process_ignore_line, load_local_config, save_to_file, parse_toml
 
 `src/graph/defs/mod.rs`
-Extracts symbol DEFINITIONS from source files using tree-sitter. Supports application functionality.
+Extracts symbol DEFINITIONS from source files using tree-sitter.
 
 `src/graph/locality/analysis/mod.rs`
-Deep topology analysis: categorize violations, find patterns, suggest fixes. Supports application functionality.
+Deep topology analysis: categorize violations, find patterns, suggest fixes.
 → Exports: TopologyAnalysis, analyze
 
 `src/graph/locality/mod.rs`
-Law of Locality enforcement for topological integrity. Supports application functionality.
+Law of Locality enforcement for topological integrity.
 
 `src/graph/mod.rs`
-Module definitions for mod. Supports application functionality.
+Module definitions for mod.
 
 `src/graph/rank/mod.rs`
-Orchestrates graph construction and ranking. Supports application functionality.
-→ Exports: GraphEngine, build, focus_on
+Orchestrates graph construction and ranking.
+→ Exports: GraphEngine, focus_on
 
 `src/lib.rs`
-Library root and public exports. Provides application entry point.
+Library root and public exports.
 
 `src/main.rs`
-Placeholder file. Provides application entry point.
+Placeholder file.
 
 `src/mutate/mod.rs`
-Cross-language mutation testing [EXPERIMENTAL]. Supports application functionality.
-→ Exports: MutateOptions, MutateReport, run
+Cross-language mutation testing [EXPERIMENTAL].
+→ Exports: MutateOptions, MutateReport
 
 `src/spinner/mod.rs`
-Triptych HUD (Head-Up Display) for process execution feedback. Supports application functionality.
+Triptych HUD (Head-Up Display) for process execution feedback.
 → Exports: start
 
+`src/types/mod.rs`
+Confidence level for a violation — how certain Neti is that this is a real problem.
+→ Exports: is_small_codebase, has_blocking_errors, clean_file_count, with_details
+
 `src/verification/mod.rs`
-External command verification pipeline. Supports application functionality.
-→ Exports: VerificationReport, failed_count, new, passed_count, run, total_commands, total_errors, total_warnings
+External command verification pipeline.
+→ Exports: VerificationReport, failed_count, passed_count, total_commands
 
 ## Layer 2 -- Domain
 
 `src/analysis/aggregator.rs`
-Aggregation logic for analysis results. Supports application functionality.
-→ Exports: Aggregator, FileAnalysis, ingest, merge, new
+Aggregation logic for analysis results.
+→ Exports: FileAnalysis, Aggregator, ingest, merge
 
 `src/analysis/ast.rs`
-Module providing `AnalysisResult`, `Analyzer`, `analyze`. Supports application functionality.
-→ Exports: AnalysisResult, Analyzer, analyze, new
+Implements analyzer functionality.
+→ Exports: AnalysisResult, Analyzer, analyze
 
 `src/analysis/checks.rs`
-AST-based complexity and style checks. Supports application functionality.
+AST-based complexity and style checks.
 → Exports: CheckContext
 
 `src/analysis/checks/banned.rs`
-Banned construct checks (Law of Paranoia). Supports application functionality.
+Banned construct checks (Law of Paranoia).
 → Exports: check_banned
 
 `src/analysis/checks/complexity.rs`
-Complexity metrics checks (Law of Complexity). Supports application functionality.
+Complexity metrics checks (Law of Complexity).
 → Exports: check_metrics
 
 `src/analysis/checks/naming.rs`
-Function naming checks (Law of Complexity). Supports application functionality.
+Function naming checks (Law of Complexity).
 → Exports: check_naming
 
 `src/analysis/checks/syntax.rs`
-AST-level syntax error and malformed node detection. Supports application functionality.
+AST-level syntax error and malformed node detection.
 → Exports: check_syntax
 
 `src/analysis/cognitive.rs`
-Cognitive Complexity metric implementation. Supports application functionality.
+Cognitive Complexity metric implementation.
 → Exports: CognitiveAnalyzer, calculate
 
 `src/analysis/deep.rs`
-Deep analysis runner. Supports application functionality.
-→ Exports: DeepAnalyzer, compute_violations, new
+Deep analysis runner.
+→ Exports: DeepAnalyzer, compute_violations
 
 `src/analysis/engine.rs`
-Main execution logic for the `Neti` analysis engine. Supports application functionality.
-→ Exports: Engine, scan, scan_with_progress
+Main execution logic for the `Neti` analysis engine.
+→ Exports: scan_with_progress, Engine, scan
 
 `src/analysis/extract.rs`
-Rust scope extraction logic (Structs/Enums/Fields). Supports application functionality.
+Rust scope extraction logic (Structs/Enums/Fields).
 → Exports: RustExtractor, extract_scopes
 
 `src/analysis/extract_impl.rs`
-Rust impl/method extraction logic. Supports application functionality.
+Rust impl/method extraction logic.
 → Exports: extract
 
 `src/analysis/metrics.rs`
-Module providing `calculate_complexity`, `calculate_max_depth`, `count_arguments`. Supports application functionality.
-→ Exports: calculate_complexity, calculate_max_depth, count_arguments
+Implements calculate complexity.
+→ Exports: calculate_max_depth, count_arguments, calculate_complexity
 
 `src/analysis/patterns/concurrency.rs`
-Concurrency pattern detection: C03, C04. Supports application functionality.
+Concurrency pattern detection: C03, C04.
 → Exports: detect
 
 `src/analysis/patterns/concurrency_lock.rs`
-C03: `MutexGuard` held across `.await`  Severity Tiers  **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH confidence** Holding a sync guard across `.await` blocks the OS thread, starving the executor, and can deadlock if another task tries to acquire the same lock. Supports application functionality.
+C03: `MutexGuard` held across `.await`  Severity Tiers  **Sync mutex (std::sync::Mutex, parking_lot::Mutex) — HIGH confidence** Holding a sync guard across `.await` blocks the OS thread, starving the executor, and can deadlock if another task tries to acquire the same lock.
 → Exports: detect_c03
 
 `src/analysis/patterns/concurrency_sync.rs`
-C04: Undocumented synchronization primitives. Supports application functionality.
+C04: Undocumented synchronization primitives.
 → Exports: detect_c04
 
 `src/analysis/patterns/db_patterns.rs`
-Database anti-patterns: P03 (N+1 queries). Supports application functionality.
+Database anti-patterns: P03 (N+1 queries).
 → Exports: detect
 
 `src/analysis/patterns/idiomatic.rs`
-Idiomatic patterns: I01, I02. Supports application functionality.
+Idiomatic patterns: I01, I02.
 → Exports: detect
 
 `src/analysis/patterns/idiomatic_i01.rs`
-I01: Manual `From` implementations that could use `derive_more::From`. Supports application functionality.
+I01: Manual `From` implementations that could use `derive_more::From`.
 
 `src/analysis/patterns/idiomatic_i02.rs`
-I02: Duplicate match arm bodies that could be combined using `A | B => body`. Supports application functionality.
+I02: Duplicate match arm bodies that could be combined using `A | B => body`.
 
 `src/analysis/patterns/logic.rs`
-Logic boundary patterns: L02 (off-by-one risk), L03 (unchecked index). Supports application functionality.
+Logic boundary patterns: L02 (off-by-one risk), L03 (unchecked index).
 → Exports: detect
 
 `src/analysis/patterns/logic_l02.rs`
-L02: Boundary uses `<=`/`>=` with `.len()` — possible off-by-one. Supports application functionality.
+L02: Boundary uses `<=`/`>=` with `.len()` — possible off-by-one.
 
 `src/analysis/patterns/logic_l03.rs`
-L03: Unchecked index access (`[0]`, `.first().unwrap()`, etc.). Supports application functionality.
+L03: Unchecked index access (`[0]`, `.first().unwrap()`, etc.).
 
 `src/analysis/patterns/logic_proof.rs`
-Fixed-size array proof helpers for L03. Supports application functionality.
-→ Exports: extract_receiver, is_fixed_size_array_access
+Fixed-size array proof helpers for L03.
+→ Exports: is_fixed_size_array_access, extract_receiver
 
 `src/analysis/patterns/performance.rs`
-Performance anti-patterns: P01, P02, P04, P06  Escalation Philosophy  P01/P02 must only fire when we can make a reasonable argument that the allocation is *material*. Supports application functionality.
+Performance anti-patterns: P01, P02, P04, P06  Escalation Philosophy  P01/P02 must only fire when we can make a reasonable argument that the allocation is *material*.
 → Exports: detect
 
 `src/analysis/patterns/performance_p01.rs`
-P01: `.clone()` inside a loop. Supports application functionality.
+P01: `.clone()` inside a loop.
 
 `src/analysis/patterns/performance_p02.rs`
-P02: String conversion (`.to_string()` / `.to_owned()`) inside a loop. Supports application functionality.
+P02: String conversion (`.to_string()` / `.to_owned()`) inside a loop.
 
 `src/analysis/patterns/performance_p04p06.rs`
-P04: Nested loop (O(n²)) and P06: linear search inside loop. Supports application functionality.
+P04: Nested loop (O(n²)) and P06: linear search inside loop.
 
 `src/analysis/patterns/resource.rs`
-Resource patterns: R07 (missing flush). Supports application functionality.
+Resource patterns: R07 (missing flush).
 → Exports: detect
 
 `src/analysis/patterns/security.rs`
-Security patterns: X01 (SQL injection), X02 (command injection), X03 (hardcoded secrets). Supports application functionality.
+Security patterns: X01 (SQL injection), X02 (command injection), X03 (hardcoded secrets).
 → Exports: detect
 
 `src/analysis/patterns/security_x01.rs`
-X01: SQL Injection — format!() used to build SQL strings. Supports application functionality.
+X01: SQL Injection — format!() used to build SQL strings.
 
 `src/analysis/patterns/security_x02.rs`
-X02: Command / Shell Injection. Supports application functionality.
+X02: Command / Shell Injection.
 
 `src/analysis/patterns/security_x03.rs`
-X03: Hardcoded secrets (keys, tokens, passwords) in let/const bindings. Supports application functionality.
+X03: Hardcoded secrets (keys, tokens, passwords) in let/const bindings.
 
 `src/analysis/patterns/semantic.rs`
-Semantic patterns: M03, M04, M05. Supports application functionality.
+Semantic patterns: M03, M04, M05.
 → Exports: detect
 
 `src/analysis/patterns/state.rs`
-State pattern detection: S01, S02, S03. Supports application functionality.
+State pattern detection: S01, S02, S03.
 → Exports: detect
 
 `src/analysis/safety.rs`
-Module providing `check_safety`. Supports application functionality.
+Validates safety.
 → Exports: check_safety
 
 `src/analysis/scope.rs`
-Module providing `FieldInfo`, `Method`, `Scope`. Supports application functionality.
-→ Exports: FieldInfo, Method, Scope, add_derive, add_field, add_method, derives, fields, has_behavior, has_derives, is_enum, methods, name, new, new_enum, row, validate_record
+Implements add method.
+→ Exports: validate_record, FieldInfo, has_behavior, is_enum
 
 `src/analysis/structural.rs`
-Structural metrics calculation (LCOM4, CBO, SFOUT, AHF). Supports application functionality.
-→ Exports: ScopeMetrics, calculate_ahf, calculate_cbo, calculate_lcom4, calculate_max_sfout
+Structural metrics calculation (LCOM4, CBO, SFOUT, AHF).
+→ Exports: calculate_max_sfout, ScopeMetrics, calculate_ahf, calculate_cbo
 
 `src/analysis/visitor.rs`
-AST Visitor for analysis. Supports application functionality.
-→ Exports: AstVisitor, extract_scopes, new
+AST Visitor for analysis.
+→ Exports: AstVisitor, extract_scopes
 
 `src/analysis/worker.rs`
-Worker module for file parsing and analysis. Supports application functionality.
+Worker module for file parsing and analysis.
 → Exports: is_ignored, scan_file
 
 `src/branch.rs`
-Git branch workflow for AI agents. Supports application functionality.
-→ Exports: BranchResult, PromoteResult, abort, count_modified_files, init_branch, on_work_branch, promote, work_branch_name
+Git branch workflow for AI agents.
+→ Exports: count_modified_files, on_work_branch, work_branch_name, PromoteResult
 
 `src/clean.rs`
-Module providing `run`. Supports application functionality.
+Processes .
 → Exports: run
 
 `src/cli/audit.rs`
-CLI handlers for the consolidation audit command. Supports application functionality.
+CLI handlers for the consolidation audit command.
 → Exports: AuditCliOptions, handle
 
 `src/cli/dispatch.rs`
-Command dispatch logic extracted from binary to reduce main function size. Supports application functionality.
+Command dispatch logic extracted from binary to reduce main function size.
 → Exports: execute
 
 `src/cli/git_ops.rs`
-Handlers for Git-based workflow operations (branch, promote, abort). Supports application functionality.
+Handlers for Git-based workflow operations (branch, promote, abort).
 → Exports: handle_abort, handle_branch, handle_promote
 
+`src/cli/handlers/check_report.rs`
+Report building and scorecard display for `neti check`.
+→ Exports: build_report_text, print_commands_scorecard, print_locality_scorecard
+
 `src/cli/handlers/scan_report.rs`
-Scan report display formatting. Supports application functionality.
+Scan report display formatting.
 → Exports: aggregate_by_law, build_summary_string, print
 
 `src/cli/locality.rs`
-Handler for locality scanning. Supports application functionality.
-→ Exports: LocalityResult, check_locality_silent, handle_locality, is_locality_blocking, run_locality_check
+Handler for locality scanning.
+→ Exports: is_locality_blocking, check_locality_silent, run_locality_check, LocalityResult
 
 `src/cli/mutate_handler.rs`
-Module providing `handle_mutate`. Supports application functionality.
+Processes mutate.
 → Exports: handle_mutate
 
 `src/constants.rs`
-Shared constants for file filtering and pattern matching. Supports application functionality.
+Shared constants for file filtering and pattern matching.
 → Exports: should_prune
 
 `src/detection.rs`
-Detects build systems. Supports application functionality.
-→ Exports: BuildSystemType, Detector, detect_build_systems, new
+Detects build systems.
+→ Exports: BuildSystemType, detect_build_systems, Detector
 
 `src/discovery.rs`
-Module providing `discover`, `group_by_directory`. Parses input into structured data.
-→ Exports: discover, group_by_directory
+Implements discover functionality.
+→ Exports: group_by_directory, discover
 
 `src/events.rs`
-Machine-readable event logging for audit trails. Supports application functionality.
-→ Exports: EventKind, EventLogger, NetiEvent, log, new
+Machine-readable event logging for audit trails.
+→ Exports: EventKind, EventLogger, NetiEvent
 
 `src/exit.rs`
-Standardized process exit codes for `Neti`. Supports application functionality.
-→ Exports: NetiExit, code, exit
+Standardized process exit codes for `Neti`.
+→ Exports: NetiExit, code
 
 `src/file_class.rs`
-File classification: distinguishes source code from config, assets, and data. Supports application functionality.
-→ Exports: FileKind, classify, is_governed, secrets_applicable
+File classification: distinguishes source code from config, assets, and data.
+→ Exports: FileKind, is_governed, secrets_applicable, classify
 
 `src/graph/defs/extract.rs`
-Module providing `DefKind`, `Definition`, `extract`. Supports application functionality.
-→ Exports: DefKind, Definition, extract
+Parses .
+→ Exports: DefKind, Definition
 
 `src/graph/defs/queries.rs`
-Module providing `DefExtractor`, `get_config`. Supports application functionality.
+Gets the config.
 → Exports: DefExtractor, get_config
 
 `src/graph/imports.rs`
-Module providing `extract`. Supports application functionality.
+Parses .
 → Exports: extract
 
 `src/graph/locality/analysis/metrics.rs`
-Module providing `GodModuleInfo`, `HubCandidate`, `compute_module_coupling`. Supports application functionality.
-→ Exports: GodModuleInfo, HubCandidate, compute_module_coupling, find_god_modules, find_hub_candidates
+Finds hub candidates.
+→ Exports: compute_module_coupling, GodModuleInfo, find_god_modules, find_hub_candidates
 
 `src/graph/locality/analysis/violations.rs`
-Categories of locality violations. Supports application functionality.
-→ Exports: CategorizedViolation, ViolationKind, categorize_violation, description, label, suggest
+Categories of locality violations.
+→ Exports: CategorizedViolation, ViolationKind, categorize_violation, description
 
 `src/graph/locality/classifier.rs`
-Node classification based on coupling metrics. Supports application functionality.
+Node classification based on coupling metrics.
 → Exports: ClassifierConfig, classify
 
 `src/graph/locality/coupling.rs`
-Afferent and Efferent coupling computation. Supports application functionality.
+Afferent and Efferent coupling computation.
 → Exports: compute_coupling
 
 `src/graph/locality/cycles.rs`
-Cycle detection for the Law of Locality. Supports application functionality.
+Cycle detection for the Law of Locality.
 → Exports: detect_cycles
 
 `src/graph/locality/distance.rs`
-Dependency Distance calculator via Lowest Common Ancestor (LCA). Supports application functionality.
+Dependency Distance calculator via Lowest Common Ancestor (LCA).
 → Exports: compute_distance, find_lca
 
 `src/graph/locality/edges.rs`
-Edge collection for locality analysis. Supports application functionality.
+Edge collection for locality analysis.
 → Exports: collect
 
 `src/graph/locality/exemptions.rs`
-Smart structural exemptions for Rust module patterns. Supports application functionality.
+Smart structural exemptions for Rust module patterns.
 → Exports: is_structural_pattern
 
 `src/graph/locality/layers.rs`
-Layer inference for the Law of Locality. Supports application functionality.
+Layer inference for the Law of Locality.
 → Exports: check_layer_violation, infer_layers
 
 `src/graph/locality/report.rs`
-Rich output formatting for locality analysis. Supports application functionality.
+Rich output formatting for locality analysis.
 → Exports: print_full_report
 
 `src/graph/locality/types.rs`
-Core types for the Law of Locality enforcement system. Defines domain data structures.
-→ Exports: Coupling, EdgeVerdict, LocalityEdge, NodeIdentity, PassReason, allows_far_deps, instability, is_local, label, new, routes_to_hub, skew, total
+Core types for the Law of Locality enforcement system.
+→ Exports: allows_far_deps, routes_to_hub, NodeIdentity, PassReason
 
 `src/graph/locality/validator.rs`
-The Universal Locality Algorithm - Judgment Pass. Supports application functionality.
-→ Exports: ValidationReport, ValidatorConfig, check_cohesion, is_clean, validate_edge, validate_graph
+The Universal Locality Algorithm - Judgment Pass.
+→ Exports: ValidationReport, ValidatorConfig, check_cohesion, is_clean
 
 `src/graph/rank/builder.rs`
-Graph construction logic: extraction and edge building. Supports application functionality.
-→ Exports: GraphData, build_data, rebuild_topology
+Graph construction logic: extraction and edge building.
+→ Exports: rebuild_topology, GraphData, build_data
 
 `src/graph/rank/graph.rs`
-The dependency graph structure and query interface. Supports application functionality.
-→ Exports: RepoGraph, dependencies, dependents, graph_tags, is_hub, neighbors, new, ranked_files
+The dependency graph structure and query interface.
+→ Exports: is_hub, ranked_files, RepoGraph, graph_tags
 
 `src/graph/rank/pagerank.rs`
-PageRank` algorithm implementation for file ranking. Supports application functionality.
+PageRank` algorithm implementation for file ranking.
 → Exports: compute
 
 `src/graph/rank/queries.rs`
-Module providing `collect_dependencies`, `collect_dependents`, `get_dependencies`. Supports application functionality.
-→ Exports: collect_dependencies, collect_dependents, get_dependencies, get_dependents, get_graph_tags, get_neighbors, get_ranked_files
+Gets the ranked files.
+→ Exports: get_graph_tags, get_ranked_files, collect_dependencies, collect_dependents
 
 `src/graph/rank/tags.rs`
-Tag types representing definitions and references. Supports application functionality.
+Tag types representing definitions and references.
 → Exports: Tag, TagKind
 
 `src/graph/resolver.rs`
-Module providing `resolve`. Supports application functionality.
+Implements resolve functionality.
 → Exports: resolve
 
 `src/lang.rs`
-Module providing `Lang`, `QueryKind`, `from_ext`. Supports application functionality.
-→ Exports: Lang, QueryKind, from_ext, grammar, q_complexity, q_defs, q_exports, q_imports, q_naming, q_skeleton, query, skeleton_replacement
+Implements q complexity.
+→ Exports: from_ext, QueryKind, skeleton_replacement, q_complexity
 
 `src/lang_queries.rs`
-Implements lang queries. Supports application functionality.
+Implements lang queries.
 
 `src/mutate/discovery.rs`
-Discovers mutation points in source files using tree-sitter. Supports application functionality.
+Discovers mutation points in source files using tree-sitter.
 → Exports: discover_mutations
 
 `src/mutate/mutations.rs`
-Mutation types and application logic. Supports application functionality.
-→ Exports: MutationKind, MutationPoint, apply_mutation, get_mutation, symbol
+Mutation types and application logic.
+→ Exports: MutationKind, MutationPoint, apply_mutation, get_mutation
 
 `src/mutate/report.rs`
-Report formatting for mutation test results. Supports application functionality.
+Report formatting for mutation test results.
 → Exports: format_json, format_progress, format_summary, format_survivors
 
 `src/mutate/runner.rs`
-Parallel mutation test runner. Supports application functionality.
-→ Exports: MutationResult, MutationSummary, RunnerConfig, python, run_mutations, rust, summarize, typescript
+Parallel mutation test runner.
+→ Exports: RunnerConfig, run_mutations, MutationResult, MutationSummary
 
 `src/project.rs`
-Detects project type from current directory. Supports application functionality.
-→ Exports: ProjectType, Strictness, detect, detect_in, generate_toml, is_typescript, npx_cmd
+Detects project type from current directory.
+→ Exports: ProjectType, generate_toml, is_typescript, npx_cmd
 
 `src/reporting.rs`
-Console output formatting for scan results. Supports application functionality.
+Console output formatting for scan results.
 → Exports: print_json
 
 `src/reporting/console.rs`
-Prints a formatted scan report to stdout with confidence tiers and deduplication. Supports application functionality.
+Prints a formatted scan report to stdout with confidence tiers and deduplication.
 → Exports: print_report
 
 `src/reporting/guidance.rs`
-Static educational guidance per rule code. Supports application functionality.
+Static educational guidance per rule code.
 
 `src/reporting/rich.rs`
-Module providing `build_rich_report`, `format_report_string`. Supports application functionality.
+Formats report string for output.
 → Exports: build_rich_report, format_report_string
 
 `src/reporting/shared.rs`
-Orchestrates `crate`. Supports application functionality.
+Orchestrates `crate`.
 
 `src/skeleton.rs`
-Reduces code to its structural skeleton (signatures only). Supports application functionality.
+Reduces code to its structural skeleton (signatures only).
 → Exports: clean
 
 `src/spinner/client.rs`
-Client for sending updates to the spinner. Supports application functionality.
-→ Exports: SpinnerClient, new, push_log, set_macro_step, set_micro_status, step_micro_progress, tick
+Client for sending updates to the spinner.
+→ Exports: set_macro_step, set_micro_status, step_micro_progress, SpinnerClient
 
 `src/spinner/controller.rs`
-Lifecycle controller for the spinner thread. Supports application functionality.
-→ Exports: SpinnerController, new, stop
+Lifecycle controller for the spinner thread.
+→ Exports: SpinnerController, stop
 
 `src/spinner/handle.rs`
-Thread management for the spinner. Supports application functionality.
+Thread management for the spinner.
 → Exports: SpinnerHandle, spawn, stop
 
 `src/spinner/render.rs`
-HUD rendering logic. Formats data for output.
+HUD rendering logic.
 → Exports: run_hud_loop
 
 `src/spinner/safe_hud.rs`
-Thread-safe wrapper for HUD state. Supports application functionality.
-→ Exports: SafeHud, completion_info, modify, new, snapshot
+Thread-safe wrapper for HUD state.
+→ Exports: SafeHud, completion_info, modify, snapshot
 
 `src/spinner/state.rs`
-HUD state management. Supports application functionality.
-→ Exports: HudSnapshot, HudState, completion_info, new, push_log, set_finished, set_macro_step, set_micro_status, snapshot, step_micro_progress, tick
+HUD state management.
+→ Exports: step_micro_progress, set_macro_step, set_micro_status, completion_info
 
 `src/tokens.rs`
-The tokenizer encoding (`cl100k_base`, used by GPT-4/3.5-turbo). Supports application functionality.
-→ Exports: Tokenizer, count, exceeds_limit, is_available
+The tokenizer encoding (`cl100k_base`, used by GPT-4/3.5-turbo).
+→ Exports: exceeds_limit, is_available, Tokenizer, count
 
-`src/types.rs`
-Confidence level for a violation — how certain Neti is that this is a real problem. Defines domain data structures.
-→ Exports: CheckReport, CommandResult, Confidence, FileReport, ScanReport, Violation, ViolationDetails, clean_file_count, command, duration_ms, error_count, exit_code, has_blocking_errors, has_errors, is_clean, is_small_codebase, label, new, output, passed, prefix, simple, stderr, stdout, suggestion_count, violation_count, warning_count, with_details
+`src/types/command.rs`
+Result of an external command execution.
+→ Exports: CommandResult, duration_ms, exit_code, error_count
+
+`src/types/locality.rs`
+Types for locality (Law of Locality) reporting.
+→ Exports: LocalityReport, LocalityViolation
 
 `src/verification/runner.rs`
-Command execution and output capture. Supports application functionality.
+Command execution and output capture.
 → Exports: run_commands
 
 ## Layer 3 -- Utilities
 
 `src/analysis/patterns/logic_helpers.rs`
-Shared helpers for L02/L03 logic pattern detection. Provides reusable helper functions.
-→ Exports: can_find_local_declaration, decl_matches_variable, has_chunks_exact_context, has_explicit_guard, has_matching_parameter, is_index_variable, is_literal
+Shared helpers for L02/L03 logic pattern detection.
+→ Exports: can_find_local_declaration, has_chunks_exact_context, decl_matches_variable, has_explicit_guard
 
 `src/analysis/patterns/logic_proof_helpers.rs`
-Helper routines for extracting and verifying array sizes in scope boundaries. Provides reusable helper functions.
+Helper routines for extracting and verifying array sizes in scope boundaries.
 
 `src/utils.rs`
-Module providing `compute_sha256`. Provides reusable helper functions.
+Implements compute sha256.
 → Exports: compute_sha256
 
 ## Layer 4 -- Tests
 
 `src/analysis/checks/syntax_test.rs`
-Orchestrates `crate`, `super`, `tree_sitter`. Verifies correctness.
+Orchestrates `crate`, `super`, `tree_sitter`.
 
 `src/analysis/inspector.rs`
-Inspection logic for scopes (Metrics application). Verifies correctness.
+Inspection logic for scopes (Metrics application).
 → Exports: Inspector, inspect, new
 
 `src/analysis/patterns/concurrency_lock_test.rs`
-Orchestrates `super`, `tokio`, `tree_sitter`. Verifies correctness.
+Orchestrates `super`, `tokio`, `tree_sitter`.
 
 `src/analysis/patterns/idiomatic_i02_test.rs`
-Orchestrates `Idx`, `super`, `tree_sitter`. Verifies correctness.
+Orchestrates `Idx`, `super`, `tree_sitter`.
 
 `src/analysis/patterns/logic_helpers_test.rs`
-Orchestrates `super`, `tree_sitter`. Verifies correctness.
+Orchestrates `super`, `tree_sitter`.
 
 `src/analysis/patterns/logic_l03_test.rs`
-Orchestrates `super`, `tree_sitter`. Verifies correctness.
+Orchestrates `super`, `tree_sitter`.
 
 `src/analysis/patterns/logic_proof_test.rs`
-Orchestrates `super`, `tree_sitter`. Verifies correctness.
+Orchestrates `super`, `tree_sitter`.
 
 `src/analysis/patterns/performance_p01_test.rs`
-Orchestrates `crate`, `super`, `tree_sitter`. Verifies correctness.
+Orchestrates `crate`, `super`, `tree_sitter`.
 
 `src/analysis/patterns/performance_test_ctx.rs`
-Test context detection for pattern detectors. Verifies correctness.
+Test context detection for pattern detectors.
 → Exports: is_test_context
 
 `src/analysis/patterns/security_x02_test.rs`
-Orchestrates `super`, `tree_sitter`. Verifies correctness.
+Orchestrates `super`, `tree_sitter`.
 
 `src/graph/locality/tests.rs`
-Integration tests for locality analysis — part 1. Verifies correctness.
+Integration tests for locality analysis — part 1.
 
 `src/graph/locality/tests/part2.rs`
-Integration tests for locality analysis — part 2. Verifies correctness.
+Integration tests for locality analysis — part 2.
 
 `tests/check_json_test.rs`
-Integration test: `neti check --json` must emit valid JSON to stdout. Verifies correctness.
+Integration test: `neti check --json` must emit valid JSON to stdout.
+
+`tests/check_locality_test.rs`
+Integration test: locality integration in `neti check` pipeline.
+
+`tests/command_parsing_test.rs`
+Integration test: command parsing with shell-words.
 
