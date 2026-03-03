@@ -12,19 +12,12 @@
 
 `[UTIL]` Utility functions
 
+`[HOTSPOT]` High fan-in file imported by 4+ others — request this file early in any task
+
 ## Layer 0 -- Config
 
 `Cargo.toml`
-Rust package manifest and dependencies.
-
-`mutants.out/lock.json`
-Configuration for lock.
-
-`mutants.out/mutants.json`
-Configuration for mutants.
-
-`mutants.out/outcomes.json`
-Configuration for outcomes.
+Workspace configuration.
 
 `neti.toml`
 Configuration for neti.
@@ -34,11 +27,11 @@ Implements config editor.
 → Exports: run_config_editor, EditResult, EventResult, set_modified
 
 `src/cli/config_ui/items.rs`
-Configuration items that can be edited.
+Configuration items that can be edited. [HOTSPOT]
 → Exports: ConfigItem, cycle_enum, toggle_boolean, get_value
 
 `src/cli/config_ui/logic.rs`
-Processes editor.
+Implements move selection.
 → Exports: move_selection, run_editor
 
 `src/cli/config_ui/render.rs`
@@ -54,7 +47,7 @@ Configuration for the Law of Locality enforcement.
 → Exports: is_error_mode, to_validator_config, LocalityConfig, is_enabled
 
 `src/config/types.rs`
-Implements rule config.
+Implements command entry.
 → Exports: CommandEntry, NetiToml, into_vec, RuleConfig
 
 `src/graph/tsconfig.rs`
@@ -74,7 +67,7 @@ AST pattern detection for violations.
 Orchestrates `clap`, `colored`, `neti_core`.
 
 `src/cli/args.rs`
-Implements cli functionality.
+Implements Cli functionality.
 → Exports: Cli, Commands
 
 `src/cli/config_ui/mod.rs`
@@ -133,11 +126,11 @@ External command verification pipeline.
 ## Layer 2 -- Domain
 
 `src/analysis/aggregator.rs`
-Aggregation logic for analysis results.
+Aggregation logic for analysis results. [HOTSPOT]
 → Exports: FileAnalysis, Aggregator, ingest, merge
 
 `src/analysis/ast.rs`
-Implements analyzer functionality.
+Implements analysis result.
 → Exports: AnalysisResult, Analyzer, analyze
 
 `src/analysis/checks.rs`
@@ -148,21 +141,9 @@ AST-based complexity and style checks.
 Banned construct checks (Law of Paranoia).
 → Exports: check_banned
 
-`src/analysis/checks/complexity.rs`
-Complexity metrics checks (Law of Complexity).
-→ Exports: check_metrics
-
 `src/analysis/checks/naming.rs`
 Function naming checks (Law of Complexity).
 → Exports: check_naming
-
-`src/analysis/checks/syntax.rs`
-AST-level syntax error and malformed node detection.
-→ Exports: check_syntax
-
-`src/analysis/cognitive.rs`
-Cognitive Complexity metric implementation.
-→ Exports: CognitiveAnalyzer, calculate
 
 `src/analysis/deep.rs`
 Deep analysis runner.
@@ -176,13 +157,9 @@ Main execution logic for the `Neti` analysis engine.
 Rust scope extraction logic (Structs/Enums/Fields).
 → Exports: RustExtractor, extract_scopes
 
-`src/analysis/extract_impl.rs`
-Rust impl/method extraction logic.
-→ Exports: extract
-
-`src/analysis/metrics.rs`
-Implements calculate complexity.
-→ Exports: calculate_max_depth, count_arguments, calculate_complexity
+`src/analysis/inspector.rs`
+Inspection logic for scopes (Metrics application).
+→ Exports: Inspector, inspect, new
 
 `src/analysis/patterns/concurrency.rs`
 Concurrency pattern detection: C03, C04.
@@ -228,14 +205,8 @@ Fixed-size array proof helpers for L03.
 Performance anti-patterns: P01, P02, P04, P06  Escalation Philosophy  P01/P02 must only fire when we can make a reasonable argument that the allocation is *material*.
 → Exports: detect
 
-`src/analysis/patterns/performance_p01.rs`
-P01: `.clone()` inside a loop.
-
 `src/analysis/patterns/performance_p02.rs`
 P02: String conversion (`.to_string()` / `.to_owned()`) inside a loop.
-
-`src/analysis/patterns/performance_p04p06.rs`
-P04: Nested loop (O(n²)) and P06: linear search inside loop.
 
 `src/analysis/patterns/resource.rs`
 Resource patterns: R07 (missing flush).
@@ -267,7 +238,7 @@ Validates safety.
 → Exports: check_safety
 
 `src/analysis/scope.rs`
-Implements add method.
+Implements add method. [HOTSPOT]
 → Exports: validate_record, FieldInfo, has_behavior, is_enum
 
 `src/analysis/structural.rs`
@@ -287,7 +258,7 @@ Git branch workflow for AI agents.
 → Exports: count_modified_files, on_work_branch, work_branch_name, PromoteResult
 
 `src/clean.rs`
-Processes .
+Implements run functionality.
 → Exports: run
 
 `src/cli/audit.rs`
@@ -306,10 +277,6 @@ Handlers for Git-based workflow operations (branch, promote, abort).
 Report building and scorecard display for `neti check`.
 → Exports: build_report_text, print_commands_scorecard, print_locality_scorecard
 
-`src/cli/handlers/scan_report.rs`
-Scan report display formatting.
-→ Exports: aggregate_by_law, build_summary_string, print
-
 `src/cli/locality.rs`
 Handler for locality scanning.
 → Exports: is_locality_blocking, check_locality_silent, run_locality_check, LocalityResult
@@ -327,7 +294,7 @@ Detects build systems.
 → Exports: BuildSystemType, detect_build_systems, Detector
 
 `src/discovery.rs`
-Implements discover functionality.
+Implements group by directory.
 → Exports: group_by_directory, discover
 
 `src/events.rs`
@@ -343,7 +310,7 @@ File classification: distinguishes source code from config, assets, and data.
 → Exports: FileKind, is_governed, secrets_applicable, classify
 
 `src/graph/defs/extract.rs`
-Parses .
+Implements def kind.
 → Exports: DefKind, Definition
 
 `src/graph/defs/queries.rs`
@@ -351,7 +318,7 @@ Gets the config.
 → Exports: DefExtractor, get_config
 
 `src/graph/imports.rs`
-Parses .
+Implements extract functionality.
 → Exports: extract
 
 `src/graph/locality/analysis/metrics.rs`
@@ -395,7 +362,7 @@ Rich output formatting for locality analysis.
 → Exports: print_full_report
 
 `src/graph/locality/types.rs`
-Core types for the Law of Locality enforcement system.
+Core types for the Law of Locality enforcement system. [HOTSPOT]
 → Exports: allows_far_deps, routes_to_hub, NodeIdentity, PassReason
 
 `src/graph/locality/validator.rs`
@@ -440,10 +407,6 @@ Discovers mutation points in source files using tree-sitter.
 `src/mutate/mutations.rs`
 Mutation types and application logic.
 → Exports: MutationKind, MutationPoint, apply_mutation, get_mutation
-
-`src/mutate/report.rs`
-Report formatting for mutation test results.
-→ Exports: format_json, format_progress, format_summary, format_survivors
 
 `src/mutate/runner.rs`
 Parallel mutation test runner.
@@ -492,11 +455,11 @@ HUD rendering logic.
 → Exports: run_hud_loop
 
 `src/spinner/safe_hud.rs`
-Thread-safe wrapper for HUD state.
+Thread-safe wrapper for HUD state. [HOTSPOT]
 → Exports: SafeHud, completion_info, modify, snapshot
 
 `src/spinner/state.rs`
-HUD state management.
+HUD state management. [HOTSPOT]
 → Exports: step_micro_progress, set_macro_step, set_micro_status, completion_info
 
 `src/tokens.rs`
@@ -517,12 +480,46 @@ Command execution and output capture.
 
 ## Layer 3 -- Utilities
 
+`src/analysis/checks/complexity.rs`
+Complexity metrics checks (Law of Complexity).
+→ Exports: check_metrics
+
+`src/analysis/checks/syntax.rs`
+AST-level syntax error and malformed node detection.
+→ Exports: check_syntax
+
+`src/analysis/cognitive.rs`
+Cognitive Complexity metric implementation.
+→ Exports: CognitiveAnalyzer, calculate
+
+`src/analysis/extract_impl.rs`
+Rust impl/method extraction logic.
+→ Exports: extract
+
+`src/analysis/metrics.rs`
+Implements calculate complexity.
+→ Exports: calculate_max_depth, count_arguments, calculate_complexity
+
 `src/analysis/patterns/logic_helpers.rs`
-Shared helpers for L02/L03 logic pattern detection.
+Shared helpers for L02/L03 logic pattern detection. [HOTSPOT]
 → Exports: can_find_local_declaration, has_chunks_exact_context, decl_matches_variable, has_explicit_guard
 
 `src/analysis/patterns/logic_proof_helpers.rs`
 Helper routines for extracting and verifying array sizes in scope boundaries.
+
+`src/analysis/patterns/performance_p01.rs`
+P01: `.clone()` inside a loop.
+
+`src/analysis/patterns/performance_p04p06.rs`
+P04: Nested loop (O(n²)) and P06: linear search inside loop.
+
+`src/cli/handlers/scan_report.rs`
+Scan report display formatting.
+→ Exports: aggregate_by_law, build_summary_string, print
+
+`src/mutate/report.rs`
+Report formatting for mutation test results.
+→ Exports: format_json, format_progress, format_summary, format_survivors
 
 `src/utils.rs`
 Implements compute sha256.
@@ -532,10 +529,6 @@ Implements compute sha256.
 
 `src/analysis/checks/syntax_test.rs`
 Orchestrates `crate`, `super`, `tree_sitter`.
-
-`src/analysis/inspector.rs`
-Inspection logic for scopes (Metrics application).
-→ Exports: Inspector, inspect, new
 
 `src/analysis/patterns/concurrency_lock_test.rs`
 Orchestrates `super`, `tokio`, `tree_sitter`.
