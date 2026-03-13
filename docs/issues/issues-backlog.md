@@ -1,11 +1,27 @@
 # BACKLOG Issues
 
+## Label Set
+
+Use only these labels across active and backlog issues:
+`Accuracy`, `Config`, `CLI`, `Reporting`, `AI Workflow`, `Adoption`, `Architecture`, `Cleanup`, `Language Support`, `Detection Rules`, `Testing`, `Performance`, `Safety`, `Branching`, `Web Stack`, `Integrations`
+
 ---
 
 ## [32] Config hygiene: audit and wire preferences
 **Status:** OPEN
 **Files:** `src/config/types.rs`, `src/cli/handlers/mod.rs`
-Preferences like `auto_promote`, `progress_bars` exist but may not be fully wired. Audit each preference — either implement it with observable behavior and test, or remove to avoid misleading UX.
+**Labels:** Config, Cleanup, CLI
+**Depends on:** none
+
+**Problem:** Several preferences such as `auto_promote` and `progress_bars` appear to exist in config surfaces without a clear, verified runtime effect. That creates misleading UX and hidden maintenance debt.
+
+**Fix:**
+
+1. Audit every config preference exposed to users.
+2. For each preference, either implement observable behavior with tests or remove it.
+3. Eliminate any config entry that looks supported but is actually dead.
+4. Document the final supported preference set through code and tests.
+
 **Resolution:**
 
 ---
@@ -13,7 +29,18 @@ Preferences like `auto_promote`, `progress_bars` exist but may not be fully wire
 ## [33] Remove or expose `cli/audit.rs`
 **Status:** OPEN
 **Files:** `src/cli/audit.rs`, `src/cli/args.rs`
-Module exists but `Audit` isn't in `Commands` enum. Either wire it up or delete until ready.
+**Labels:** CLI, Cleanup
+**Depends on:** none
+
+**Problem:** `src/cli/audit.rs` exists, but `Audit` is not exposed through the `Commands` enum. That leaves dead or half-finished CLI surface area in the tree.
+
+**Fix:**
+
+1. Decide whether `audit` is a real command or not.
+2. If yes, wire it into argument parsing and the command dispatch path.
+3. If no, remove the dormant module until the feature is ready.
+4. Add or update tests so the command surface matches the codebase.
+
 **Resolution:**
 
 ---
@@ -21,15 +48,37 @@ Module exists but `Audit` isn't in `Commands` enum. Either wire it up or delete 
 ## [10] Governance-grade clippy integration
 **Status:** OPEN
 **Files:** `src/verification/runner.rs`, `src/config/types.rs`, tests
-Make clippy a first-class governance stage with tiering (warn vs fail) via config and stable parsing (not brittle string matching).
+**Labels:** Integrations, Config, Testing
+**Depends on:** none
+
+**Problem:** Clippy should be a first-class governance stage, but the integration needs stable parsing and configurable severity instead of brittle string matching.
+
+**Fix:**
+
+1. Promote clippy to an explicit verification stage.
+2. Support config-driven warn-vs-fail behavior.
+3. Parse clippy output using a stable approach rather than ad hoc string matching.
+4. Add tests proving severity handling and parser stability.
+
 **Resolution:**
 
 ---
 
-## [24] Root src/ cleanup and domain consolidation
+## [24] Root `src/` cleanup and domain consolidation
 **Status:** OPEN
 **Files:** `src/discovery.rs`, `src/file_class.rs`, `src/project.rs`, `src/detection.rs`, `src/constants.rs`, `src/reporting.rs`, `src/lib.rs`
-Consolidate filesystem/project discovery into a `workspace` module. Move `src/reporting.rs` to `src/reporting/mod.rs` for consistency. Reduce top-level sprawl.
+**Labels:** Architecture, Cleanup
+**Depends on:** none
+
+**Problem:** Too many unrelated concerns live directly under `src/`, which weakens discoverability and muddies domain boundaries.
+
+**Fix:**
+
+1. Consolidate filesystem and project discovery into a `workspace` module.
+2. Move `src/reporting.rs` to `src/reporting/mod.rs` for consistency with the rest of the tree.
+3. Reduce top-level sprawl so responsibilities are grouped by domain rather than history.
+4. Verify imports and public module boundaries remain coherent after the move.
+
 **Resolution:**
 
 ---
@@ -37,7 +86,18 @@ Consolidate filesystem/project discovery into a `workspace` module. Move `src/re
 ## [34] Add `neti rules` catalog command
 **Status:** OPEN
 **Files:** `src/cli/args.rs`, `src/reporting/guidance.rs`
-List all rule codes with severity, confidence semantics, thresholds, fix guidance, and suppression syntax. Searchable in-product catalog reduces friction.
+**Labels:** CLI, Reporting, Detection Rules
+**Depends on:** none
+
+**Problem:** Users have no in-product way to browse rule codes, severity semantics, thresholds, fix guidance, or suppression syntax. That raises adoption friction and pushes people into docs hunting.
+
+**Fix:**
+
+1. Add a `neti rules` command.
+2. List all rule codes with severity and confidence semantics.
+3. Include thresholds, fix guidance, and suppression syntax.
+4. Make the catalog searchable or filterable enough to be useful in real workflows.
+
 **Resolution:**
 
 ---
@@ -45,7 +105,19 @@ List all rule codes with severity, confidence semantics, thresholds, fix guidanc
 ## [35] Add SARIF output format
 **Status:** OPEN
 **Files:** `src/reporting/mod.rs`, `src/cli/args.rs`
-SARIF enables GitHub/GitLab PR annotations. Map rule code → ruleId, confidence → level, file/line → region. Keep JSON as canonical; SARIF is derived.
+**Labels:** Reporting, Integrations
+**Depends on:** none
+
+**Problem:** SARIF output is needed for GitHub and GitLab annotations, but Neti currently only provides its own report formats.
+
+**Fix:**
+
+1. Add SARIF as an output option.
+2. Map Neti rule code to SARIF `ruleId`.
+3. Map confidence and severity to SARIF levels.
+4. Map file and line information into SARIF regions.
+5. Keep Neti JSON as the canonical internal representation and derive SARIF from it.
+
 **Resolution:**
 
 ---
@@ -53,7 +125,18 @@ SARIF enables GitHub/GitLab PR annotations. Map rule code → ruleId, confidence
 ## [36] Add `neti init` scaffolding command
 **Status:** OPEN
 **Files:** `src/cli/args.rs`, `src/project.rs`
-Generate `neti.toml` + `.netiignore` based on detected project type. Support `--strict` vs `--lenient` presets. Optionally generate `CHAT-PROTOCOL.md`.
+**Labels:** CLI, Config, Adoption
+**Depends on:** [49]
+
+**Problem:** Users need a fast path to a sensible initial configuration once they decide to customize Neti beyond default behavior.
+
+**Fix:**
+
+1. Add `neti init`.
+2. Generate `neti.toml` and `.netiignore` based on detected project type.
+3. Support `--strict` and `--lenient` presets.
+4. Optionally generate `CHAT-PROTOCOL.md`.
+
 **Resolution:**
 
 ---
@@ -61,7 +144,18 @@ Generate `neti.toml` + `.netiignore` based on detected project type. Support `--
 ## [37] LCOM4 miscalibrated for delegation patterns
 **Status:** OPEN
 **Files:** `src/analysis/structural.rs`, `src/config/mod.rs`
-The "Touch fields for LCOM4" hacks indicate the metric is too sensitive to pure delegators. Either exempt config/CLI modules, adjust computation for delegation patterns, or add `// neti:allow(LCOM4)` mechanism.
+**Labels:** Accuracy, Detection Rules, Architecture
+**Depends on:** [30]
+
+**Problem:** Existing "touch fields for LCOM4" hacks suggest the metric is too sensitive to pure delegation patterns, which reduces trust in the signal.
+
+**Fix:**
+
+1. Revisit the LCOM4 calculation for delegator-heavy modules.
+2. Either exempt the affected module categories, improve the computation, or rely on an explicit suppression path.
+3. Prefer a real metric fix over a blanket carve-out when practical.
+4. Add tests proving the chosen approach distinguishes delegation from low cohesion.
+
 **Resolution:**
 
 ---
@@ -69,7 +163,18 @@ The "Touch fields for LCOM4" hacks indicate the metric is too sensitive to pure 
 ## [21] Python `LangSemantics` table
 **Status:** OPEN
 **Files:** `src/lang/semantics.rs`
-Add Python semantics: `test_` prefix, `list`/`dict`/`set` heap types, `index`/`find` search methods, `len` length method, `for_statement`/`while_statement` loops.
+**Labels:** Language Support, Architecture, Detection Rules
+**Depends on:** [17]
+
+**Problem:** The language abstraction needs a Python semantics table before detector behavior can be extended coherently to Python codebases.
+
+**Fix:**
+
+1. Add Python test markers such as the `test_` prefix.
+2. Add heap-type vocabulary such as `list`, `dict`, and `set`.
+3. Add search and length vocabulary such as `index`, `find`, and `len`.
+4. Add loop and syntax markers such as `for_statement` and `while_statement`.
+
 **Resolution:**
 
 ---
@@ -77,7 +182,18 @@ Add Python semantics: `test_` prefix, `list`/`dict`/`set` heap types, `index`/`f
 ## [22] TypeScript `LangSemantics` table
 **Status:** OPEN
 **Files:** `src/lang/semantics.rs`
-Add TypeScript semantics: `describe`/`it`/`test` markers, `Array`/`Map`/`Set` heap types, `find`/`indexOf` search methods, `length` property.
+**Labels:** Language Support, Architecture, Detection Rules, Web Stack
+**Depends on:** [17]
+
+**Problem:** The language abstraction also needs a TypeScript semantics table before detector reuse can extend cleanly to JS/TS projects.
+
+**Fix:**
+
+1. Add test markers such as `describe`, `it`, and `test`.
+2. Add heap-type vocabulary such as `Array`, `Map`, and `Set`.
+3. Add search vocabulary such as `find` and `indexOf`.
+4. Add length-property semantics such as `length`.
+
 **Resolution:**
 
 ---
@@ -85,12 +201,18 @@ Add TypeScript semantics: `describe`/`it`/`test` markers, `Array`/`Map`/`Set` he
 ## [12] Cross-language regression suite
 **Status:** OPEN
 **Files:** `tests/` (new), CI config
-Create test fixtures:
-- `tests/fixtures/rust/` — syntax suppressions, L03 tiers, P04 numeric iteration
-- `tests/fixtures/python/` — equivalent patterns once [21] lands
-- `tests/fixtures/typescript/` — equivalent patterns once [22] lands
+**Labels:** Testing, Language Support, Detection Rules
+**Depends on:** [15], [21], [22]
 
-Same rules should fire on equivalent patterns across languages.
+**Problem:** Neti needs a fixture-backed regression suite that proves equivalent rules behave consistently across supported languages.
+
+**Fix:**
+
+1. Add Rust fixtures covering syntax suppressions, L03 tiers, and P04 numeric iteration.
+2. Add Python fixtures once [21] lands.
+3. Add TypeScript fixtures once [22] lands.
+4. Assert that equivalent patterns produce equivalent findings across languages where the rule intent matches.
+
 **Resolution:**
 
 ---
@@ -98,34 +220,18 @@ Same rules should fire on equivalent patterns across languages.
 ## [38] HTML monolith analysis and split recommendations
 **Status:** OPEN
 **Files:** `src/cli/args.rs`, `src/cli/handlers/mod.rs`, `src/analysis/html.rs` (new), `src/graph/locality/` (extend)
+**Labels:** Web Stack, Architecture, CLI, Reporting
+**Depends on:** [39], [40]
 
-Single-file HTML applications with inline `<script>` and `<style>` blocks are common entry points for projects that outgrow their structure. Neti should analyze these monoliths and recommend splits.
+**Problem:** Large single-file HTML apps with inline `<script>` and `<style>` blocks are common, but Neti cannot currently analyze them or recommend structural splits.
 
-**Required:**
-1. Parse HTML with tree-sitter-html, extract `<script>` and `<style>` blocks
-2. Run existing JS/TS definition extraction on script content
-3. Cluster functions by shared variable access (reuse coupling analysis)
-4. Cluster CSS rules by selector patterns (layout vs components vs theme)
-5. Emit split recommendations with rationale
+**Fix:**
 
-**Command:** `neti split <file.html>`
-
-**Output format:**
-```
-Analysis:
-  <script> block: 847 lines, 12 functions, 3 cohesion clusters
-  <style> block: 234 lines, 2 distinct concerns
-
-Recommended structure:
-  src/
-    js/
-      auth.js      ← login(), logout(), checkSession() [share userState]
-      ui.js        ← render(), update() [share domRefs]
-    css/
-      layout.css   ← structural selectors
-      components.css ← .btn, .card, .modal
-    index.html     ← markup only
-```
+1. Parse HTML with `tree-sitter-html` and extract `<script>` and `<style>` blocks.
+2. Run existing JS or TS definition extraction on script content.
+3. Cluster functions by shared variable access, reusing coupling analysis where possible.
+4. Cluster CSS rules by selector patterns such as layout, components, and theme.
+5. Add `neti split <file.html>` and emit split recommendations with rationale.
 
 **Resolution:**
 
@@ -134,13 +240,17 @@ Recommended structure:
 ## [39] Inline script/style analysis without split recommendation
 **Status:** OPEN
 **Files:** `src/analysis/engine.rs`, `src/analysis/html.rs` (new)
+**Labels:** Web Stack, Detection Rules, Architecture
+**Depends on:** none
 
-Before full split recommendations ([38]), support basic `neti scan` on HTML files:
-- Extract `<script>` content, run JS/TS pattern detectors
-- Report violations with correct line offsets (HTML line + script offset)
-- Flag monolith size thresholds (e.g., >200 lines of inline JS triggers suggestion)
+**Problem:** Before Neti can recommend structural splits for HTML monoliths, it needs baseline support for scanning inline scripts and styles with correct source mapping.
 
-This enables governance on legacy HTML without requiring immediate refactoring.
+**Fix:**
+
+1. Extract `<script>` content during scan.
+2. Run JS or TS pattern detectors against the extracted script.
+3. Report violations using correct line offsets back into the HTML file.
+4. Add monolith-size suggestions, such as warning when inline JS grows past a threshold.
 
 **Resolution:**
 
@@ -149,14 +259,18 @@ This enables governance on legacy HTML without requiring immediate refactoring.
 ## [40] CSS cohesion analysis
 **Status:** OPEN
 **Files:** `src/analysis/css.rs` (new), `src/lang.rs`
+**Labels:** Web Stack, Detection Rules, Language Support
+**Depends on:** none
 
-Add tree-sitter-css support for:
-- Selector clustering (group by prefix: `.nav-*`, `.btn-*`, layout selectors)
-- Specificity warnings (overly specific selectors indicate coupling)
-- Dead code detection (selectors with no HTML match in same file)
-- Variable locality (`--var` definitions and usage proximity)
+**Problem:** CSS currently has no dedicated analysis support, which limits both standalone governance and any future HTML split recommendations.
 
-Required for [38] split recommendations and standalone CSS governance.
+**Fix:**
+
+1. Add `tree-sitter-css` support.
+2. Implement selector clustering by prefix and concern.
+3. Add specificity warnings to catch overly coupled selectors.
+4. Add dead-code detection for selectors with no HTML match in the same file.
+5. Add variable locality analysis for `--var` definitions and usage proximity.
 
 **Resolution:**
 
@@ -165,13 +279,17 @@ Required for [38] split recommendations and standalone CSS governance.
 ## [41] SWUM-style identifier expansion for JS/TS
 **Status:** OPEN
 **Files:** `src/analysis/naming.rs` (extend), `src/lang.rs`
+**Labels:** Web Stack, Language Support, Detection Rules
+**Depends on:** [22]
 
-Port SEMMAP's SWUM identifier expansion to Neti for:
-- Naming convention checks (camelCase vs snake_case consistency)
-- Verb-first function name suggestions
-- Acronym detection and expansion hints
+**Problem:** JS and TS naming analysis would benefit from SWUM-style identifier expansion so naming guidance can reason about verbs, acronyms, and intent rather than raw token shape.
 
-Low priority — nice-to-have for style governance.
+**Fix:**
+
+1. Port SEMMAP's SWUM-style identifier expansion into Neti's naming analysis.
+2. Use it for naming convention consistency checks.
+3. Add verb-first function name suggestions.
+4. Add acronym detection and expansion hints.
 
 **Resolution:**
 
@@ -180,16 +298,18 @@ Low priority — nice-to-have for style governance.
 ## [42] Report file optimized for LLM consumption
 **Status:** OPEN
 **Files:** `src/reporting/rich.rs`, `src/cli/handlers/check_report.rs`
+**Labels:** AI Workflow, Reporting
+**Depends on:** [29]
 
-`neti-report.txt` is the primary interface between Neti and whatever AI is doing the fixing. Audit for LLM-friendliness:
+**Problem:** `neti-report.txt` is the primary handoff surface between Neti and an AI agent doing remediation work, but the current structure is not explicitly optimized for that use case.
 
-1. **Front-load the verdict.** First line: `PASS` or `FAIL (N errors, M warnings)`. Not buried after headers.
-2. **Group by file, then by rule.** LLMs fix file-by-file.
-3. **Inline the fix hint** with each violation (WHY/FIX from guidance.rs), not in a separate educational section. The AI needs fix context adjacent to the error.
-4. **Strip ANSI.** Report file must never contain terminal color escapes.
-5. **Cap length.** If violations exceed 200, summarize tail as `... and N more`. Context windows are finite.
+**Fix:**
 
-Test: token count before/after on a noisy real-world scan.
+1. Front-load the verdict with `PASS` or `FAIL`.
+2. Group findings by file and then by rule.
+3. Inline fix hints next to each violation rather than isolating them elsewhere.
+4. Guarantee the report file is ANSI-free.
+5. Cap report length and summarize the tail when the finding count is very large.
 
 **Resolution:**
 
@@ -198,18 +318,17 @@ Test: token count before/after on a noisy real-world scan.
 ## [43] Summary one-liner as last line of output
 **Status:** OPEN
 **Files:** `src/cli/handlers/mod.rs`
+**Labels:** CLI, Reporting, AI Workflow
+**Depends on:** none
 
-Always print a single summary as the very last line of `neti check`:
+**Problem:** Console output often gets truncated in agent tooling and chat UIs. If the final line is not a concise verdict, the important result is easy to miss.
 
-```
-neti: PASS (247 files, 0 errors, 2 warnings) in 6.1s
-```
-or
-```
-neti: FAIL (3 errors, 1 warning) — see neti-report.txt
-```
+**Fix:**
 
-Console output gets truncated by agents and chatbot UIs. If the summary is last, it's always visible. The user (or AI) sees pass/fail immediately and knows whether to dig into the report.
+1. Always print a single summary line as the last line of `neti check`.
+2. Include pass/fail, key counts, and runtime.
+3. On failure, point directly to `neti-report.txt`.
+4. Keep the format stable so humans and tools can both rely on it.
 
 **Resolution:**
 
@@ -218,16 +337,16 @@ Console output gets truncated by agents and chatbot UIs. If the summary is last,
 ## [44] Stage timing in report
 **Status:** OPEN
 **Files:** `src/cli/handlers/mod.rs`, `src/cli/handlers/check_report.rs`
+**Labels:** Reporting, CLI, Performance
+**Depends on:** none
 
-Add timing to each stage:
-```
-Scan:      0.8s (247 files, 3 violations)
-Locality:  1.2s (189 edges, 0 violations)
-Commands:  4.1s (2/2 passed)
-Total:     6.1s
-```
+**Problem:** Neti does not currently make stage timing visible, which hides slow paths and makes CI output less informative.
 
-Humans see if a stage is unexpectedly slow. Agents learn what's cheap vs expensive. Makes output look professional in CI logs.
+**Fix:**
+
+1. Add timing for scan, locality, commands, and total runtime.
+2. Include useful per-stage counts alongside the timing output.
+3. Surface the data in a format that works both in terminals and CI logs.
 
 **Resolution:**
 
@@ -236,20 +355,17 @@ Humans see if a stage is unexpectedly slow. Agents learn what's cheap vs expensi
 ## [45] Human-friendly violation messages alongside machine codes
 **Status:** OPEN
 **Files:** `src/reporting/rich.rs`, `src/reporting/guidance.rs`
+**Labels:** Reporting, AI Workflow
+**Depends on:** none
 
-Every violation should have two voices:
+**Problem:** Neti findings need to serve two audiences at once: machine parsing and human comprehension. Right now the report does not clearly separate those two voices.
 
-**Machine line** (for AI parsing):
-```
-FAIL src/foo.rs:42 [COMPLEXITY-01] cognitive_complexity=18 limit=15
-```
+**Fix:**
 
-**Human line** (for the person watching):
-```
-  → This function is doing too many things. Try splitting it into smaller pieces.
-```
-
-The machine line uses stable codes. The human line reads like advice from a mentor. Both appear in the report. The AI parses the first, the person reads the second. Neither needs to understand the other's line.
+1. Keep a stable machine-readable line for every violation.
+2. Add a human-readable explanation line immediately after it.
+3. Ensure the human line reads like actionable guidance rather than raw metadata.
+4. Keep both lines adjacent so people and tools can consume the same report.
 
 **Resolution:**
 
@@ -258,14 +374,17 @@ The machine line uses stable codes. The human line reads like advice from a ment
 ## [46] `neti check --changed-only` for incremental feedback
 **Status:** OPEN
 **Files:** `src/cli/args.rs`, `src/analysis/engine.rs`, `src/cli/handlers/mod.rs`
+**Labels:** CLI, Performance, AI Workflow
+**Depends on:** none
 
-Scan only files changed since a git ref (default: `HEAD`). Uses `git diff --name-only` internally.
+**Problem:** Full-repo scans are expensive when an agent has only changed a few files. Incremental feedback should be faster and more focused where that is semantically safe.
 
-When an agent edits 3 files and runs `neti check`, scanning the whole codebase is wasteful. This keeps the report focused on what actually changed.
+**Fix:**
 
-`--changed-only` diffs against HEAD. `--since <ref>` diffs against arbitrary ref.
-
-Important: locality must still analyze the full graph (can't detect cycles from partial view). Only scan-level checks (complexity, patterns) get scoped.
+1. Add `--changed-only` and `--since <ref>` flags.
+2. Scope scan-level checks to files changed since the target ref.
+3. Keep locality analysis full-graph because partial locality analysis would be misleading.
+4. Document the exact contract so users know what is and is not incremental.
 
 **Resolution:**
 
@@ -274,14 +393,16 @@ Important: locality must still analyze the full graph (can't detect cycles from 
 ## [47] Ungoverned file type warning
 **Status:** OPEN
 **Files:** `src/analysis/engine.rs`, `src/reporting/rich.rs`
+**Labels:** Reporting, Adoption, Language Support
+**Depends on:** none
 
-After a scan, if the project contains file types Neti can't analyze yet, emit one info line:
+**Problem:** A clean scan can create false confidence when large parts of the repo use file types Neti does not analyze yet.
 
-```
-info: 47 .py files and 23 .ts files not yet covered by Neti
-```
+**Fix:**
 
-Prevents false confidence from a clean scan that only checked half the codebase. Honest about coverage gaps. Also serves as organic signal for which language parity work matters most.
+1. Count file types that Neti cannot currently govern.
+2. Emit a concise informational summary after the scan.
+3. Make the wording explicit that coverage is incomplete, not clean.
 
 **Resolution:**
 
@@ -290,13 +411,16 @@ Prevents false confidence from a clean scan that only checked half the codebase.
 ## [48] Exit code contract
 **Status:** OPEN
 **Files:** `src/exit.rs`, `README.md`, tests
+**Labels:** CLI, Integrations, Testing
+**Depends on:** none
 
-Document and test exact exit code semantics:
-- `0` — all stages pass
-- `1` — violations found
-- `2` — config error or runtime failure
+**Problem:** CI systems and agents depend on stable exit code semantics. If those semantics are undocumented or untested, integrations become fragile.
 
-Agents and CI key off exit codes. If these aren't stable and tested, integrations break silently. Integration tests should assert each code for known scenarios.
+**Fix:**
+
+1. Document exact exit code meanings for success, violations, and runtime/config failure.
+2. Add tests that assert each exit code in a known scenario.
+3. Keep the contract stable once published.
 
 **Resolution:**
 
@@ -305,45 +429,16 @@ Agents and CI key off exit codes. If these aren't stable and tested, integration
 ## [49] Zero-config first run
 **Status:** OPEN
 **Files:** `src/config/io.rs`, `src/project.rs`, `src/cli/handlers/mod.rs`
+**Labels:** Adoption, Config, CLI
+**Depends on:** none
 
-`neti check` with no `neti.toml` should do something useful:
-- Auto-detect project type from root markers (Cargo.toml, package.json, go.mod, etc.)
-- Apply sensible defaults for detected language (Rust → clippy in commands, complexity limits, locality warn mode)
-- Run scan + locality + detected commands
-- Print a note: `Using auto-detected defaults for Rust project. Run neti init to customize.`
+**Problem:** The first-run experience should be useful even when the user has not created `neti.toml`. Requiring manual setup before the first meaningful check adds avoidable friction.
 
-The user's first experience should be: `cd my-project && neti check` → useful results. No config file, no docs, no flags. If they want to tune, `neti init` scaffolds the config. But the default path just works.
+**Fix:**
 
-**Resolution:**
-
----
-
-## [50] Configurable report path
-**Status:** OPEN
-**Files:** `src/config/types.rs`, `src/cli/handlers/mod.rs`
-
-Allow `neti.toml` to specify report location:
-```toml
-[output]
-report_path = ".neti/report.txt"
-```
-
-Default stays `neti-report.txt` at root. Some teams don't want governance artifacts in root. Some agents expect output in specific locations. Small config, real QoL.
+1. Auto-detect project type from root markers such as `Cargo.toml`, `package.json`, or `go.mod`.
+2. Apply sensible defaults based on the detected language or ecosystem.
+3. Run scan, locality, and detected commands with those defaults.
+4. Print a note explaining that auto-detected defaults are in effect and `neti init` can customize them.
 
 **Resolution:**
-
----
-
-## [51] `neti rules` catalog command
-**Status:** OPEN
-**Files:** `src/cli/args.rs`, `src/reporting/guidance.rs`
-
-(Moved from backlog [34] — renumbered for continuity.)
-
-List all rule codes with severity, confidence, thresholds, fix guidance, and examples. Searchable catalog inside the tool itself. When the report says `[P01]` and the user wants to understand why, `neti rules P01` gives the full explanation without leaving the terminal.
-
-**Resolution:**
-
----
-
-rushed user note: i just had an idea for an issue,we should have some sort of "neti allow" audit mode, where it pulls together all of the current neti and clippy "allows" so they can be reviewed for legitimacy. Currently i just search with terminal but would be nice if that was like a flag we could include or something or a dedicated thing, I want to keep it simple, its just a convenience thing, but that said allows can completely bypass our system so i want a way to audit them easily and quickly.
