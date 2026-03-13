@@ -343,3 +343,7 @@ Default stays `neti-report.txt` at root. Some teams don't want governance artifa
 List all rule codes with severity, confidence, thresholds, fix guidance, and examples. Searchable catalog inside the tool itself. When the report says `[P01]` and the user wants to understand why, `neti rules P01` gives the full explanation without leaving the terminal.
 
 **Resolution:**
+
+---
+
+rushed user note: i just had an idea for an issue,we should have some sort of "neti allow" audit mode, where it pulls together all of the current neti and clippy "allows" so they can be reviewed for legitimacy. Currently i just search with terminal but would be nice if that was like a flag we could include or something or a dedicated thing, I want to keep it simple, its just a convenience thing, but that said allows can completely bypass our system so i want a way to audit them easily and quickly.
