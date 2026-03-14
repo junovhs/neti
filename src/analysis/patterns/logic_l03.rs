@@ -4,6 +4,7 @@
 use std::collections::HashSet;
 
 use crate::types::{Confidence, Violation, ViolationDetails};
+use omni_ast::{semantics_for, LangSemantics, SemanticContext, SemanticLanguage};
 use tree_sitter::{Node, Query, QueryCursor};
 
 use super::logic_helpers::{
@@ -27,6 +28,7 @@ fn detect_index_zero(
     seen_self_fields: &mut HashSet<String>,
     out: &mut Vec<Violation>,
 ) {
+    let semantics = semantics_for(SemanticLanguage::Rust);
     let q = r"(index_expression) @idx";
     let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
@@ -39,10 +41,10 @@ fn detect_index_zero(
         };
 
         let text = idx_node.utf8_text(source.as_bytes()).unwrap_or("");
-        if !text.ends_with("[0]") {
+        if !semantics.has_unguarded_collection_access(&SemanticContext::from_source(text)) {
             continue;
         }
-        if has_explicit_guard(source, idx_node) {
+        if has_explicit_guard(source, idx_node, &semantics) {
             continue;
         }
         if has_chunks_exact_context(source, idx_node) {
@@ -135,6 +137,7 @@ fn classify_l03_confidence(
 }
 
 fn detect_first_last_unwrap(source: &str, root: Node, out: &mut Vec<Violation>) {
+    let semantics = semantics_for(SemanticLanguage::Rust);
     let q = r"(call_expression) @call";
     let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
@@ -147,14 +150,10 @@ fn detect_first_last_unwrap(source: &str, root: Node, out: &mut Vec<Violation>) 
         };
 
         let text = call.utf8_text(source.as_bytes()).unwrap_or("");
-        let has_first_or_last = text.contains(".first()") || text.contains(".last()");
-        if !has_first_or_last {
+        if !semantics.has_unwrapped_front_access(&SemanticContext::from_source(text)) {
             continue;
         }
-        if !text.contains(".unwrap()") {
-            continue;
-        }
-        if has_explicit_guard(source, call) {
+        if has_explicit_guard(source, call, &semantics) {
             continue;
         }
 

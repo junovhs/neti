@@ -18,32 +18,30 @@ use std::path::Path;
 use tree_sitter::Node;
 
 use crate::types::Violation;
-
-/// Heap-type keywords used for High confidence classification.
-pub(super) const HEAP_KEYWORDS: &[&str] = &[
-    "string",
-    "vec",
-    "map",
-    "set",
-    "box",
-    "rc",
-    "bufwriter",
-    "bytes",
-    "buffer",
-];
-
-/// Heuristic keywords that suggest heap ownership but are less certain.
-pub(super) const HEURISTIC_KEYWORDS: &[&str] =
-    &["name", "text", "data", "list", "array", "items", "cache"];
+use omni_ast::{semantics_for, Concept, LangSemantics, SemanticContext, SemanticLanguage};
 
 #[must_use]
-pub fn detect(source: &str, root: Node, path: &Path) -> Vec<Violation> {
+pub fn detect(source: &str, root: Option<Node>, path: &Path) -> Vec<Violation> {
     if should_skip(path) {
         return Vec::new();
     }
-    let mut out = Vec::new();
-    detect_loops(source, root, &mut out);
-    out
+
+    let Some(language) = path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .and_then(SemanticLanguage::from_ext)
+    else {
+        return Vec::new();
+    };
+
+    match (language, root) {
+        (SemanticLanguage::Rust, Some(root)) => {
+            let mut out = Vec::new();
+            detect_loops(source, root, &mut out);
+            out
+        }
+        _ => detect_shared_semantics(source, path, language),
+    }
 }
 
 fn should_skip(path: &Path) -> bool {
@@ -60,6 +58,27 @@ fn should_skip(path: &Path) -> bool {
         || s.ends_with("main.rs")
 }
 
+fn detect_shared_semantics(source: &str, path: &Path, language: SemanticLanguage) -> Vec<Violation> {
+    let semantics = semantics_for(language);
+    let context = SemanticContext::from_source(source).with_path(path);
+
+    if semantics.is_test_context(&context) {
+        return Vec::new();
+    }
+
+    let detects_nested_lookup =
+        semantics.has_concept(Concept::Loop, &context) && semantics.has_concept(Concept::Lookup, &context);
+
+    if !detects_nested_lookup {
+        return Vec::new();
+    }
+
+    vec![performance_p04p06::shared_p06_violation(
+        first_lookup_line(source, language),
+        "Shared semantics identified looped lookup in a non-Rust file.".into(),
+    )]
+}
+
 fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
     use super::get_capture_node;
     use super::performance_test_ctx::is_test_context;
@@ -73,6 +92,7 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
     let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
     };
+    let language = SemanticLanguage::Rust;
     let idx_pat = query.capture_index_for_name("pat");
     let idx_body = query.capture_index_for_name("body");
 
@@ -84,15 +104,15 @@ fn detect_loops(source: &str, root: Node, out: &mut Vec<Violation>) {
             continue;
         };
 
-        let in_test = is_test_context(source, body);
+        let in_test = is_test_context(source, body, language);
 
         if !in_test {
-            performance_p01::check_p01(source, body, loop_var.as_deref(), out);
+            performance_p01::check_p01(source, body, loop_var.as_deref(), language, out);
         }
         performance_p02::check_p02(source, body, loop_var.as_deref(), out);
         performance_p04p06::check_p04(body, out);
         if !in_test {
-            performance_p04p06::check_p06(source, body, out);
+            performance_p04p06::check_p06(source, body, language, out);
         }
     }
 }
@@ -112,4 +132,22 @@ fn extract_loop_var(
             .trim()
             .to_string(),
     )
+}
+
+fn first_lookup_line(source: &str, language: SemanticLanguage) -> usize {
+    let needles = match language {
+        SemanticLanguage::Rust => &[".find(", ".position(", ".contains(", ".get("][..],
+        SemanticLanguage::Python => &[" in ", ".index(", ".get(", ".count("][..],
+        SemanticLanguage::JavaScript | SemanticLanguage::TypeScript => {
+            &[".find(", ".findIndex(", ".includes(", ".indexOf(", ".get(", ".has("][..]
+        }
+        SemanticLanguage::Go => &["contains(", "map["][..],
+        SemanticLanguage::Cpp => &[".find(", ".contains(", "std::find("][..],
+        SemanticLanguage::Swift => &[".contains(", ".firstIndex(", ".first(where:"][..],
+    };
+
+    source
+        .lines()
+        .position(|line| needles.iter().any(|needle| line.contains(needle)))
+        .map_or(1, |idx| idx + 1)
 }

@@ -12,6 +12,7 @@
 //! head-of-line blocking rather than deadlock.
 
 use crate::types::{Confidence, Violation, ViolationDetails};
+use omni_ast::{semantics_for, Concept, LangSemantics, SemanticContext, SemanticLanguage};
 use tree_sitter::{Node, Query, QueryCursor};
 
 #[cfg(test)]
@@ -74,9 +75,9 @@ fn check_async_fn(source: &str, m: &tree_sitter::QueryMatch) -> Option<Violation
 }
 
 fn has_lock_and_await(body: &str) -> bool {
-    let has_lock =
-        body.contains(".lock()") || body.contains(".read()") || body.contains(".write()");
-    has_lock && body.contains(".await")
+    let semantics = semantics_for(SemanticLanguage::Rust);
+    semantics.has_concept(Concept::Locking, &SemanticContext::from_source(body))
+        && body.contains(".await")
 }
 
 fn lock_spans_await(body: &str) -> bool {
@@ -106,33 +107,13 @@ fn is_lock_assignment(line: &str) -> bool {
 
 /// Infers whether the mutex in use is sync or async.
 fn classify_mutex_kind(source: &str, body_text: &str) -> MutexKind {
-    for line in body_text.lines() {
-        let trimmed = line.trim();
-        if is_lock_assignment(trimmed)
-            && (trimmed.contains(".lock().await")
-                || trimmed.contains(".read().await")
-                || trimmed.contains(".write().await"))
-        {
-            return MutexKind::Async;
-        }
-    }
-
-    if has_async_mutex_import(source) {
+    let semantics = semantics_for(SemanticLanguage::Rust);
+    let combined = format!("{source}\n{body_text}");
+    if semantics.is_async_locking_context(&SemanticContext::from_source(combined)) {
         return MutexKind::Async;
     }
 
     MutexKind::Sync
-}
-
-/// Returns `true` if the source file imports an async-aware mutex type.
-fn has_async_mutex_import(source: &str) -> bool {
-    source.contains("tokio::sync::Mutex")
-        || source.contains("tokio::sync::RwLock")
-        || source.contains("tokio::sync::Semaphore")
-        || source.contains("futures::lock::Mutex")
-        || source.contains("futures_util::lock::Mutex")
-        || source.contains("async_std::sync::Mutex")
-        || source.contains("async_lock::Mutex")
 }
 
 fn build_c03_violation(row: usize, fn_name: &str, kind: MutexKind) -> Violation {

@@ -2,7 +2,8 @@
 //! P04: Nested loop (O(n²)) and P06: linear search inside loop.
 
 use crate::types::{Confidence, Violation, ViolationDetails};
-use tree_sitter::{Node, Query, QueryCursor};
+use omni_ast::{semantics_for, Concept, LangSemantics, SemanticContext, SemanticLanguage};
+use tree_sitter::Node;
 
 // ── P04 ─────────────────────────────────────────────────────────────────────
 
@@ -38,38 +39,46 @@ fn find_nested_loops(node: Node, out: &mut Vec<Violation>) {
 
 // ── P06 ─────────────────────────────────────────────────────────────────────
 
-pub(super) fn check_p06(source: &str, body: Node, out: &mut Vec<Violation>) {
-    let q = r#"(call_expression function: (field_expression
-        field: (field_identifier) @m) (#match? @m "^(find|position)$")) @call"#;
-    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
+pub(super) fn check_p06(source: &str, body: Node, language: SemanticLanguage, out: &mut Vec<Violation>) {
+    let Some(body_text) = body.utf8_text(source.as_bytes()).ok() else {
         return;
     };
-    let mut cursor = QueryCursor::new();
 
-    for m in cursor.matches(&query, body, source.as_bytes()) {
-        if let Some(cap) = m.captures.first() {
-            let mut v = Violation::with_details(
-                cap.node.start_position().row + 1,
-                "Linear search inside loop — O(n·m) complexity".into(),
-                "P06",
-                ViolationDetails {
-                    function_name: None,
-                    analysis: vec!["Each outer iteration performs a full inner scan.".into()],
-                    suggestion: Some("Pre-build a HashSet or HashMap for O(1) lookup.".into()),
-                },
-            );
-            v.confidence = Confidence::Medium;
-            v.confidence_reason =
-                Some("linear scan may be intentional algorithm or bounded collection".into());
-            out.push(v);
-        }
+    if detects_linear_lookup(language, body_text) {
+        out.push(shared_p06_violation(
+            body.start_position().row + 1,
+            "Each outer iteration performs a full inner scan.".into(),
+        ));
     }
+}
+
+fn detects_linear_lookup(language: SemanticLanguage, loop_body: &str) -> bool {
+    let semantics = semantics_for(language);
+    semantics.has_concept(Concept::Lookup, &SemanticContext::from_source(loop_body))
+}
+
+pub(super) fn shared_p06_violation(row: usize, analysis: String) -> Violation {
+    let mut v = Violation::with_details(
+        row,
+        "Linear search inside loop — O(n·m) complexity".into(),
+        "P06",
+        ViolationDetails {
+            function_name: None,
+            analysis: vec![analysis],
+            suggestion: Some("Pre-build a HashSet or HashMap for O(1) lookup.".into()),
+        },
+    );
+    v.confidence = Confidence::Medium;
+    v.confidence_reason =
+        Some("linear scan may be intentional algorithm or bounded collection".into());
+    v
 }
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
     use crate::types::{Confidence, Violation};
+    use omni_ast::SemanticLanguage;
     use std::path::Path;
     use tree_sitter::Parser;
 
@@ -79,7 +88,7 @@ mod tests {
             .set_language(&tree_sitter_rust::LANGUAGE.into())
             .unwrap();
         let tree = parser.parse(code, None).unwrap();
-        super::super::detect(code, tree.root_node(), Path::new("src/lib.rs"))
+        super::super::detect(code, Some(tree.root_node()), Path::new("src/lib.rs"))
     }
 
     #[test]
@@ -147,5 +156,21 @@ mod tests {
             }
         "#;
         assert!(parse_and_detect(code).iter().all(|v| v.law != "P06"));
+    }
+
+    #[test]
+    fn shared_semantics_drive_p06_across_languages() {
+        assert!(super::detects_linear_lookup(
+            SemanticLanguage::Rust,
+            "let found = haystack.iter().find(|&&x| x == needle);"
+        ));
+        assert!(super::detects_linear_lookup(
+            SemanticLanguage::Python,
+            "if needle in haystack:\n    hits.append(needle)\n"
+        ));
+        assert!(super::detects_linear_lookup(
+            SemanticLanguage::TypeScript,
+            "const found = haystack.find((value) => value === needle);"
+        ));
     }
 }

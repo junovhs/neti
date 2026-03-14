@@ -2,11 +2,13 @@
 //! L02: Boundary uses `<=`/`>=` with `.len()` — possible off-by-one.
 
 use crate::types::{Violation, ViolationDetails};
+use omni_ast::{semantics_for, Concept, LangSemantics, SemanticContext, SemanticLanguage};
 use tree_sitter::{Node, Query, QueryCursor};
 
 use super::logic_helpers::{is_index_variable, is_literal};
 
 pub(super) fn detect_l02(source: &str, root: Node, out: &mut Vec<Violation>) {
+    let semantics = semantics_for(SemanticLanguage::Rust);
     let q = r"(binary_expression) @cmp";
     let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
         return;
@@ -19,13 +21,10 @@ pub(super) fn detect_l02(source: &str, root: Node, out: &mut Vec<Violation>) {
         };
 
         let text = cmp.utf8_text(source.as_bytes()).unwrap_or("");
-        if !text.contains(".len()") {
+        if !semantics.has_length_boundary_risk(&SemanticContext::from_source(text)) {
             continue;
         }
-        if !text.contains("<=") && !text.contains(">=") {
-            continue;
-        }
-        if is_safe_boundary(cmp, source) {
+        if is_safe_boundary(cmp, source, &semantics) {
             continue;
         }
 
@@ -44,7 +43,7 @@ pub(super) fn detect_l02(source: &str, root: Node, out: &mut Vec<Violation>) {
     }
 }
 
-fn is_safe_boundary(node: Node, source: &str) -> bool {
+fn is_safe_boundary(node: Node, source: &str, semantics: &impl LangSemantics) -> bool {
     let left = node.child_by_field_name("left");
     let right = node.child_by_field_name("right");
 
@@ -62,14 +61,14 @@ fn is_safe_boundary(node: Node, source: &str) -> bool {
         .and_then(|n| n.utf8_text(source.as_bytes()).ok())
         .unwrap_or("");
 
-    if right_text.contains(".len()") {
+    if semantics.has_concept(Concept::Length, &SemanticContext::from_source(right_text)) {
         if op == ">=" {
             return true;
         }
         return !is_index_variable(left_text);
     }
 
-    if left_text.contains(".len()") {
+    if semantics.has_concept(Concept::Length, &SemanticContext::from_source(left_text)) {
         if op == "<=" {
             return true;
         }
@@ -93,6 +92,7 @@ fn extract_op(full_text: &str) -> &str {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use crate::types::Violation;
+    use std::path::Path;
     use tree_sitter::Parser;
 
     fn parse_and_detect(code: &str) -> Vec<Violation> {
@@ -101,7 +101,7 @@ mod tests {
             .set_language(&tree_sitter_rust::LANGUAGE.into())
             .unwrap();
         let tree = parser.parse(code, None).unwrap();
-        super::super::detect(code, tree.root_node())
+        super::super::detect(code, Some(tree.root_node()), Path::new("src/example.rs"))
     }
 
     #[test]

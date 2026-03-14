@@ -2,7 +2,7 @@
 NETI SCAN REPORT
 ========================================
 
-SCAN SUMMARY: 226 files | 255131 tokens | 1 violations
+SCAN SUMMARY: 232 files | 264377 tokens | 1 violations
 
 ALL VIOLATING FILES:
     1 violations | src/types/command.rs
@@ -23,7 +23,7 @@ warn: Class 'CommandResult' has low cohesion (LCOM4: 5)
    |
    = SUPPRESS: // neti:allow(LCOM4) on the line, or LCOM4 = "warn" in neti.toml [rules]
 
-~ Neti found 1 warning (1.444s).
+~ Neti found 1 warning (1.234s).
 
 
 ========================================
@@ -31,11 +31,10 @@ NETI LOCALITY REPORT
 ========================================
 
 Mode: warn
-Edges analyzed: 151
-Violations: 2
-Cycles: 0
-  src/cli/handlers/mod.rs → src/spinner/mod.rs (distance: 5, target: VOLATILE_LEAF)
-  src/cli/handlers/mod.rs → src/verification/mod.rs (distance: 5, target: STANDARD)
+Edges analyzed: 0
+Violations: 0
+Cycles: 1
+  cycle 1: src/cli/audit.rs → src/cli/audit.rs
 Result: PASS
 
 
@@ -44,8 +43,8 @@ NETI COMMANDS REPORT
 ========================================
 
 $ cargo clippy --all-targets --no-deps -- -D warnings
-> PASS (1591ms)
+> PASS (1534ms)
 
 $ cargo test
-> PASS (3913ms)
+> PASS (3812ms)
 

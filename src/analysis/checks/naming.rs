@@ -1,6 +1,7 @@
 // src/analysis/checks/naming.rs
 //! Function naming checks (Law of Complexity).
 
+use omni_ast::swum::{expand_identifier, split_identifier};
 use tree_sitter::{Query, QueryCursor, QueryMatch};
 
 use crate::types::{Violation, ViolationDetails};
@@ -37,15 +38,19 @@ fn check_word_count(
     ctx: &CheckContext,
     out: &mut Vec<Violation>,
 ) {
-    let word_count = count_words(name);
+    let words = split_identifier(name);
+    let word_count = words.len();
     if word_count <= ctx.config.max_function_words {
         return;
     }
     let owned_name = name.to_string();
     let details = ViolationDetails {
         function_name: Some(owned_name),
-        analysis: vec![format!("Name has {word_count} words")],
-        suggestion: Some(suggest_shorter_name(name)),
+        analysis: vec![
+            format!("Name has {word_count} words"),
+            format!("SWUM reads it as: {}", expand_identifier(name)),
+        ],
+        suggestion: Some(suggest_shorter_name(name, &words)),
     };
     out.push(Violation::with_details(
         node.start_position().row + 1,
@@ -58,58 +63,51 @@ fn check_word_count(
     ));
 }
 
-fn suggest_shorter_name(name: &str) -> String {
-    let words: Vec<&str> = split_name_words(name);
+fn suggest_shorter_name(name: &str, words: &[String]) -> String {
     if words.len() <= 3 {
-        return "Consider a more concise name".to_string();
+        return format!(
+            "Consider a more concise name. SWUM reads it as: {}",
+            expand_identifier(name)
+        );
     }
+    let core = words
+        .iter()
+        .take(3)
+        .map(String::as_str)
+        .collect::<Vec<_>>()
+        .join("_");
     format!(
-        "Consider abbreviating. Core: '{}'",
-        words.iter().take(3).copied().collect::<Vec<_>>().join("_")
+        "Consider abbreviating to '{core}'. SWUM reads it as: {}",
+        expand_identifier(name)
     )
 }
 
-fn split_name_words(name: &str) -> Vec<&str> {
-    if name.contains('_') {
-        name.split('_').filter(|s| !s.is_empty()).collect()
-    } else {
-        split_camel_case(name)
-    }
-}
-
-fn split_camel_case(name: &str) -> Vec<&str> {
-    let mut words = Vec::new();
-    let mut start = 0;
-    let chars: Vec<char> = name.chars().collect();
-
-    for (i, &c) in chars.iter().enumerate().skip(1) {
-        if c.is_uppercase() && start < i {
-            words.push(&name[start..i]);
-            start = i;
-        }
-    }
-    if start < name.len() {
-        words.push(&name[start..]);
-    }
-    words
-}
-
+#[cfg(test)]
 fn count_words(name: &str) -> usize {
-    if name.contains('_') {
-        name.split('_').filter(|s| !s.is_empty()).count()
-    } else {
-        count_camel_words(name)
-    }
+    split_identifier(name).len()
 }
 
-fn count_camel_words(name: &str) -> usize {
-    let mut count = 0;
-    let mut prev_upper = true;
-    for c in name.chars() {
-        if c.is_uppercase() && !prev_upper {
-            count += 1;
-        }
-        prev_upper = c.is_uppercase();
+#[cfg(test)]
+mod tests {
+    use super::{count_words, suggest_shorter_name};
+    use omni_ast::swum::split_identifier;
+
+    #[test]
+    fn count_words_uses_swum_for_acronyms() {
+        assert_eq!(count_words("parseHTTPResponseBody"), 4);
     }
-    count + 1
+
+    #[test]
+    fn count_words_uses_swum_for_snake_case() {
+        assert_eq!(count_words("render_user_profile_card"), 4);
+    }
+
+    #[test]
+    fn suggestion_reuses_swum_summary() {
+        let words = split_identifier("parseHTTPResponseBody");
+        let suggestion = suggest_shorter_name("parseHTTPResponseBody", &words);
+
+        assert!(suggestion.contains("parse_http_response"));
+        assert!(suggestion.contains("Parses http response body."));
+    }
 }

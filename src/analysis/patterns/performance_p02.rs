@@ -64,7 +64,7 @@ mod tests {
             .set_language(&tree_sitter_rust::LANGUAGE.into())
             .unwrap();
         let tree = parser.parse(code, None).unwrap();
-        super::super::detect(code, tree.root_node(), Path::new("src/lib.rs"))
+        super::super::detect(code, Some(tree.root_node()), Path::new("src/lib.rs"))
     }
 
     #[test]

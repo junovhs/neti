@@ -3,6 +3,7 @@
 
 use super::get_capture_node;
 use crate::types::{Violation, ViolationDetails};
+use omni_ast::{semantics_for, Concept, LangSemantics, SemanticContext, SemanticLanguage};
 use tree_sitter::{Node, Query, QueryCursor};
 
 #[must_use]
@@ -16,6 +17,7 @@ pub fn detect(source: &str, root: Node) -> Vec<Violation> {
 
 /// M03: Getter with mutation - `get_*`/`is_*` that takes `&mut self`
 fn detect_m03(source: &str, root: Node, out: &mut Vec<Violation>) {
+    let semantics = semantics_for(SemanticLanguage::Rust);
     let q = r#"(function_item
         name: (identifier) @name
         parameters: (parameters (self_parameter) @self)
@@ -40,7 +42,7 @@ fn detect_m03(source: &str, root: Node, out: &mut Vec<Violation>) {
         };
 
         let self_text = self_cap.utf8_text(source.as_bytes()).unwrap_or("");
-        if !self_text.contains("mut") {
+        if !semantics.has_concept(Concept::Mutation, &SemanticContext::from_source(self_text)) {
             continue;
         }
 
@@ -115,6 +117,7 @@ fn check_m04_match(
 
 /// M05: `calculate_*`/`compute_*` that takes `&mut self`
 fn detect_m05(source: &str, root: Node, out: &mut Vec<Violation>) {
+    let semantics = semantics_for(SemanticLanguage::Rust);
     let q = r#"(function_item
         name: (identifier) @name
         parameters: (parameters (self_parameter) @self)
@@ -139,7 +142,7 @@ fn detect_m05(source: &str, root: Node, out: &mut Vec<Violation>) {
         };
 
         let self_text = self_cap.utf8_text(source.as_bytes()).unwrap_or("");
-        if !self_text.contains("mut") {
+        if !semantics.has_concept(Concept::Mutation, &SemanticContext::from_source(self_text)) {
             continue;
         }
 

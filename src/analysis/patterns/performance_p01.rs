@@ -2,8 +2,8 @@
 //! P01: `.clone()` inside a loop.
 
 use super::super::get_capture_node;
-use super::{HEAP_KEYWORDS, HEURISTIC_KEYWORDS};
 use crate::types::{Confidence, Violation, ViolationDetails};
+use omni_ast::{semantics_for, Concept, LangSemantics, SemanticContext, SemanticLanguage};
 use tree_sitter::{Node, Query, QueryCursor};
 
 #[cfg(test)]
@@ -14,6 +14,7 @@ pub(super) fn check_p01(
     source: &str,
     body: Node,
     loop_var: Option<&str>,
+    language: SemanticLanguage,
     out: &mut Vec<Violation>,
 ) {
     let q = r#"(call_expression function: (field_expression
@@ -31,6 +32,7 @@ pub(super) fn check_p01(
             continue;
         };
         let recv = get_capture_node(&m, idx_recv).and_then(|c| c.utf8_text(source.as_bytes()).ok());
+        let semantics = semantics_for(language);
 
         let call_text = call.utf8_text(source.as_bytes()).unwrap_or("");
         if is_arc_or_rc_clone(call_text) {
@@ -41,11 +43,11 @@ pub(super) fn check_p01(
         }
 
         let recv_text = recv.unwrap_or("");
-        if !looks_heap_owning(recv_text) {
+        if !looks_heap_owning_with_semantics(&semantics, recv_text) {
             continue;
         }
 
-        let (confidence, reason) = classify_p01_confidence(recv_text);
+        let (confidence, reason) = classify_p01_confidence(&semantics, recv_text);
 
         let mut v = Violation::with_details(
             call.start_position().row + 1,
@@ -68,7 +70,10 @@ pub(super) fn check_p01(
     }
 }
 
-fn classify_p01_confidence(recv: &str) -> (Confidence, Option<String>) {
+fn classify_p01_confidence(
+    semantics: &impl LangSemantics,
+    recv: &str,
+) -> (Confidence, Option<String>) {
     let r = recv.trim();
 
     if r.contains('[') || r.contains("self.") {
@@ -85,25 +90,14 @@ fn classify_p01_confidence(recv: &str) -> (Confidence, Option<String>) {
         return (Confidence::High, None);
     }
 
-    let lower = r.to_lowercase();
-
-    if HEAP_KEYWORDS.iter().any(|&k| lower.contains(k)) {
+    if semantics.has_concept(Concept::HeapAllocation, &SemanticContext::from_source(r)) {
         return (Confidence::High, None);
-    }
-
-    if HEURISTIC_KEYWORDS.iter().any(|&k| lower.contains(k)) {
-        return (
-            Confidence::Medium,
-            Some(format!(
-                "receiver `{r}` matches a heuristic keyword but type is unverified"
-            )),
-        );
     }
 
     (
         Confidence::Medium,
         Some(format!(
-            "receiver `{r}` has no known heap-type indicator — type inference incomplete"
+            "receiver `{r}` lacks a strong shared heap-allocation signal"
         )),
     )
 }
@@ -115,7 +109,7 @@ pub(super) fn is_arc_or_rc_clone(call_text: &str) -> bool {
         || call_text.contains("::Rc::clone")
 }
 
-pub(super) fn looks_heap_owning(recv: &str) -> bool {
+fn looks_heap_owning_with_semantics(semantics: &impl LangSemantics, recv: &str) -> bool {
     let r = recv.trim();
     if r.is_empty() {
         return true;
@@ -123,14 +117,14 @@ pub(super) fn looks_heap_owning(recv: &str) -> bool {
     if r.chars().next().is_some_and(|c| c.is_uppercase()) {
         return true;
     }
-    let lower = r.to_lowercase();
-    if HEAP_KEYWORDS.iter().any(|&k| lower.contains(k)) {
-        return true;
-    }
-    if HEURISTIC_KEYWORDS.iter().any(|&k| lower.contains(k)) {
-        return true;
-    }
-    r.len() > 2
+
+    semantics.has_concept(Concept::HeapAllocation, &SemanticContext::from_source(r)) || r.len() > 2
+}
+
+#[cfg(test)]
+pub(super) fn looks_heap_owning(recv: &str) -> bool {
+    let semantics = semantics_for(SemanticLanguage::Rust);
+    looks_heap_owning_with_semantics(&semantics, recv)
 }
 
 fn should_skip_clone(source: &str, call: Node, recv: Option<&str>, lv: Option<&str>) -> bool {

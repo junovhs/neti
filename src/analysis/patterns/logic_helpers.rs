@@ -3,6 +3,7 @@
 //!
 //! Extracted from `logic.rs` to satisfy the Law of Atomicity.
 
+use omni_ast::{LangSemantics, SemanticContext};
 use tree_sitter::Node;
 
 #[cfg(test)]
@@ -30,16 +31,16 @@ pub fn is_index_variable(name: &str) -> bool {
 }
 
 /// Returns `true` if a parent scope contains a `.len()` or `.is_empty()` guard.
-pub fn has_explicit_guard(source: &str, node: Node) -> bool {
+pub fn has_explicit_guard(
+    source: &str,
+    node: Node,
+    semantics: &impl LangSemantics,
+) -> bool {
     let mut cur = node;
     for _ in 0..10 {
         let Some(p) = cur.parent() else { break };
-        let kind = p.kind();
         let text = p.utf8_text(source.as_bytes()).unwrap_or("");
-        if text.contains(".len()") || text.contains(".is_empty()") {
-            return true;
-        }
-        if kind == "if_expression" && text.contains('!') && text.contains("is_empty") {
+        if semantics.has_guarding_collection_check(&SemanticContext::from_source(text)) {
             return true;
         }
         cur = p;

@@ -2,6 +2,160 @@
 
 ---
 
+## [51] Adopt `omni-ast` as NETI's primary semantic engine
+**Status:** DONE
+**Files:** `src/lang.rs`, `src/analysis/patterns/mod.rs`, `src/analysis/patterns/performance.rs`, `src/analysis/patterns/performance_p01.rs`, `src/analysis/patterns/performance_p04p06.rs`, `src/analysis/patterns/performance_test_ctx.rs`, `src/analysis/patterns/logic.rs`, `src/analysis/patterns/logic_l02.rs`, `src/analysis/patterns/logic_l03.rs`, `src/analysis/patterns/logic_helpers.rs`, shared `omni-ast` semantics modules
+**Labels:** Architecture, Adoption, Language Support, Integrations
+**Depends on:** [50]
+
+**Problem:** The shared crate now exists and NETI consumes pieces of it, but NETI is not yet primarily governed by `omni-ast` semantics. Detector behavior still largely lives in Rust-specific rule code, which means the extraction milestone is real while the strategic adoption milestone remains open.
+
+**Fix:**
+
+1. Define the shared semantic contract NETI detectors should consume as their main interface.
+2. Move detector-facing language and concept knowledge behind `omni-ast` instead of keeping it embedded in NETI rules.
+3. Replace detector-local Rust syntax assumptions with shared semantic queries in the main rule paths.
+4. Prove the adoption with cross-language rule coverage showing one rule can execute through the shared semantic layer.
+
+**Resolution:** Turned `omni-ast` semantics into the live detector contract NETI now consumes. `LangSemantics` gained stable detector-facing queries for concept checks, length-boundary risk, collection access risk, front-access unwrap risk, and guard detection, backed by `SharedSemantics`, split logic/performance semantic tables, and path-aware `SemanticContext`. I chose to keep Rust tree-sitter structure only for precision and line attribution while moving vocabulary and semantic rule predicates behind `omni-ast`; that makes the shared crate the governing semantic layer without forcing a one-shot rewrite of all AST extraction.
+
+NETI's performance and logic detector families now route their core rule predicates through shared semantics. Rust performance/logic paths still use AST traversal for precision, but no longer own the semantic vocabulary locally. `detect_all()` also now executes shared-semantic rule paths for non-Rust files, with verified cross-language coverage for P06 and L02 on Python and TypeScript inputs. Verification used `neti check`: `cargo clippy --all-targets --no-deps -- -D warnings` passed, `cargo test` passed, and the only remaining non-zero condition was the pre-existing `LCOM4` warning on `src/types/command.rs`. Commands run: `semmap generate`, `semmap trace src/lang.rs`, `semmap trace src/analysis/patterns/performance.rs`, `semmap trace src/analysis/patterns/logic.rs`, `neti check`.
+
+---
+
+## [17] Implement `LangSemantics` in the new shared crate
+**Status:** DONE
+**Files:** `src/lang.rs`, `omni-ast/src/lib.rs`, `omni-ast/src/semantics.rs`, `omni-ast/src/semantics_engine.rs`, `omni-ast/src/semantics_queries.rs`, `omni-ast/src/semantics_logic_queries.rs`, `omni-ast/src/semantics_tables.rs`, `omni-ast/src/semantics_logic_tables.rs`
+**Labels:** Architecture, Language Support, Detection Rules
+**Depends on:** [51]
+
+**Problem:** NETI needs a stable semantic interface above raw syntax. That interface should live in the shared crate so both projects can reason about concepts such as test context, heap allocation, mutation, locking, and exported roles without duplicating language-specific logic.
+
+**Fix:**
+
+1. Define a `LangSemantics` trait in the shared crate.
+2. Make the trait answer the semantic queries NETI detectors need, such as `is_test_context()` and `has_concept(Concept::HeapAllocation)`.
+3. Map SEMMAP-style badges and concepts onto that trait surface.
+4. Expose the interface so NETI detectors can query semantics without directly handling AST syntax.
+
+**Resolution:** Implemented `LangSemantics` as NETI's shared semantic contract inside `omni-ast`, with exported `SharedSemantics` instances created through `semantics_for()`. The trait now answers concept-level questions (`TestContext`, `HeapAllocation`, `Lookup`, `Length`, `Mutation`, `Locking`, `Loop`, `ExportedApi`) plus detector-facing logic queries for boundary risk, unguarded collection access, front unwrap access, and guarding collection checks. SEMMAP fingerprint and badge data now feed the same interface through `SemanticContext`, which carries harvested metadata, source text, and optional path hints. NETI consumes the trait directly in detector paths, so the semantic surface is no longer hypothetical. Verified by `neti check`; command stages passed and only the pre-existing `src/types/command.rs` warning remained.
+
+---
+
+## [18] Wire shared semantics into performance detectors
+**Status:** DONE
+**Files:** `src/analysis/patterns/performance.rs`, `src/analysis/patterns/performance_p01.rs`, `src/analysis/patterns/performance_p04p06.rs`, `src/analysis/patterns/performance_test_ctx.rs`
+**Labels:** Architecture, Language Support, Detection Rules, Performance
+**Depends on:** [17]
+
+**Problem:** Performance detectors still rely on Rust-shaped vocabulary and local heuristics. They should operate on shared semantic concepts so one rule can run against Rust, Python, Go, and JS/TS through the same interface.
+
+**Fix:**
+
+1. Replace detector-local vocabulary checks with queries against shared semantics.
+2. Express rules in terms of concepts such as allocation, lookup, collection iteration, and test context.
+3. Remove path-based skip heuristics that exist only to compensate for weak semantics.
+4. Add tests showing the same detector intent can run across multiple languages through the shared layer.
+
+**Resolution:** Rewired the performance detector family to consume `LangSemantics` directly. Test-context detection, heap-allocation classification, and lookup-in-loop checks now all route through `omni-ast` semantic queries instead of local Rust keyword tables. Rust keeps AST-driven loop extraction for precision, while non-Rust files execute the shared-semantic P06 path through `detect_all()`. Added regression coverage proving the same P06 intent now runs on Python and TypeScript through the shared layer. Verified with `neti check`; command stages passed and the only remaining warning was pre-existing in `src/types/command.rs`.
+
+---
+
+## [19] Wire shared semantics into logic detectors
+**Status:** DONE
+**Files:** `src/analysis/patterns/logic.rs`, `src/analysis/patterns/logic_l02.rs`, `src/analysis/patterns/logic_l03.rs`, `src/analysis/patterns/logic_helpers.rs`
+**Labels:** Architecture, Language Support, Detection Rules
+**Depends on:** [17]
+
+**Problem:** Logic detectors currently mix rule intent with Rust-specific syntax assumptions. That blocks cross-language governance and makes the rules harder to reason about.
+
+**Fix:**
+
+1. Rewrite logic detectors to query shared semantics rather than raw syntax vocabulary.
+2. Preserve Rust-only proof helpers only where they materially improve precision.
+3. Keep any Rust-specific precision layer clearly gated on language, not embedded in the core rule definition.
+4. Add regression coverage proving shared semantics drives the rule while precision enhancers remain optional.
+
+**Resolution:** Logic detectors now consume shared semantic queries for their core predicates. L02's boundary-risk and length-side detection moved behind `LangSemantics`, while L03 now uses shared semantic checks for index access, front unwrap access, and guard detection; Rust-only array/chunks proof helpers remain as explicit precision layers. `detect_all()` now runs a shared-semantic L02 path for non-Rust files, with regression tests covering Python and TypeScript off-by-one detection. Verified by `neti check`; `cargo clippy` and `cargo test` both passed, and no touched-path scan errors remained.
+
+---
+
+## [21] Populate Python semantics in the shared crate
+**Status:** DONE
+**Files:** `omni-ast/src/semantics.rs`, `omni-ast/src/semantics_queries.rs`, `omni-ast/src/semantics_logic_queries.rs`, `omni-ast/src/semantics_tables.rs`, `omni-ast/src/semantics_logic_tables.rs`
+**Labels:** Language Support, Architecture, Detection Rules
+**Depends on:** [17]
+
+**Problem:** Python needs a first-class semantics table in the shared crate before cross-language detector execution can be credible.
+
+**Fix:**
+
+1. Add Python test-context semantics.
+2. Add Python heap, lookup, length, mutation, and loop concepts.
+3. Map Python syntax and library vocabulary onto the shared concept model.
+4. Verify NETI rules can consume Python semantics through the same detector queries used for Rust.
+
+**Resolution:** Added Python semantic coverage for test context, heap allocation, lookup, length, mutation, loop detection, and shared logic-rule predicates in `omni-ast`. NETI now consumes those semantics in live detector paths: Python files can trigger shared-semantic P06 and L02 through `detect_all()`, backed by regression tests. Verified with `neti check`; command stages passed and the only remaining warning was the unrelated `src/types/command.rs` LCOM4 warning.
+
+---
+
+## [22] Populate TypeScript semantics in the shared crate
+**Status:** DONE
+**Files:** `omni-ast/src/semantics.rs`, `omni-ast/src/semantics_queries.rs`, `omni-ast/src/semantics_logic_queries.rs`, `omni-ast/src/semantics_tables.rs`, `omni-ast/src/semantics_logic_tables.rs`
+**Labels:** Language Support, Architecture, Detection Rules, Web Stack
+**Depends on:** [17]
+
+**Problem:** TypeScript and JavaScript need shared semantics coverage so NETI rules can execute over web code through the same concept interface.
+
+**Fix:**
+
+1. Add JS/TS test-context semantics.
+2. Add JS/TS heap, lookup, length, mutation, and loop concepts.
+3. Map JS/TS library and syntax vocabulary onto the shared concept model.
+4. Verify NETI rules can consume JS/TS semantics through the common detector interface.
+
+**Resolution:** Expanded `omni-ast` with JS/TS semantic tables covering test contexts, heap allocation, lookup, length, mutation, loops, and shared logic/performance rule predicates. NETI now exercises those semantics through `detect_all()`, with TypeScript regression coverage for both P06 and L02 on the shared-semantic execution path. Verified with `neti check`; verification commands passed and only the pre-existing `src/types/command.rs` warning remained.
+
+---
+
+## [41] Port SEMMAP SWUM expansion to Neti naming rules
+**Status:** DONE
+**Files:** `src/analysis/checks/naming.rs`, `omni-ast/src/swum/mod.rs`, `omni-ast/src/swum/splitter.rs`, `omni-ast/src/swum/verb_patterns.rs`
+**Labels:** Language Support, Detection Rules, Architecture
+**Depends on:** [51]
+
+**Problem:** NETI naming guidance is still shallow and language-specific. SEMMAP already has a SWUM engine that can expand identifiers into verb-intent phrases, which is the right foundation for cross-language naming rules.
+
+**Fix:**
+
+1. Port SEMMAP's SWUM engine into `omni-ast`.
+2. Replace NETI naming-rule heuristics with SWUM-backed semantic expansion where practical.
+3. Use the shared engine to reason about verbs, themes, acronyms, and intent across languages.
+4. Add tests proving naming analysis behavior works through the shared interface instead of language-local hacks.
+
+**Resolution:** Adopted the existing `omni-ast` SWUM engine into NETI's naming rule path. `src/analysis/checks/naming.rs` now uses shared `split_identifier()` and `expand_identifier()` instead of maintaining a local snake/camel splitter, so acronym boundaries, verbs, themes, and intent all come from the shared SWUM surface. The naming violation payload now includes SWUM's interpretation of the identifier and builds rename guidance from shared word splits rather than NETI-only heuristics. Added regression tests covering acronym-heavy camelCase, snake_case counting, and SWUM-backed suggestion text. Verified with `neti check`; both command stages passed and the only remaining non-zero condition was the pre-existing `LCOM4` warning in `src/types/command.rs`.
+
+---
+
+## [20] Wire shared semantics into concurrency and remaining detectors
+**Status:** DONE
+**Files:** `src/analysis/patterns/semantic.rs`, `src/analysis/patterns/concurrency.rs`, `src/analysis/patterns/concurrency_lock.rs`, `src/analysis/patterns/concurrency_sync.rs`, `omni-ast/src/semantics.rs`, `omni-ast/src/semantics_engine.rs`, `omni-ast/src/semantics_concurrency_queries.rs`, `omni-ast/src/semantics_tables.rs`
+**Labels:** Architecture, Language Support, Detection Rules, Safety
+**Depends on:** [17]
+
+**Problem:** Lock-type knowledge, mutation receiver patterns, and other semantic cues still live inline inside NETI detectors. That leaves the cross-language abstraction incomplete.
+
+**Fix:**
+
+1. Move lock and sync concepts behind the shared semantics layer.
+2. Move mutation and state-change concepts behind the shared semantics layer.
+3. Remove remaining detector-local Rust vocabulary where the shared crate can own it.
+4. Extend tests to prove these rule families work through semantic concepts rather than syntax matching.
+
+**Resolution:** Moved the remaining concurrency and mutation cue ownership behind `LangSemantics`. `omni-ast` now exposes `is_async_locking_context()` and expanded Rust mutation semantics so NETI no longer hardcodes async-lock import families or `&mut self` mutation markers inside detector-local helpers. C03 now uses shared locking concepts for lock detection and shared async-lock classification for severity selection; C04 now detects synchronization fields through shared locking semantics instead of inline `Arc<Mutex>`/`Arc<RwLock>` string checks; M03/M05 now use shared mutation semantics rather than local `contains(\"mut\")` checks on self parameters. I kept AST traversal only where it provides structural evidence such as async function shape, await span, and field locations. Verified with `neti check`; `cargo clippy --all-targets --no-deps -- -D warnings` passed, `cargo test` passed, and the only remaining non-zero condition was the pre-existing `LCOM4` warning in `src/types/command.rs`.
+
+---
+
 ## [50] Extract shared `omni-ast` crate from SEMMAP
 **Status:** DONE
 **Files:** `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/lang.rs`, `src/graph/imports.rs`, `omni-ast/Cargo.toml`, `omni-ast/src/lib.rs`, `omni-ast/src/harvester.rs`, `omni-ast/src/harvester_tree.rs`, `omni-ast/src/harvester_signatures.rs`, `omni-ast/src/taxonomy.rs`, `omni-ast/src/taxonomy_rules.rs`, `omni-ast/src/semantics.rs`, `omni-ast/src/types.rs`, `omni-ast/src/doc_extractor.rs`, `omni-ast/src/doc_filter.rs`, `omni-ast/src/language/`, `omni-ast/src/swum/`

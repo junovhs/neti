@@ -17,16 +17,25 @@ pub mod state;
 
 use crate::lang::Lang;
 use crate::types::Violation;
+use omni_ast::SemanticLanguage;
 use std::path::Path;
 use tree_sitter::Parser;
 
 /// Runs all pattern detections on a file.
 #[must_use]
 pub fn detect_all(path: &Path, source: &str) -> Vec<Violation> {
-    let Some(lang) = get_rust_lang(path) else {
+    let Some(language) = semantic_language(path) else {
         return Vec::new();
     };
-    let Some(tree) = parse_source(source, lang) else {
+
+    if language != SemanticLanguage::Rust {
+        let mut out = Vec::new();
+        out.extend(performance::detect(source, None, path));
+        out.extend(logic::detect(source, None, path));
+        return out;
+    }
+
+    let Some(tree) = parse_source(source, Lang::Rust) else {
         return Vec::new();
     };
     let root = tree.root_node();
@@ -34,22 +43,20 @@ pub fn detect_all(path: &Path, source: &str) -> Vec<Violation> {
     let mut out = Vec::new();
     out.extend(state::detect(source, root));
     out.extend(concurrency::detect(source, root));
-    out.extend(performance::detect(source, root, path));
+    out.extend(performance::detect(source, Some(root), path));
     out.extend(db_patterns::detect(source, root));
     out.extend(security::detect(source, root));
     out.extend(semantic::detect(source, root));
     out.extend(resource::detect(source, root));
     out.extend(idiomatic::detect(source, root));
-    out.extend(logic::detect(source, root));
+    out.extend(logic::detect(source, Some(root), path));
     out
 }
 
-fn get_rust_lang(path: &Path) -> Option<Lang> {
-    let ext = path.extension()?.to_str()?;
-    match Lang::from_ext(ext) {
-        Some(Lang::Rust) => Some(Lang::Rust),
-        _ => None,
-    }
+fn semantic_language(path: &Path) -> Option<SemanticLanguage> {
+    path.extension()
+        .and_then(|ext| ext.to_str())
+        .and_then(SemanticLanguage::from_ext)
 }
 
 fn parse_source(source: &str, lang: Lang) -> Option<tree_sitter::Tree> {
@@ -71,4 +78,58 @@ pub fn get_capture_node<'a>(
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::detect_all;
+    use std::path::Path;
+
+    #[test]
+    fn detect_all_runs_shared_p06_for_python() {
+        let source = r#"
+for needle in needles:
+    if needle in haystack:
+        hits.append(needle)
+"#;
+
+        let violations = detect_all(Path::new("src/example.py"), source);
+        assert!(violations.iter().any(|violation| violation.law == "P06"));
+    }
+
+    #[test]
+    fn detect_all_runs_shared_p06_for_typescript() {
+        let source = r#"
+for (const needle of needles) {
+    const found = haystack.find((value) => value === needle);
+    consume(found);
+}
+"#;
+
+        let violations = detect_all(Path::new("src/example.ts"), source);
+        assert!(violations.iter().any(|violation| violation.law == "P06"));
+    }
+
+    #[test]
+    fn detect_all_runs_shared_l02_for_python() {
+        let source = r#"
+if idx <= len(values):
+    return values[idx]
+"#;
+
+        let violations = detect_all(Path::new("src/example.py"), source);
+        assert!(violations.iter().any(|violation| violation.law == "L02"));
+    }
+
+    #[test]
+    fn detect_all_runs_shared_l02_for_typescript() {
+        let source = r#"
+if (idx <= values.length) {
+  return values[idx];
+}
+"#;
+
+        let violations = detect_all(Path::new("src/example.ts"), source);
+        assert!(violations.iter().any(|violation| violation.law == "L02"));
+    }
 }

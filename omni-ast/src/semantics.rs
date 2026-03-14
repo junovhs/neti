@@ -1,6 +1,19 @@
 use crate::harvester::SemanticFingerprint;
 use crate::taxonomy::SemanticBadges;
 
+#[path = "semantics_engine.rs"]
+mod engine;
+#[path = "semantics_queries.rs"]
+mod queries;
+#[path = "semantics_logic_queries.rs"]
+mod logic_queries;
+#[path = "semantics_concurrency_queries.rs"]
+mod concurrency_queries;
+#[path = "semantics_logic_tables.rs"]
+mod logic_tables;
+#[path = "semantics_tables.rs"]
+mod tables;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SemanticLanguage {
     Rust,
@@ -44,6 +57,8 @@ pub enum Concept {
 pub struct SemanticContext {
     pub fingerprint: SemanticFingerprint,
     pub badges: SemanticBadges,
+    pub source_text: String,
+    pub path_hint: Option<String>,
 }
 
 pub trait LangSemantics {
@@ -52,4 +67,16 @@ pub trait LangSemantics {
     fn is_test_context(&self, context: &SemanticContext) -> bool;
 
     fn has_concept(&self, concept: Concept, context: &SemanticContext) -> bool;
+
+    fn has_length_boundary_risk(&self, context: &SemanticContext) -> bool;
+
+    fn has_unguarded_collection_access(&self, context: &SemanticContext) -> bool;
+
+    fn has_unwrapped_front_access(&self, context: &SemanticContext) -> bool;
+
+    fn has_guarding_collection_check(&self, context: &SemanticContext) -> bool;
+
+    fn is_async_locking_context(&self, context: &SemanticContext) -> bool;
 }
+
+pub use engine::{semantics_for, SharedSemantics};

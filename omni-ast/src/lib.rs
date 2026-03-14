@@ -12,6 +12,8 @@ pub use language::{
     extract_doc_comment_for_file, has_rust_inline_tests, resolve_imports, resolve_primary_symbol,
     resolve_semantic_exports,
 };
-pub use semantics::{Concept, LangSemantics, SemanticContext, SemanticLanguage};
+pub use semantics::{
+    semantics_for, Concept, LangSemantics, SemanticContext, SemanticLanguage, SharedSemantics,
+};
 pub use taxonomy::{load_taxonomy, SemanticBadges, Taxonomy};
 pub use types::DepKind;

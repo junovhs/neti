@@ -2,6 +2,7 @@
 //! C04: Undocumented synchronization primitives
 
 use crate::types::{Confidence, Violation, ViolationDetails};
+use omni_ast::{semantics_for, Concept, LangSemantics, SemanticContext, SemanticLanguage};
 use tree_sitter::{Node, Query, QueryCursor};
 
 /// C04: Arc<Mutex<T>> without documentation
@@ -29,8 +30,9 @@ fn detect_sync_fields(source: &str, root: Node, out: &mut Vec<Violation>) {
 fn check_sync_field(source: &str, m: &tree_sitter::QueryMatch) -> Option<Violation> {
     let field_cap = m.captures.iter().find(|c| c.index == 1)?;
     let field_text = field_cap.node.utf8_text(source.as_bytes()).ok()?;
+    let semantics = semantics_for(SemanticLanguage::Rust);
 
-    if !has_sync_type(field_text) {
+    if !semantics.has_concept(Concept::Locking, &SemanticContext::from_source(field_text)) {
         return None;
     }
 
@@ -43,10 +45,6 @@ fn check_sync_field(source: &str, m: &tree_sitter::QueryMatch) -> Option<Violati
         field_cap.node.start_position().row,
         &name,
     ))
-}
-
-fn has_sync_type(text: &str) -> bool {
-    text.contains("Arc<Mutex") || text.contains("Arc<RwLock")
 }
 
 fn has_doc_comment(source: &str, node: Node) -> bool {

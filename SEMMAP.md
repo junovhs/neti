@@ -125,7 +125,7 @@ Configuration for the Law of Locality enforcement.
 Exports: is_error_mode, to_validator_config, LocalityConfig, is_enabled
 
 `src/config/types.rs`
-Implements safety config.
+Implements command entry.
 Exports: CommandEntry, NetiToml, into_vec, RuleConfig
 
 `src/graph/tsconfig.rs`
@@ -549,7 +549,7 @@ Exports: group_by_directory, discover
 
 `src/lang.rs`
 Provides shared lang used across multiple domains. [HOTSPOT] [GLOBAL-UTIL]
-Exports: from_ext, QueryKind, skeleton_replacement, q_complexity
+Exports: from_semantic_language, QueryKind, from_ext, skeleton_replacement
 Touch: Contains inline Rust tests alongside runtime code.
 
 `src/lang_queries.rs`
@@ -597,7 +597,7 @@ CLI command handlers. [ENTRY]
 Exports: config_ui, git_ops, mutate_handler, args
 
 `src/config/mod.rs`
-Provides shared mod used across multiple domains. [ENTRY] [HOTSPOT] [GLOBAL-UTIL]
+Sets the to file. [ENTRY] [HOTSPOT] [GLOBAL-UTIL]
 Exports: process_ignore_line, save_to_file, load_local_config, parse_toml
 
 `src/graph/defs/mod.rs`
@@ -622,7 +622,7 @@ Exports: focus_on, GraphEngine, RepoGraph, builder
 
 `src/lib.rs`
 Re-exports the public API surface. [ENTRY]
-Exports: file_class, analysis, branch, clean
+Exports: file_class, omni_ast, analysis, branch
 
 `src/main.rs`
 Placeholder file. [ENTRY]
@@ -670,46 +670,138 @@ Integration test: locality integration in `neti check` pipeline.
 `tests/command_parsing_test.rs`
 Integration test: command parsing with shell-words.
 
+## Subprojects
+
+### omni-ast
+
+`omni-ast/Cargo.toml`
+Workspace configuration.
+
+`omni-ast/src/harvester_signatures.rs`
+Implements harvester signatures.
+
+`omni-ast/src/semantics.rs`
+Implements semantic language.
+Exports: LangSemantics, from_ext, SemanticContext, SemanticLanguage
+
+`omni-ast/src/taxonomy.rs`
+Stage 3 semantic badge evaluation.
+Exports: SemanticBadges, load_taxonomy, evaluate, Taxonomy
+Touch: Contains inline Rust tests alongside runtime code.
+
+`omni-ast/src/types.rs`
+Implements dep kind. [TYPE]
+Exports: DepKind
+
+`omni-ast/src/doc_extractor.rs`
+Extracts documentation comments from source files.
+Exports: extract_doc_comment_for_file, collapse_doc_lines, extract_doc_comment
+
+`omni-ast/src/doc_filter.rs`
+Heuristics to reject item-level doc comments mistaken for module docs.
+Exports: looks_like_item_doc
+
+`omni-ast/src/harvester.rs`
+Stage 1 semantic signal harvesting. [UTIL]
+Exports: SemanticFingerprint, parse_config, with_exports
+Touch: Contains inline Rust tests alongside runtime code.
+
+`omni-ast/src/harvester_tree.rs`
+Implements harvester tree. [CORE]
+
+`omni-ast/src/language/cpp.rs`
+C and C++ import, doc, and export extraction. [UTIL]
+Exports: is_header_path, extract_import_strings, primary_symbol, extract_doc
+
+`omni-ast/src/language/cpp_includes.rs`
+Parses imports.
+Exports: is_build_only_path, extract_imports
+
+`omni-ast/src/language/go.rs`
+Parses import strings.
+Exports: extract_import_strings, extract_doc, extract_imports
+
+`omni-ast/src/language/javascript.rs`
+JavaScript/TypeScript import extraction and path resolution.
+Exports: extract_import_strings, extract_doc, extract_imports
+
+`omni-ast/src/language/javascript/monorepo.rs`
+Monorepo-aware bare import resolution for JavaScript/TypeScript.
+Exports: collect_package_roots, resolve_bare
+
+`omni-ast/src/language/rust.rs`
+Rust import extraction and dependency analysis. [UTIL]
+Exports: has_inline_tests, extract_crate_imports, extract_mod_declarations, extract_modules
+
+`omni-ast/src/swum/splitter.rs`
+Identifier splitting for SWUM.
+Exports: split_identifier
+
+`omni-ast/src/swum/verb_patterns.rs`
+Verb pattern expansion for SWUM.
+Exports: expand_verb_pattern
+
+`omni-ast/src/taxonomy_rules.rs`
+Implements Taxonomy functionality. [UTIL]
+Exports: Taxonomy
+
+`omni-ast/src/language/mod.rs`
+Implements resolve semantic exports. [ENTRY]
+Exports: extract_doc_comment_for_file, has_rust_inline_tests, extract_import_strings, resolve_primary_symbol
+Touch: Contains inline Rust tests alongside runtime code.
+
+`omni-ast/src/language/python.rs`
+Python import extraction and dependency analysis.
+Exports: extract_import_strings, extract_doc, extract_imports
+
+`omni-ast/src/lib.rs`
+Re-exports the public API surface. [ENTRY]
+Exports: DepKind, harvester, language, semantics
+
+`omni-ast/src/swum/mod.rs`
+SWUM (Software Word Usage Model) for identifier expansion. [ENTRY]
+Exports: expand_verb_pattern, summarize_exports, split_identifier, expand_identifier
+
 
 ## DependencyGraph
 
 ```yaml
 DependencyGraph:
   # --- Entrypoints ---
-  lib.rs:
-    Imports: [branch.rs, clean.rs, cli/mod.rs, config/mod.rs, constants.rs, detection.rs, events.rs, exit.rs, file_class.rs, graph/mod.rs, lang.rs, mutate/mod.rs, project.rs, reporting.rs, skeleton.rs, spinner/mod.rs, src/analysis/mod.rs, src/discovery.rs, tokens.rs, types/mod.rs, utils.rs, verification/mod.rs]
-    ImportedBy: []
   main.rs, neti.rs:
     Imports: []
+    ImportedBy: []
+  src/lib.rs:
+    Imports: [branch.rs, clean.rs, cli/mod.rs, config/mod.rs, constants.rs, detection.rs, events.rs, exit.rs, file_class.rs, graph/mod.rs, lang.rs, mutate/mod.rs, project.rs, reporting.rs, skeleton.rs, spinner/mod.rs, src/analysis/mod.rs, src/discovery.rs, tokens.rs, types/mod.rs, utils.rs, verification/mod.rs]
     ImportedBy: []
   # --- High Fan-In Hotspots ---
   config/mod.rs:
     Imports: [config/locality.rs, config/types.rs, constants.rs, io.rs, types/mod.rs]
-    ImportedBy: [ast.rs, checks.rs, cli/locality.rs, complexity.rs, config_ui/logic.rs, config_ui/render.rs, deep.rs, editor.rs, engine.rs, handlers/mod.rs, imports.rs, inspector.rs, items.rs, lib.rs, mutate/mod.rs, safety.rs, src/discovery.rs, syntax_test.rs, verification/mod.rs, worker.rs]
+    ImportedBy: [ast.rs, checks.rs, cli/locality.rs, complexity.rs, config_ui/logic.rs, config_ui/render.rs, deep.rs, editor.rs, engine.rs, handlers/mod.rs, imports.rs, inspector.rs, items.rs, mutate/mod.rs, safety.rs, src/discovery.rs, src/lib.rs, syntax_test.rs, verification/mod.rs, worker.rs]
   exit.rs:
     Imports: []
-    ImportedBy: [cli/locality.rs, dispatch.rs, git_ops.rs, handlers/mod.rs, lib.rs, mutate_handler.rs]
+    ImportedBy: [cli/locality.rs, dispatch.rs, git_ops.rs, handlers/mod.rs, mutate_handler.rs, src/lib.rs]
   graph/mod.rs:
     Imports: [defs/mod.rs, imports.rs, locality/mod.rs, rank/mod.rs, resolver.rs, tsconfig.rs]
-    ImportedBy: [builder.rs, cli/locality.rs, config/locality.rs, edges.rs, lib.rs, locality/analysis/metrics.rs, locality/analysis/mod.rs, rank/queries.rs, resolver.rs, violations.rs]
+    ImportedBy: [builder.rs, cli/locality.rs, config/locality.rs, edges.rs, locality/analysis/metrics.rs, locality/analysis/mod.rs, rank/queries.rs, resolver.rs, src/lib.rs, violations.rs]
   lang.rs:
     Imports: []
-    ImportedBy: [ast.rs, defs/extract.rs, defs/queries.rs, imports.rs, lib.rs, mutate/discovery.rs, patterns/mod.rs, skeleton.rs, syntax_test.rs, visitor.rs, worker.rs]
+    ImportedBy: [ast.rs, defs/extract.rs, defs/queries.rs, imports.rs, mutate/discovery.rs, patterns/mod.rs, skeleton.rs, src/lib.rs, syntax_test.rs, visitor.rs, worker.rs]
   mutate/mod.rs:
     Imports: [config/mod.rs, mutate/discovery.rs, mutate/report.rs, mutate/runner.rs, mutations.rs, project.rs, src/discovery.rs]
-    ImportedBy: [lib.rs, mutate/discovery.rs, mutate/report.rs, mutate/runner.rs, mutate_handler.rs]
+    ImportedBy: [mutate/discovery.rs, mutate/report.rs, mutate/runner.rs, mutate_handler.rs, src/lib.rs]
   reporting.rs:
     Imports: [console.rs, guidance.rs, rich.rs, shared.rs]
-    ImportedBy: [check_report.rs, console.rs, handlers/mod.rs, lib.rs, rich.rs]
+    ImportedBy: [check_report.rs, console.rs, handlers/mod.rs, rich.rs, src/lib.rs]
   src/analysis/mod.rs:
     Imports: [aggregator.rs, analysis/extract.rs, ast.rs, checks.rs, cognitive.rs, deep.rs, engine.rs, extract_impl.rs, inspector.rs, patterns/mod.rs, safety.rs, scope.rs, src/analysis/metrics.rs, structural.rs, visitor.rs, worker.rs]
-    ImportedBy: [handlers/mod.rs, layers.rs, lib.rs, locality/report.rs, safety.rs, scan_report.rs, types/mod.rs]
+    ImportedBy: [handlers/mod.rs, layers.rs, locality/report.rs, safety.rs, scan_report.rs, src/lib.rs, types/mod.rs]
   src/discovery.rs:
     Imports: [config/mod.rs, constants.rs]
-    ImportedBy: [cli/locality.rs, handlers/mod.rs, lib.rs, mutate/mod.rs]
+    ImportedBy: [cli/locality.rs, handlers/mod.rs, mutate/mod.rs, src/lib.rs]
   types/mod.rs:
     Imports: [command.rs, src/analysis/mod.rs, types/locality.rs]
-    ImportedBy: [aggregator.rs, ast.rs, banned.rs, check_report.rs, classifier.rs, cli/locality.rs, complexity.rs, concurrency.rs, concurrency_lock.rs, concurrency_sync.rs, config/mod.rs, console.rs, coupling.rs, db_patterns.rs, deep.rs, engine.rs, handlers/mod.rs, idiomatic.rs, idiomatic_i01.rs, idiomatic_i02.rs, inspector.rs, io.rs, layers.rs, lib.rs, logic_l02.rs, logic_l03.rs, naming.rs, patterns/logic.rs, patterns/mod.rs, patterns/state.rs, performance.rs, performance_p01.rs, performance_p01_test.rs, performance_p02.rs, performance_p04p06.rs, resource.rs, rich.rs, safety.rs, scan_report.rs, security.rs, security_x01.rs, security_x02.rs, security_x03.rs, semantic.rs, shared.rs, syntax.rs, validator.rs, verification/mod.rs, verification/runner.rs, worker.rs]
+    ImportedBy: [aggregator.rs, ast.rs, banned.rs, check_report.rs, classifier.rs, cli/locality.rs, complexity.rs, concurrency.rs, concurrency_lock.rs, concurrency_sync.rs, config/mod.rs, console.rs, coupling.rs, db_patterns.rs, deep.rs, engine.rs, handlers/mod.rs, idiomatic.rs, idiomatic_i01.rs, idiomatic_i02.rs, inspector.rs, io.rs, layers.rs, logic_l02.rs, logic_l03.rs, naming.rs, patterns/logic.rs, patterns/mod.rs, patterns/state.rs, performance.rs, performance_p01.rs, performance_p01_test.rs, performance_p02.rs, performance_p04p06.rs, resource.rs, rich.rs, safety.rs, scan_report.rs, security.rs, security_x01.rs, security_x02.rs, security_x03.rs, semantic.rs, shared.rs, src/lib.rs, syntax.rs, validator.rs, verification/mod.rs, verification/runner.rs, worker.rs]
   # --- Layer 0 -- Config ---
   Cargo.toml, README.md, SEMMAP.md, neti.toml:
     Imports: []
@@ -747,7 +839,7 @@ DependencyGraph:
     ImportedBy: [checks.rs]
   branch.rs:
     Imports: []
-    ImportedBy: [git_ops.rs, lib.rs]
+    ImportedBy: [git_ops.rs, src/lib.rs]
   builder.rs, rank/queries.rs:
     Imports: [graph/mod.rs]
     ImportedBy: [rank/mod.rs]
@@ -762,7 +854,7 @@ DependencyGraph:
     ImportedBy: [locality/mod.rs]
   clean.rs, detection.rs, events.rs:
     Imports: []
-    ImportedBy: [lib.rs]
+    ImportedBy: [src/lib.rs]
   cli/locality.rs:
     Imports: [config/mod.rs, exit.rs, graph/mod.rs, src/discovery.rs, types/mod.rs]
     ImportedBy: [cli/mod.rs]
@@ -780,7 +872,7 @@ DependencyGraph:
     ImportedBy: [reporting.rs]
   constants.rs:
     Imports: []
-    ImportedBy: [config/mod.rs, lib.rs, src/discovery.rs]
+    ImportedBy: [config/mod.rs, src/discovery.rs, src/lib.rs]
   cycles.rs, distance.rs, exemptions.rs, locality/types.rs:
     Imports: []
     ImportedBy: [locality/mod.rs]
@@ -798,7 +890,7 @@ DependencyGraph:
     ImportedBy: [locality/mod.rs]
   file_class.rs, tokens.rs:
     Imports: []
-    ImportedBy: [lib.rs, worker.rs]
+    ImportedBy: [src/lib.rs, worker.rs]
   git_ops.rs:
     Imports: [branch.rs, exit.rs]
     ImportedBy: [cli/mod.rs]
@@ -840,7 +932,7 @@ DependencyGraph:
     ImportedBy: [mutate/mod.rs]
   project.rs:
     Imports: []
-    ImportedBy: [io.rs, lib.rs, mutate/mod.rs]
+    ImportedBy: [io.rs, mutate/mod.rs, src/lib.rs]
   resolver.rs:
     Imports: [graph/mod.rs]
     ImportedBy: [graph/mod.rs]
@@ -852,7 +944,7 @@ DependencyGraph:
     ImportedBy: [reporting.rs]
   skeleton.rs:
     Imports: [lang.rs]
-    ImportedBy: [lib.rs]
+    ImportedBy: [src/lib.rs]
   verification/runner.rs:
     Imports: [types/mod.rs]
     ImportedBy: [verification/mod.rs]
@@ -892,14 +984,14 @@ DependencyGraph:
     ImportedBy: [checks.rs]
   utils.rs:
     Imports: []
-    ImportedBy: [lib.rs]
+    ImportedBy: [src/lib.rs]
   # --- Layer 3 -- App / Entrypoints ---
   args.rs:
     Imports: []
     ImportedBy: [cli/mod.rs]
   cli/mod.rs:
     Imports: [args.rs, cli/locality.rs, config_ui/mod.rs, dispatch.rs, git_ops.rs, handlers/mod.rs, mutate_handler.rs]
-    ImportedBy: [check_report.rs, lib.rs, mutate_handler.rs]
+    ImportedBy: [check_report.rs, mutate_handler.rs, src/lib.rs]
   config_ui/mod.rs:
     Imports: [config_ui/logic.rs, config_ui/render.rs, editor.rs, items.rs]
     ImportedBy: [cli/mod.rs]
@@ -923,10 +1015,10 @@ DependencyGraph:
     ImportedBy: [graph/mod.rs]
   spinner/mod.rs:
     Imports: [client.rs, controller.rs, handle.rs, safe_hud.rs, spinner/render.rs, spinner/state.rs]
-    ImportedBy: [handlers/mod.rs, lib.rs]
+    ImportedBy: [handlers/mod.rs, src/lib.rs]
   verification/mod.rs:
     Imports: [config/mod.rs, types/mod.rs, verification/runner.rs]
-    ImportedBy: [check_report.rs, handlers/mod.rs, lib.rs]
+    ImportedBy: [check_report.rs, handlers/mod.rs, src/lib.rs]
   # --- Tests ---
   check_json_test.rs, check_locality_test.rs, command_parsing_test.rs, concurrency_lock_test.rs, idiomatic_i02_test.rs, logic_helpers_test.rs, logic_l03_test.rs, logic_proof_test.rs, security_x02_test.rs:
     Imports: []
@@ -946,4 +1038,32 @@ DependencyGraph:
   tests.rs:
     Imports: [part2.rs]
     ImportedBy: [locality/mod.rs]
+  # --- Subproject -- omni-ast ---
+  cpp.rs, go.rs, python.rs, rust.rs:
+    Imports: []
+    ImportedBy: [language/mod.rs]
+  cpp_includes.rs, harvester_signatures.rs, harvester_tree.rs, omni-ast/Cargo.toml, taxonomy_rules.rs:
+    Imports: []
+    ImportedBy: []
+  doc_extractor.rs, doc_filter.rs, harvester.rs, semantics.rs, src/types.rs, taxonomy.rs:
+    Imports: []
+    ImportedBy: [omni-ast/src/lib.rs]
+  javascript.rs:
+    Imports: [monorepo.rs]
+    ImportedBy: [language/mod.rs]
+  language/mod.rs:
+    Imports: [cpp.rs, go.rs, javascript.rs, python.rs, rust.rs]
+    ImportedBy: [omni-ast/src/lib.rs]
+  monorepo.rs:
+    Imports: []
+    ImportedBy: [javascript.rs]
+  omni-ast/src/lib.rs:
+    Imports: [doc_extractor.rs, doc_filter.rs, harvester.rs, language/mod.rs, semantics.rs, src/types.rs, swum/mod.rs, taxonomy.rs]
+    ImportedBy: []
+  splitter.rs, verb_patterns.rs:
+    Imports: []
+    ImportedBy: [swum/mod.rs]
+  swum/mod.rs:
+    Imports: [splitter.rs, verb_patterns.rs]
+    ImportedBy: [omni-ast/src/lib.rs]
 ```
