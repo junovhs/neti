@@ -1,6 +1,6 @@
 [package]
 name = "neti"
-version = "1.7.0"
+version = "0.1.7"
 edition = "2021"
 authors = ["Spencer Nunamaker <junovhs@gmail.com>"]
 description = "High-integrity code quality governance and transactional change management for AI-assisted development"
