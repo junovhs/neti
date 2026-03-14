@@ -1,5 +1,43 @@
 # Model-Driven Code Intelligence: North Star
 
+Ultimately, Neti is supposed to make AI-assisted coding professionally trustworthy.
+
+  More concretely:
+
+  Neti should take code that might otherwise be fast, messy, overgrown, under-reviewed AI
+  output and enforce the shape of serious engineering:
+
+  - modular
+  - maintainable
+  - local
+  - reviewable
+  - hard to rot
+  - safe to evolve
+
+  Its job is not to prove perfection.
+  Its job is to act as a high-trust quality gate so that when code is “all green,” you can
+  say:
+
+  - it builds
+  - it passes lint and tests
+  - it clears high-signal risk checks
+  - it is structurally sound
+  - it is not AI spaghetti
+  - it is worth professional review and credible to show to a client or senior engineer
+
+  So the ultimate purpose of Neti is:
+
+  to turn AI-generated or AI-assisted code into code that is architecturally clean,
+  professionally presentable, and trustworthy enough to move forward with confidence.
+
+  And the deeper version is:
+
+  Neti is an architecture-governance system for preserving code quality, reviewability, and
+  long-term maintainability in the age of AI coding.
+
+  That is the north star.
+
+
 ## The Problem
 
 AI makes producing code cheap. That doesn't eliminate work — it changes its shape.

@@ -133,6 +133,9 @@ Parser for tsconfig.json / jsconfig.json path mappings.
 Exports: TsConfig, load, resolve
 Touch: Contains inline Rust tests alongside runtime code.
 
+`v0.1.8-focus.md`
+Support file for v0.1.8-focus.
+
 ## Layer 1 -- Domain (Engine)
 
 `src/analysis/aggregator.rs`
@@ -154,6 +157,7 @@ Exports: check_banned
 `src/analysis/checks/naming.rs`
 Function naming checks (Law of Complexity).
 Exports: check_naming
+Touch: Contains inline Rust tests alongside runtime code.
 
 `src/analysis/deep.rs`
 Deep analysis runner.
@@ -576,6 +580,7 @@ Exports: FileAnalysis, extract_impl, Engine, aggregator
 `src/analysis/patterns/mod.rs`
 AST pattern detection for violations. [ENTRY]
 Exports: get_capture_node, performance_test_ctx, db_patterns, detect_all
+Touch: Contains inline Rust tests alongside runtime code.
 
 `src/bin/neti.rs`
 Implements neti functionality.
@@ -597,7 +602,7 @@ CLI command handlers. [ENTRY]
 Exports: config_ui, git_ops, mutate_handler, args
 
 `src/config/mod.rs`
-Sets the to file. [ENTRY] [HOTSPOT] [GLOBAL-UTIL]
+Provides shared mod used across multiple domains. [ENTRY] [HOTSPOT] [GLOBAL-UTIL]
 Exports: process_ignore_line, save_to_file, load_local_config, parse_toml
 
 `src/graph/defs/mod.rs`
@@ -683,6 +688,26 @@ Implements harvester signatures.
 `omni-ast/src/semantics.rs`
 Implements semantic language.
 Exports: LangSemantics, from_ext, SemanticContext, SemanticLanguage
+
+`omni-ast/src/semantics_concurrency_queries.rs`
+Implements semantics concurrency queries.
+
+`omni-ast/src/semantics_engine.rs`
+Implements shared semantics.
+Exports: from_source, with_path, SharedSemantics, semantics_for
+
+`omni-ast/src/semantics_logic_queries.rs`
+Implements semantics logic queries.
+
+`omni-ast/src/semantics_logic_tables.rs`
+Implements semantics logic tables.
+
+`omni-ast/src/semantics_queries.rs`
+Implements semantics queries.
+Touch: Contains inline Rust tests alongside runtime code.
+
+`omni-ast/src/semantics_tables.rs`
+Implements semantics tables.
 
 `omni-ast/src/taxonomy.rs`
 Stage 3 semantic badge evaluation.
@@ -803,7 +828,7 @@ DependencyGraph:
     Imports: [command.rs, src/analysis/mod.rs, types/locality.rs]
     ImportedBy: [aggregator.rs, ast.rs, banned.rs, check_report.rs, classifier.rs, cli/locality.rs, complexity.rs, concurrency.rs, concurrency_lock.rs, concurrency_sync.rs, config/mod.rs, console.rs, coupling.rs, db_patterns.rs, deep.rs, engine.rs, handlers/mod.rs, idiomatic.rs, idiomatic_i01.rs, idiomatic_i02.rs, inspector.rs, io.rs, layers.rs, logic_l02.rs, logic_l03.rs, naming.rs, patterns/logic.rs, patterns/mod.rs, patterns/state.rs, performance.rs, performance_p01.rs, performance_p01_test.rs, performance_p02.rs, performance_p04p06.rs, resource.rs, rich.rs, safety.rs, scan_report.rs, security.rs, security_x01.rs, security_x02.rs, security_x03.rs, semantic.rs, shared.rs, src/lib.rs, syntax.rs, validator.rs, verification/mod.rs, verification/runner.rs, worker.rs]
   # --- Layer 0 -- Config ---
-  Cargo.toml, README.md, SEMMAP.md, neti.toml:
+  Cargo.toml, README.md, SEMMAP.md, neti.toml, v0.1.8-focus.md:
     Imports: []
     ImportedBy: []
   config/locality.rs:
@@ -1042,7 +1067,7 @@ DependencyGraph:
   cpp.rs, go.rs, python.rs, rust.rs:
     Imports: []
     ImportedBy: [language/mod.rs]
-  cpp_includes.rs, harvester_signatures.rs, harvester_tree.rs, omni-ast/Cargo.toml, taxonomy_rules.rs:
+  cpp_includes.rs, harvester_signatures.rs, harvester_tree.rs, omni-ast/Cargo.toml, semantics_concurrency_queries.rs, semantics_engine.rs, semantics_logic_queries.rs, semantics_logic_tables.rs, semantics_queries.rs, semantics_tables.rs, taxonomy_rules.rs:
     Imports: []
     ImportedBy: []
   doc_extractor.rs, doc_filter.rs, harvester.rs, semantics.rs, src/types.rs, taxonomy.rs:
