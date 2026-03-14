@@ -3,7 +3,6 @@
 
 use serde::{Deserialize, Serialize};
 
-
 use crate::graph::locality::{ClassifierConfig, ValidatorConfig};
 
 /// Locality rules configuration from neti.toml.

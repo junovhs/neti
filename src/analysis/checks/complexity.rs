@@ -25,11 +25,7 @@ pub fn check_metrics(
     0 // Return 0 as max complexity is tracked via cognitive score in AST analyzer
 }
 
-fn process_match(
-    m: &QueryMatch,
-    ctx: &CheckContext,
-    out: &mut Vec<Violation>,
-) {
+fn process_match(m: &QueryMatch, ctx: &CheckContext, out: &mut Vec<Violation>) {
     for capture in m.captures {
         let node = capture.node;
         if is_function_kind(node.kind()) {
@@ -49,11 +45,7 @@ fn is_function_kind(kind: &str) -> bool {
     )
 }
 
-fn analyze_function(
-    node: Node,
-    ctx: &CheckContext,
-    out: &mut Vec<Violation>,
-) {
+fn analyze_function(node: Node, ctx: &CheckContext, out: &mut Vec<Violation>) {
     let row = node.start_position().row + 1;
 
     // Check Arity
@@ -93,7 +85,10 @@ fn check_arity(
         };
         out.push(Violation::with_details(
             row,
-            format!("Function '{func_name}' has {params} args (Max: {})", config.max_function_args),
+            format!(
+                "Function '{func_name}' has {params} args (Max: {})",
+                config.max_function_args
+            ),
             "LAW OF COMPLEXITY",
             details,
         ));
@@ -127,7 +122,10 @@ fn check_nesting(
         };
         out.push(Violation::with_details(
             row,
-            format!("Function '{func_name}' has nesting depth {depth} (Max: {})", config.max_nesting_depth),
+            format!(
+                "Function '{func_name}' has nesting depth {depth} (Max: {})",
+                config.max_nesting_depth
+            ),
             "LAW OF COMPLEXITY",
             details,
         ));
@@ -140,7 +138,11 @@ fn measure_nesting(node: Node, current: usize, base_row: usize) -> (usize, usize
 
     let mut cursor = node.walk();
     for child in node.children(&mut cursor) {
-        let child_depth = if is_nesting_node(child.kind()) { current + 1 } else { current };
+        let child_depth = if is_nesting_node(child.kind()) {
+            current + 1
+        } else {
+            current
+        };
         let child_row = child.start_position().row + 1;
         let (sub_depth, sub_line) = measure_nesting(child, child_depth, child_row);
         if sub_depth > max_depth {
@@ -155,8 +157,16 @@ fn measure_nesting(node: Node, current: usize, base_row: usize) -> (usize, usize
 fn is_nesting_node(kind: &str) -> bool {
     matches!(
         kind,
-        "if_expression" | "if_statement" | "for_expression" | "for_statement"
-            | "for_in_statement" | "while_expression" | "while_statement"
-            | "loop_expression" | "match_expression" | "switch_statement" | "try_statement"
+        "if_expression"
+            | "if_statement"
+            | "for_expression"
+            | "for_statement"
+            | "for_in_statement"
+            | "while_expression"
+            | "while_statement"
+            | "loop_expression"
+            | "match_expression"
+            | "switch_statement"
+            | "try_statement"
     )
 }

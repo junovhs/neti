@@ -1,7 +1,7 @@
 // src/cli/mutate_handler.rs
+use crate::cli::handlers::get_repo_root;
 use crate::exit::NetiExit;
 use crate::mutate::{self, MutateOptions};
-use crate::cli::handlers::get_repo_root;
 use anyhow::Result;
 
 /// Handles the mutate command.
@@ -20,10 +20,10 @@ pub fn handle_mutate(
         json,
         filter,
     };
-    
+
     let repo_root = get_repo_root();
     let report = mutate::run(&repo_root, &opts)?;
-    
+
     if report.summary.survived > 0 {
         Ok(NetiExit::CheckFailed)
     } else {

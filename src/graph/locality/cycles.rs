@@ -52,11 +52,7 @@ struct DfsState {
     cycles: Vec<Vec<PathBuf>>,
 }
 
-fn dfs(
-    node: &PathBuf,
-    adjacency: &HashMap<PathBuf, Vec<PathBuf>>,
-    state: &mut DfsState,
-) {
+fn dfs(node: &PathBuf, adjacency: &HashMap<PathBuf, Vec<PathBuf>>, state: &mut DfsState) {
     state.visited.insert(node.clone());
     state.recursion_stack.insert(node.clone());
     state.path_stack.push(node.clone());
@@ -95,10 +91,7 @@ fn visit_neighbor(
 }
 
 #[allow(clippy::indexing_slicing)] // Guarded: pos is from position() returning Some
-fn record_cycle(
-    neighbor: PathBuf,
-    state: &mut DfsState,
-) {
+fn record_cycle(neighbor: PathBuf, state: &mut DfsState) {
     if let Some(pos) = state.path_stack.iter().position(|x| x == &neighbor) {
         let mut cycle = state.path_stack[pos..].to_vec();
         cycle.push(neighbor); // Close the loop visually
@@ -106,14 +99,14 @@ fn record_cycle(
     }
 }
 
-
-
 #[cfg(test)]
 #[allow(clippy::indexing_slicing)]
 mod tests {
     use super::*;
 
-    fn p(s: &str) -> PathBuf { PathBuf::from(s) }
+    fn p(s: &str) -> PathBuf {
+        PathBuf::from(s)
+    }
     fn edges(list: &[(&str, &str)]) -> Vec<(PathBuf, PathBuf)> {
         list.iter().map(|(a, b)| (p(a), p(b))).collect()
     }
@@ -121,63 +114,46 @@ mod tests {
     #[test]
     fn test_cycle_detection_logic() {
         let cases = vec![
+            (vec![("a", "b"), ("b", "c")], 0, "No cycles"),
+            (vec![("a", "b"), ("b", "a")], 1, "Simple cycle"),
             (
-                vec![("a", "b"), ("b", "c")], 
-                0, 
-                "No cycles"
+                vec![("a", "b"), ("a", "c"), ("b", "d"), ("c", "d")],
+                0,
+                "Diamond DAG (no cycle)",
+            ),
+            (vec![("a", "a")], 1, "Self loop"),
+            (
+                vec![("a", "b"), ("b", "c"), ("c", "a")],
+                1,
+                "Three node cycle",
             ),
             (
-                vec![("a", "b"), ("b", "a")], 
-                1, 
-                "Simple cycle"
-            ),
-            (
-                vec![("a", "b"), ("a", "c"), ("b", "d"), ("c", "d")], 
-                0, 
-                "Diamond DAG (no cycle)"
-            ),
-            (
-                vec![("a", "a")], 
-                1, 
-                "Self loop"
-            ),
-            (
-                vec![("a", "b"), ("b", "c"), ("c", "a")], 
-                1, 
-                "Three node cycle"
-            ),
-            (
-                vec![("a", "b"), ("b", "a"), ("c", "d"), ("d", "c")], 
-                2, 
-                "Disjoint cycles"
+                vec![("a", "b"), ("b", "a"), ("c", "d"), ("d", "c")],
+                2,
+                "Disjoint cycles",
             ),
             (
                 vec![("a", "b"), ("b", "a"), ("b", "c"), ("c", "b")], // figure 8
-                2, 
-                "Figure-8 (shared node)"
+                2,
+                "Figure-8 (shared node)",
             ),
             (
-                vec![("a", "b"), ("b", "c"), ("c", "d"), ("d", "e"), ("e", "a")], 
-                1, 
-                "Long cycle (5 nodes)"
+                vec![("a", "b"), ("b", "c"), ("c", "d"), ("d", "e"), ("e", "a")],
+                1,
+                "Long cycle (5 nodes)",
             ),
-            (
-                vec![], 
-                0, 
-                "Empty graph"
-            ),
-            (
-                vec![("a", "b")], 
-                0, 
-                "Single edge"
-            ),
+            (vec![], 0, "Empty graph"),
+            (vec![("a", "b")], 0, "Single edge"),
         ];
 
         for (edge_list, expected_count, desc) in cases {
             // Convert to format needed by detect_cycles
             let edge_vec = edges(&edge_list);
-            let edge_refs: Vec<(&Path, &Path)> = edge_vec.iter().map(|(a, b)| (a.as_ref(), b.as_ref())).collect();
-            
+            let edge_refs: Vec<(&Path, &Path)> = edge_vec
+                .iter()
+                .map(|(a, b)| (a.as_ref(), b.as_ref()))
+                .collect();
+
             let cycles = detect_cycles(edge_refs.into_iter());
             assert_eq!(cycles.len(), expected_count, "Failed: {desc}");
 
@@ -196,9 +172,12 @@ mod tests {
         // Correct nodes check
         let list = vec![("x", "y"), ("y", "z"), ("z", "x")];
         let edge_vec = edges(&list);
-        let edge_refs: Vec<(&Path, &Path)> = edge_vec.iter().map(|(a, b)| (a.as_ref(), b.as_ref())).collect();
+        let edge_refs: Vec<(&Path, &Path)> = edge_vec
+            .iter()
+            .map(|(a, b)| (a.as_ref(), b.as_ref()))
+            .collect();
         let cycles = detect_cycles(edge_refs.into_iter());
-        
+
         assert_eq!(cycles.len(), 1);
         let cycle = &cycles[0];
         assert!(cycle.contains(&p("x")));

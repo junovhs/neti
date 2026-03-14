@@ -4,9 +4,7 @@ pub mod locality;
 pub mod types;
 
 pub use self::locality::LocalityConfig;
-pub use self::types::{
-    CommandEntry, Config, Preferences, RuleConfig, NetiToml,
-};
+pub use self::types::{CommandEntry, Config, NetiToml, Preferences, RuleConfig};
 use anyhow::Result;
 
 impl Config {

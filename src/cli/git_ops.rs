@@ -1,9 +1,9 @@
 // src/cli/git_ops.rs
 //! Handlers for Git-based workflow operations (branch, promote, abort).
 
+use super::handlers::get_repo_root;
 use crate::branch;
 use crate::exit::NetiExit;
-use super::handlers::get_repo_root;
 use anyhow::Result;
 use colored::Colorize;
 use std::fs;
@@ -40,7 +40,10 @@ pub fn handle_promote(dry_run: bool) -> Result<NetiExit> {
 
     match branch::promote(dry_run, msg)? {
         branch::PromoteResult::DryRun => {
-            println!("{}", "[DRY RUN] Would merge 'neti-work' into main.".yellow());
+            println!(
+                "{}",
+                "[DRY RUN] Would merge 'neti-work' into main.".yellow()
+            );
         }
         branch::PromoteResult::Merged => {
             println!("{}", "  Merged 'neti-work' into main.".green().bold());

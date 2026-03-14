@@ -1,9 +1,9 @@
 // src/analysis/v2/patterns/resource.rs
 //! Resource patterns: R07 (missing flush)
 
+use super::get_capture_node;
 use crate::types::{Violation, ViolationDetails};
 use tree_sitter::{Node, Query, QueryCursor};
-use super::get_capture_node;
 
 #[must_use]
 pub fn detect(source: &str, root: Node) -> Vec<Violation> {
@@ -18,18 +18,30 @@ fn detect_r07(source: &str, root: Node, out: &mut Vec<Violation>) {
         function: (scoped_identifier path: (identifier) @type name: (identifier) @method)
         (#eq? @type "BufWriter") (#eq? @method "new")) @call"#;
 
-    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else { return };
+    let Ok(query) = Query::new(&tree_sitter_rust::LANGUAGE.into(), q) else {
+        return;
+    };
     let idx_call = query.capture_index_for_name("call");
     let mut cursor = QueryCursor::new();
 
     for m in cursor.matches(&query, root, source.as_bytes()) {
-        let Some(call) = get_capture_node(&m, idx_call) else { continue };
-        let Some(fn_node) = find_containing_fn(call) else { continue };
+        let Some(call) = get_capture_node(&m, idx_call) else {
+            continue;
+        };
+        let Some(fn_node) = find_containing_fn(call) else {
+            continue;
+        };
 
         let fn_text = fn_node.utf8_text(source.as_bytes()).unwrap_or("");
-        if fn_text.contains(".flush()") { continue }
-        if fn_text.contains("-> BufWriter") || fn_text.contains("-> impl Write") { continue }
-        if fn_text.contains("Ok(BufWriter") { continue }
+        if fn_text.contains(".flush()") {
+            continue;
+        }
+        if fn_text.contains("-> BufWriter") || fn_text.contains("-> impl Write") {
+            continue;
+        }
+        if fn_text.contains("Ok(BufWriter") {
+            continue;
+        }
 
         out.push(Violation::with_details(
             call.start_position().row + 1,
@@ -39,7 +51,7 @@ fn detect_r07(source: &str, root: Node, out: &mut Vec<Violation>) {
                 function_name: None,
                 analysis: vec!["Data may not be written on drop.".into()],
                 suggestion: Some("Call `.flush()?` before scope ends.".into()),
-            }
+            },
         ));
     }
 }
@@ -47,7 +59,9 @@ fn detect_r07(source: &str, root: Node, out: &mut Vec<Violation>) {
 fn find_containing_fn(node: Node) -> Option<Node> {
     let mut cur = node;
     loop {
-        if cur.kind() == "function_item" { return Some(cur) }
+        if cur.kind() == "function_item" {
+            return Some(cur);
+        }
         cur = cur.parent()?;
     }
 }
@@ -60,7 +74,9 @@ mod tests {
 
     fn parse_and_detect(code: &str) -> Vec<Violation> {
         let mut parser = Parser::new();
-        parser.set_language(&tree_sitter_rust::LANGUAGE.into()).unwrap();
+        parser
+            .set_language(&tree_sitter_rust::LANGUAGE.into())
+            .unwrap();
         let tree = parser.parse(code, None).unwrap();
         detect(code, tree.root_node())
     }
@@ -73,7 +89,8 @@ mod tests {
 
     #[test]
     fn r07_skip_with_flush() {
-        let code = "fn write_data() { let mut w = BufWriter::new(file); w.write_all(data); w.flush(); }";
+        let code =
+            "fn write_data() { let mut w = BufWriter::new(file); w.write_all(data); w.flush(); }";
         assert!(parse_and_detect(code).iter().all(|v| v.law != "R07"));
     }
 

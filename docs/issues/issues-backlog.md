@@ -5,13 +5,114 @@
 Use only these labels across active and backlog issues:
 `Accuracy`, `Config`, `CLI`, `Reporting`, `AI Workflow`, `Adoption`, `Architecture`, `Cleanup`, `Language Support`, `Detection Rules`, `Testing`, `Performance`, `Safety`, `Branching`, `Web Stack`, `Integrations`
 
+## Priority Theme
+
+Items here are intentionally paused or secondary while the active roadmap focuses on extracting `omni-ast` from SEMMAP and moving NETI onto a shared multi-language semantic engine.
+
+---
+
+## [8] Safety rule: recognize nearby SAFETY justifications
+**Status:** OPEN
+**Files:** `src/analysis/safety.rs`, tests
+**Labels:** Safety, Accuracy, Detection Rules, Testing
+**Depends on:** none
+
+**Problem:** The current rule requires a `// SAFETY:` comment to be immediately adjacent to an `unsafe` block. That is stricter than how humans actually document safety reasoning, and it creates false positives when the justification appears a few lines above the block or directly inside the block header.
+
+**Fix:**
+
+1. Accept `// SAFETY:` comments within 3 lines above the `unsafe` block.
+2. Accept a justification immediately inside the block header when it clearly documents that block.
+3. Keep rejecting distant or ambiguous comments.
+4. Add tests proving "nearby is OK" and "distant is not."
+
+**Resolution:**
+
+---
+
+## [15] P04 false positives on 2D numeric iteration
+**Status:** OPEN
+**Files:** `src/analysis/patterns/performance_p04p06.rs`, tests
+**Labels:** Accuracy, Performance, Detection Rules, Testing
+**Depends on:** [18]
+
+**Problem:** P04 currently fires on patterns like `for x in 0..w { for y in 0..h }`, which are often intentional 2D numeric iteration rather than evidence of avoidable lookup inefficiency.
+
+**Fix:**
+
+1. Detect when both loops are simple numeric range iteration.
+2. Skip the finding entirely, or downgrade it to `Info`, for that 2D numeric case.
+3. Keep flagging nested loops where the inner loop iterates a collection that suggests a lookup optimization.
+4. Add tests covering both the intentional 2D case and a true positive collection-iteration case.
+
+**Resolution:**
+
+---
+
+## [29] Wire `write_fix_packet` and `auto_copy` preferences
+**Status:** OPEN
+**Files:** `src/cli/handlers/mod.rs`, `src/config/types.rs`, `src/reporting.rs`
+**Labels:** AI Workflow, Reporting, Config, CLI
+**Depends on:** none
+
+**Problem:** `write_fix_packet` and `auto_copy` exist in config and UI surfaces but are not implemented in the actual check failure path. That makes the AI-fix loop look supported without delivering the behavior.
+
+**Fix:**
+
+1. On `neti check` failure, write `format_report_string()` output to the configured report path.
+2. When `auto_copy` is enabled, copy the fix packet to the clipboard after generation.
+3. Keep the behavior opt-in through config.
+4. Verify the file output and clipboard path both work from the real failure flow.
+
+**Resolution:**
+
+---
+
+## [30] Baseline + suppression system for staged adoption
+**Status:** OPEN
+**Files:** `src/config/types.rs`, `src/reporting.rs`, `src/cli/handlers/mod.rs`, `src/types.rs`
+**Labels:** Adoption, Reporting, Config, CLI, Detection Rules
+**Depends on:** none
+
+**Problem:** Neti needs staged-adoption escape hatches for legacy repositories. Without a baseline and explicit suppressions, teams either absorb a large migration cost immediately or avoid adoption entirely.
+
+**Fix:**
+
+1. Add `neti baseline` to snapshot the current violation set.
+2. Enforce "no regressions" on future runs until the baseline is intentionally refreshed.
+3. Support inline suppressions using `// neti:allow(CODE) reason`.
+4. Require a human-readable reason for every suppression.
+5. Surface baseline and suppression effects clearly in report output.
+
+**Resolution:**
+
+---
+
+## [31] Make branch workflow configurable
+**Status:** OPEN
+**Files:** `src/branch.rs`, `src/config/types.rs`
+**Labels:** Branching, Config, CLI
+**Depends on:** none
+
+**Problem:** The branch workflow is hard-coded around `neti-work`, `main`, and squash merge semantics. That blocks teams whose branch naming, base branch, or merge policy differs.
+
+**Fix:**
+
+1. Add config for `work_branch_name`.
+2. Add config for `base_branch_name`.
+3. Add config for `merge_mode` with `squash`, `merge`, and `rebase`.
+4. Add config for `commit_message_template`.
+5. Preserve current behavior as the default when config is absent.
+
+**Resolution:**
+
 ---
 
 ## [32] Config hygiene: audit and wire preferences
 **Status:** OPEN
 **Files:** `src/config/types.rs`, `src/cli/handlers/mod.rs`
 **Labels:** Config, Cleanup, CLI
-**Depends on:** none
+**Depends on:** [29], [31]
 
 **Problem:** Several preferences such as `auto_promote` and `progress_bars` appear to exist in config surfaces without a clear, verified runtime effect. That creates misleading UX and hidden maintenance debt.
 
@@ -68,7 +169,7 @@ Use only these labels across active and backlog issues:
 **Status:** OPEN
 **Files:** `src/discovery.rs`, `src/file_class.rs`, `src/project.rs`, `src/detection.rs`, `src/constants.rs`, `src/reporting.rs`, `src/lib.rs`
 **Labels:** Architecture, Cleanup
-**Depends on:** none
+**Depends on:** [50]
 
 **Problem:** Too many unrelated concerns live directly under `src/`, which weakens discoverability and muddies domain boundaries.
 
@@ -87,7 +188,7 @@ Use only these labels across active and backlog issues:
 **Status:** OPEN
 **Files:** `src/cli/args.rs`, `src/reporting/guidance.rs`
 **Labels:** CLI, Reporting, Detection Rules
-**Depends on:** none
+**Depends on:** [30]
 
 **Problem:** Users have no in-product way to browse rule codes, severity semantics, thresholds, fix guidance, or suppression syntax. That raises adoption friction and pushes people into docs hunting.
 
@@ -160,58 +261,21 @@ Use only these labels across active and backlog issues:
 
 ---
 
-## [21] Python `LangSemantics` table
-**Status:** OPEN
-**Files:** `src/lang/semantics.rs`
-**Labels:** Language Support, Architecture, Detection Rules
-**Depends on:** [17]
-
-**Problem:** The language abstraction needs a Python semantics table before detector behavior can be extended coherently to Python codebases.
-
-**Fix:**
-
-1. Add Python test markers such as the `test_` prefix.
-2. Add heap-type vocabulary such as `list`, `dict`, and `set`.
-3. Add search and length vocabulary such as `index`, `find`, and `len`.
-4. Add loop and syntax markers such as `for_statement` and `while_statement`.
-
-**Resolution:**
-
----
-
-## [22] TypeScript `LangSemantics` table
-**Status:** OPEN
-**Files:** `src/lang/semantics.rs`
-**Labels:** Language Support, Architecture, Detection Rules, Web Stack
-**Depends on:** [17]
-
-**Problem:** The language abstraction also needs a TypeScript semantics table before detector reuse can extend cleanly to JS/TS projects.
-
-**Fix:**
-
-1. Add test markers such as `describe`, `it`, and `test`.
-2. Add heap-type vocabulary such as `Array`, `Map`, and `Set`.
-3. Add search vocabulary such as `find` and `indexOf`.
-4. Add length-property semantics such as `length`.
-
-**Resolution:**
-
----
-
 ## [12] Cross-language regression suite
 **Status:** OPEN
 **Files:** `tests/` (new), CI config
 **Labels:** Testing, Language Support, Detection Rules
-**Depends on:** [15], [21], [22]
+**Depends on:** [18], [19], [20], [21], [22]
 
-**Problem:** Neti needs a fixture-backed regression suite that proves equivalent rules behave consistently across supported languages.
+**Problem:** Neti needs a fixture-backed regression suite that proves equivalent rules behave consistently across supported languages once the shared semantic layer is in place.
 
 **Fix:**
 
-1. Add Rust fixtures covering syntax suppressions, L03 tiers, and P04 numeric iteration.
-2. Add Python fixtures once [21] lands.
-3. Add TypeScript fixtures once [22] lands.
-4. Assert that equivalent patterns produce equivalent findings across languages where the rule intent matches.
+1. Add Rust fixtures covering rule parity and precision-sensitive edge cases.
+2. Add Python fixtures once shared Python semantics land.
+3. Add TypeScript fixtures once shared JS/TS semantics land.
+4. Add Go fixtures once the shared crate exposes the same concept surface there.
+5. Assert that one detector intent produces comparable behavior across languages through shared semantic concepts.
 
 **Resolution:**
 
@@ -221,7 +285,7 @@ Use only these labels across active and backlog issues:
 **Status:** OPEN
 **Files:** `src/cli/args.rs`, `src/cli/handlers/mod.rs`, `src/analysis/html.rs` (new), `src/graph/locality/` (extend)
 **Labels:** Web Stack, Architecture, CLI, Reporting
-**Depends on:** [39], [40]
+**Depends on:** [39], [40], [22]
 
 **Problem:** Large single-file HTML apps with inline `<script>` and `<style>` blocks are common, but Neti cannot currently analyze them or recommend structural splits.
 
@@ -241,7 +305,7 @@ Use only these labels across active and backlog issues:
 **Status:** OPEN
 **Files:** `src/analysis/engine.rs`, `src/analysis/html.rs` (new)
 **Labels:** Web Stack, Detection Rules, Architecture
-**Depends on:** none
+**Depends on:** [22]
 
 **Problem:** Before Neti can recommend structural splits for HTML monoliths, it needs baseline support for scanning inline scripts and styles with correct source mapping.
 
@@ -271,25 +335,6 @@ Use only these labels across active and backlog issues:
 3. Add specificity warnings to catch overly coupled selectors.
 4. Add dead-code detection for selectors with no HTML match in the same file.
 5. Add variable locality analysis for `--var` definitions and usage proximity.
-
-**Resolution:**
-
----
-
-## [41] SWUM-style identifier expansion for JS/TS
-**Status:** OPEN
-**Files:** `src/analysis/naming.rs` (extend), `src/lang.rs`
-**Labels:** Web Stack, Language Support, Detection Rules
-**Depends on:** [22]
-
-**Problem:** JS and TS naming analysis would benefit from SWUM-style identifier expansion so naming guidance can reason about verbs, acronyms, and intent rather than raw token shape.
-
-**Fix:**
-
-1. Port SEMMAP's SWUM-style identifier expansion into Neti's naming analysis.
-2. Use it for naming convention consistency checks.
-3. Add verb-first function name suggestions.
-4. Add acronym detection and expansion hints.
 
 **Resolution:**
 

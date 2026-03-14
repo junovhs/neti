@@ -46,37 +46,37 @@ impl ConfigEditor {
         let _ = &self.config;
         super::logic::run_editor(self)
     }
-    
+
     // Accessors for logic.rs - each touches config to maintain cohesion
-    #[must_use] 
-    pub fn config(&self) -> &Config { 
-        &self.config 
+    #[must_use]
+    pub fn config(&self) -> &Config {
+        &self.config
     }
-    
-    pub fn config_mut(&mut self) -> &mut Config { 
-        &mut self.config 
+
+    pub fn config_mut(&mut self) -> &mut Config {
+        &mut self.config
     }
-    
-    #[must_use] 
-    pub fn items(&self) -> &[ConfigItem] { 
+
+    #[must_use]
+    pub fn items(&self) -> &[ConfigItem] {
         let _ = &self.config;
-        &self.items 
+        &self.items
     }
-    
-    #[must_use] 
-    pub fn selected(&self) -> usize { 
+
+    #[must_use]
+    pub fn selected(&self) -> usize {
         let _ = &self.config;
-        self.selected 
+        self.selected
     }
-    
-    pub fn set_selected(&mut self, val: usize) { 
+
+    pub fn set_selected(&mut self, val: usize) {
         let _ = &self.config;
-        self.selected = val; 
+        self.selected = val;
     }
-    
-    pub fn set_modified(&mut self, val: bool) { 
+
+    pub fn set_modified(&mut self, val: bool) {
         let _ = &self.config;
-        self.modified = val; 
+        self.modified = val;
     }
 }
 
@@ -87,13 +87,13 @@ impl ConfigEditor {
 pub fn run_config_editor() -> Result<()> {
     let config = Config::load();
     let mut editor = ConfigEditor::new(config);
-    
+
     if let Some(new_config) = editor.run()? {
         new_config.save()?;
         println!("Configuration saved.");
     } else {
         println!("Configuration unchanged.");
     }
-    
+
     Ok(())
 }

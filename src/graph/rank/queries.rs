@@ -1,8 +1,8 @@
 // src/graph/rank/queries.rs
-use std::collections::{HashMap, HashSet};
-use std::path::{Path, PathBuf};
 use crate::graph::rank::graph::RepoGraph;
 use crate::graph::rank::tags::{Tag, TagKind};
+use std::collections::{HashMap, HashSet};
+use std::path::{Path, PathBuf};
 
 #[must_use]
 pub fn get_neighbors(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
@@ -23,7 +23,12 @@ pub fn get_ranked_files(graph: &RepoGraph) -> Vec<(PathBuf, f64)> {
 #[must_use]
 pub fn get_dependencies(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
     let mut result = HashSet::new();
-    collect_dependencies(&graph.defines, &graph.references, &anchor.to_path_buf(), &mut result);
+    collect_dependencies(
+        &graph.defines,
+        &graph.references,
+        &anchor.to_path_buf(),
+        &mut result,
+    );
     let mut deps: Vec<_> = result.into_iter().collect();
     deps.sort();
     deps
@@ -32,7 +37,12 @@ pub fn get_dependencies(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
 #[must_use]
 pub fn get_dependents(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
     let mut result = HashSet::new();
-    collect_dependents(&graph.defines, &graph.references, &anchor.to_path_buf(), &mut result);
+    collect_dependents(
+        &graph.defines,
+        &graph.references,
+        &anchor.to_path_buf(),
+        &mut result,
+    );
     let mut deps: Vec<_> = result.into_iter().collect();
     deps.sort();
     deps
@@ -40,7 +50,12 @@ pub fn get_dependents(graph: &RepoGraph, anchor: &Path) -> Vec<PathBuf> {
 
 #[must_use]
 pub fn get_graph_tags(graph: &RepoGraph) -> Vec<Tag> {
-    graph.tags.iter().filter(|t| t.kind == TagKind::Def).cloned().collect()
+    graph
+        .tags
+        .iter()
+        .filter(|t| t.kind == TagKind::Def)
+        .cloned()
+        .collect()
 }
 
 #[allow(clippy::implicit_hasher)]

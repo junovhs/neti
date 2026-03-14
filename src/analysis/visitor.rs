@@ -1,7 +1,7 @@
 //! AST Visitor for analysis. Extracts high-level structure (Scopes/Methods).
 
-use super::scope::Scope;
 use super::extract::RustExtractor; // Updated import
+use super::scope::Scope;
 use crate::lang::Lang;
 use std::collections::HashMap;
 use tree_sitter::Node;

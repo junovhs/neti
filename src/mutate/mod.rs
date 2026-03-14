@@ -158,9 +158,7 @@ fn filter_files(files: &[PathBuf], filter: Option<&str>) -> Vec<PathBuf> {
 }
 
 /// Discovers mutations in all target files.
-fn discover_all_mutations(
-    files: &[PathBuf],
-) -> Vec<mutations::MutationPoint> {
+fn discover_all_mutations(files: &[PathBuf]) -> Vec<mutations::MutationPoint> {
     let mut all_points = Vec::new();
 
     for file in files {
@@ -180,14 +178,8 @@ fn print_header(files: &[PathBuf], config: &RunnerConfig) {
     println!();
     println!("{}", "MUTATION TESTING [EXPERIMENTAL]".bold().cyan());
     println!("{}", "═".repeat(60));
-    println!(
-        "  Files:    {}",
-        files.len().to_string().cyan()
-    );
-    println!(
-        "  Timeout:  {}s",
-        config.timeout_secs.to_string().cyan()
-    );
+    println!("  Files:    {}", files.len().to_string().cyan());
+    println!("  Timeout:  {}s", config.timeout_secs.to_string().cyan());
     println!(
         "  Command:  {} {}",
         config.test_command.cyan(),

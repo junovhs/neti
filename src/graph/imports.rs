@@ -1,5 +1,6 @@
 // src/graph/imports.rs
 use crate::lang::Lang;
+use omni_ast::language::extract_import_strings;
 use std::path::Path;
 use tree_sitter::{Language, Parser, Query, QueryCursor};
 
@@ -18,13 +19,17 @@ pub fn extract(path: &Path, content: &str) -> Vec<String> {
     };
 
     let Some(lang) = Lang::from_ext(ext) else {
-        return Vec::new();
+        return extract_import_strings(path, content, None);
     };
 
+    let mut imports = extract_import_strings(path, content, None);
     let grammar = lang.grammar();
     let query = compile_query(&grammar, lang.q_imports());
+    imports.extend(run_query(content, &grammar, &query));
+    imports.sort();
+    imports.dedup();
 
-    run_query(content, &grammar, &query)
+    imports
 }
 
 fn run_query(source: &str, lang: &Language, query: &Query) -> Vec<String> {

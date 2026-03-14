@@ -43,8 +43,14 @@ impl Coupling {
         self.afferent + self.efferent
     }
 
-    #[must_use] pub fn afferent(&self) -> usize { self.afferent }
-    #[must_use] pub fn efferent(&self) -> usize { self.efferent }
+    #[must_use]
+    pub fn afferent(&self) -> usize {
+        self.afferent
+    }
+    #[must_use]
+    pub fn efferent(&self) -> usize {
+        self.efferent
+    }
 }
 
 /// Classification of a node's role in the dependency topology.
@@ -100,8 +106,13 @@ impl LocalityEdge {
 /// Result of validating a single edge.
 #[derive(Debug, Clone)]
 pub enum EdgeVerdict {
-    Pass { reason: PassReason },
-    Fail { edge: LocalityEdge, suggestion: String },
+    Pass {
+        reason: PassReason,
+    },
+    Fail {
+        edge: LocalityEdge,
+        suggestion: String,
+    },
 }
 
 /// Reason an edge passed validation.

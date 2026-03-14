@@ -18,4 +18,3 @@ pub enum TagKind {
     Def,
     Ref,
 }
-

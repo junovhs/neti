@@ -1,5 +1,5 @@
 // src/config/io.rs
-use super::types::{CommandEntry, Config, Preferences, RuleConfig, NetiToml};
+use super::types::{CommandEntry, Config, NetiToml, Preferences, RuleConfig};
 use crate::project::{self, ProjectType};
 use anyhow::{anyhow, Result};
 use regex::Regex;

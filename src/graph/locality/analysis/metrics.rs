@@ -62,7 +62,11 @@ pub fn find_hub_candidates(
         .filter(|(_, importers)| importers.len() >= 2)
         .map(|(path, importers)| {
             let fan_in = couplings.get(&path).map_or(0, Coupling::afferent);
-            HubCandidate { path, fan_in, importers }
+            HubCandidate {
+                path,
+                fan_in,
+                importers,
+            }
         })
         .collect()
 }
@@ -96,5 +100,9 @@ fn get_top_module(path: &std::path::Path) -> String {
 }
 
 fn order_pair(a: String, b: String) -> (String, String) {
-    if a < b { (a, b) } else { (b, a) }
+    if a < b {
+        (a, b)
+    } else {
+        (b, a)
+    }
 }

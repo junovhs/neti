@@ -1,7 +1,6 @@
 // src/mutate/report.rs
 //! Report formatting for mutation test results.
 
-
 use crate::mutate::runner::{MutationResult, MutationSummary};
 use colored::Colorize;
 use std::fmt::Write;
@@ -20,9 +19,7 @@ pub fn format_progress(current: usize, total: usize, result: &MutationResult) ->
     let orig = &result.point.original;
     let mutated = &result.point.mutated;
 
-    format!(
-        "[{current}/{total}] {file}:{line}  '{orig}' → '{mutated}'  ... {status}"
-    )
+    format!("[{current}/{total}] {file}:{line}  '{orig}' → '{mutated}'  ... {status}")
 }
 
 /// Formats the final summary report.
@@ -36,8 +33,16 @@ pub fn format_summary(summary: &MutationSummary) -> String {
     let _ = writeln!(out, "{}", "═".repeat(60));
     let _ = writeln!(out);
     let _ = writeln!(out, "  Total mutations:  {}", summary.total);
-    let _ = writeln!(out, "  Killed:           {} ✓", summary.killed.to_string().green());
-    let _ = writeln!(out, "  Survived:         {} ⚠", format_survived(summary.survived));
+    let _ = writeln!(
+        out,
+        "  Killed:           {} ✓",
+        summary.killed.to_string().green()
+    );
+    let _ = writeln!(
+        out,
+        "  Survived:         {} ⚠",
+        format_survived(summary.survived)
+    );
     let _ = writeln!(out);
 
     let score_str = format!("{:.1}%", summary.score);
@@ -71,7 +76,10 @@ pub fn format_survivors(results: &[MutationResult]) -> String {
     let survivors: Vec<_> = results.iter().filter(|r| r.survived).collect();
 
     if survivors.is_empty() {
-        return format!("{}\n", "All mutants killed! Tests are solid.".green().bold());
+        return format!(
+            "{}\n",
+            "All mutants killed! Tests are solid.".green().bold()
+        );
     }
 
     let mut out = String::new();

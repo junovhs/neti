@@ -72,8 +72,8 @@ fn get_logical(op: &str) -> Option<(&'static str, MutationKind)> {
     let mutated = match op {
         "&&" => "||",
         "||" => "&&",
-        "and" => "or",  // Python
-        "or" => "and",  // Python
+        "and" => "or", // Python
+        "or" => "and", // Python
         _ => return None,
     };
     Some((mutated, MutationKind::Logical))
@@ -83,8 +83,8 @@ fn get_boolean(op: &str) -> Option<(&'static str, MutationKind)> {
     let mutated = match op {
         "true" => "false",
         "false" => "true",
-        "True" => "False",   // Python
-        "False" => "True",   // Python
+        "True" => "False", // Python
+        "False" => "True", // Python
         _ => return None,
     };
     Some((mutated, MutationKind::Boolean))

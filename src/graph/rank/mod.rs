@@ -2,8 +2,8 @@
 pub mod builder;
 pub mod graph;
 pub mod pagerank;
-pub mod tags;
 pub mod queries;
+pub mod tags;
 
 pub use graph::RepoGraph;
 use std::path::Path;

@@ -41,7 +41,7 @@ impl ConfigItem {
             Self::LocalityMaxDistance,
         ]
     }
-    
+
     #[must_use]
     pub fn label(self) -> &'static str {
         match self {
@@ -89,16 +89,16 @@ impl ConfigItem {
         if self.is_boolean() {
             return self.get_boolean_value(config);
         }
-        
+
         if self.is_enum() {
-             return format!("[{}]", config.rules.locality.mode);
+            return format!("[{}]", config.rules.locality.mode);
         }
 
         self.get_numeric_value(config)
     }
 
     fn get_boolean_value(self, config: &Config) -> String {
-         let checked = match self {
+        let checked = match self {
             Self::AutoCopy => config.preferences.auto_copy,
             Self::WriteFixPacket => config.preferences.write_fix_packet,
             Self::RequirePlan => config.preferences.require_plan,
@@ -153,7 +153,9 @@ impl ConfigItem {
     pub fn toggle_boolean(self, config: &mut Config) {
         match self {
             Self::AutoCopy => config.preferences.auto_copy = !config.preferences.auto_copy,
-            Self::WriteFixPacket => config.preferences.write_fix_packet = !config.preferences.write_fix_packet,
+            Self::WriteFixPacket => {
+                config.preferences.write_fix_packet = !config.preferences.write_fix_packet
+            }
             Self::RequirePlan => config.preferences.require_plan = !config.preferences.require_plan,
             Self::AutoPromote => config.preferences.auto_promote = !config.preferences.auto_promote,
             _ => {}
@@ -172,5 +174,9 @@ impl ConfigItem {
 }
 
 fn checkbox(checked: bool) -> String {
-    if checked { "[x]".to_string() } else { "[ ]".to_string() }
+    if checked {
+        "[x]".to_string()
+    } else {
+        "[ ]".to_string()
+    }
 }

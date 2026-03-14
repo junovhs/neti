@@ -1,3 +1,4 @@
+use super::editor::{ConfigEditor, EditResult, EventResult};
 use super::items::ConfigItem;
 use super::render;
 use crate::config::Config;
@@ -6,11 +7,10 @@ use crossterm::{
     cursor,
     event::{self, Event, KeyCode, KeyEventKind},
     execute,
-    style::{Print, Color, SetForegroundColor, ResetColor},
+    style::{Color, Print, ResetColor, SetForegroundColor},
     terminal::{self, Clear, ClearType, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use std::io::{stdout, Write};
-use super::editor::{ConfigEditor, EventResult, EditResult};
 
 /// Runs the editor event loop.
 ///
@@ -20,25 +20,25 @@ pub fn run_editor(editor: &mut ConfigEditor) -> Result<Option<Config>> {
     let mut stdout = stdout();
     execute!(stdout, EnterAlternateScreen)?;
     terminal::enable_raw_mode()?;
-    
+
     let result = event_loop(editor);
-    
+
     terminal::disable_raw_mode()?;
     execute!(stdout, LeaveAlternateScreen)?;
     result
 }
 
 fn event_loop(editor: &mut ConfigEditor) -> Result<Option<Config>> {
-     loop {
+    loop {
         render::draw(editor.items(), editor.selected(), editor.config())?;
-        
+
         if let Event::Key(key) = event::read()? {
             if key.kind != KeyEventKind::Press {
                 continue;
             }
-            
+
             match handle_key_event(editor, key.code)? {
-                EventResult::Continue => {},
+                EventResult::Continue => {}
                 EventResult::Exit => return Ok(None),
                 EventResult::Save(config) => return Ok(Some(*config)),
             }
@@ -47,7 +47,7 @@ fn event_loop(editor: &mut ConfigEditor) -> Result<Option<Config>> {
 }
 
 fn handle_key_event(editor: &mut ConfigEditor, code: KeyCode) -> Result<EventResult> {
-     match code {
+    match code {
         KeyCode::Up => {
             move_selection(editor, -1);
             Ok(EventResult::Continue)
@@ -62,20 +62,20 @@ fn handle_key_event(editor: &mut ConfigEditor, code: KeyCode) -> Result<EventRes
         }
         KeyCode::Char('s' | 'S') => Ok(EventResult::Save(Box::new(editor.config().clone()))),
         KeyCode::Esc | KeyCode::Char('q') => Ok(EventResult::Exit),
-        _ => Ok(EventResult::Continue)
+        _ => Ok(EventResult::Continue),
     }
 }
 
 pub fn move_selection(editor: &mut ConfigEditor, delta: isize) {
     let len = editor.items().len();
     let current = editor.selected();
-    
+
     let new_pos = if delta < 0 {
         current.saturating_sub(delta.unsigned_abs())
     } else {
         current.saturating_add(delta.unsigned_abs())
     };
-    
+
     if new_pos < len {
         editor.set_selected(new_pos);
     }
@@ -83,9 +83,9 @@ pub fn move_selection(editor: &mut ConfigEditor, delta: isize) {
 
 #[allow(clippy::indexing_slicing)] // Guarded: selected is always < items.len()
 fn edit_current(editor: &mut ConfigEditor) -> Result<()> {
-     let selected = editor.selected();
+    let selected = editor.selected();
     let item = editor.items()[selected];
-    
+
     if item.is_boolean() {
         item.toggle_boolean(editor.config_mut());
         editor.set_modified(true);
@@ -100,11 +100,11 @@ fn edit_current(editor: &mut ConfigEditor) -> Result<()> {
 }
 
 fn edit_number(editor: &ConfigEditor, item: ConfigItem) -> Result<Option<usize>> {
-     let mut value = item.get_number(editor.config());
-    
+    let mut value = item.get_number(editor.config());
+
     loop {
         render_number_editor(editor.selected(), value)?;
-        
+
         match handle_number_input(&mut value)? {
             EditResult::Continue => {}
             EditResult::Commit(val) => return Ok(Some(val)),
@@ -116,7 +116,7 @@ fn edit_number(editor: &ConfigEditor, item: ConfigItem) -> Result<Option<usize>>
 fn render_number_editor(selected: usize, value: usize) -> Result<()> {
     let row = u16::try_from(selected).unwrap_or(0) + 2; // +2 to account for header offset
     let mut stdout = stdout();
-    
+
     execute!(
         stdout,
         cursor::MoveTo(40, row),
@@ -131,10 +131,10 @@ fn render_number_editor(selected: usize, value: usize) -> Result<()> {
 }
 
 fn handle_number_input(value: &mut usize) -> Result<EditResult> {
-      let Event::Key(key) = event::read()? else {
+    let Event::Key(key) = event::read()? else {
         return Ok(EditResult::Continue);
     };
-    
+
     if key.kind != KeyEventKind::Press {
         return Ok(EditResult::Continue);
     }
@@ -145,7 +145,13 @@ fn handle_number_input(value: &mut usize) -> Result<EditResult> {
 // ADAPTIVE STEPPING LOGIC
 fn process_number_key(code: KeyCode, value: &mut usize) -> EditResult {
     let small_step = 1;
-    let big_step = if *value >= 1000 { 500 } else if *value >= 100 { 100 } else { 10 };
+    let big_step = if *value >= 1000 {
+        500
+    } else if *value >= 100 {
+        100
+    } else {
+        10
+    };
 
     match code {
         // Fine adjustment
@@ -157,7 +163,7 @@ fn process_number_key(code: KeyCode, value: &mut usize) -> EditResult {
             *value = value.saturating_add(small_step);
             EditResult::Continue
         }
-        
+
         // Coarse adjustment
         KeyCode::Down => {
             *value = value.saturating_sub(big_step);
@@ -167,9 +173,9 @@ fn process_number_key(code: KeyCode, value: &mut usize) -> EditResult {
             *value = value.saturating_add(big_step);
             EditResult::Continue
         }
-        
+
         KeyCode::Enter => EditResult::Commit(*value),
         KeyCode::Esc => EditResult::Cancel,
-        _ => EditResult::Continue
+        _ => EditResult::Continue,
     }
 }

@@ -15,7 +15,6 @@ pub struct RepoGraph {
     pub(crate) ranks: HashMap<PathBuf, f64>,
 }
 
-
 impl RepoGraph {
     /// Creates a new graph container.
     #[must_use]
@@ -25,7 +24,12 @@ impl RepoGraph {
         references: HashMap<String, HashSet<PathBuf>>,
         ranks: HashMap<PathBuf, f64>,
     ) -> Self {
-        Self { tags, defines, references, ranks }
+        Self {
+            tags,
+            defines,
+            references,
+            ranks,
+        }
     }
 
     /// Returns files ranked by importance.

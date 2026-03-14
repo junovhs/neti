@@ -18,12 +18,7 @@ fn is_rust_file(filename: &str) -> bool {
         .is_some_and(|ext| ext.eq_ignore_ascii_case("rs"))
 }
 
-fn traverse_for_unsafe(
-    node: Node,
-    source: &str,
-    config: &RuleConfig,
-    out: &mut Vec<Violation>,
-) {
+fn traverse_for_unsafe(node: Node, source: &str, config: &RuleConfig, out: &mut Vec<Violation>) {
     if node.kind() == "unsafe_block" {
         validate_unsafe_node(node, source, config, out);
     }
@@ -34,12 +29,7 @@ fn traverse_for_unsafe(
     }
 }
 
-fn validate_unsafe_node(
-    node: Node,
-    source: &str,
-    config: &RuleConfig,
-    out: &mut Vec<Violation>,
-) {
+fn validate_unsafe_node(node: Node, source: &str, config: &RuleConfig, out: &mut Vec<Violation>) {
     if config.safety.ban_unsafe {
         report_ban_violation(node, out);
     } else if config.safety.require_safety_comment && !has_safety_comment(node, source) {
@@ -82,7 +72,8 @@ fn check_single_sibling(node: Node, source: &str) -> bool {
 }
 
 fn node_text_contains(node: Node, source: &str, pat: &str) -> bool {
-    node.utf8_text(source.as_bytes()).is_ok_and(|t| t.contains(pat))
+    node.utf8_text(source.as_bytes())
+        .is_ok_and(|t| t.contains(pat))
 }
 
 fn is_comment_node(kind: &str) -> bool {
@@ -90,17 +81,25 @@ fn is_comment_node(kind: &str) -> bool {
 }
 
 fn check_lines_above(row: usize, source: &str) -> bool {
-    if row == 0 { return false; }
-    
+    if row == 0 {
+        return false;
+    }
+
     let lines: Vec<&str> = source.lines().collect();
     let start_check = row.saturating_sub(3);
-    
+
     for i in (start_check..row).rev() {
         if let Some(line) = lines.get(i) {
             let trimmed = line.trim();
-            if trimmed.is_empty() { continue; }
-            if check_line_content(trimmed) { return true; }
-            if !trimmed.starts_with("//") { return false; }
+            if trimmed.is_empty() {
+                continue;
+            }
+            if check_line_content(trimmed) {
+                return true;
+            }
+            if !trimmed.starts_with("//") {
+                return false;
+            }
         }
     }
     false

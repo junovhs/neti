@@ -6,9 +6,9 @@ use std::path::{Path, PathBuf};
 use super::classifier::{classify, ClassifierConfig};
 use super::coupling::compute_coupling;
 use super::cycles::detect_cycles;
-use super::layers::{infer_layers, check_layer_violation};
 use super::distance::compute_distance;
 use super::exemptions::is_structural_pattern;
+use super::layers::{check_layer_violation, infer_layers};
 use super::types::{Coupling, EdgeVerdict, LocalityEdge, NodeIdentity, PassReason};
 
 /// Configuration for locality validation.
@@ -57,17 +57,40 @@ impl ValidationReport {
         self.entropy = self.failed.len() as f64 / self.total_edges as f64;
     }
 
-    #[must_use] pub fn passed(&self) -> &[LocalityEdge] { &self.passed }
-    #[must_use] pub fn failed(&self) -> &[LocalityEdge] { &self.failed }
-    #[must_use] pub fn cycles(&self) -> &[Vec<PathBuf>] { &self.cycles }
-    #[must_use] pub fn layers(&self) -> &std::collections::HashMap<PathBuf, usize> { &self.layers }
-    #[must_use] pub fn total_edges(&self) -> usize { self.total_edges }
-    #[must_use] pub fn entropy(&self) -> f64 { self.entropy }
+    #[must_use]
+    pub fn passed(&self) -> &[LocalityEdge] {
+        &self.passed
+    }
+    #[must_use]
+    pub fn failed(&self) -> &[LocalityEdge] {
+        &self.failed
+    }
+    #[must_use]
+    pub fn cycles(&self) -> &[Vec<PathBuf>] {
+        &self.cycles
+    }
+    #[must_use]
+    pub fn layers(&self) -> &std::collections::HashMap<PathBuf, usize> {
+        &self.layers
+    }
+    #[must_use]
+    pub fn total_edges(&self) -> usize {
+        self.total_edges
+    }
+    #[must_use]
+    pub fn entropy(&self) -> f64 {
+        self.entropy
+    }
 
     /// Internal cohesion check to satisfy structural requirements.
     #[must_use]
     pub fn check_cohesion(&self) -> bool {
-        self.total_edges + self.passed.len() + self.failed.len() + self.cycles.len() + self.layers.len() > 0
+        self.total_edges
+            + self.passed.len()
+            + self.failed.len()
+            + self.cycles.len()
+            + self.layers.len()
+            > 0
     }
 }
 
@@ -85,7 +108,9 @@ pub fn validate_edge(
 
     // Check structural patterns first (lib.rs, mod.rs re-exports, vertical)
     if is_structural_pattern(from, to) {
-        return EdgeVerdict::Pass { reason: PassReason::Exempted };
+        return EdgeVerdict::Pass {
+            reason: PassReason::Exempted,
+        };
     }
 
     if let Some(reason) = check_distance(&edge, config) {
@@ -96,16 +121,16 @@ pub fn validate_edge(
     }
 
     if let Some(kind) = check_layer_violation(&edge, layers) {
-         let suggestion = kind.suggest(&edge, target_coupling.afferent());
-         // Overwrite the kind in EdgeVerdict? 
-         // EdgeVerdict::Fail stores the edge and suggestion. 
-         // But analysis.rs re-categorizes it using categorize_violation.
-         // We might need to handle this. For now, let it fail and let analysis derive the kind.
-         // Actually, analysis.rs needs to know about layers to categorize it as "Sideways/Upward".
-         // The current analyze function doesn't take layers map.
-         // This is a disconnect. 
-         // For now, loop this back to Fail.
-         return EdgeVerdict::Fail { edge, suggestion };
+        let suggestion = kind.suggest(&edge, target_coupling.afferent());
+        // Overwrite the kind in EdgeVerdict?
+        // EdgeVerdict::Fail stores the edge and suggestion.
+        // But analysis.rs re-categorizes it using categorize_violation.
+        // We might need to handle this. For now, let it fail and let analysis derive the kind.
+        // Actually, analysis.rs needs to know about layers to categorize it as "Sideways/Upward".
+        // The current analyze function doesn't take layers map.
+        // This is a disconnect.
+        // For now, loop this back to Fail.
+        return EdgeVerdict::Fail { edge, suggestion };
     }
 
     // Default failure if not caught above (Sideways)

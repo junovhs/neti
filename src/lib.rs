@@ -20,3 +20,5 @@ pub mod tokens;
 pub mod types;
 pub mod utils;
 pub mod verification;
+
+pub use omni_ast;

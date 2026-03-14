@@ -2,6 +2,27 @@
 
 ---
 
+## [50] Extract shared `omni-ast` crate from SEMMAP
+**Status:** DONE
+**Files:** `Cargo.toml`, `Cargo.lock`, `src/lib.rs`, `src/lang.rs`, `src/graph/imports.rs`, `omni-ast/Cargo.toml`, `omni-ast/src/lib.rs`, `omni-ast/src/harvester.rs`, `omni-ast/src/harvester_tree.rs`, `omni-ast/src/harvester_signatures.rs`, `omni-ast/src/taxonomy.rs`, `omni-ast/src/taxonomy_rules.rs`, `omni-ast/src/semantics.rs`, `omni-ast/src/types.rs`, `omni-ast/src/doc_extractor.rs`, `omni-ast/src/doc_filter.rs`, `omni-ast/src/language/`, `omni-ast/src/swum/`
+**Labels:** Architecture, Language Support, Integrations
+**Depends on:** none
+
+**Problem:** NETI needed a shared multi-language analysis crate built from SEMMAP's reusable core so future rule work could stop depending on SEMMAP-internal modules and start targeting a publishable shared engine.
+
+**Fix:**
+
+1. Create a standalone shared crate, `omni-ast`, suitable for publication on crates.io.
+2. Port SEMMAP Stage 1 harvesting (`SemanticFingerprint`) into the shared crate.
+3. Port SEMMAP taxonomy evaluation (`SemanticBadges` and taxonomy rules) into the shared crate.
+4. Port the SEMMAP language modules for Rust, Go, Python, C++, and JS/TS into the shared crate.
+5. Port the SEMMAP SWUM engine into the shared crate.
+6. Integrate the crate into at least one live NETI path so the extraction is proven in production code rather than parked in the workspace.
+
+**Resolution:** Extracted a new workspace crate, `omni-ast`, and moved SEMMAP's shared analysis core into it under NETI's `tree-sitter 0.23` stack. The crate now contains the Stage 1 harvester, taxonomy engine and rules, SWUM engine, documentation extractors, shared dependency types, and language modules for Rust, Go, Python, JS/TS, and C++. I chose this boundary because it isolates reusable AST harvesting and semantic enrichment logic from SEMMAP-specific rendering concerns while giving NETI a publishable shared engine. NETI now depends on and re-exports `omni-ast`, uses `SemanticLanguage` in `src/lang.rs`, and consumes `omni-ast` import extraction in `src/graph/imports.rs`, which proves the shared crate is live in the production path rather than just parked in the workspace. Added extraction and regression coverage in `omni-ast` for harvesting, taxonomy behavior, cross-language import extraction, JS monorepo resolution, Python relative imports, and C++ symbol/doc extraction. Verified with `cargo test -p omni-ast` (9 tests passed) and `neti check`; verification commands passed and the only remaining `neti check` finding was the pre-existing LCOM4 warning in `src/types/command.rs`. Follow-on adoption work, where NETI becomes primarily driven by shared semantic queries rather than Rust-specific detector logic, remains open in [51].
+
+---
+
 ## [26] `neti check --json` must emit JSON to stdout
 **Status:** DONE
 **Files:** `src/cli/handlers/mod.rs`, `src/types.rs`, `src/reporting.rs`

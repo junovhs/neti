@@ -45,7 +45,9 @@ fn resolve_super_path(current: &Path, import: &str) -> Option<PathBuf> {
         dir = dir.parent()?;
     }
 
-    if parts.is_empty() { return None; }
+    if parts.is_empty() {
+        return None;
+    }
     check_rust_variations(dir, &parts)
 }
 
@@ -65,10 +67,14 @@ fn check_rust_variations(base: &Path, parts: &[&str]) -> Option<PathBuf> {
     }
 
     let file_path = current.with_extension("rs");
-    if file_path.exists() { return Some(file_path); }
+    if file_path.exists() {
+        return Some(file_path);
+    }
 
     let mod_path = current.join("mod.rs");
-    if mod_path.exists() { return Some(mod_path); }
+    if mod_path.exists() {
+        return Some(mod_path);
+    }
 
     None
 }
@@ -98,27 +104,37 @@ fn is_node_module(import: &str) -> bool {
 }
 
 fn check_ts_file(path: &Path) -> Option<PathBuf> {
-    if path.is_file() { return Some(path.to_path_buf()); }
+    if path.is_file() {
+        return Some(path.to_path_buf());
+    }
 
     for ext in &["ts", "tsx", "js", "jsx", "json"] {
         let p = path.with_extension(ext);
-        if p.exists() { return Some(p); }
+        if p.exists() {
+            return Some(p);
+        }
     }
     None
 }
 
 fn check_ts_index(path: &Path) -> Option<PathBuf> {
-    if !path.is_dir() { return None; }
+    if !path.is_dir() {
+        return None;
+    }
 
     for ext in &["ts", "tsx", "js", "jsx"] {
         let p = path.join(format!("index.{ext}"));
-        if p.exists() { return Some(p); }
+        if p.exists() {
+            return Some(p);
+        }
     }
     None
 }
 
 fn resolve_python(root: &Path, import: &str) -> Option<PathBuf> {
-    if import.starts_with('.') { return None; }
+    if import.starts_with('.') {
+        return None;
+    }
 
     let parts: Vec<&str> = import.split('.').collect();
     let mut current = root.to_path_buf();
@@ -127,10 +143,14 @@ fn resolve_python(root: &Path, import: &str) -> Option<PathBuf> {
     }
 
     let file_path = current.with_extension("py");
-    if file_path.exists() { return Some(file_path); }
+    if file_path.exists() {
+        return Some(file_path);
+    }
 
     let init_path = current.join("__init__.py");
-    if init_path.exists() { return Some(init_path); }
+    if init_path.exists() {
+        return Some(init_path);
+    }
 
     None
 }

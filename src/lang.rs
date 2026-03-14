@@ -1,4 +1,5 @@
 // src/lang.rs
+use omni_ast::SemanticLanguage;
 use tree_sitter::Language;
 
 #[path = "lang_queries.rs"]
@@ -26,13 +27,7 @@ pub enum QueryKind {
 impl Lang {
     #[must_use]
     pub fn from_ext(ext: &str) -> Option<Self> {
-        match ext {
-            "rs" => Some(Self::Rust),
-            "py" => Some(Self::Python),
-            "ts" | "tsx" | "js" | "jsx" => Some(Self::TypeScript),
-            "swift" => Some(Self::Swift),
-            _ => None,
-        }
+        SemanticLanguage::from_ext(ext).and_then(Self::from_semantic_language)
     }
 
     #[must_use]
@@ -86,6 +81,27 @@ impl Lang {
             "{ ... }"
         }
     }
+
+    #[must_use]
+    pub fn semantic_language(self) -> SemanticLanguage {
+        match self {
+            Self::Rust => SemanticLanguage::Rust,
+            Self::Python => SemanticLanguage::Python,
+            Self::TypeScript => SemanticLanguage::TypeScript,
+            Self::Swift => SemanticLanguage::Swift,
+        }
+    }
+
+    #[must_use]
+    pub fn from_semantic_language(lang: SemanticLanguage) -> Option<Self> {
+        match lang {
+            SemanticLanguage::Rust => Some(Self::Rust),
+            SemanticLanguage::Python => Some(Self::Python),
+            SemanticLanguage::JavaScript | SemanticLanguage::TypeScript => Some(Self::TypeScript),
+            SemanticLanguage::Swift => Some(Self::Swift),
+            SemanticLanguage::Go | SemanticLanguage::Cpp => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -98,6 +114,16 @@ mod tests {
         assert_eq!(Lang::from_ext("py"), Some(Lang::Python));
         assert_eq!(Lang::from_ext("ts"), Some(Lang::TypeScript));
         assert_eq!(Lang::from_ext("xyz"), None);
+    }
+
+    #[test]
+    fn test_semantic_language_mapping() {
+        assert_eq!(Lang::Rust.semantic_language(), SemanticLanguage::Rust);
+        assert_eq!(
+            Lang::from_semantic_language(SemanticLanguage::JavaScript),
+            Some(Lang::TypeScript)
+        );
+        assert_eq!(Lang::from_semantic_language(SemanticLanguage::Go), None);
     }
 
     #[test]

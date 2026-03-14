@@ -3,8 +3,6 @@ use std::path::{Path, PathBuf};
 
 use crate::graph::locality::types::{Coupling, LocalityEdge, NodeIdentity};
 
-
-
 /// Categories of locality violations.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ViolationKind {
@@ -76,7 +74,7 @@ pub fn categorize_violation(
     if is_missing_hub(edge, couplings) {
         return ViolationKind::MissingHub;
     }
-    
+
     // Check for upward dependency
     let from_layer = layers.get(&edge.from).copied().unwrap_or(usize::MAX);
     let to_layer = layers.get(&edge.to).copied().unwrap_or(usize::MAX);
@@ -88,9 +86,9 @@ pub fn categorize_violation(
 }
 
 fn is_missing_hub(edge: &LocalityEdge, couplings: &HashMap<PathBuf, Coupling>) -> bool {
-    couplings.get(&edge.to).is_some_and(|c| {
-        c.afferent() >= 3 && edge.target_identity != NodeIdentity::StableHub
-    })
+    couplings
+        .get(&edge.to)
+        .is_some_and(|c| c.afferent() >= 3 && edge.target_identity != NodeIdentity::StableHub)
 }
 
 fn is_internal_import(path: &Path) -> bool {
@@ -123,7 +121,10 @@ fn suggest_sideways(edge: &LocalityEdge) -> String {
 }
 
 fn suggest_upward(edge: &LocalityEdge) -> String {
-    format!("Layer violation. Move '{}' down to a lower layer or extract shared code.", edge.to.display())
+    format!(
+        "Layer violation. Move '{}' down to a lower layer or extract shared code.",
+        edge.to.display()
+    )
 }
 
 fn get_module_root(path: &Path) -> PathBuf {

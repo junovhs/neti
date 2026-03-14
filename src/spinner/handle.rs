@@ -19,7 +19,7 @@ impl SpinnerHandle {
     pub fn spawn(hud: SafeHud) -> Self {
         let running = Arc::new(AtomicBool::new(true));
         let r_clone = running.clone();
-        
+
         let handle = thread::spawn(move || {
             render::run_hud_loop(&r_clone, &hud);
         });

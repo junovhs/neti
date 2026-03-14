@@ -30,7 +30,9 @@ impl TsConfig {
     #[must_use]
     pub fn load(root: &Path) -> Option<Self> {
         let candidates = ["tsconfig.json", "jsconfig.json"];
-        candidates.iter().find_map(|name| Self::parse_file(&root.join(name), root))
+        candidates
+            .iter()
+            .find_map(|name| Self::parse_file(&root.join(name), root))
     }
 
     fn parse_file(path: &Path, root: &Path) -> Option<Self> {
@@ -49,7 +51,10 @@ impl TsConfig {
         let paths = opts.paths.map_or_else(HashMap::new, |p| {
             p.into_iter()
                 .map(|(pattern, targets)| {
-                    let resolved = targets.into_iter().map(|t| base_for_paths.join(&t)).collect();
+                    let resolved = targets
+                        .into_iter()
+                        .map(|t| base_for_paths.join(&t))
+                        .collect();
                     (pattern, resolved)
                 })
                 .collect()
@@ -61,7 +66,8 @@ impl TsConfig {
     /// Resolve an import using path aliases or baseUrl.
     #[must_use]
     pub fn resolve(&self, import: &str) -> Option<PathBuf> {
-        self.resolve_alias(import).or_else(|| self.resolve_base_url(import))
+        self.resolve_alias(import)
+            .or_else(|| self.resolve_base_url(import))
     }
 
     fn resolve_alias(&self, import: &str) -> Option<PathBuf> {
@@ -99,22 +105,30 @@ fn expand_and_find(target: &Path, matched: &str) -> Option<PathBuf> {
 }
 
 fn find_ts_file(path: &Path) -> Option<PathBuf> {
-    if path.is_file() { return Some(path.to_path_buf()); }
+    if path.is_file() {
+        return Some(path.to_path_buf());
+    }
 
     for ext in &["ts", "tsx", "js", "jsx", "json", "d.ts"] {
         let with_ext = path.with_extension(ext);
-        if with_ext.is_file() { return Some(with_ext); }
+        if with_ext.is_file() {
+            return Some(with_ext);
+        }
     }
 
     find_ts_index(path)
 }
 
 fn find_ts_index(path: &Path) -> Option<PathBuf> {
-    if !path.is_dir() { return None; }
+    if !path.is_dir() {
+        return None;
+    }
 
     for ext in &["ts", "tsx", "js", "jsx"] {
         let index = path.join(format!("index.{ext}"));
-        if index.is_file() { return Some(index); }
+        if index.is_file() {
+            return Some(index);
+        }
     }
     None
 }
@@ -133,7 +147,10 @@ fn strip_json_comments(input: &str) -> String {
         }
 
         match c {
-            '"' => { in_string = true; result.push(c); }
+            '"' => {
+                in_string = true;
+                result.push(c);
+            }
             '/' => handle_slash(&mut chars, &mut result),
             _ => result.push(c),
         }
@@ -141,7 +158,11 @@ fn strip_json_comments(input: &str) -> String {
     result
 }
 
-fn handle_string_char(c: char, chars: &mut std::iter::Peekable<std::str::Chars>, result: &mut String) -> bool {
+fn handle_string_char(
+    c: char,
+    chars: &mut std::iter::Peekable<std::str::Chars>,
+    result: &mut String,
+) -> bool {
     if c == '\\' {
         if let Some(&next) = chars.peek() {
             result.push(next);
@@ -162,7 +183,10 @@ fn handle_slash(chars: &mut std::iter::Peekable<std::str::Chars>, result: &mut S
 
 fn skip_line_comment(chars: &mut std::iter::Peekable<std::str::Chars>, result: &mut String) {
     for ch in chars.by_ref() {
-        if ch == '\n' { result.push('\n'); break; }
+        if ch == '\n' {
+            result.push('\n');
+            break;
+        }
     }
 }
 
@@ -192,7 +216,10 @@ mod tests {
 
     #[test]
     fn test_match_pattern() {
-        assert_eq!(match_pattern("@/*", "@/components/Button"), Some("components/Button"));
+        assert_eq!(
+            match_pattern("@/*", "@/components/Button"),
+            Some("components/Button")
+        );
         assert_eq!(match_pattern("@/*", "react"), None);
         assert_eq!(match_pattern("utils", "utils"), Some(""));
     }

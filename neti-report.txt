@@ -1,0 +1,51 @@
+========================================
+NETI SCAN REPORT
+========================================
+
+SCAN SUMMARY: 226 files | 255131 tokens | 1 violations
+
+ALL VIOLATING FILES:
+    1 violations | src/types/command.rs
+
+warn: Class 'CommandResult' has low cohesion (LCOM4: 5)
+  --> src/types/command.rs:7
+   |
+     6 | #[derive(Debug, Clone, Serialize)]
+     7 | pub struct CommandResult {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^
+     8 |     // neti:allow(LCOM4) Data record, one getter per field.
+   = LCOM4: Review recommended — accurate metric, but may be expected for types implementing multiple traits
+   |
+   = ANALYSIS:
+   |   Connected components: 5
+   |   Methods: 9
+   |   Methods don't share fields or call each other.
+   |
+   = SUPPRESS: // neti:allow(LCOM4) on the line, or LCOM4 = "warn" in neti.toml [rules]
+
+~ Neti found 1 warning (1.444s).
+
+
+========================================
+NETI LOCALITY REPORT
+========================================
+
+Mode: warn
+Edges analyzed: 151
+Violations: 2
+Cycles: 0
+  src/cli/handlers/mod.rs → src/spinner/mod.rs (distance: 5, target: VOLATILE_LEAF)
+  src/cli/handlers/mod.rs → src/verification/mod.rs (distance: 5, target: STANDARD)
+Result: PASS
+
+
+========================================
+NETI COMMANDS REPORT
+========================================
+
+$ cargo clippy --all-targets --no-deps -- -D warnings
+> PASS (1591ms)
+
+$ cargo test
+> PASS (3913ms)
+

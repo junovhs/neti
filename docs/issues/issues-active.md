@@ -5,175 +5,158 @@
 Use only these labels across active and backlog issues:
 `Accuracy`, `Config`, `CLI`, `Reporting`, `AI Workflow`, `Adoption`, `Architecture`, `Cleanup`, `Language Support`, `Detection Rules`, `Testing`, `Performance`, `Safety`, `Branching`, `Web Stack`, `Integrations`
 
+## Priority Theme
+
+Current roadmap focus: harmonize NETI with SEMMAP by extracting a shared multi-language analysis crate, `omni-ast`, and refactoring NETI to consume semantic concepts instead of Rust-specific syntax checks.
+
 ---
 
-## [8] Safety rule: recognize nearby SAFETY justifications
+## [51] Adopt `omni-ast` as NETI's primary semantic engine
 **Status:** OPEN
-**Files:** `src/analysis/safety.rs`, tests
-**Labels:** Safety, Accuracy, Detection Rules, Testing
-**Depends on:** none
+**Files:** `src/lang.rs`, `src/graph/imports.rs`, `src/analysis/patterns/`, shared `omni-ast` semantics modules
+**Labels:** Architecture, Adoption, Language Support, Integrations
+**Depends on:** [50]
 
-**Problem:** The current rule requires a `// SAFETY:` comment to be immediately adjacent to an `unsafe` block. That is stricter than how humans actually document safety reasoning, and it creates false positives when the justification appears a few lines above the block or directly inside the block header.
+**Problem:** The shared crate now exists and NETI consumes pieces of it, but NETI is not yet primarily governed by `omni-ast` semantics. Detector behavior still largely lives in Rust-specific rule code, which means the extraction milestone is real while the strategic adoption milestone remains open.
 
 **Fix:**
 
-1. Accept `// SAFETY:` comments within 3 lines above the `unsafe` block.
-2. Accept a justification immediately inside the block header when it clearly documents that block.
-3. Keep rejecting distant or ambiguous comments.
-4. Add tests proving "nearby is OK" and "distant is not."
+1. Define the shared semantic contract NETI detectors should consume as their main interface.
+2. Move detector-facing language and concept knowledge behind `omni-ast` instead of keeping it embedded in NETI rules.
+3. Replace detector-local Rust syntax assumptions with shared semantic queries in the main rule paths.
+4. Prove the adoption with cross-language rule coverage showing one rule can execute through the shared semantic layer.
 
 **Resolution:**
 
 ---
 
-## [15] P04 false positives on 2D numeric iteration
+## [17] Implement `LangSemantics` in the new shared crate
 **Status:** OPEN
-**Files:** `src/analysis/patterns/performance_p04p06.rs`, tests
-**Labels:** Accuracy, Performance, Detection Rules, Testing
-**Depends on:** none
-
-**Problem:** P04 currently fires on patterns like `for x in 0..w { for y in 0..h }`, which are often intentional 2D numeric iteration rather than evidence of avoidable lookup inefficiency.
-
-**Fix:**
-
-1. Detect when both loops are simple numeric range iteration.
-2. Skip the finding entirely, or downgrade it to `Info`, for that 2D numeric case.
-3. Keep flagging nested loops where the inner loop iterates a collection that suggests a lookup optimization.
-4. Add tests covering both the intentional 2D case and a true positive collection-iteration case.
-
-**Resolution:**
-
----
-
-## [29] Wire `write_fix_packet` and `auto_copy` preferences
-**Status:** OPEN
-**Files:** `src/cli/handlers/mod.rs`, `src/config/types.rs`, `src/reporting.rs`
-**Labels:** AI Workflow, Reporting, Config, CLI
-**Depends on:** none
-
-**Problem:** `write_fix_packet` and `auto_copy` exist in config and UI surfaces but are not implemented in the actual check failure path. That makes the AI-fix loop look supported without delivering the behavior.
-
-**Fix:**
-
-1. On `neti check` failure, write `format_report_string()` output to the configured report path.
-2. When `auto_copy` is enabled, copy the fix packet to the clipboard after generation.
-3. Keep the behavior opt-in through config.
-4. Verify the file output and clipboard path both work from the real failure flow.
-
-**Resolution:**
-
----
-
-## [30] Baseline + suppression system for staged adoption
-**Status:** OPEN
-**Files:** `src/config/types.rs`, `src/reporting.rs`, `src/cli/handlers/mod.rs`, `src/types.rs`
-**Labels:** Adoption, Reporting, Config, CLI, Detection Rules
-**Depends on:** none
-
-**Problem:** Neti needs staged-adoption escape hatches for legacy repositories. Without a baseline and explicit suppressions, teams either absorb a large migration cost immediately or avoid adoption entirely.
-
-**Fix:**
-
-1. Add `neti baseline` to snapshot the current violation set.
-2. Enforce "no regressions" on future runs until the baseline is intentionally refreshed.
-3. Support inline suppressions using `// neti:allow(CODE) reason`.
-4. Require a human-readable reason for every suppression.
-5. Surface baseline and suppression effects clearly in report output.
-
-**Resolution:**
-
----
-
-## [31] Make branch workflow configurable
-**Status:** OPEN
-**Files:** `src/branch.rs`, `src/config/types.rs`
-**Labels:** Branching, Config, CLI
-**Depends on:** none
-
-**Problem:** The branch workflow is hard-coded around `neti-work`, `main`, and squash merge semantics. That blocks teams whose branch naming, base branch, or merge policy differs.
-
-**Fix:**
-
-1. Add config for `work_branch_name`.
-2. Add config for `base_branch_name`.
-3. Add config for `merge_mode` with `squash`, `merge`, and `rebase`.
-4. Add config for `commit_message_template`.
-5. Preserve current behavior as the default when config is absent.
-
-**Resolution:**
-
----
-
-## [17] Define `LangSemantics` trait and Rust implementation
-**Status:** OPEN
-**Files:** `src/lang.rs`, `src/lang/semantics.rs` (new)
+**Files:** `src/lang.rs`, `src/lang/semantics.rs` (new or moved), shared `omni-ast` semantics module
 **Labels:** Architecture, Language Support, Detection Rules
-**Depends on:** none
+**Depends on:** [51]
 
-**Problem:** Detector logic still hardcodes language-specific vocabulary directly in rule implementations. That couples the detection engine to Rust-specific details and makes multi-language support brittle.
+**Problem:** NETI needs a stable semantic interface above raw syntax. That interface should live in the shared crate so both projects can reason about concepts such as test context, heap allocation, mutation, locking, and exported roles without duplicating language-specific logic.
 
 **Fix:**
 
-1. Create a `LangSemantics` abstraction that exposes language-specific knowledge through one interface.
-2. Cover test markers, type vocabulary, method vocabulary, and syntax vocabulary.
-3. Populate a Rust semantics table with the values currently hardcoded across detectors.
-4. Add `Lang::semantics()` so detectors can query the abstraction.
+1. Define a `LangSemantics` trait in the shared crate.
+2. Make the trait answer the semantic queries NETI detectors need, such as `is_test_context()` and `has_concept(Concept::HeapAllocation)`.
+3. Map SEMMAP-style badges and concepts onto that trait surface.
+4. Expose the interface so NETI detectors can query semantics without directly handling AST syntax.
 
 **Resolution:**
 
 ---
 
-## [18] Wire `LangSemantics` into performance detectors
+## [41] Port SEMMAP SWUM expansion to Neti naming rules
+**Status:** OPEN
+**Files:** `../semmap/src/swum/`, `src/analysis/naming.rs`, shared `omni-ast` SWUM module
+**Labels:** Language Support, Detection Rules, Architecture
+**Depends on:** [51]
+
+**Problem:** NETI naming guidance is still shallow and language-specific. SEMMAP already has a SWUM engine that can expand identifiers into verb-intent phrases, which is the right foundation for cross-language naming rules.
+
+**Fix:**
+
+1. Port SEMMAP's SWUM engine into `omni-ast`.
+2. Replace NETI naming-rule heuristics with SWUM-backed semantic expansion where practical.
+3. Use the shared engine to reason about verbs, themes, acronyms, and intent across languages.
+4. Add tests proving naming analysis behavior works through the shared interface instead of language-local hacks.
+
+**Resolution:**
+
+---
+
+## [18] Wire shared semantics into performance detectors
 **Status:** OPEN
 **Files:** `src/analysis/patterns/performance.rs`, `src/analysis/patterns/performance_test_ctx.rs`
 **Labels:** Architecture, Language Support, Detection Rules, Performance
 **Depends on:** [17]
 
-**Problem:** Performance detectors still embed language-specific vocabulary and path-based exceptions. That makes the rules less portable and hides precision problems behind `should_skip()`.
+**Problem:** Performance detectors still rely on Rust-shaped vocabulary and local heuristics. They should operate on shared semantic concepts so one rule can run against Rust, Python, Go, and JS/TS through the same interface.
 
 **Fix:**
 
-1. Replace hardcoded vocabulary lookups with `LangSemantics` queries.
-2. Remove the `should_skip()` path filter.
-3. Tighten heuristics so precision comes from the rule logic rather than file-path exclusion.
-4. Update or extend tests to prove the detectors still behave correctly after the refactor.
+1. Replace detector-local vocabulary checks with queries against shared semantics.
+2. Express rules in terms of concepts such as allocation, lookup, collection iteration, and test context.
+3. Remove path-based skip heuristics that exist only to compensate for weak semantics.
+4. Add tests showing the same detector intent can run across multiple languages through the shared layer.
 
 **Resolution:**
 
 ---
 
-## [19] Wire `LangSemantics` into logic detectors
+## [19] Wire shared semantics into logic detectors
 **Status:** OPEN
 **Files:** `src/analysis/patterns/logic.rs`, `src/analysis/patterns/logic_helpers.rs`
 **Labels:** Architecture, Language Support, Detection Rules
 **Depends on:** [17]
 
-**Problem:** Logic detectors also hardcode language-specific terms and syntax assumptions, which prevents the rule family from scaling cleanly beyond Rust.
+**Problem:** Logic detectors currently mix rule intent with Rust-specific syntax assumptions. That blocks cross-language governance and makes the rules harder to reason about.
 
 **Fix:**
 
-1. Replace hardcoded vocabulary with `LangSemantics` queries.
-2. Keep `logic_proof.rs` as a Rust-only precision enhancer.
-3. Gate Rust-only proof logic behind an explicit `Lang::Rust` check.
-4. Update tests to ensure the refactor preserves existing Rust precision.
+1. Rewrite logic detectors to query shared semantics rather than raw syntax vocabulary.
+2. Preserve Rust-only proof helpers only where they materially improve precision.
+3. Keep any Rust-specific precision layer clearly gated on language, not embedded in the core rule definition.
+4. Add regression coverage proving shared semantics drives the rule while precision enhancers remain optional.
 
 **Resolution:**
 
 ---
 
-## [20] Wire `LangSemantics` into remaining detectors
+## [20] Wire shared semantics into concurrency and remaining detectors
 **Status:** OPEN
 **Files:** `src/analysis/patterns/semantic.rs`, `src/analysis/patterns/concurrency.rs`, `src/analysis/patterns/concurrency_lock.rs`, `src/analysis/patterns/concurrency_sync.rs`
 **Labels:** Architecture, Language Support, Detection Rules, Safety
 **Depends on:** [17]
 
-**Problem:** The remaining detector families still keep lock-type and mutation-pattern knowledge inline, leaving the language abstraction incomplete.
+**Problem:** Lock-type knowledge, mutation receiver patterns, and other semantic cues still live inline inside NETI detectors. That leaves the cross-language abstraction incomplete.
 
 **Fix:**
 
-1. Move lock types behind `LangSemantics`.
-2. Move mutation receiver patterns behind `LangSemantics`.
-3. Remove remaining detector-local Rust vocabulary where the abstraction can own it.
-4. Extend tests for the affected detector families.
+1. Move lock and sync concepts behind the shared semantics layer.
+2. Move mutation and state-change concepts behind the shared semantics layer.
+3. Remove remaining detector-local Rust vocabulary where the shared crate can own it.
+4. Extend tests to prove these rule families work through semantic concepts rather than syntax matching.
+
+**Resolution:**
+
+---
+
+## [21] Populate Python semantics in the shared crate
+**Status:** OPEN
+**Files:** shared `omni-ast` semantics tables
+**Labels:** Language Support, Architecture, Detection Rules
+**Depends on:** [17]
+
+**Problem:** Python needs a first-class semantics table in the shared crate before cross-language detector execution can be credible.
+
+**Fix:**
+
+1. Add Python test-context semantics.
+2. Add Python heap, lookup, length, mutation, and loop concepts.
+3. Map Python syntax and library vocabulary onto the shared concept model.
+4. Verify NETI rules can consume Python semantics through the same detector queries used for Rust.
+
+**Resolution:**
+
+---
+
+## [22] Populate TypeScript semantics in the shared crate
+**Status:** OPEN
+**Files:** shared `omni-ast` semantics tables
+**Labels:** Language Support, Architecture, Detection Rules, Web Stack
+**Depends on:** [17]
+
+**Problem:** TypeScript and JavaScript need shared semantics coverage so NETI rules can execute over web code through the same concept interface.
+
+**Fix:**
+
+1. Add JS/TS test-context semantics.
+2. Add JS/TS heap, lookup, length, mutation, and loop concepts.
+3. Map JS/TS library and syntax vocabulary onto the shared concept model.
+4. Verify NETI rules can consume JS/TS semantics through the common detector interface.
 
 **Resolution:**

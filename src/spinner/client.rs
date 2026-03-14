@@ -28,7 +28,8 @@ impl SpinnerClient {
 
     pub fn step_micro_progress(&self, current: usize, total: usize, status: impl Into<String>) {
         let s = status.into();
-        self.state.modify(|state| state.step_micro_progress(current, total, s));
+        self.state
+            .modify(|state| state.step_micro_progress(current, total, s));
     }
 
     pub fn push_log(&self, line: &str) {

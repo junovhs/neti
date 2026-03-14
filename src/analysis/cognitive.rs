@@ -44,12 +44,14 @@ impl<'a> Scorer<'a> {
     fn assess_node(&self, node: Node, nesting: usize) -> (usize, usize) {
         let kind = node.kind();
         match kind {
-            "if_expression" | "match_expression" | "for_expression" | "while_expression" | "loop_expression" => {
-                Self::handle_control_flow(node, nesting)
-            }
+            "if_expression" | "match_expression" | "for_expression" | "while_expression"
+            | "loop_expression" => Self::handle_control_flow(node, nesting),
             "binary_expression" => (Self::handle_logic(node, self.source), nesting),
             "match_arm" => (1, nesting),
-            "function_item" | "closure_expression" | "function_definition" | "method_definition" => (0, 0),
+            "function_item"
+            | "closure_expression"
+            | "function_definition"
+            | "method_definition" => (0, 0),
             _ => (0, nesting),
         }
     }

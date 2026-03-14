@@ -1,7 +1,5 @@
 // src/discovery.rs
-use crate::config::{
-    Config, BIN_EXT_PATTERN, CODE_BARE_PATTERN, CODE_EXT_PATTERN, SECRET_PATTERN,
-};
+use crate::config::{Config, BIN_EXT_PATTERN, CODE_BARE_PATTERN, CODE_EXT_PATTERN, SECRET_PATTERN};
 use crate::constants::should_prune;
 use anyhow::Result;
 use regex::Regex;

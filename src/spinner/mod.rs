@@ -3,10 +3,10 @@
 
 pub mod client;
 pub mod controller;
+mod handle;
 pub mod render;
 pub mod safe_hud;
 pub mod state;
-mod handle;
 
 pub use client::SpinnerClient;
 pub use controller::SpinnerController;
